@@ -1,6 +1,6 @@
 {
   "name": "jylli-tool",
-  "version": "1.4.4",
+  "version": "1.4.5",
   "description": "Professional Windows Optimization Tool",
   "main": "main.js",
   "scripts": {

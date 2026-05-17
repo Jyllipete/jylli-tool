@@ -308,6 +308,15 @@ html, body {
   background: rgba(255,46,99,0.18);
   border-color: rgba(255,46,99,0.55);
 }
+.preset-balanced {
+  background: rgba(46,204,113,0.1);
+  border-color: rgba(46,204,113,0.3);
+  color: #2ECC71;
+}
+.preset-balanced:hover {
+  background: rgba(46,204,113,0.18);
+  border-color: rgba(46,204,113,0.55);
+}
 .preset-divider {
   width: 1px; height: 20px;
   background: #222;
@@ -323,7 +332,7 @@ html, body {
     <div class="tb-icon"><i class="fa fa-sliders"></i></div>
     <div style="flex:1">
       <div class="tb-title">FiveM <span>Graphics</span> Settings</div>
-      <div class="tb-subtitle">gta5_settings.xml editor</div>
+      <div class="tb-subtitle" id="lbl-title-sub">gta5_settings.xml editor</div>
     </div>
     <button class="tb-close" onclick="window.api.closeFivemSettings()"><i class="fa fa-xmark"></i></button>
   </div>
@@ -335,24 +344,27 @@ html, body {
     <div>
       <div id="path-row">
         <input id="manual-path" type="text" placeholder="Optional: paste full path to gta5_settings.xml if auto-detect fails" spellcheck="false">
-        <button class="btn btn-ghost" id="btn-load" onclick="loadSettings()"><i class="fa fa-rotate"></i> Load</button>
+        <button class="btn btn-ghost" id="btn-load" onclick="loadSettings()"><i class="fa fa-rotate"></i> <span id="lbl-load-btn">Load</span></button>
       </div>
       <div id="path-status"></div>
     </div>
 
     <!-- Preset bar -->
     <div id="preset-bar">
-      <span class="preset-label"><i class="fa fa-wand-magic-sparkles"></i> Presets</span>
+      <span class="preset-label"><i class="fa fa-wand-magic-sparkles"></i> <span id="lbl-presets">Presets</span></span>
       <div class="preset-divider"></div>
       <button class="preset-btn preset-quality" onclick="applyPreset('quality')">
-        <i class="fa fa-gem"></i> Quality
+        <i class="fa fa-gem"></i> <span id="lbl-preset-quality">Quality</span>
+      </button>
+      <button class="preset-btn preset-balanced" onclick="applyPreset('balanced')">
+        <i class="fa fa-gauge-high"></i> <span id="lbl-preset-balanced">Balanced</span>
       </button>
       <button class="preset-btn preset-performance" onclick="applyPreset('performance')">
-        <i class="fa fa-bolt"></i> Performance
+        <i class="fa fa-bolt"></i> <span id="lbl-preset-performance">Performance</span>
       </button>
       <div class="preset-divider"></div>
       <button class="btn btn-ghost" style="font-size:10px;padding:5px 10px;" onclick="applyRecommended()">
-        <i class="fa fa-wand-sparkles"></i> Recommended
+        <i class="fa fa-wand-sparkles"></i> <span id="lbl-preset-recommended">Recommended</span>
       </button>
     </div>
 
@@ -360,8 +372,8 @@ html, body {
     <div id="settings-body">
       <div id="empty-state">
         <i class="fa fa-sliders"></i>
-        <p>Load your FiveM graphics settings to get started.</p>
-        <small>File: %APPDATA%\CitizenFX\gta5_settings.xml<br>If the file doesn't exist, open FiveM → Settings → Graphics, change any option, then close FiveM.</small>
+        <p id="lbl-empty-title">Load your FiveM graphics settings to get started.</p>
+        <small id="lbl-empty-small">File: %APPDATA%\CitizenFX\gta5_settings.xml<br>If the file doesn't exist, open FiveM → Settings → Graphics, change any option, then close FiveM.</small>
       </div>
     </div>
 
@@ -371,74 +383,158 @@ html, body {
   <div id="fivem-warn-banner" style="display:none;align-items:flex-start;gap:12px;padding:12px 16px;background:rgba(230,126,34,0.08);border-top:1px solid rgba(230,126,34,0.25);flex-shrink:0">
     <i class="fa fa-triangle-exclamation" style="color:#e67e22;font-size:16px;margin-top:1px;flex-shrink:0"></i>
     <div style="flex:1">
-      <div style="font-size:12px;font-weight:700;color:#e67e22;margin-bottom:3px">Make sure FiveM is fully closed before saving</div>
-      <div style="font-size:10px;color:#8a8a9a;line-height:1.5">FiveM writes back to <code style="color:#aaa">gta5_settings.xml</code> when you exit the graphics menu or quit the game — this will overwrite your saved settings. Close FiveM completely first, then save here, then relaunch FiveM without opening Graphics Settings.</div>
+      <div id="lbl-warn-title" style="font-size:12px;font-weight:700;color:#e67e22;margin-bottom:3px">Make sure FiveM is fully closed before saving</div>
+      <div id="lbl-warn-body" style="font-size:10px;color:#8a8a9a;line-height:1.5">FiveM writes back to <code style="color:#aaa">gta5_settings.xml</code> when you exit the graphics menu or quit the game — this will overwrite your saved settings. Close FiveM completely first, then save here, then relaunch FiveM without opening Graphics Settings.</div>
     </div>
     <div style="display:flex;gap:6px;flex-shrink:0;align-items:center">
-      <button class="btn btn-ghost" style="font-size:10px;padding:5px 10px" onclick="document.getElementById('fivem-warn-banner').style.display='none'">Cancel</button>
-      <button class="btn btn-primary" style="font-size:10px;padding:5px 12px;background:#e67e22;border-color:#e67e22" onclick="confirmSaveAnyway()"><i class="fa fa-floppy-disk"></i> Save Anyway</button>
+      <button class="btn btn-ghost" id="lbl-warn-cancel" style="font-size:10px;padding:5px 10px" onclick="document.getElementById('fivem-warn-banner').style.display='none'">Cancel</button>
+      <button class="btn btn-primary" style="font-size:10px;padding:5px 12px;background:#e67e22;border-color:#e67e22" onclick="confirmSaveAnyway()"><i class="fa fa-floppy-disk"></i> <span id="lbl-warn-save-anyway">Save Anyway</span></button>
     </div>
   </div>
 
   <!-- Footer -->
   <div id="footer">
     <div id="footer-info">
-      <span id="path-display">No file loaded</span>
+      <span id="path-display"><!-- set by JS --></span>
     </div>
     <span id="changes-count">0 changes</span>
-    <button class="btn btn-primary" id="btn-save" onclick="saveSettings()" disabled><i class="fa fa-floppy-disk"></i> Save Settings</button>
+    <button class="btn btn-ghost" id="btn-export" onclick="exportToClipboard()" disabled title="Copy settings summary to clipboard" style="padding:5px 10px;font-size:10px"><i class="fa fa-copy"></i> <span id="lbl-export-btn">Export</span></button>
+    <button class="btn btn-primary" id="btn-save" onclick="saveSettings()" disabled><i class="fa fa-floppy-disk"></i> <span id="lbl-save-btn">Save Settings</span></button>
   </div>
 </div>
 
 <script>
+// ─── i18n ─────────────────────────────────────────────────────────────────────
+const LANG_FIVEM = {
+  en: {
+    titleSub: 'gta5_settings.xml editor',
+    loadBtn: 'Load',
+    loadingFile: 'Reading settings file…',
+    noFile: 'No file loaded',
+    presetsLabel: 'Presets',
+    presetQuality: 'Quality',
+    presetBalanced: 'Balanced',
+    presetPerformance: 'Performance',
+    presetRecommended: 'Recommended',
+    presetApplied: 'Applied',
+    exportBtn: 'Export',
+    exportCopied: 'Copied!',
+    saveBtn: 'Save Settings',
+    savingBtn: 'Saving…',
+    savedBtn: 'Saved!',
+    saveError: 'Error',
+    emptyTitle: 'Load your FiveM graphics settings to get started.',
+    emptySmall: 'File: %APPDATA%\\CitizenFX\\gta5_settings.xml\nIf the file doesn\'t exist, open FiveM → Settings → Graphics, change any option, then close FiveM.',
+    pathPlaceholder: 'Optional: paste full path to gta5_settings.xml if auto-detect fails',
+    warnTitle: 'Make sure FiveM is fully closed before saving',
+    warnBody: 'FiveM writes back to gta5_settings.xml when you exit the graphics menu or quit the game — this will overwrite your saved settings. Close FiveM completely first, then save here, then relaunch FiveM without opening Graphics Settings.',
+    warnCancel: 'Cancel',
+    warnSaveAnyway: 'Save Anyway',
+    saveSuccess: 'Settings saved successfully.',
+    saveSuccessNote: 'Close FiveM completely (not just the game), then relaunch it. Do not open Graphics Settings in FiveM after relaunching — it will overwrite these values.',
+    missingTag: 'not in file — will be added on save',
+    changes: '{n} change',
+    changesPlural: '{n} changes',
+    // Category names & descs
+    catLod: 'Level of Detail', catLodDesc: 'Distance & object detail',
+    catShadows: 'Shadows', catShadowsDesc: 'Shadow quality & cost',
+    catAa: 'Anti-Aliasing', catAaDesc: 'Edge smoothing options',
+    catEnv: 'Environment', catEnvDesc: 'World detail & density',
+    catRendering: 'Rendering', catRenderingDesc: 'GPU shading & effects',
+    catEffects: 'Visual Effects', catEffectsDesc: 'DoF, blur & depth effects',
+    impLow: 'Low', impMed: 'Med', impHigh: 'High', impVeryHigh: 'Very High',
+  },
+  fi: {
+    titleSub: 'gta5_settings.xml -muokkain',
+    loadBtn: 'Lataa',
+    loadingFile: 'Luetaan asetustiedostoa…',
+    noFile: 'Ei tiedostoa ladattu',
+    presetsLabel: 'Esiasetukset',
+    presetQuality: 'Laatu',
+    presetBalanced: 'Tasapainoinen',
+    presetPerformance: 'Suorituskyky',
+    presetRecommended: 'Suositeltu',
+    presetApplied: 'Käytetty',
+    exportBtn: 'Vie',
+    exportCopied: 'Kopioitu!',
+    saveBtn: 'Tallenna asetukset',
+    savingBtn: 'Tallennetaan…',
+    savedBtn: 'Tallennettu!',
+    saveError: 'Virhe',
+    emptyTitle: 'Lataa FiveM-grafiikka-asetuksesi aloittaaksesi.',
+    emptySmall: 'Tiedosto: %APPDATA%\\CitizenFX\\gta5_settings.xml\nJos tiedostoa ei ole, avaa FiveM → Asetukset → Grafiikka, muuta jotain asetusta ja sulje FiveM.',
+    pathPlaceholder: 'Valinnainen: liitä koko polku gta5_settings.xml-tiedostoon, jos automaattinen haku epäonnistuu',
+    warnTitle: 'Varmista, että FiveM on täysin suljettu ennen tallentamista',
+    warnBody: 'FiveM kirjoittaa gta5_settings.xml-tiedoston uudelleen, kun poistut grafiikka-valikosta tai suljet pelin — tämä ylikirjoittaa tallennetut asetuksesi. Sulje FiveM ensin kokonaan, tallenna sitten täällä ja käynnistä FiveM uudelleen avaamatta grafiikka-asetuksia.',
+    warnCancel: 'Peruuta',
+    warnSaveAnyway: 'Tallenna silti',
+    saveSuccess: 'Asetukset tallennettu onnistuneesti.',
+    saveSuccessNote: 'Sulje FiveM kokonaan (ei vain peliä), käynnistä sitten uudelleen. Älä avaa FiveMin grafiikka-asetuksia uudelleenkäynnistyksen jälkeen — se ylikirjoittaa arvot.',
+    missingTag: 'ei tiedostossa — lisätään tallennettaessa',
+    changes: '{n} muutos',
+    changesPlural: '{n} muutosta',
+    catLod: 'Yksityiskohtien taso', catLodDesc: 'Etäisyys & objektien taso',
+    catShadows: 'Varjot', catShadowsDesc: 'Varjojen laatu & kustannus',
+    catAa: 'Anti-Aliasing', catAaDesc: 'Reunojen tasoitus',
+    catEnv: 'Ympäristö', catEnvDesc: 'Maailman taso & tiheys',
+    catRendering: 'Renderöinti', catRenderingDesc: 'GPU-varjostimet & efektit',
+    catEffects: 'Visuaaliset efektit', catEffectsDesc: 'DoF, blur & syvyysefektit',
+    impLow: 'Matala', impMed: 'Keski', impHigh: 'Korkea', impVeryHigh: 'Erittäin korkea',
+  }
+}
+function getLangF() {
+  try { return JSON.parse(localStorage.getItem('jylli-settings') || '{}').language || 'en' } catch { return 'en' }
+}
+function tF(key) { const l = getLangF(); return (LANG_FIVEM[l] || LANG_FIVEM.en)[key] || LANG_FIVEM.en[key] || key }
+
 // ─── Category definitions ─────────────────────────────────────────────────────
 const CATEGORIES = [
   {
     id: 'lod',
-    name: 'Level of Detail',
+    get name() { return tF('catLod') },
     icon: '<i class="fa fa-layer-group"></i>',
     color: '#f97316',
-    desc: 'Distance & object detail',
+    get desc() { return tF('catLodDesc') },
     keys: ['LodScale', 'PedLodBias', 'VehicleLodBias', 'HdStreamingInFlight']
   },
   {
     id: 'shadows',
-    name: 'Shadows',
+    get name() { return tF('catShadows') },
     icon: '<i class="fa fa-moon"></i>',
     color: '#9B59B6',
-    desc: 'Shadow quality & cost',
+    get desc() { return tF('catShadowsDesc') },
     keys: ['ShadowQuality', 'Shadow_Distance', 'Shadow_SoftShadows', 'UltraShadows_Enabled', 'Shadow_ParticleShadows', 'Shadow_LongShadows']
   },
   {
     id: 'aa',
-    name: 'Anti-Aliasing',
+    get name() { return tF('catAa') },
     icon: '<i class="fa fa-border-all"></i>',
     color: '#3498DB',
-    desc: 'Edge smoothing options',
+    get desc() { return tF('catAaDesc') },
     keys: ['MSAA', 'FXAA_Enabled', 'TXAA_Enabled', 'ReflectionMSAA']
   },
   {
     id: 'env',
-    name: 'Environment',
+    get name() { return tF('catEnv') },
     icon: '<i class="fa fa-tree"></i>',
     color: '#2ECC71',
-    desc: 'World detail & density',
+    get desc() { return tF('catEnvDesc') },
     keys: ['GrassQuality', 'WaterQuality', 'ParticleQuality', 'Lighting_FogVolumes', 'CityDensity', 'VehicleVarietyMultiplier', 'PedVarietyMultiplier']
   },
   {
     id: 'rendering',
-    name: 'Rendering',
+    get name() { return tF('catRendering') },
     icon: '<i class="fa fa-microchip"></i>',
     color: '#FF2E63',
-    desc: 'GPU shading & effects',
+    get desc() { return tF('catRenderingDesc') },
     keys: ['ShaderQuality', 'ReflectionQuality', 'SSAO', 'Tessellation', 'AnisotropicFiltering', 'PostFX']
   },
   {
     id: 'effects',
-    name: 'Visual Effects',
+    get name() { return tF('catEffects') },
     icon: '<i class="fa fa-wand-sparkles"></i>',
     color: '#F39C12',
-    desc: 'DoF, blur & depth effects',
+    get desc() { return tF('catEffectsDesc') },
     keys: ['DoF', 'MotionBlurStrength']
   }
 ]
@@ -512,8 +608,41 @@ const PRESETS = {
     Lighting_FogVolumes:       'false',     // Off
     HdStreamingInFlight:       'false',     // Off
   },
+
+  // Balanced — solid 60+ FPS with decent visuals; good all-rounder for RP servers
+  balanced: {
+    LodScale:                  '0.750000',  // 0.75 — decent draw distance
+    PedLodBias:                '0.100000',  // slight bias
+    VehicleLodBias:            '0.100000',  // slight bias
+    ShadowQuality:             '2',         // High — noticeable visual improvement
+    ReflectionQuality:         '1',         // Normal — some reflections
+    ReflectionMSAA:            '0',         // Off
+    MSAA:                      '0',         // Off
+    FXAA_Enabled:              'true',      // On — cheap edge smoothing
+    TXAA_Enabled:              'false',     // Off
+    ParticleQuality:           '1',         // Normal
+    WaterQuality:              '1',         // Normal
+    GrassQuality:              '0',         // Off — biggest open-world FPS gain
+    ShaderQuality:             '2',         // High
+    Shadow_Distance:           '0.600000',  // mid-range
+    Shadow_SoftShadows:        '1',         // Softer
+    UltraShadows_Enabled:      'false',     // Off
+    Shadow_ParticleShadows:    'false',     // Off
+    Shadow_LongShadows:        'false',     // Off
+    CityDensity:               '0.250000',  // Low — some life but not CPU-heavy
+    VehicleVarietyMultiplier:  '0.250000',  // Low
+    PedVarietyMultiplier:      '0.250000',  // Low
+    PostFX:                    '1',         // Normal
+    DoF:                       'false',     // Off
+    MotionBlurStrength:        '0.000000',  // Off
+    Tessellation:              '0',         // Off
+    AnisotropicFiltering:      '16',        // 16x — free
+    SSAO:                      '0',         // Off
+    Lighting_FogVolumes:       'false',     // Off
+    HdStreamingInFlight:       'false',     // Off
+  },
 }
-const IMPACT_LABEL = { low: 'Low', medium: 'Med', high: 'High', 'very high': 'Very High' }
+const IMPACT_LABEL = { get low() { return tF('impLow') }, get medium() { return tF('impMed') }, get high() { return tF('impHigh') }, get 'very high'() { return tF('impVeryHigh') } }
 
 let currentDefs = []
 let currentVals = {}
@@ -530,12 +659,12 @@ async function loadSettings() {
   const pathStatus = document.getElementById('path-status')
 
   btn.disabled = true
-  btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Loading…'
-  body.innerHTML = `<div id="empty-state"><i class="fa fa-spinner fa-spin" style="font-size:28px;color:#333"></i><p style="color:#333">Reading settings file…</p></div>`
+  btn.innerHTML = `<i class="fa fa-spinner fa-spin"></i> ${tF('loadBtn')}`
+  body.innerHTML = `<div id="empty-state"><i class="fa fa-spinner fa-spin" style="font-size:28px;color:#333"></i><p style="color:#333">${tF('loadingFile')}</p></div>`
 
   const r = await window.api.fivemReadSettings(getManualPath())
   btn.disabled = false
-  btn.innerHTML = '<i class="fa fa-rotate"></i> Load'
+  btn.innerHTML = `<i class="fa fa-rotate"></i> ${tF('loadBtn')}`
 
   if (!r.ok) {
     pathStatus.innerHTML = `<i class="fa fa-triangle-exclamation" style="color:#E74C3C"></i> ${r.reason}`
@@ -551,8 +680,9 @@ async function loadSettings() {
   currentVals = r.vals
   currentPath = r.path
   pathStatus.innerHTML = `<i class="fa fa-check" style="color:#2ECC71"></i> ${r.path}`
-  document.getElementById('path-display').textContent = r.path
+  const pd = document.getElementById('path-display'); if (pd) { pd.textContent = r.path; pd._set = true }
   document.getElementById('btn-save').disabled = false
+  document.getElementById('btn-export').disabled = false
   document.getElementById('preset-bar').style.display = 'flex'
 
   renderSettings()
@@ -608,7 +738,7 @@ function renderSettings() {
       row.innerHTML = `
         <div class="setting-label">
           ${def.label}
-          ${isMissing ? '<span class="missing-tag"><i class="fa fa-circle-exclamation"></i> not in file — will be added on save</span>' : ''}
+          ${isMissing ? `<span class="missing-tag"><i class="fa fa-circle-exclamation"></i> ${tF('missingTag')}</span>` : ''}
         </div>
         <div class="setting-control">
           <select id="sval-${def.key}" onchange="onSettingChange('${def.key}')" class="${isRec ? 'is-rec' : ''}">
@@ -652,7 +782,7 @@ function trackChanges() {
   const badge = document.getElementById('changes-count')
   if (count > 0) {
     badge.style.display = 'inline-block'
-    badge.textContent = `${count} change${count !== 1 ? 's' : ''}`
+    badge.textContent = (count !== 1 ? tF('changesPlural') : tF('changes')).replace('{n}', count)
   } else {
     badge.style.display = 'none'
   }
@@ -674,10 +804,25 @@ function applyPreset(presetId) {
   const btn = document.querySelector(`.preset-${presetId}`)
   if (btn) {
     const orig = btn.innerHTML
-    btn.innerHTML = '<i class="fa fa-check"></i> Applied'
+    btn.innerHTML = `<i class="fa fa-check"></i> ${tF('presetApplied')}`
     btn.style.opacity = '0.7'
     setTimeout(() => { btn.innerHTML = orig; btn.style.opacity = '' }, 1800)
   }
+}
+
+function exportToClipboard() {
+  if (!currentDefs.length) return
+  const lines = currentDefs.map(def => {
+    const el = document.getElementById(`sval-${def.key}`)
+    const val = el ? el.value : (currentVals[def.key] ?? def.rec)
+    return `${def.key}: ${val}`
+  })
+  navigator.clipboard.writeText(lines.join('\n')).then(() => {
+    const btn = document.getElementById('btn-export')
+    const orig = btn.innerHTML
+    btn.innerHTML = `<i class="fa fa-check"></i> ${tF('exportCopied')}`
+    setTimeout(() => { btn.innerHTML = orig }, 1800)
+  })
 }
 
 function applyRecommended() {
@@ -718,16 +863,17 @@ async function saveSettings() {
   }
 
   btn.disabled = true
-  btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Saving…'
+  btn.innerHTML = `<i class="fa fa-spinner fa-spin"></i> ${tF('savingBtn')}`
 
   const r = await window.api.fivemWriteSettings(changes, getManualPath())
   btn.disabled = false
 
   if (r.ok) {
-    btn.innerHTML = '<i class="fa fa-check"></i> Saved!'
+    btn.innerHTML = `<i class="fa fa-check"></i> ${tF('savedBtn')}`
     if (warnBanner) { warnBanner.style.display = 'none'; delete warnBanner.dataset.confirmed }
+    const chLabel = (changedCount !== 1 ? tF('changesPlural') : tF('changes')).replace('{n}', changedCount)
     document.getElementById('path-status').innerHTML =
-      `<i class="fa fa-check" style="color:#2ECC71"></i> Saved ${changedCount} change${changedCount !== 1 ? 's' : ''} → ${r.path}`
+      `<i class="fa fa-check" style="color:#2ECC71"></i> ${chLabel} → ${r.path}`
     showSaveConfirmBanner(r.path)
     // Sync currentVals
     for (const def of currentDefs) {
@@ -736,12 +882,12 @@ async function saveSettings() {
     }
     for (const def of currentDefs) document.getElementById(`srow-${def.key}`)?.classList.remove('is-changed')
     trackChanges()
-    setTimeout(() => { btn.innerHTML = '<i class="fa fa-floppy-disk"></i> Save Settings'; btn.disabled = false }, 2500)
+    setTimeout(() => { btn.innerHTML = `<i class="fa fa-floppy-disk"></i> ${tF('saveBtn')}`; btn.disabled = false }, 2500)
   } else {
-    btn.innerHTML = '<i class="fa fa-xmark"></i> Error'
+    btn.innerHTML = `<i class="fa fa-xmark"></i> ${tF('saveError')}`
     document.getElementById('path-status').innerHTML =
       `<i class="fa fa-triangle-exclamation" style="color:#E74C3C"></i> ${r.reason || 'Save failed'}`
-    setTimeout(() => { btn.innerHTML = '<i class="fa fa-floppy-disk"></i> Save Settings'; btn.disabled = false }, 2500)
+    setTimeout(() => { btn.innerHTML = `<i class="fa fa-floppy-disk"></i> ${tF('saveBtn')}`; btn.disabled = false }, 2500)
   }
 }
 
@@ -754,8 +900,8 @@ function showSaveConfirmBanner(filePath) {
   banner.innerHTML = `
     <i class="fa fa-circle-check" style="color:#2ECC71;font-size:14px;flex-shrink:0"></i>
     <div style="flex:1;line-height:1.5">
-      <strong style="color:#2ECC71">Settings saved successfully.</strong><br>
-      <span style="color:#8a8a9a">Close FiveM completely (not just the game), then relaunch it. Do not open Graphics Settings in FiveM after relaunching — it will overwrite these values.</span>
+      <strong style="color:#2ECC71">${tF('saveSuccess')}</strong><br>
+      <span style="color:#8a8a9a">${tF('saveSuccessNote')}</span>
     </div>
     <button onclick="this.closest('#save-confirm-banner').remove()" style="background:none;border:none;color:#555;cursor:pointer;font-size:13px;flex-shrink:0;padding:0 4px">✕</button>
   `
@@ -771,8 +917,31 @@ function confirmSaveAnyway() {
   saveSettings()
 }
 
+// ─── i18n apply ───────────────────────────────────────────────────────────────
+function applyTranslationsF() {
+  const t = (id, key) => { const el = document.getElementById(id); if (el) el.textContent = tF(key) }
+  t('lbl-title-sub', 'titleSub')
+  t('lbl-load-btn', 'loadBtn')
+  t('lbl-presets', 'presetsLabel')
+  t('lbl-preset-quality', 'presetQuality')
+  t('lbl-preset-balanced', 'presetBalanced')
+  t('lbl-preset-performance', 'presetPerformance')
+  t('lbl-preset-recommended', 'presetRecommended')
+  t('lbl-export-btn', 'exportBtn')
+  t('lbl-empty-title', 'emptyTitle')
+  t('lbl-empty-small', 'emptySmall')
+  t('lbl-warn-title', 'warnTitle')
+  t('lbl-warn-body', 'warnBody')
+  t('lbl-warn-cancel', 'warnCancel')
+  t('lbl-warn-save-anyway', 'warnSaveAnyway')
+  t('lbl-save-btn', 'saveBtn')
+  const pd = document.getElementById('path-display'); if (pd && !pd._set) pd.textContent = tF('noFile')
+  const mp = document.getElementById('manual-path'); if (mp) mp.placeholder = tF('pathPlaceholder')
+}
+
 // Auto-load on open
 window.addEventListener('DOMContentLoaded', () => {
+  applyTranslationsF()
   loadSettings()
 })
 </script>

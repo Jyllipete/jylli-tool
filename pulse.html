@@ -290,7 +290,7 @@ html, body {
 
   <!-- Game Presets -->
   <div class="card">
-    <div class="card-label">GAME PRESETS</div>
+    <div class="card-label" id="lbl-game-presets">GAME PRESETS</div>
     <div class="preset-grid" id="preset-grid"></div>
   </div>
 
@@ -299,25 +299,25 @@ html, body {
 
     <!-- Options -->
     <div class="card">
-      <div class="card-label">OPTIONS</div>
+      <div class="card-label" id="lbl-options">OPTIONS</div>
       <label class="opt-row">
         <input type="checkbox" id="opt-kill" checked>
-        <div><div class="opt-title">Kill background apps</div><div class="opt-sub">Discord, browsers, Spotify, OneDrive…</div></div>
+        <div><div class="opt-title" id="lbl-opt-kill">Kill background apps</div><div class="opt-sub" id="lbl-opt-kill-sub">Discord, browsers, Spotify, OneDrive…</div></div>
       </label>
       <label class="opt-row">
         <input type="checkbox" id="opt-affinity" checked>
-        <div><div class="opt-title">CPU affinity optimisation</div><div class="opt-sub">Pins game to performance cores</div></div>
+        <div><div class="opt-title" id="lbl-opt-affinity">CPU affinity optimisation</div><div class="opt-sub" id="lbl-opt-affinity-sub">Pins game to performance cores</div></div>
       </label>
       <label class="opt-row">
         <input type="checkbox" id="opt-mmcss" checked>
-        <div><div class="opt-title">MMCSS GPU priority boost</div><div class="opt-sub">Raises GPU scheduling priority to High</div></div>
+        <div><div class="opt-title" id="lbl-opt-mmcss">MMCSS GPU priority boost</div><div class="opt-sub" id="lbl-opt-mmcss-sub">Raises GPU scheduling priority to High</div></div>
       </label>
     </div>
 
     <!-- Live Monitor -->
     <div class="card">
       <div class="monitor-header">
-        <div class="card-label" style="margin-bottom:0">LIVE MONITOR</div>
+        <div class="card-label" id="lbl-live-monitor" style="margin-bottom:0">LIVE MONITOR</div>
         <button class="monitor-toggle" id="monitor-toggle-btn" onclick="toggleMonitor()" title="Toggle live monitor">
           <i class="fa fa-chevron-down" id="monitor-chevron"></i>
         </button>
@@ -359,10 +359,10 @@ html, body {
   <!-- Action buttons -->
   <div style="display:flex;gap:8px">
     <button class="btn btn-pink" id="start-btn" onclick="doPulseStart()" style="flex:1;justify-content:center;font-size:13px" disabled>
-      <i class="fa fa-satellite-dish"></i> Activate Pulse
+      <i class="fa fa-satellite-dish"></i> <span id="lbl-activate-pulse">Activate Pulse</span>
     </button>
     <button class="btn btn-stop" id="stop-btn" onclick="doPulseStop()" disabled>
-      <i class="fa fa-stop"></i> Stop
+      <i class="fa fa-stop"></i> <span id="lbl-stop">Stop</span>
     </button>
     <button class="btn btn-ghost" onclick="doPulseDetect()" title="Auto-detect running game" style="padding:10px 14px">
       <i class="fa fa-magnifying-glass"></i>
@@ -372,25 +372,25 @@ html, body {
   <!-- Process table -->
   <div class="card" style="padding:0;overflow:hidden;flex:1">
     <div style="display:flex;align-items:center;gap:8px;padding:10px 14px;border-bottom:1px solid var(--border)">
-      <span style="font-size:9px;font-weight:700;color:#444;letter-spacing:1.2px;flex:1">RUNNING PROCESSES</span>
+      <span id="lbl-running-processes" style="font-size:9px;font-weight:700;color:#444;letter-spacing:1.2px;flex:1">RUNNING PROCESSES</span>
       <input id="proc-filter" type="text" placeholder="Filter…" oninput="filterProcs(this.value)"
         style="background:#0a0a0a;border:1px solid var(--border);border-radius:5px;padding:3px 9px;color:var(--white);font-size:10px;font-family:inherit;outline:none;width:120px">
       <button class="btn btn-ghost" onclick="loadProcs(this)" style="padding:4px 10px;font-size:10px;gap:5px">
-        <i class="fa fa-arrows-rotate"></i> Refresh
+        <i class="fa fa-arrows-rotate"></i> <span id="lbl-refresh">Refresh</span>
       </button>
       <span id="proc-count" style="font-size:9px;color:#333"></span>
     </div>
     <div style="max-height:280px;overflow-y:auto">
       <table class="proc-table" id="proc-table">
         <thead><tr>
-          <th onclick="sortProcs('name')">Process</th>
-          <th onclick="sortProcs('cpu')" style="width:72px">CPU %</th>
-          <th onclick="sortProcs('ram')" style="width:84px">RAM (MB)</th>
-          <th style="width:46px">PID</th>
+          <th onclick="sortProcs('name')" id="lbl-col-process">Process</th>
+          <th onclick="sortProcs('cpu')" style="width:72px" id="lbl-col-cpu">CPU %</th>
+          <th onclick="sortProcs('ram')" style="width:84px" id="lbl-col-ram">RAM (MB)</th>
+          <th style="width:46px" id="lbl-col-pid">PID</th>
           <th style="width:38px"></th>
         </tr></thead>
         <tbody id="proc-tbody">
-          <tr><td colspan="5" style="text-align:center;color:#333;padding:20px">Loading…</td></tr>
+          <tr><td colspan="5" style="text-align:center;color:#333;padding:20px" id="lbl-loading">Loading…</td></tr>
         </tbody>
       </table>
     </div>
@@ -401,6 +401,80 @@ html, body {
 <div id="toast"></div>
 
 <script>
+// ── i18n ──
+const LANG_PULSE = {
+  en: {
+    gamePresets: 'GAME PRESETS',
+    options: 'OPTIONS',
+    liveMonitor: 'LIVE MONITOR',
+    optKill: 'Kill background apps',
+    optKillSub: 'Discord, browsers, Spotify, OneDrive…',
+    optAffinity: 'CPU affinity optimisation',
+    optAffinitySub: 'Pins game to performance cores',
+    optMmcss: 'MMCSS GPU priority boost',
+    optMmcssSub: 'Raises GPU scheduling priority to High',
+    activatePulse: 'Activate Pulse',
+    activating: 'Activating…',
+    pulseActive: 'Pulse Active',
+    stop: 'Stop',
+    runningProcesses: 'RUNNING PROCESSES',
+    filter: 'Filter…',
+    refresh: 'Refresh',
+    colProcess: 'Process',
+    colCpu: 'CPU %',
+    colRam: 'RAM (MB)',
+    colPid: 'PID',
+    loading: 'Loading…',
+    scanning: 'Scanning…',
+    detected: 'Detected:',
+    pulseLive: '● LIVE',
+    pulseIdle: '● IDLE',
+    pulseStartFail: 'Failed to start Pulse',
+    pulseStopped: 'Pulse stopped',
+    stopConfirm: 'Pulse is still active. Stop it and close?',
+    killConfirm: 'Kill {name} (PID {pid})?',
+    killed: 'Killed',
+    failed: 'Failed',
+  },
+  fi: {
+    gamePresets: 'PELIESIASETUKSET',
+    options: 'ASETUKSET',
+    liveMonitor: 'REAALIAIKAINEN SEURANTA',
+    optKill: 'Sulje taustasovellukset',
+    optKillSub: 'Discord, selaimet, Spotify, OneDrive…',
+    optAffinity: 'CPU-ydinoptimointi',
+    optAffinitySub: 'Kiinnittää pelin suorituskykyytimille',
+    optMmcss: 'MMCSS GPU -prioriteettitehostus',
+    optMmcssSub: 'Nostaa GPU-ajastuksen prioriteetin korkeaksi',
+    activatePulse: 'Käynnistä Pulse',
+    activating: 'Käynnistetään…',
+    pulseActive: 'Pulse aktiivinen',
+    stop: 'Pysäytä',
+    runningProcesses: 'KÄYNNISSÄ OLEVAT PROSESSIT',
+    filter: 'Suodata…',
+    refresh: 'Päivitä',
+    colProcess: 'Prosessi',
+    colCpu: 'CPU %',
+    colRam: 'RAM (Mt)',
+    colPid: 'PID',
+    loading: 'Ladataan…',
+    scanning: 'Skannataan…',
+    detected: 'Havaittu:',
+    pulseLive: '● LIVE',
+    pulseIdle: '● IDLE',
+    pulseStartFail: 'Pulsen käynnistys epäonnistui',
+    pulseStopped: 'Pulse pysäytetty',
+    stopConfirm: 'Pulse on vielä aktiivinen. Pysäytetäänkö ja suljetaanko?',
+    killConfirm: 'Lopetetaanko {name} (PID {pid})?',
+    killed: 'Lopetettu',
+    failed: 'Epäonnistui',
+  }
+}
+function getLang() {
+  try { return JSON.parse(localStorage.getItem('jylli-settings') || '{}').language || 'en' } catch { return 'en' }
+}
+function tP(key) { const l = getLang(); return (LANG_PULSE[l] || LANG_PULSE.en)[key] || LANG_PULSE.en[key] || key }
+
 // ── State ──
 const PRESET_ICONS = {
   fortnite:'fa-crosshairs', valorant:'fa-crosshairs', csgo:'fa-crosshairs',
@@ -417,8 +491,34 @@ let monitorOpen = false
 const SPARK_LEN = 40
 const _sparkCpu = [], _sparkGpu = []
 
+// ── i18n apply ──
+function applyTranslations() {
+  const t = (id, key) => { const el = document.getElementById(id); if (el) el.textContent = tP(key) }
+  t('lbl-game-presets', 'gamePresets')
+  t('lbl-options', 'options')
+  t('lbl-live-monitor', 'liveMonitor')
+  t('lbl-opt-kill', 'optKill')
+  t('lbl-opt-kill-sub', 'optKillSub')
+  t('lbl-opt-affinity', 'optAffinity')
+  t('lbl-opt-affinity-sub', 'optAffinitySub')
+  t('lbl-opt-mmcss', 'optMmcss')
+  t('lbl-opt-mmcss-sub', 'optMmcssSub')
+  t('lbl-activate-pulse', 'activatePulse')
+  t('lbl-stop', 'stop')
+  t('lbl-running-processes', 'runningProcesses')
+  t('lbl-refresh', 'refresh')
+  t('lbl-col-process', 'colProcess')
+  t('lbl-col-cpu', 'colCpu')
+  t('lbl-col-ram', 'colRam')
+  t('lbl-col-pid', 'colPid')
+  t('lbl-loading', 'loading')
+  const fi = document.getElementById('proc-filter')
+  if (fi) fi.placeholder = tP('filter')
+}
+
 // ── Init ──
 async function init() {
+  applyTranslations()
   const presets = await api.pulseGetPresets()
   const grid = document.getElementById('preset-grid')
   grid.innerHTML = presets.map(p => `
@@ -447,7 +547,7 @@ async function doPulseStart() {
   const startBtn = document.getElementById('start-btn')
   const stopBtn = document.getElementById('stop-btn')
   startBtn.disabled = true
-  startBtn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Activating…'
+  startBtn.innerHTML = `<i class="fa fa-spinner fa-spin"></i> ${tP('activating')}`
   const r = await api.pulseStart({
     presetId: selectedPreset,
     killBg: document.getElementById('opt-kill')?.checked,
@@ -456,14 +556,14 @@ async function doPulseStart() {
   })
   if (r.ok) {
     pulseActive = true
-    startBtn.innerHTML = '<i class="fa fa-check"></i> Pulse Active'
+    startBtn.innerHTML = `<i class="fa fa-check"></i> ${tP('pulseActive')}`
     stopBtn.disabled = false
     setBadge(true)
-    showToast('Pulse Active', 'ok')
+    showToast(tP('pulseActive'), 'ok')
   } else {
     startBtn.disabled = false
-    startBtn.innerHTML = '<i class="fa fa-satellite-dish"></i> Activate Pulse'
-    showToast('Failed to start Pulse', 'err')
+    startBtn.innerHTML = `<i class="fa fa-satellite-dish"></i> ${tP('activatePulse')}`
+    showToast(tP('pulseStartFail'), 'err')
   }
 }
 
@@ -472,18 +572,18 @@ async function doPulseStop() {
   pulseActive = false
   const startBtn = document.getElementById('start-btn')
   const stopBtn = document.getElementById('stop-btn')
-  if (startBtn) { startBtn.disabled = false; startBtn.innerHTML = '<i class="fa fa-satellite-dish"></i> Activate Pulse' }
+  if (startBtn) { startBtn.disabled = false; startBtn.innerHTML = `<i class="fa fa-satellite-dish"></i> ${tP('activatePulse')}` }
   if (stopBtn) stopBtn.disabled = true
   setBadge(false)
-  showToast('Pulse stopped', 'info')
+  showToast(tP('pulseStopped'), 'info')
 }
 
 async function doPulseDetect() {
   const el = document.getElementById('detect-result')
-  if (el) el.textContent = 'Scanning…'
+  if (el) el.textContent = tP('scanning')
   const r = await api.pulseDetectGame()
   if (r.found) {
-    if (el) el.innerHTML = `<span style="color:var(--success)"><i class="fa fa-check"></i> Detected: ${r.name}</span>`
+    if (el) el.innerHTML = `<span style="color:var(--success)"><i class="fa fa-check"></i> ${tP('detected')} ${r.name}</span>`
     selectPreset(r.id)
   } else {
     if (el) el.textContent = ''
@@ -494,10 +594,10 @@ function setBadge(live) {
   const b = document.getElementById('status-badge')
   if (!b) return
   if (live) {
-    b.textContent = '● LIVE'
+    b.textContent = tP('pulseLive')
     b.classList.add('live')
   } else {
-    b.textContent = '● IDLE'
+    b.textContent = tP('pulseIdle')
     b.classList.remove('live')
   }
 }
@@ -596,7 +696,7 @@ async function loadProcs(btn) {
   if (btn) { btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i>'; btn.disabled = true }
   const procs = await api.getProcesses()
   procData = Array.isArray(procs) ? procs : []
-  if (btn) { btn.innerHTML = '<i class="fa fa-arrows-rotate"></i> Refresh'; btn.disabled = false }
+  if (btn) { btn.innerHTML = `<i class="fa fa-arrows-rotate"></i> ${tP('refresh')}`; btn.disabled = false }
   renderProcs(procData)
   const el = document.getElementById('proc-count')
   if (el) el.textContent = `${procData.length}`
@@ -644,9 +744,9 @@ function renderProcs(data) {
 }
 
 async function doKill(pid, name) {
-  if (!confirm(`Kill ${name} (PID ${pid})?`)) return
+  if (!confirm(tP('killConfirm').replace('{name}', name).replace('{pid}', pid))) return
   const r = await api.killProcess(pid)
-  showToast(r.ok ? `Killed ${name}` : `Failed`, r.ok ? 'ok' : 'err')
+  showToast(r.ok ? `${tP('killed')} ${name}` : tP('failed'), r.ok ? 'ok' : 'err')
   loadProcs()
 }
 
@@ -665,7 +765,7 @@ function showToast(msg, type) {
 // ── Window controls ──
 function closePulseWindow() {
   if (pulseActive) {
-    if (!confirm('Pulse is still active. Stop it and close?')) return
+    if (!confirm(tP('stopConfirm'))) return
     api.pulseStop()
   }
   api.closePulseWindow()

@@ -117,38 +117,86 @@ html, body { background: var(--bg); color: var(--white); font-family: 'Segoe UI'
     <div>
       <div id="path-row">
         <input id="manual-path" type="text" placeholder="Optional: paste path to settings folder (…\app1874880_user...\settings)" spellcheck="false">
-        <button class="btn btn-ghost" id="btn-load" onclick="loadSettings()"><i class="fa fa-rotate"></i> Load</button>
+        <button class="btn btn-ghost" id="btn-load" onclick="loadSettings()"><i class="fa fa-rotate"></i> <span id="lbl-load-btn">Load</span></button>
       </div>
       <div id="path-status"></div>
     </div>
 
     <div id="preset-bar">
-      <span class="preset-label"><i class="fa fa-wand-magic-sparkles"></i> Presets</span>
+      <span class="preset-label"><i class="fa fa-wand-magic-sparkles"></i> <span id="lbl-presets">Presets</span></span>
       <div class="preset-divider"></div>
-      <button class="preset-btn preset-quality"     onclick="applyPreset('quality')">    <i class="fa fa-gem"></i>  Quality</button>
-      <button class="preset-btn preset-performance" onclick="applyPreset('performance')"><i class="fa fa-bolt"></i> Performance</button>
+      <button class="preset-btn preset-quality"     onclick="applyPreset('quality')">    <i class="fa fa-gem"></i>  <span id="lbl-preset-quality">Quality</span></button>
+      <button class="preset-btn preset-performance" onclick="applyPreset('performance')"><i class="fa fa-bolt"></i> <span id="lbl-preset-performance">Performance</span></button>
       <div class="preset-divider"></div>
-      <button class="preset-btn preset-recommended" onclick="applyPreset('recommended')"><i class="fa fa-star"></i> Recommended</button>
+      <button class="preset-btn preset-recommended" onclick="applyPreset('recommended')"><i class="fa fa-star"></i> <span id="lbl-preset-recommended">Recommended</span></button>
     </div>
 
     <div id="settings-body">
       <div id="empty-state">
         <i class="fa fa-helmet-safety"></i>
-        <p>Load your Arma Reforger graphics settings to get started.</p>
-        <small>File: Documents\My Games\ArmaReforger\profile\.save\app…_user…\settings\ReforgerEngineSettings.conf<br>
+        <p id="lbl-empty-title">Load your Arma Reforger graphics settings to get started.</p>
+        <small id="lbl-empty-small">File: Documents\My Games\ArmaReforger\profile\.save\app…_user…\settings\ReforgerEngineSettings.conf<br>
         If not found, launch the game, open Settings → Video, change any setting and quit.</small>
       </div>
     </div>
   </div>
 
   <div id="footer">
-    <div id="footer-info"><span id="path-display">No file loaded</span></div>
-    <span id="changes-count">0 changes</span>
-    <button class="btn btn-primary" id="btn-save" onclick="saveSettings()" disabled><i class="fa fa-floppy-disk"></i> Save Settings</button>
+    <div id="footer-info"><span id="path-display"><!-- set by JS --></span></div>
+    <span id="changes-count"></span>
+    <button class="btn btn-primary" id="btn-save" onclick="saveSettings()" disabled><i class="fa fa-floppy-disk"></i> <span id="lbl-save-btn">Save Settings</span></button>
   </div>
 </div>
 
 <script>
+// ─── i18n ─────────────────────────────────────────────────────────────────────
+const LANG_ARMA = {
+  en: {
+    loadBtn: 'Load', loadingSpinner: 'Loading…',
+    presetsLabel: 'Presets',
+    presetQuality: 'Quality', presetPerformance: 'Performance', presetRecommended: 'Recommended',
+    presetApplied: 'Applied',
+    emptyTitle: 'Load your Arma Reforger graphics settings to get started.',
+    emptySmall: 'File: Documents\\My Games\\ArmaReforger\\profile\\.save\\app…_user…\\settings\\ReforgerEngineSettings.conf\nIf not found, launch the game, open Settings → Video, change any setting and quit.',
+    pathPlaceholder: 'Optional: paste path to settings folder (…\\app1874880_user...\\settings)',
+    noFile: 'No file loaded',
+    saveBtn: 'Save Settings', savingBtn: 'Saving…', savedBtn: 'Saved!', saveError: 'Error',
+    savedMsg: 'Settings saved.',
+    savedNote: 'Make sure Arma Reforger is fully closed before saving. Relaunch the game for changes to take effect.',
+    changes: '{n} change', changesPlural: '{n} changes',
+    tierHigh: 'High-End', tierMid: 'Mid-Range', tierBudget: 'Budget',
+    catDisplay: 'Display', catDisplayDesc: 'Window mode, resolution, AA',
+    catWorld: 'World Quality', catWorldDesc: 'Environment, objects, grass',
+    catTextures: 'Textures', catTexturesDesc: 'Texture detail & filtering',
+    catPost: 'Post-Process', catPostDesc: 'HBAO, SSDO, SSR, PPAA',
+    impLow: 'Low', impMed: 'Med', impHigh: 'High', impVeryHigh: 'V.High',
+  },
+  fi: {
+    loadBtn: 'Lataa', loadingSpinner: 'Ladataan…',
+    presetsLabel: 'Esiasetukset',
+    presetQuality: 'Laatu', presetPerformance: 'Suorituskyky', presetRecommended: 'Suositeltu',
+    presetApplied: 'Käytetty',
+    emptyTitle: 'Lataa Arma Reforger -grafiikka-asetuksesi aloittaaksesi.',
+    emptySmall: 'Tiedosto: Documents\\My Games\\ArmaReforger\\profile\\.save\\app…_user…\\settings\\ReforgerEngineSettings.conf\nJos tiedostoa ei löydy, käynnistä peli, avaa Asetukset → Video, muuta jotain asetusta ja sulje peli.',
+    pathPlaceholder: 'Valinnainen: liitä polku asetuskansioon (…\\app1874880_user...\\settings)',
+    noFile: 'Ei tiedostoa ladattu',
+    saveBtn: 'Tallenna asetukset', savingBtn: 'Tallennetaan…', savedBtn: 'Tallennettu!', saveError: 'Virhe',
+    savedMsg: 'Asetukset tallennettu.',
+    savedNote: 'Varmista, että Arma Reforger on täysin suljettu ennen tallentamista. Käynnistä peli uudelleen muutosten voimaantuloa varten.',
+    changes: '{n} muutos', changesPlural: '{n} muutosta',
+    tierHigh: 'Huipputaso', tierMid: 'Keskitaso', tierBudget: 'Budjetti',
+    catDisplay: 'Näyttö', catDisplayDesc: 'Ikkuna, resoluutio, AA',
+    catWorld: 'Maailman laatu', catWorldDesc: 'Ympäristö, objektit, ruoho',
+    catTextures: 'Tekstuurit', catTexturesDesc: 'Tekstuurien taso & suodatus',
+    catPost: 'Jälkikäsittely', catPostDesc: 'HBAO, SSDO, SSR, PPAA',
+    impLow: 'Matala', impMed: 'Keski', impHigh: 'Korkea', impVeryHigh: 'Eritt. korkea',
+  }
+}
+function getLangA() {
+  try { return JSON.parse(localStorage.getItem('jylli-settings') || '{}').language || 'en' } catch { return 'en' }
+}
+function tA(key) { const l = getLangA(); return (LANG_ARMA[l] || LANG_ARMA.en)[key] || LANG_ARMA.en[key] || key }
+
 // ─── Setting definitions ──────────────────────────────────────────────────────
 // Each entry maps to a real key in ReforgerEngineSettings.conf.
 // rec_low/mid/high = recommended value for that PC tier.
@@ -256,18 +304,18 @@ const DEFS = [
 ]
 
 const CATS = [
-  { name:'Display', color:'#FF2E63', icon:'<i class="fa fa-display"></i>', desc:'Window mode, resolution, AA',
+  { get name() { return tA('catDisplay') }, color:'#FF2E63', icon:'<i class="fa fa-display"></i>', get desc() { return tA('catDisplayDesc') },
     keys:['windowMode','vsync','fsaa','resolutionScale','fsrEnabled'] },
-  { name:'World Quality', color:'#5c8c3e', icon:'<i class="fa fa-mountain-sun"></i>', desc:'Environment, objects, grass',
+  { get name() { return tA('catWorld') }, color:'#5c8c3e', icon:'<i class="fa fa-mountain-sun"></i>', get desc() { return tA('catWorldDesc') },
     keys:['environmentQuality','objectDrawDistance','grassDistance','grassLod'] },
-  { name:'Textures', color:'#3498DB', icon:'<i class="fa fa-image"></i>', desc:'Texture detail & filtering',
+  { get name() { return tA('catTextures') }, color:'#3498DB', icon:'<i class="fa fa-image"></i>', get desc() { return tA('catTexturesDesc') },
     keys:['textureDetail','textureFilter','geometricDetail'] },
-  { name:'Post-Process', color:'#9B59B6', icon:'<i class="fa fa-wand-sparkles"></i>', desc:'HBAO, SSDO, SSR, PPAA',
+  { get name() { return tA('catPost') }, color:'#9B59B6', icon:'<i class="fa fa-wand-sparkles"></i>', get desc() { return tA('catPostDesc') },
     keys:['hbao','ssdo','ssr','ppaa'] },
 ]
 
 const IMPACT_CLASS = { low:'imp-low', medium:'imp-medium', high:'imp-high', 'very high':'imp-very-high' }
-const IMPACT_LABEL = { low:'Low', medium:'Med', high:'High', 'very high':'V.High' }
+const IMPACT_LABEL = { get low() { return tA('impLow') }, get medium() { return tA('impMed') }, get high() { return tA('impHigh') }, get 'very high'() { return tA('impVeryHigh') } }
 
 const PRESETS = {
   quality: {
@@ -317,12 +365,12 @@ async function loadSettings() {
   const btn = document.getElementById('btn-load')
   const body = document.getElementById('settings-body')
   btn.disabled = true
-  btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Loading…'
+  btn.innerHTML = `<i class="fa fa-spinner fa-spin"></i> ${tA('loadingSpinner')}`
   body.innerHTML = `<div id="empty-state"><i class="fa fa-spinner fa-spin" style="font-size:28px;color:#333"></i></div>`
 
   const r = await window.api.armaReadSettings(getManualPath())
   btn.disabled = false
-  btn.innerHTML = '<i class="fa fa-rotate"></i> Load'
+  btn.innerHTML = `<i class="fa fa-rotate"></i> ${tA('loadBtn')}`
 
   const pathStatus = document.getElementById('path-status')
   if (!r.ok) {
@@ -333,7 +381,7 @@ async function loadSettings() {
 
   currentVals = r.vals
   pathStatus.innerHTML = `<i class="fa fa-check" style="color:#2ECC71"></i> ${r.path}`
-  document.getElementById('path-display').textContent = r.path
+  const pdEl = document.getElementById('path-display'); if (pdEl) pdEl.textContent = r.path
   document.getElementById('btn-save').disabled = false
   document.getElementById('preset-bar').style.display = 'flex'
 
@@ -413,7 +461,7 @@ function trackChanges() {
   }
   const badge = document.getElementById('changes-count')
   badge.style.display = count > 0 ? 'inline-block' : 'none'
-  badge.textContent = `${count} change${count !== 1 ? 's' : ''}`
+  badge.textContent = (count !== 1 ? tA('changesPlural') : tA('changes')).replace('{n}', count)
 }
 
 function applyPreset(id) {
@@ -427,7 +475,7 @@ function applyPreset(id) {
   const btn = document.querySelector(`.preset-${id}`)
   if (btn) {
     const orig = btn.innerHTML
-    btn.innerHTML = '<i class="fa fa-check"></i> Applied'
+    btn.innerHTML = `<i class="fa fa-check"></i> ${tA('presetApplied')}`
     btn.style.opacity = '0.7'
     setTimeout(() => { btn.innerHTML = orig; btn.style.opacity = '' }, 1800)
   }
@@ -442,14 +490,14 @@ async function saveSettings() {
     if (el) changes[def.key] = el.value
   }
   btn.disabled = true
-  btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Saving…'
+  btn.innerHTML = `<i class="fa fa-spinner fa-spin"></i> ${tA('savingBtn')}`
 
   const r = await window.api.armaWriteSettings(changes, getManualPath())
   btn.disabled = false
 
   if (r.ok) {
-    btn.innerHTML = '<i class="fa fa-check"></i> Saved!'
-    document.getElementById('path-status').innerHTML = `<i class="fa fa-check" style="color:#2ECC71"></i> Saved → ${r.path}`
+    btn.innerHTML = `<i class="fa fa-check"></i> ${tA('savedBtn')}`
+    document.getElementById('path-status').innerHTML = `<i class="fa fa-check" style="color:#2ECC71"></i> ${r.path}`
     showSaveBanner()
     for (const def of DEFS) {
       const el = document.getElementById(`sval-${def.key}`)
@@ -457,11 +505,11 @@ async function saveSettings() {
       document.getElementById(`srow-${def.key}`)?.classList.remove('is-changed')
     }
     trackChanges()
-    setTimeout(() => { btn.innerHTML = '<i class="fa fa-floppy-disk"></i> Save Settings'; btn.disabled = false }, 2500)
+    setTimeout(() => { btn.innerHTML = `<i class="fa fa-floppy-disk"></i> ${tA('saveBtn')}`; btn.disabled = false }, 2500)
   } else {
-    btn.innerHTML = '<i class="fa fa-xmark"></i> Error'
+    btn.innerHTML = `<i class="fa fa-xmark"></i> ${tA('saveError')}`
     document.getElementById('path-status').innerHTML = `<i class="fa fa-triangle-exclamation" style="color:#E74C3C"></i> ${r.reason || 'Save failed'}`
-    setTimeout(() => { btn.innerHTML = '<i class="fa fa-floppy-disk"></i> Save Settings'; btn.disabled = false }, 2500)
+    setTimeout(() => { btn.innerHTML = `<i class="fa fa-floppy-disk"></i> ${tA('saveBtn')}`; btn.disabled = false }, 2500)
   }
 }
 
@@ -470,17 +518,32 @@ function showSaveBanner() {
   const b = document.createElement('div')
   b.id = 'save-confirm-banner'
   b.style.cssText = 'background:rgba(46,204,113,0.08);border:1px solid rgba(46,204,113,0.25);border-radius:8px;padding:10px 14px;display:flex;align-items:center;gap:10px;font-size:11px'
-  b.innerHTML = `<i class="fa fa-circle-check" style="color:#2ECC71;font-size:14px;flex-shrink:0"></i><div style="flex:1;line-height:1.5"><strong style="color:#2ECC71">Settings saved.</strong><br><span style="color:#8a8a9a">Make sure Arma Reforger is fully closed before saving. Relaunch the game for changes to take effect.</span></div><button onclick="this.closest('#save-confirm-banner').remove()" style="background:none;border:none;color:#555;cursor:pointer;font-size:13px">✕</button>`
+  b.innerHTML = `<i class="fa fa-circle-check" style="color:#2ECC71;font-size:14px;flex-shrink:0"></i><div style="flex:1;line-height:1.5"><strong style="color:#2ECC71">${tA('savedMsg')}</strong><br><span style="color:#8a8a9a">${tA('savedNote')}</span></div><button onclick="this.closest('#save-confirm-banner').remove()" style="background:none;border:none;color:#555;cursor:pointer;font-size:13px">✕</button>`
   document.getElementById('content').insertBefore(b, document.getElementById('settings-body'))
 }
 
+function applyTranslationsA() {
+  const t = (id, key) => { const el = document.getElementById(id); if (el) el.textContent = tA(key) }
+  t('lbl-load-btn', 'loadBtn')
+  t('lbl-presets', 'presetsLabel')
+  t('lbl-preset-quality', 'presetQuality')
+  t('lbl-preset-performance', 'presetPerformance')
+  t('lbl-preset-recommended', 'presetRecommended')
+  t('lbl-empty-title', 'emptyTitle')
+  t('lbl-empty-small', 'emptySmall')
+  t('lbl-save-btn', 'saveBtn')
+  const pd = document.getElementById('path-display'); if (pd && !pd.textContent) pd.textContent = tA('noFile')
+  const mp = document.getElementById('manual-path'); if (mp) mp.placeholder = tA('pathPlaceholder')
+}
+
 window.addEventListener('DOMContentLoaded', async () => {
+  applyTranslationsA()
   try {
     sysInfo = await window.api.getSystemInfo()
     if (sysInfo) {
       const tier = getSystemTier()
       const tierColor = tier === 'high' ? '#2ECC71' : tier === 'mid' ? '#F39C12' : '#E74C3C'
-      const tierLabel = tier === 'high' ? 'High-End' : tier === 'mid' ? 'Mid-Range' : 'Budget'
+      const tierLabel = tier === 'high' ? tA('tierHigh') : tier === 'mid' ? tA('tierMid') : tA('tierBudget')
       const vramStr = sysInfo.vramMB >= 1024 ? `${Math.round(sysInfo.vramMB/1024)}GB VRAM` : `${sysInfo.vramMB || '?'}MB VRAM`
       document.getElementById('sysinfo-bar').style.display = 'flex'
       document.getElementById('sysinfo-text').innerHTML =

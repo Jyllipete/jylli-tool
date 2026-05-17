@@ -5217,8 +5217,9 @@ ipcMain.handle('auth-start', async () => {
     const userId = analytics.userId || 'unknown'
     const result = await botGet(`/auth/start?userId=${encodeURIComponent(userId)}&secret=${encodeURIComponent(BOT_SECRET)}`)
     if (!result.state || !result.url) return { ok: false }
-    require('electron').shell.openExternal(result.url)
-    return { ok: true, state: result.state }
+    let browserFailed = false
+    try { await require('electron').shell.openExternal(result.url) } catch { browserFailed = true }
+    return { ok: true, state: result.state, url: result.url, browserFailed }
   } catch (e) { return { ok: false, error: e.message } }
 })
 
@@ -5304,6 +5305,27 @@ ipcMain.handle('clean-power-plans', async () => {
 
 // What's New content
 const WHATS_NEW = [
+  { version: '1.4.5', date: 'May 2026', items: [
+    'Auto-Optimize wizard fully translated — all gate screens, step labels, questions, review screen, and run log now respond to your language setting (EN/FI)',
+    'Smart select toggle — the "Uncheck All" button now shows how many tweaks are selected (e.g. "9 / 10 selected") and toggles to "Check All" when everything is unchecked',
+    'Estimated time on review screen — a chip shows the approximate time the run will take based on tweak count',
+    'Auto-open skipped tweaks — if 5 or more tweaks are already applied, the skipped-tweaks details section opens automatically so you can see what was skipped',
+    'Elapsed timer during run — Step 4 header shows a live elapsed time counter while tweaks are being applied',
+    'View History after completion — a "View History" button appears when the run finishes, opening the changelog page',
+    'Close-guard during execution — the X button is disabled while tweaks are running; clicking it mid-run shows a confirm dialog instead of silently aborting',
+    'Dashboard status auto-clears — the progress bar and status text in the dashboard reset 3 seconds after Auto-Optimize completes',
+    'Brave browser auth fix — if your default browser fails to open when clicking "Link Discord", a "Browser didn\'t open? Click here" fallback link now appears immediately; for all users a soft fallback link appears after 4 seconds',
+  ], items_fi: [
+    'Automaattioptimoinnin velho täysin käännetty — kaikki porttinäytöt, vaiheiden otsikot, kysymykset, tarkistusnäyttö ja ajokirjaus vastaavat nyt kieliasetustasi (EN/FI)',
+    'Älykäs valintapainike — "Poista kaikki valinnat" -painike näyttää nyt valittujen säätöjen määrän (esim. "9 / 10 valittu") ja vaihtuu "Valitse kaikki" -tilaan kun kaikki on poistettu',
+    'Arvioitu aika tarkistusnäytöllä — siru näyttää arvioidun suoritusajan säätöjen määrän perusteella',
+    'Ohitetut säädöt avautuvat automaattisesti — jos 5 tai enemmän säätöä on jo käytössä, ohitettujen säätöjen osio avautuu automaattisesti',
+    'Kulunut aika ajon aikana — vaiheen 4 otsikko näyttää reaaliaikaisen aikalaskurin säätöjen soveltamisen aikana',
+    'Näytä historia suorituksen jälkeen — "Näytä historia" -painike ilmestyy ajon päätyttyä ja avaa muutosloki-sivun',
+    'Sulkemissuoja ajon aikana — X-painike on poistettu käytöstä säätöjen soveltamisen aikana; kesken ajon painaminen näyttää vahvistusdialogit hiljentämisen sijaan',
+    'Kojelaudan tila tyhjenee automaattisesti — edistymispalkki ja tilateksti kojelaudalla nollautuvat 3 sekuntia automaattioptimoinnin jälkeen',
+    'Brave-selaimen kirjautumiskorjaus — jos oletusselaimesi ei avaudu "Linkitä Discord" -painikkeesta, "Selain ei auennut? Klikkaa tästä" -varaelinkki ilmestyy välittömästi; kaikille käyttäjille pehmeä varaelinkki ilmestyy 4 sekunnin jälkeen',
+  ]},
   { version: '1.4.4', date: 'May 2026', items: [
     'Fullscreen flicker fix — the FiveM Hang Fix tweak now removes HungAppTimeout from registry entirely, eliminating the desktop peek/flash on mouse click in fullscreen FiveM',
     'Fixes tab redesigned — fixes are now grouped into Gaming, Hardware & Connectivity, and System & Windows categories',
@@ -5706,6 +5728,105 @@ Set-ItemProperty -Path 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Exp
       s('Explorer tweaks restored.', 'ok')
     }
   },
+  // ── Epic Games ────────────────────────────────────────────────────────────
+  'epic-optimize': {
+    apply: async (s, ps) => {
+      const base = 'HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options'
+      await ps(`New-Item -Path "${base}\\EpicGamesLauncher.exe\\PerfOptions" -Force -EA SilentlyContinue | Out-Null
+Set-ItemProperty -Path "${base}\\EpicGamesLauncher.exe\\PerfOptions" -Name CpuPriorityClass -Value 1 -Force
+Set-ItemProperty -Path "${base}\\EpicGamesLauncher.exe\\PerfOptions" -Name IoPriority -Value 0 -Force`)
+      const cfgDir = path.join(process.env['LOCALAPPDATA'] || '', 'EpicGamesLauncher\\Saved\\Config\\Windows')
+      const cfgFile = path.join(cfgDir, 'GameUserSettings.ini')
+      if (fs.existsSync(cfgFile)) {
+        let ini = fs.readFileSync(cfgFile, 'utf8')
+        ini = ini.replace(/bRunAtStartup\s*=\s*.*/g, 'bRunAtStartup=False')
+        if (!ini.includes('bRunAtStartup')) ini += '\nbRunAtStartup=False\n'
+        fs.writeFileSync(cfgFile, ini)
+        s('Epic Games: startup disabled, low CPU/IO priority.', 'ok')
+      } else {
+        s('Epic Games: low CPU/IO priority applied.', 'ok')
+      }
+    },
+    restore: async (s, ps) => {
+      await ps(`Remove-ItemProperty -Path 'HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\EpicGamesLauncher.exe\\PerfOptions' -Name CpuPriorityClass,IoPriority -EA SilentlyContinue`)
+      s('Epic Games priority restored.', 'ok')
+    }
+  },
+  // ── EA App ────────────────────────────────────────────────────────────────
+  'ea-app-optimize': {
+    apply: async (s, ps) => {
+      const base = 'HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options'
+      await ps(`New-Item -Path "${base}\\EADesktop.exe\\PerfOptions" -Force -EA SilentlyContinue | Out-Null
+Set-ItemProperty -Path "${base}\\EADesktop.exe\\PerfOptions" -Name CpuPriorityClass -Value 1 -Force
+Set-ItemProperty -Path "${base}\\EADesktop.exe\\PerfOptions" -Name IoPriority -Value 0 -Force
+New-Item -Path "${base}\\EABackgroundService.exe\\PerfOptions" -Force -EA SilentlyContinue | Out-Null
+Set-ItemProperty -Path "${base}\\EABackgroundService.exe\\PerfOptions" -Name CpuPriorityClass -Value 1 -Force`)
+      s('EA App: desktop + background service set to IDLE priority.', 'ok')
+    },
+    restore: async (s, ps) => {
+      await ps(`Remove-ItemProperty -Path 'HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\EADesktop.exe\\PerfOptions' -Name CpuPriorityClass,IoPriority -EA SilentlyContinue
+Remove-ItemProperty -Path 'HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\EABackgroundService.exe\\PerfOptions' -Name CpuPriorityClass -EA SilentlyContinue`)
+      s('EA App priority restored.', 'ok')
+    }
+  },
+  // ── Riot Client ───────────────────────────────────────────────────────────
+  'riot-optimize': {
+    apply: async (s, ps) => {
+      const base = 'HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options'
+      await ps(`New-Item -Path "${base}\\RiotClientServices.exe\\PerfOptions" -Force -EA SilentlyContinue | Out-Null
+Set-ItemProperty -Path "${base}\\RiotClientServices.exe\\PerfOptions" -Name CpuPriorityClass -Value 1 -Force
+Set-ItemProperty -Path "${base}\\RiotClientServices.exe\\PerfOptions" -Name IoPriority -Value 0 -Force`)
+      s('Riot Client: set to IDLE CPU priority. Vanguard anti-cheat is unaffected.', 'ok')
+    },
+    restore: async (s, ps) => {
+      await ps(`Remove-ItemProperty -Path 'HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\RiotClientServices.exe\\PerfOptions' -Name CpuPriorityClass,IoPriority -EA SilentlyContinue`)
+      s('Riot Client priority restored.', 'ok')
+    }
+  },
+  // ── NVIDIA App / GeForce Experience ──────────────────────────────────────
+  'nvidia-app-optimize': {
+    apply: async (s, ps) => {
+      await ps(`Stop-Service -Name 'NvTelemetryContainer' -Force -EA SilentlyContinue
+Set-Service -Name 'NvTelemetryContainer' -StartupType Disabled -EA SilentlyContinue`)
+      s('NVIDIA telemetry service disabled.', 'ok')
+      const base = 'HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options'
+      await ps(`New-Item -Path "${base}\\NVIDIA GeForce Experience.exe\\PerfOptions" -Force -EA SilentlyContinue | Out-Null
+Set-ItemProperty -Path "${base}\\NVIDIA GeForce Experience.exe\\PerfOptions" -Name CpuPriorityClass -Value 1 -Force`)
+      s('GeForce Experience: set to IDLE CPU priority.', 'ok')
+    },
+    restore: async (s, ps) => {
+      await ps(`Set-Service -Name 'NvTelemetryContainer' -StartupType Automatic -EA SilentlyContinue
+Start-Service -Name 'NvTelemetryContainer' -EA SilentlyContinue`)
+      s('NVIDIA telemetry service restored.', 'ok')
+    }
+  },
+  // ── Playnite ──────────────────────────────────────────────────────────────
+  'playnite-optimize': {
+    apply: async (s, ps) => {
+      const base = 'HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options'
+      await ps(`New-Item -Path "${base}\\Playnite.DesktopApp.exe\\PerfOptions" -Force -EA SilentlyContinue | Out-Null
+Set-ItemProperty -Path "${base}\\Playnite.DesktopApp.exe\\PerfOptions" -Name CpuPriorityClass -Value 1 -Force
+Set-ItemProperty -Path "${base}\\Playnite.DesktopApp.exe\\PerfOptions" -Name IoPriority -Value 0 -Force`)
+      s('Playnite: set to IDLE CPU + IO priority. Won\'t compete with games.', 'ok')
+    },
+    restore: async (s, ps) => {
+      await ps(`Remove-ItemProperty -Path 'HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\Playnite.DesktopApp.exe\\PerfOptions' -Name CpuPriorityClass,IoPriority -EA SilentlyContinue`)
+      s('Playnite priority restored.', 'ok')
+    }
+  },
+  // ── VS Code ───────────────────────────────────────────────────────────────
+  'vscode-optimize': {
+    apply: async (s, ps) => {
+      const base = 'HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options'
+      await ps(`New-Item -Path "${base}\\Code.exe\\PerfOptions" -Force -EA SilentlyContinue | Out-Null
+Set-ItemProperty -Path "${base}\\Code.exe\\PerfOptions" -Name CpuPriorityClass -Value 1 -Force`)
+      s('VS Code: set to IDLE CPU priority when in background.', 'ok')
+    },
+    restore: async (s, ps) => {
+      await ps(`Remove-ItemProperty -Path 'HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\Code.exe\\PerfOptions' -Name CpuPriorityClass -EA SilentlyContinue`)
+      s('VS Code priority restored.', 'ok')
+    }
+  },
 }
 
 ipcMain.handle('run-app-optimizer', async (_, { id, action }) => {
@@ -5718,6 +5839,79 @@ ipcMain.handle('run-app-optimizer', async (_, { id, action }) => {
     send(`Error: ${e.message}`, 'err')
     return { ok: false, error: e.message }
   }
+})
+
+ipcMain.handle('scan-installed-apps', async () => {
+  const lad = process.env['LOCALAPPDATA'] || ''
+  const appd = process.env['APPDATA'] || ''
+  const pf = process.env['ProgramFiles'] || 'C:\\Program Files'
+  const pf86 = process.env['ProgramFiles(x86)'] || 'C:\\Program Files (x86)'
+  const pd = process.env['ProgramData'] || 'C:\\ProgramData'
+  const checks = {
+    'edge-optimize':       () => fs.existsSync(path.join(pf86, 'Microsoft\\Edge\\Application\\msedge.exe')) || fs.existsSync(path.join(pf, 'Microsoft\\Edge\\Application\\msedge.exe')),
+    'chrome-optimize':     () => fs.existsSync(path.join(pf, 'Google\\Chrome\\Application\\chrome.exe')) || fs.existsSync(path.join(pf86, 'Google\\Chrome\\Application\\chrome.exe')),
+    'brave-optimize':      () => fs.existsSync(path.join(pf, 'BraveSoftware\\Brave-Browser\\Application\\brave.exe')) || fs.existsSync(path.join(pf86, 'BraveSoftware\\Brave-Browser\\Application\\brave.exe')),
+    'opera-gx-optimize':   () => fs.existsSync(path.join(appd, 'Opera Software\\Opera GX Stable\\launcher.exe')),
+    'firefox-optimize':    () => fs.existsSync(path.join(pf, 'Mozilla Firefox\\firefox.exe')) || fs.existsSync(path.join(pf86, 'Mozilla Firefox\\firefox.exe')),
+    'discord-optimize':    () => { try { const d = path.join(lad, 'Discord'); return fs.existsSync(d) && fs.readdirSync(d).some(f => f.startsWith('app-')) } catch { return false } },
+    'discord-cpu-priority':() => { try { const d = path.join(lad, 'Discord'); return fs.existsSync(d) && fs.readdirSync(d).some(f => f.startsWith('app-')) } catch { return false } },
+    'spotify-optimize':    () => fs.existsSync(path.join(appd, 'Spotify\\Spotify.exe')),
+    'steam-optimize':      () => fs.existsSync(path.join(pf86, 'Steam\\steam.exe')) || fs.existsSync(path.join(pf, 'Steam\\steam.exe')),
+    'obs-optimize':        () => fs.existsSync(path.join(pf, 'obs-studio\\bin\\64bit\\obs64.exe')) || fs.existsSync(path.join(pf86, 'obs-studio\\bin\\64bit\\obs64.exe')),
+    'epic-optimize':       () => fs.existsSync(path.join(pd, 'Epic\\EpicGamesLauncher\\Portal\\Binaries\\Win64\\EpicGamesLauncher.exe')) || fs.existsSync(path.join(pf, 'Epic Games\\Launcher\\Portal\\Binaries\\Win64\\EpicGamesLauncher.exe')),
+    'ea-app-optimize':     () => fs.existsSync(path.join(pf, 'Electronic Arts\\EA Desktop\\EA Desktop.exe')),
+    'riot-optimize':       () => fs.existsSync(path.join(lad, 'Riot Games\\RiotClientServices.exe')),
+    'nvidia-app-optimize': () => fs.existsSync(path.join(pf, 'NVIDIA Corporation\\NVIDIA app\\CEF\\NVIDIA app.exe')) || fs.existsSync(path.join(pf, 'NVIDIA Corporation\\GeForce Experience\\NVIDIA GeForce Experience.exe')),
+    'playnite-optimize':   () => fs.existsSync(path.join(appd, 'Playnite\\Playnite.DesktopApp.exe')),
+    'vscode-optimize':     () => fs.existsSync(path.join(lad, 'Programs\\Microsoft VS Code\\Code.exe')),
+    'explorer-optimize':   () => true,
+  }
+  const installed = []
+  for (const [id, check] of Object.entries(checks)) {
+    try { if (check()) installed.push(id) } catch {}
+  }
+  return installed
+})
+
+ipcMain.handle('health-check-app-optimizer', async () => {
+  const appd = process.env['APPDATA'] || ''
+  const pf = process.env['ProgramFiles'] || 'C:\\Program Files'
+  const pf86 = process.env['ProgramFiles(x86)'] || 'C:\\Program Files (x86)'
+  const ifeoBase = 'HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options'
+
+  const readReg = (keyPath, name) => {
+    try {
+      const out = require('child_process').execSync(`reg query "${keyPath}" /v "${name}" 2>nul`, { encoding: 'utf8' })
+      const m = out.match(/REG_DWORD\s+(0x[0-9a-fA-F]+|\d+)/)
+      return m ? parseInt(m[1], 16) : null
+    } catch { return null }
+  }
+
+  const checks = {
+    'edge-optimize':       () => readReg('HKLM\\SOFTWARE\\Policies\\Microsoft\\Edge', 'HardwareAccelerationModeEnabled') === 0,
+    'chrome-optimize':     () => readReg('HKLM\\SOFTWARE\\Policies\\Google\\Chrome', 'HardwareAccelerationModeEnabled') === 0,
+    'brave-optimize':      () => readReg('HKLM\\SOFTWARE\\Policies\\BraveSoftware\\Brave', 'HardwareAccelerationModeEnabled') === 0,
+    'opera-gx-optimize':   () => readReg('HKLM\\SOFTWARE\\Policies\\OperaSoftware\\OperaGX', 'HardwareAccelerationModeEnabled') === 0,
+    'firefox-optimize':    () => { try { const ffp = path.join(appd.replace('Roaming',''), 'Roaming\\Mozilla\\Firefox\\Profiles'); return fs.existsSync(ffp) && fs.readdirSync(ffp).some(p => fs.existsSync(path.join(ffp, p, 'user.js'))) } catch { return false } },
+    'discord-optimize':    () => { try { const cfg = path.join(appd, 'discord\\settings.json'); if (!fs.existsSync(cfg)) return false; return JSON.parse(fs.readFileSync(cfg,'utf8')).enableHardwareAcceleration === false } catch { return false } },
+    'discord-cpu-priority':() => readReg(`${ifeoBase}\\Discord.exe\\PerfOptions`, 'CpuPriorityClass') === 1,
+    'spotify-optimize':    () => readReg(`${ifeoBase}\\Spotify.exe\\PerfOptions`, 'CpuPriorityClass') === 1,
+    'steam-optimize':      () => { try { const steamPath = (require('child_process').execSync('reg query "HKLM\\SOFTWARE\\WOW6432Node\\Valve\\Steam" /v InstallPath 2>nul',{encoding:'utf8'}).match(/InstallPath\s+REG_SZ\s+(.+)/) || [])[1]?.trim(); return steamPath ? fs.existsSync(path.join(steamPath, 'steam.cfg')) : false } catch { return false } },
+    'obs-optimize':        () => readReg(`${ifeoBase}\\obs64.exe\\PerfOptions`, 'CpuPriorityClass') === 3,
+    'epic-optimize':       () => readReg(`${ifeoBase}\\EpicGamesLauncher.exe\\PerfOptions`, 'CpuPriorityClass') === 1,
+    'ea-app-optimize':     () => readReg(`${ifeoBase}\\EADesktop.exe\\PerfOptions`, 'CpuPriorityClass') === 1,
+    'riot-optimize':       () => readReg(`${ifeoBase}\\RiotClientServices.exe\\PerfOptions`, 'CpuPriorityClass') === 1,
+    'nvidia-app-optimize': () => { try { const r = require('child_process').execSync('sc query NvTelemetryContainer 2>nul',{encoding:'utf8'}); return r.includes('STOPPED') || r.includes('DISABLED') } catch { return false } },
+    'playnite-optimize':   () => readReg(`${ifeoBase}\\Playnite.DesktopApp.exe\\PerfOptions`, 'CpuPriorityClass') === 1,
+    'vscode-optimize':     () => readReg(`${ifeoBase}\\Code.exe\\PerfOptions`, 'CpuPriorityClass') === 1,
+    'explorer-optimize':   () => readReg('HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Serialize', 'StartupDelayInMSec') === 0,
+  }
+
+  const results = {}
+  for (const [id, check] of Object.entries(checks)) {
+    try { results[id] = check() ? 'ok' : 'drifted' } catch { results[id] = 'unknown' }
+  }
+  return results
 })
 const GAME_EXE_MAP = {
   'arma-reforger': ['ArmaReforger.exe', 'ArmaReforgerSteam.exe', 'ArmaReforger_BE.exe'],
@@ -5897,8 +6091,8 @@ ipcMain.handle('open-fivem-settings', () => {
     transparent: false,
     backgroundColor: '#0d0d0d',
     show: false,
-    focusable: false,
-    skipTaskbar: true,
+    focusable: true,
+    skipTaskbar: false,
     title: 'FiveM Graphics Settings',
     icon: path.join(__dirname, 'assets', 'icon.png'),
     webPreferences: {

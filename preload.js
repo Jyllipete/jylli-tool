@@ -75,6 +75,8 @@ contextBridge.exposeInMainWorld('api', {
   installUpdate:      ()           => ipcRenderer.invoke('install-update'),
   getWhatsNew:        (lang)       => ipcRenderer.invoke('get-whats-new', lang),
   runAppOptimizer:    (id, action) => ipcRenderer.invoke('run-app-optimizer', { id, action }),
+  scanInstalledApps:      ()           => ipcRenderer.invoke('scan-installed-apps'),
+  healthCheckAppOptimizer: ()          => ipcRenderer.invoke('health-check-app-optimizer'),
   onWindowsHealthProgress: (cb) => ipcRenderer.on('windows-health-progress', (_, d) => cb(d)),
   onSpecProgress:     (cb) => ipcRenderer.on('spec-progress',     (_, d) => cb(d)),
   onLog:              (cb) => ipcRenderer.on('log',               (_, d) => cb(d)),
