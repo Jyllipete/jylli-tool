@@ -3431,6 +3431,7 @@ let installedApps = new Set()
 let gameWatcherRunning = false
 let autoPulseEnabled = false
 let autoPulseActive = false
+let _flickerNudgeSent = false
 
 // ─── Custom confirm dialog ────────────────────────────────────────────────────
 let _confirmResolve = null, _confirmReject = null
@@ -3647,6 +3648,11 @@ const init = async function _init() {
       if (lbl) lbl.textContent = `▶ ${gameId} running — optimizations applied`
       // Pause metrics polling while game is running — prevents PowerShell spawns every 3s
       if (metricsInterval) { clearInterval(metricsInterval); metricsInterval = null }
+      // One-time nudge: suggest hiding to tray to avoid any fullscreen interference
+      if (!_flickerNudgeSent && !document.hidden) {
+        _flickerNudgeSent = true
+        toast('Tip: hide to tray while gaming', 'Press the tray icon to hide Jylli Tool — stops background activity and prevents fullscreen interference', 'info', 7000)
+      }
     } else if (event === 'game-closed') {
       const lbl = document.getElementById('watcher-active-game')
       if (lbl) lbl.textContent = 'Watching for: Fortnite, GTA V, Valorant, CS2, Apex, Warzone, Rust, THE FINALS, Arma Reforger'
@@ -5607,6 +5613,25 @@ function buildFixes(c) {
 async function runFix(id, btn) {
   const fix = FIXES_DEFS.find(f => f.id === id)
   if (!fix) return
+
+  // Guard: if this is a USB/HID fix and G HUB is running, warn the user first
+  if (id === 'fix-usb-ghosting' || id === 'fix-phantom-hid') {
+    const lghub = await api.checkLghub?.().catch(() => null)
+    if (lghub?.present) {
+      try {
+        await showConfirm({
+          title: tUI('fixLghubTitle'),
+          body: tUI('fixLghubDesc'),
+          okText: tUI('confirm'),
+          okStyle: 'warning',
+          icon: 'fa-triangle-exclamation'
+        })
+      } catch {
+        return
+      }
+    }
+  }
+
   btn.disabled = true
   btn.innerHTML = `<i class="fa fa-spinner fa-spin"></i> ${tUI('fixRunning')}`
   try {
@@ -7199,6 +7224,24 @@ function clearLog() { document.getElementById('log-output').innerHTML = '' }
 
 // ─── Tweak execution ──────────────────────────────────────────────────────────
 async function applyTweak(id, action = 'apply') {
+  // Guard: warn if G HUB is running before applying USB tweaks that cause phantom HID
+  if (action === 'apply' && (id === 'usb-suspend' || id === 'usb-power-guard')) {
+    const lghub = await api.checkLghub?.().catch(() => null)
+    if (lghub?.present) {
+      try {
+        await showConfirm({
+          title: tUI('fixLghubTitle'),
+          body: tUI('fixLghubDesc'),
+          okText: tUI('confirm'),
+          okStyle: 'warning',
+          icon: 'fa-triangle-exclamation'
+        })
+      } catch {
+        return
+      }
+    }
+  }
+
   const badge = document.getElementById(`badge-${id}`)
   const prog = document.getElementById(`prog-${id}`)
   const progBar = document.getElementById(`prog-bar-${id}`)
@@ -9320,6 +9363,25 @@ async function applyTweakCard(id, checked, isDanger = false) {
     }
   }
   const action = checked ? 'apply' : 'restore'
+  // Guard: warn if G HUB is running before applying USB tweaks that cause phantom HID
+  if (action === 'apply' && (id === 'usb-suspend' || id === 'usb-power-guard')) {
+    const lghub = await api.checkLghub?.().catch(() => null)
+    if (lghub?.present) {
+      try {
+        await showConfirm({
+          title: tUI('fixLghubTitle'),
+          body: tUI('fixLghubDesc'),
+          okText: tUI('confirm'),
+          okStyle: 'warning',
+          icon: 'fa-triangle-exclamation'
+        })
+      } catch {
+        const tct = document.getElementById(`tct-${id}`)
+        if (tct) tct.checked = false
+        return
+      }
+    }
+  }
   const badge = document.getElementById(`tcb-${id}`)
   const bar = document.getElementById(`tcpb-${id}`)
   const card = document.getElementById(`tcw-${id}`)
