@@ -1234,6 +1234,7 @@ select.styled-select:focus { border-color: var(--pink); }
 .tc-name { font-size:11.5px; font-weight:700; color:var(--white); line-height:1.3; margin-bottom:4px; }
 .tc-desc { font-size:10px; color:var(--gray); line-height:1.5; }
 .tc-warn { font-size:9px; color:var(--warning); background:var(--warning-bg); border:1px solid var(--warning-bg); border-radius:4px; padding:4px 8px; margin-top:4px; }
+.reboot-badge { display:inline-flex;align-items:center;gap:4px;font-size:9px;color:#f39c12;background:rgba(243,156,18,0.08);border:1px solid rgba(243,156,18,0.22);border-radius:4px;padding:2px 6px;margin-top:4px; }
 .pf-row-tag { font-size:9px; color:var(--info); margin-top:3px; }
 .tweak-row.pf-preapplied { border-left:2px solid rgba(52,152,219,0.35); }
 .tc-foot { display:flex; align-items:center; justify-content:space-between; margin-top:auto; }
@@ -2131,6 +2132,10 @@ const LANG = {
       genSecPrivacyExt:'Privacy & Telemetry (Extended)',
       genSecSecurity:'Security Services (Advanced)',
       genSecCpuSched:'CPU Scheduling',
+      genSearchPlaceholder:'Search tweaks…', genSafeDefaults:'Safe Defaults',
+      genSafeDefaultsConfirm:'Apply safe tweaks with no danger flags or reboot required?',
+      genSafeDefaultsDone:'Safe defaults applied!',
+      genRebootBadge:'Reboot required', genTipTitle:'Tip: Click <b>Safe Defaults</b> to apply the most impactful tweaks in one go, then fine-tune from there.',
       // Advanced/Hardware — warning banner + section group titles + button
       hwWarnText:'Create a System Restore Point before tweaking hardware or registry!',
       hwCreateRP:'Create Restore Point',
@@ -2966,6 +2971,10 @@ const LANG = {
       genSecPrivacyExt:'Yksityisyys & telemetria (laajennettu)',
       genSecSecurity:'Tietoturvapalvelut (lisäasetukset)',
       genSecCpuSched:'CPU-ajoitus',
+      genSearchPlaceholder:'Hae säätöjä…', genSafeDefaults:'Turvalliset oletukset',
+      genSafeDefaultsConfirm:'Käytetäänkö turvalliset säädöt ilman vaaralippuja tai uudelleenkäynnistystä?',
+      genSafeDefaultsDone:'Turvalliset oletukset käytetty!',
+      genRebootBadge:'Uudelleenkäynnistys vaaditaan', genTipTitle:'Vinkki: Klikkaa <b>Turvalliset oletukset</b> käyttääksesi vaikuttavimmat säädöt kerralla, ja hienosäädä sen jälkeen.',
       // Advanced/Hardware
       hwWarnText:'Luo järjestelmän palautuspiste ennen laitteisto- tai rekisterisäätöjä!',
       hwCreateRP:'Luo palautuspiste',
@@ -9285,6 +9294,27 @@ function buildWindowsOpti(c) {
   const si = sysInfo
   const isLaptop = si.isLaptop
 
+  // Tip banner
+  c.appendChild(makeTip(tUI('genTipTitle'), 'info'))
+
+  // Search + Safe Defaults bar
+  const toolbar = document.createElement('div')
+  toolbar.style.cssText = 'display:flex;align-items:center;gap:10px;margin-bottom:4px'
+  toolbar.innerHTML = `
+    <div style="position:relative;flex:1">
+      <i class="fa fa-magnifying-glass" style="position:absolute;left:11px;top:50%;transform:translateY(-50%);color:#555;font-size:12px;pointer-events:none"></i>
+      <input id="gen-search" type="text" placeholder="${tUI('genSearchPlaceholder')}"
+        style="width:100%;box-sizing:border-box;background:#111;border:1px solid #222;border-radius:8px;padding:8px 10px 8px 32px;color:#ccc;font-size:12px;outline:none;transition:border-color .15s"
+        onfocus="this.style.borderColor='#333'" onblur="this.style.borderColor='#222'"
+        oninput="genFilterTweaks(this.value)">
+    </div>
+    <button onclick="genApplySafeDefaults()" style="background:#1a1a2e;border:1px solid #2a2a4a;border-radius:8px;padding:8px 14px;color:#7a9fff;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;transition:background .15s;flex-shrink:0"
+      onmouseenter="this.style.background='#222244'" onmouseleave="this.style.background='#1a1a2e'">
+      <i class="fa fa-wand-magic-sparkles"></i> ${tUI('genSafeDefaults')}
+    </button>
+  `
+  c.appendChild(toolbar)
+
   const SECTIONS = [
     { get title() { return tUI('genSecGameOverlays') }, icon:'<i class="fa fa-gamepad"></i>', cards:[
       { id:'game-dvr',    name:'Disable Game DVR / Xbox Game Bar', desc:'Removes background recording overhead — reduces CPU/GPU usage while gaming even when not recording.', icon:'<i class="fa fa-gamepad"></i>' },
@@ -9314,12 +9344,12 @@ function buildWindowsOpti(c) {
       { id:'power-throttling',name:'Disable Power Throttling', desc:'Prevents Windows reducing clock speeds for background processes.', icon:'<i class="fa fa-bolt"></i>', warning: isLaptop ? tUI('warnLaptopBattery') : '' },
     ]},
     { get title() { return tUI('genSecTimer') }, cards:[
-      { id:'hpet',     name:'Disable HPET', desc:'Disables platform clock via bcdedit. Improves FPS consistency on many CPUs. Reboot required.', icon:'<i class="fa fa-stopwatch"></i>', danger:true, dangerLabel:'Confirm' },
-      { id:'tsc-sync', name:'BCDEdit TSC Sync → Enhanced', desc:'Improves timer synchronisation across CPU cores. Minor FPS consistency gain. Reboot required.', icon:'<i class="fa fa-arrows-rotate"></i>' },
-      { id:'msi-mode', name:'Enable MSI Interrupt Mode (PCI)', desc:'Replaces legacy interrupt handling. Reduces interrupt latency. Reboot required.', icon:'<i class="fa fa-plug"></i>' },
+      { id:'hpet',     name:'Disable HPET', desc:'Disables platform clock via bcdedit. Improves FPS consistency on many CPUs. Reboot required.', icon:'<i class="fa fa-stopwatch"></i>', danger:true, dangerLabel:'Confirm', reboot:true },
+      { id:'tsc-sync', name:'BCDEdit TSC Sync → Enhanced', desc:'Improves timer synchronisation across CPU cores. Minor FPS consistency gain. Reboot required.', icon:'<i class="fa fa-arrows-rotate"></i>', reboot:true },
+      { id:'msi-mode', name:'Enable MSI Interrupt Mode (PCI)', desc:'Replaces legacy interrupt handling. Reduces interrupt latency. Reboot required.', icon:'<i class="fa fa-plug"></i>', reboot:true },
     ]},
     { get title() { return tUI('genSecGpu') }, cards:[
-      { id:'gpu-hwsch', name:'GPU Hardware Scheduling (WDDM 2.7)', desc:'Offloads GPU command scheduling from CPU to GPU driver. Reduces frame latency. Reboot required.', icon:'<i class="fa fa-palette"></i>' },
+      { id:'gpu-hwsch', name:'GPU Hardware Scheduling (WDDM 2.7)', desc:'Offloads GPU command scheduling from CPU to GPU driver. Reduces frame latency. Reboot required.', icon:'<i class="fa fa-palette"></i>', reboot:true },
       { id:'tdr-delay', name:'Extend GPU TDR Timeout (10s)', desc:'Prevents GPU driver timeout crashes under heavy DXR/modding load.', icon:'<i class="fa fa-shield-halved"></i>' },
     ]},
     { get title() { return tUI('genSecFilesystem') }, cards:[
@@ -9327,13 +9357,13 @@ function buildWindowsOpti(c) {
       { id:'memory-compression', name:'Disable Memory Compression', desc:'Stops compressing RAM contents. Reduces CPU overhead, may increase pagefile use.', icon:'<i class="fa fa-compress"></i>', danger:true, dangerLabel:'Confirm', warning: si.ramGB > 0 && si.ramGB < 16 ? tUI('warnLowRamCompression').replace('{n}', si.ramGB) : '' },
     ]},
     { get title() { return `${tUI('genSecAdvanced')} (<i class="fa fa-triangle-exclamation"></i> Security)` }, cards:[
-      { id:'spectre-meltdown', name:'Disable Spectre/Meltdown Mitigations', desc:'WARNING: Disables CPU security mitigations. FPS gain at security cost. ONLY on dedicated gaming PCs.', icon:'<i class="fa fa-triangle-exclamation"></i>', danger:true, dangerLabel:'I accept the risk', warning:'Disables kernel-level CPU security. Never on a shared PC.' },
-      { id:'bcd-tweaks',       name:'BCDEdit Boot Tweaks', desc:'Removes boot menu timeout, disables boot logging. Slightly faster POST. Reboot required.', icon:'<i class="fa fa-terminal"></i>', danger:true, dangerLabel:'Confirm BCD' },
+      { id:'spectre-meltdown', name:'Disable Spectre/Meltdown Mitigations', desc:'WARNING: Disables CPU security mitigations. FPS gain at security cost. ONLY on dedicated gaming PCs.', icon:'<i class="fa fa-triangle-exclamation"></i>', danger:true, dangerLabel:'I accept the risk', warning:'Disables kernel-level CPU security. Never on a shared PC.', reboot:true },
+      { id:'bcd-tweaks',       name:'BCDEdit Boot Tweaks', desc:'Removes boot menu timeout, disables boot logging. Slightly faster POST. Reboot required.', icon:'<i class="fa fa-terminal"></i>', danger:true, dangerLabel:'Confirm BCD', reboot:true },
     ]},
     { get title() { return tUI('genSecInput') }, cards:[
       { id:'raw-aim-curve',    name:'Raw Aim Curve', desc:'Sets MouseSensitivity registry curve to a flat 1:1 raw input table. Eliminates any hidden Windows pointer curve for perfect aim consistency.', icon:'<i class="fa fa-crosshairs"></i>' },
       { id:'proximity-deny',  name:'Proximity Deny (Nearby Sharing Off)', desc:'Disables Windows Nearby Sharing service. Stops background Bluetooth/Wi-Fi proximity scans that cause micro-stutters.', icon:'<i class="fa fa-ban"></i>' },
-      { id:'cursor-max-rate', name:'Cursor Max Rate (8000Hz+ support)', desc:'Sets HIDDeviceInputProcessingMode=0 (unified HID input thread) and increases mouse data queue size. Fixes mouse flicking and click loss when dragging windows between monitors. Also allows 8000Hz polling mice without Windows rate-limiting them. Reboot required.', icon:'<i class="fa fa-computer-mouse"></i>' },
+      { id:'cursor-max-rate', name:'Cursor Max Rate (8000Hz+ support)', desc:'Sets HIDDeviceInputProcessingMode=0 (unified HID input thread) and increases mouse data queue size. Fixes mouse flicking and click loss when dragging windows between monitors. Also allows 8000Hz polling mice without Windows rate-limiting them. Reboot required.', icon:'<i class="fa fa-computer-mouse"></i>', reboot:true },
       { id:'nudge-blocker',   name:'Nudge Blocker (Disable AutoPlay nudges)', desc:'Disables AutoPlay notifications that pop up when inserting USB devices mid-game.', icon:'<i class="fa fa-circle-xmark"></i>' },
       { id:'sticky-keys-guard', name:'StickyKeys Guard (Disable accidentally)', desc:'Disables StickyKeys, FilterKeys and ToggleKeys hotkeys entirely. Prevents them from triggering mid-game when pressing Shift 5x or holding keys.', icon:'<i class="fa fa-keyboard"></i>' },
     ]},
@@ -9377,6 +9407,49 @@ function buildWindowsOpti(c) {
     card.appendChild(grid)
     c.appendChild(card)
   })
+}
+
+function genFilterTweaks(query) {
+  const q = query.trim().toLowerCase()
+  const content = document.getElementById('page-content')
+  if (!content) return
+  content.querySelectorAll('.tweak-card-grid .tweak-card').forEach(card => {
+    card.style.display = (!q || card.textContent.toLowerCase().includes(q)) ? '' : 'none'
+  })
+  content.querySelectorAll('.section-card').forEach(sec => {
+    const anyVisible = [...sec.querySelectorAll('.tweak-card')].some(c => c.style.display !== 'none')
+    sec.style.display = anyVisible ? '' : 'none'
+  })
+}
+
+async function genApplySafeDefaults() {
+  const SAFE_DEFAULTS = [
+    'game-dvr','disable-fso','win-tips','explorer-perf','disable-mouse-accel',
+    'disable-background-apps','disable-auto-maintenance','disable-delivery-opt',
+    'mmcss','priority-sep','raw-aim-curve','proximity-deny','nudge-blocker',
+    'sticky-keys-guard','search-box-local','search-cloud-off','do-solo-mode',
+    'security-quiet','security-toast-off','boot-sound-off','compat-scanner-off',
+    'defender-quiet','diag-tasks-off'
+  ]
+  try {
+    await showConfirm({ title: tUI('genSafeDefaults'), body: tUI('genSafeDefaultsConfirm'), okText: 'Apply', okStyle: 'primary', icon: 'fa-wand-magic-sparkles' })
+  } catch { return }
+  let applied = 0
+  for (const id of SAFE_DEFAULTS) {
+    if (tweakState(id) === 'applied') continue
+    try {
+      await api.runTweak(id, 'apply')
+      settings[`tweak_${id}`] = 'applied'
+      const badge = document.getElementById(`tcb-${id}`)
+      if (badge) { badge.className = 'tc-badge applied'; badge.innerHTML = '<i class="fa fa-check"></i> APPLIED' }
+      const toggle = document.getElementById(`tct-${id}`)
+      if (toggle) toggle.checked = true
+      const card = document.getElementById(`tcw-${id}`)
+      if (card) card.classList.add('tc-applied')
+      applied++
+    } catch {}
+  }
+  toast(tUI('genSafeDefaultsDone'), `${applied} tweaks applied`, 'ok')
 }
 
 // ─── Page: Hardware ───────────────────────────────────────────────────────────
@@ -9699,7 +9772,7 @@ function getPreflightStates() {
   try { return JSON.parse(localStorage.getItem('pf_tweak_states') || '{}') } catch { return {} }
 }
 
-function makeCard({ id, name, desc, icon = '<i class="fa fa-gear"></i>', danger = false, dangerLabel = 'Confirm', restore = true, warning = '' }) {
+function makeCard({ id, name, desc, icon = '<i class="fa fa-gear"></i>', danger = false, dangerLabel = 'Confirm', restore = true, warning = '', reboot = false }) {
   desc = tDesc(id) || desc
   name = tName(id) || name
   warning = tWarn(id) || warning
@@ -9720,6 +9793,7 @@ function makeCard({ id, name, desc, icon = '<i class="fa fa-gear"></i>', danger 
         <div class="tc-desc">${desc}</div>
         ${preApplied ? `<div class="tc-warn" style="color:var(--info)"><i class="fa fa-lock"></i> Already active on your system — applying again is safe but redundant.</div>` : ''}
         ${warning ? `<div class="tc-warn"><i class="fa fa-triangle-exclamation"></i> ${warning}</div>` : ''}
+        ${reboot ? `<span class="reboot-badge"><i class="fa fa-rotate-right"></i> ${tUI('genRebootBadge')}</span>` : ''}
       </div>
     </div>
     <div class="tc-foot">
