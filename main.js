@@ -277,9 +277,11 @@ function notifyBot(event, extra = {}) {
     if (optOut) return
     const { winVer, cpu, ram, gpu, isLaptop, isWifi, hasFiveM } = getSystemFields()
     const analytics = loadAnalytics()
+    const discordUserId = loadSettings().discordUserId || null
     const payload = JSON.stringify({
       secret: BOT_SECRET, event, version: APP_VERSION,
-      userId: analytics.userId, sessions: analytics.sessions,
+      userId: analytics.userId, discordUserId,
+      sessions: analytics.sessions,
       totalTweaks: analytics.totalTweaksApplied || 0,
       cpu, ram, gpu, winVer, isLaptop, isWifi, hasFiveM,
       ...extra
