@@ -476,6 +476,24 @@ function createWindow() {
 
   mainWindow.once('ready-to-show', () => {
     mainWindow.show()
+    // Auth gate: verify from main process so renderer can't bypass via DevTools
+    ;(async () => {
+      try {
+        const s = loadSettings()
+        const hasToken  = !!s.authToken
+        const notExpired = s.authExpiry && Date.now() < s.authExpiry
+        if (!hasToken || !notExpired) {
+          mainWindow?.webContents.send('auth-required')
+          return
+        }
+        const result = await botGet(`/auth/verify?token=${encodeURIComponent(s.authToken)}&secret=${encodeURIComponent(BOT_SECRET)}`)
+        if (!result?.ok) mainWindow?.webContents.send('auth-required')
+      } catch (e) {
+        // Network error — allow through (offline tolerance)
+        const isNetErr = e.code && (e.code.startsWith('E') || e.code === 'ETIMEDOUT')
+        if (!isNetErr) mainWindow?.webContents.send('auth-required')
+      }
+    })()
   })
 
   // Minimize → hide to tray instead of taskbar minimize
@@ -769,14 +787,9 @@ async function detectSystemInfo() {
     info.cpuSpeed = cpus[0].speed // fallback, overwritten below if WMI succeeds
   }
 
-  // RAM
+  // RAM (instant — used everywhere; speed queried inside IS_WIN block below)
   info.ram = os.totalmem()
   info.ramGB = Math.floor(info.ram / (1024 ** 3))
-  if (IS_WIN) {
-    const ramSpeedR = await runPS('(Get-CimInstance Win32_PhysicalMemory | Measure-Object -Property ConfiguredClockSpeed -Maximum).Maximum')
-    const spd = parseInt(ramSpeedR.out.trim())
-    if (!isNaN(spd) && spd > 0) info.ramSpeed = spd
-  }
 
   if (IS_WIN) {
     // ── CPU real max speed from WMI ──────────────────────────────────────────
@@ -785,6 +798,14 @@ async function detectSystemInfo() {
     const maxSpeed = parseInt(cpuSpeedR.out.trim())
     if (!isNaN(maxSpeed) && maxSpeed > 0) info.cpuSpeed = maxSpeed
     emitSpecProgress('CPU detected', `${info.cpu} · ${(info.cpuSpeed/1000).toFixed(1)} GHz · ${info.cpuCores} cores`)
+    await new Promise(r => setTimeout(r, 50))
+
+    // ── RAM speed from WMI ───────────────────────────────────────────────────
+    emitSpecProgress('Detecting RAM…', `${info.ramGB} GB`)
+    const ramSpeedR = await runPS('(Get-CimInstance Win32_PhysicalMemory | Measure-Object -Property ConfiguredClockSpeed -Maximum).Maximum')
+    const spd = parseInt(ramSpeedR.out.trim())
+    if (!isNaN(spd) && spd > 0) info.ramSpeed = spd
+    emitSpecProgress('RAM detected', `${info.ramGB} GB` + (info.ramSpeed > 0 ? ` · ${info.ramSpeed} MHz` : ''))
     await new Promise(r => setTimeout(r, 50))
 
     // ── GPU Name ─────────────────────────────────────────────────────────────
@@ -3836,19 +3857,48 @@ ${c}
         }
       `)
 
-      // ── 6c. Register a scheduled task to re-run LGHUB cleanup on every boot/wake ──
-      s('Registering boot-time phantom cleanup task…', 'info')
+      // ── 6c. Register a scheduled task to re-run LGHUB cleanup on boot, wake, and USB arrival ──
+      // XML-based registration is required because New-ScheduledTaskTrigger in PS 5.1 does not
+      // support EventTrigger or SessionStateChangeTrigger natively.
+      s('Registering phantom cleanup task (boot + wake + USB)…', 'info')
       await ps(`
-        $script = @'
-Get-Process -Name lghub,lghub_system_tray,lghub_updater,lghub_agent -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
-Get-ChildItem 'HKLM:\\SYSTEM\\CurrentControlSet\\Enum\\HID' -ErrorAction SilentlyContinue | Where-Object { $_.PSChildName -match 'VID_046D&PID_C232' } | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
+        $taskXml = @'
+<?xml version="1.0" encoding="UTF-16"?>
+<Task version="1.4" xmlns="http://schemas.microsoft.com/windows/2004/02/mit/task">
+  <Triggers>
+    <BootTrigger><Enabled>true</Enabled></BootTrigger>
+    <SessionStateChangeTrigger>
+      <Enabled>true</Enabled>
+      <StateChange>SessionUnlock</StateChange>
+    </SessionStateChangeTrigger>
+    <EventTrigger>
+      <Enabled>true</Enabled>
+      <Subscription>&lt;QueryList&gt;&lt;Query Id="0"&gt;&lt;Select Path="Microsoft-Windows-DriverFrameworks-UserMode/Operational"&gt;*[System[EventID=2003]]&lt;/Select&gt;&lt;/Query&gt;&lt;/QueryList&gt;</Subscription>
+      <ExecutionTimeLimit>PT1M</ExecutionTimeLimit>
+    </EventTrigger>
+  </Triggers>
+  <Principals>
+    <Principal id="Author">
+      <UserId>S-1-5-18</UserId>
+      <RunLevel>HighestAvailable</RunLevel>
+    </Principal>
+  </Principals>
+  <Settings>
+    <MultipleInstancesPolicy>IgnoreNew</MultipleInstancesPolicy>
+    <DisallowStartIfOnBatteries>false</DisallowStartIfOnBatteries>
+    <StopIfGoingOnBatteries>false</StopIfGoingOnBatteries>
+    <ExecutionTimeLimit>PT2M</ExecutionTimeLimit>
+    <Enabled>true</Enabled>
+  </Settings>
+  <Actions>
+    <Exec>
+      <Command>powershell.exe</Command>
+      <Arguments>-NonInteractive -WindowStyle Hidden -ExecutionPolicy Bypass -Command &quot;Get-Process -Name lghub,lghub_system_tray,lghub_updater,lghub_agent -EA SilentlyContinue | Stop-Process -Force -EA SilentlyContinue; Get-ChildItem &apos;HKLM:\\SYSTEM\\CurrentControlSet\\Enum\\HID&apos; -EA SilentlyContinue | Where-Object { $$_.PSChildName -match &apos;VID_046D&amp;PID_C232&apos; } | Remove-Item -Recurse -Force -EA SilentlyContinue&quot;</Arguments>
+    </Exec>
+  </Actions>
+</Task>
 '@
-        $encodedCmd = [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($script))
-        $action  = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument "-NonInteractive -WindowStyle Hidden -ExecutionPolicy Bypass -EncodedCommand $encodedCmd"
-        $trigger = New-ScheduledTaskTrigger -AtStartup
-        $settings = New-ScheduledTaskSettingsSet -ExecutionTimeLimit (New-TimeSpan -Minutes 2) -MultipleInstances IgnoreNew
-        $principal = New-ScheduledTaskPrincipal -UserId 'SYSTEM' -RunLevel Highest
-        Register-ScheduledTask -TaskName 'JylliTool_PhantomHIDCleanup' -Action $action -Trigger $trigger -Settings $settings -Principal $principal -Force -EA SilentlyContinue
+        Register-ScheduledTask -TaskName 'JylliTool_PhantomHIDCleanup' -Xml $taskXml -Force -EA SilentlyContinue
         Write-Output "TASK_REGISTERED"
       `)
 
@@ -3964,6 +4014,66 @@ if ($r.Count -eq 0) { Write-Output "NONE_FOUND" } else { foreach ($x in $r) { Wr
       if (failed > 0) s(`${failed} device(s) could not be removed (may require Safe Mode).`, 'warn')
     },
     restore: async (s) => s('Phantom device removal cannot be undone — reinstall the relevant software to restore devices.', 'info')
+  },
+  'fix-fivem-fullscreen': {
+    apply: async (s, ps) => {
+      const compat = 'HKCU:\\Software\\Microsoft\\Windows NT\\CurrentVersion\\AppCompatFlags\\Layers'
+      for (const exe of ['FiveM.exe', 'GTA5.exe', 'FiveM_b3095_GTAProcess.exe']) {
+        await ps(`New-Item -Path "${compat}" -Force -EA SilentlyContinue | Out-Null; Set-ItemProperty -Path "${compat}" -Name "${exe}" -Value "~ DISABLEDXMAXIMIZEDWINDOWEDMODE" -Force`)
+        s(`  ${exe}: fullscreen compat flag set`, 'ok')
+      }
+      const gtaPathR = await ps(`
+        $paths = @(
+          "$env:ProgramFiles\\Rockstar Games\\Grand Theft Auto V",
+          "$env:ProgramFiles(x86)\\Steam\\steamapps\\common\\Grand Theft Auto V",
+          "C:\\Program Files\\Rockstar Games\\Grand Theft Auto V",
+          "D:\\Rockstar Games\\Grand Theft Auto V",
+          "D:\\SteamLibrary\\steamapps\\common\\Grand Theft Auto V",
+          "E:\\SteamLibrary\\steamapps\\common\\Grand Theft Auto V"
+        )
+        foreach ($p in $paths) { if (Test-Path $p) { Write-Output $p; break } }
+      `)
+      const gtaPath = gtaPathR.out.trim()
+      if (gtaPath) {
+        const cmdFile = `${gtaPath}\\commandline.txt`
+        const existingR = await ps(`if (Test-Path "${cmdFile}") { Get-Content "${cmdFile}" -Raw } else { "" }`)
+        const existing = existingR.out || ''
+        const lines = existing.split(/\r?\n/).map(l => l.trim()).filter(Boolean)
+        if (!lines.includes('-fullscreen')) lines.push('-fullscreen')
+        await ps(`Set-Content -Path "${cmdFile}" -Value "${lines.join('`n')}" -Encoding ASCII -Force`)
+        s(`commandline.txt: -fullscreen added`, 'ok')
+        s(`  Path: ${cmdFile}`, 'info')
+      } else {
+        s('GTA V install not found — commandline.txt skipped. Compat flags still applied.', 'warn')
+      }
+    },
+    restore: async (s, ps) => {
+      const compat = 'HKCU:\\Software\\Microsoft\\Windows NT\\CurrentVersion\\AppCompatFlags\\Layers'
+      for (const exe of ['FiveM.exe', 'GTA5.exe', 'FiveM_b3095_GTAProcess.exe']) {
+        await ps(`Remove-ItemProperty -Path "${compat}" -Name "${exe}" -EA SilentlyContinue`)
+      }
+      s('Fullscreen compat flags removed.', 'ok')
+      const gtaPathR = await ps(`
+        $paths = @(
+          "$env:ProgramFiles\\Rockstar Games\\Grand Theft Auto V",
+          "$env:ProgramFiles(x86)\\Steam\\steamapps\\common\\Grand Theft Auto V",
+          "C:\\Program Files\\Rockstar Games\\Grand Theft Auto V",
+          "D:\\Rockstar Games\\Grand Theft Auto V",
+          "D:\\SteamLibrary\\steamapps\\common\\Grand Theft Auto V",
+          "E:\\SteamLibrary\\steamapps\\common\\Grand Theft Auto V"
+        )
+        foreach ($p in $paths) { if (Test-Path $p) { Write-Output $p; break } }
+      `)
+      const gtaPath = gtaPathR.out.trim()
+      if (gtaPath) {
+        const cmdFile = `${gtaPath}\\commandline.txt`
+        const existingR = await ps(`if (Test-Path "${cmdFile}") { Get-Content "${cmdFile}" -Raw } else { "" }`)
+        const existing = existingR.out || ''
+        const lines = existing.split(/\r?\n/).map(l => l.trim()).filter(l => l && l !== '-fullscreen')
+        await ps(`Set-Content -Path "${cmdFile}" -Value "${lines.join('`n')}" -Encoding ASCII -Force`)
+        s('commandline.txt: -fullscreen removed.', 'ok')
+      }
+    }
   },
 
   // ── New General Tweaks (from screenshots) ─────────────────────────────────
@@ -5080,6 +5190,72 @@ try {
   // electron-updater not available
 }
 
+// ─── Auth IPC ─────────────────────────────────────────────────────────────────
+function botGet(path) {
+  return new Promise((resolve, reject) => {
+    const url = new URL(BOT_URL + path)
+    require('https').get({
+      hostname: url.hostname, path: url.pathname + url.search,
+      headers: { 'User-Agent': 'jylli-tool/1.0' }
+    }, res => {
+      let data = ''
+      res.on('data', d => data += d)
+      res.on('end', () => { try { resolve(JSON.parse(data)) } catch { reject(new Error('parse fail')) } })
+    }).on('error', reject)
+  })
+}
+
+ipcMain.handle('auth-start', async () => {
+  try {
+    const analytics = loadAnalytics()
+    const userId = analytics.userId || 'unknown'
+    const result = await botGet(`/auth/start?userId=${encodeURIComponent(userId)}&secret=${encodeURIComponent(BOT_SECRET)}`)
+    if (!result.state || !result.url) return { ok: false }
+    require('electron').shell.openExternal(result.url)
+    return { ok: true, state: result.state }
+  } catch (e) { return { ok: false, error: e.message } }
+})
+
+ipcMain.handle('auth-poll', async (_, state) => {
+  try {
+    const result = await botGet(`/auth/poll?state=${encodeURIComponent(state)}&secret=${encodeURIComponent(BOT_SECRET)}`)
+    if (result.status === 'ok') {
+      const s = loadSettings()
+      s.authToken      = result.token
+      s.discordUserId  = result.discordUserId
+      s.authExpiry     = Date.now() + 7 * 86400000
+      saveSettings(s)
+    }
+    return result
+  } catch (e) { return { status: 'pending' } }
+})
+
+ipcMain.handle('auth-verify', async () => {
+  try {
+    const s = loadSettings()
+    if (!s.authToken) return { ok: false, reason: 'no_token' }
+    // Require expiry to always be present and valid — missing expiry = reject
+    if (!s.authExpiry || Date.now() > s.authExpiry) return { ok: false, reason: 'expired' }
+    const result = await botGet(`/auth/verify?token=${encodeURIComponent(s.authToken)}&secret=${encodeURIComponent(BOT_SECRET)}`)
+    if (typeof result?.ok !== 'boolean') return { ok: false, reason: 'bad_response' }
+    return result
+  } catch (e) {
+    // Only allow through on actual network errors (ENOTFOUND, ECONNREFUSED, etc.)
+    const isNetErr = e.code && (e.code.startsWith('E') || e.code === 'ETIMEDOUT')
+    if (isNetErr) return { ok: true, reason: 'offline' }
+    return { ok: false, reason: 'error' }
+  }
+})
+
+ipcMain.handle('auth-logout', async () => {
+  const s = loadSettings()
+  delete s.authToken
+  delete s.discordUserId
+  delete s.authExpiry
+  saveSettings(s)
+  return { ok: true }
+})
+
 ipcMain.handle('check-update', async () => {
   if (!autoUpdater) return { ok: false, reason: 'electron-updater not installed' }
   try { await autoUpdater.checkForUpdates(); return { ok: true } }
@@ -5122,16 +5298,40 @@ ipcMain.handle('clean-power-plans', async () => {
 
 // What's New content
 const WHATS_NEW = [
+  { version: '1.4.3', date: 'May 2026', items: [
+    'Finnish translations — App Optimizer card names and descriptions are now fully translated',
+    'Finnish translations — FiveM tab tweak names and descriptions are now fully translated',
+    'Finnish translations — What\'s New modal now shows release notes in Finnish when the app language is set to Finnish (recent versions)',
+    'Finnish translations — Pulse "Activating…" and "Restoring…" button states now show in Finnish',
+    'Finnish translations — What\'s New modal title and Close button are now translated',
+    'FiveM fullscreen fix — app now automatically sets the DISABLEDXMAXIMIZEDWINDOWEDMODE compat flag when FiveM is detected running, so Alt+Enter fullscreen works without any manual steps',
+  ], items_fi: [
+    'Suomenkieliset käännökset — Sovelluksen optimoijan korttien nimet ja kuvaukset on nyt täysin käännetty',
+    'Suomenkieliset käännökset — FiveM-välilehden säätöjen nimet ja kuvaukset on nyt täysin käännetty',
+    'Suomenkieliset käännökset — Mitä uutta -ikkuna näyttää nyt julkaisutiedot suomeksi, kun sovelluksen kieli on asetettu suomeksi (uusimmat versiot)',
+    'Suomenkieliset käännökset — Pulsen "Aktivoidaan…" ja "Palautetaan…" -tilatekstit näkyvät nyt suomeksi',
+    'Suomenkieliset käännökset — Mitä uutta -ikkunan otsikko ja Sulje-painike on nyt käännetty',
+    'FiveM kokoruututilakorjaus — sovellus asettaa nyt automaattisesti DISABLEDXMAXIMIZEDWINDOWEDMODE-yhteensopivuusliputuksen, kun FiveM havaitaan käynnissä, joten Alt+Enter-kokoruututila toimii ilman manuaalisia toimenpiteitä',
+  ]},
   { version: '1.4.2', date: 'May 2026', items: [
     'Tweak Health Check — no longer nags on every launch: after clicking Re-apply the prompt is snoozed for 24 hours; after clicking Cancel it is snoozed for 4 hours. Windows Update genuinely resets certain tweaks on every boot — this prevents the endless nag loop.',
     'Auto-Optimize — GPU Hardware Scheduling (WDDM 2.7) is now skipped for unsupported GPUs (old AMD, integrated Intel) instead of being applied unconditionally; prevents potential instability on incompatible hardware.',
     'Auto-Optimize — NIC hardware offloads tweak (checksum, LSO, RSC disable) is now included in the wizard for Ethernet users; was previously only available as a manual tweak on the Network page.',
     'Auto-Optimize (legacy path) — max performance power plan now uses the same full 4-step fallback chain and full settings (EPP=0, boost policy, no idle/sleep) as the individual Intel/AMD power plan tweaks.',
+  ], items_fi: [
+    'Säätöjen terveystarkistus — ei enää vaivaa jokaisella käynnistyksellä: Käytä uudelleen -napista napsauttamisen jälkeen muistutus hiljaisutetaan 24 tunniksi; Peruuta-napista napsauttamisen jälkeen 4 tunniksi. Windows Update todellakin nollaa tietyt säädöt joka käynnistyksellä — tämä estää loputoman vaivaamisen.',
+    'Automaattioptimointi — GPU Hardware Scheduling (WDDM 2.7) ohitetaan nyt tukemattomille GPU:ille (vanhat AMD, integroitu Intel) sen sijaan että se sovellettaisiin ehdoitta; estää mahdollisen epävakauden yhteensopimattomalla laitteistolla.',
+    'Automaattioptimointi — NIC-laitteiston purkamissäätö (tarkistussumma, LSO, RSC-poisto) on nyt mukana velhossa Ethernet-käyttäjille; aiemmin se oli saatavilla vain manuaalisena säätönä Verkko-sivulla.',
+    'Automaattioptimointi (perintäpolku) — enimmäissuorituskyvyn virransäästösuunnitelma käyttää nyt samaa 4-vaiheista varajärjestelmäketjua ja täysiä asetuksia (EPP=0, boost-käytäntö, ei tyhjäkäyntiä/unta) kuin yksittäiset Intel/AMD-virrankäyttösäädöt.',
   ]},
   { version: '1.4.1', date: 'May 2026', items: [
     'Tweak Health Check — fixed: 5 tweaks (TDR Delay, NVMe Latency, Disable NetBIOS, Disable Background Apps, Disable HDCP) were always falsely reported as reverted by Windows even right after applying; health check now verifies the correct registry keys',
     'Tweak Health Check — WPAD tweak removed from health check (it controls a Windows service, not a registry key, so cannot be verified this way)',
     'Network tab — harmful NIC tweaks (offloads, interrupt moderation, flow control, Energy Efficient Ethernet) are now fully hidden for Wi-Fi users instead of just showing a warning; prevents accidental application on wireless adapters',
+  ], items_fi: [
+    'Säätöjen terveystarkistus — korjattu: 5 säätöä (TDR-viive, NVMe-latenssi, Poista NetBIOS, Poista taustasovellukset, Poista HDCP) raportoitiin aina virheellisesti Windowsin palauttamiksi heti käyttämisen jälkeenkin; terveystarkistus vahvistaa nyt oikeat rekisteriavaimet.',
+    'Säätöjen terveystarkistus — WPAD-säätö poistettu terveystarkistuksesta (se ohjaa Windows-palvelua, ei rekisteriavainta, joten sitä ei voi vahvistaa tällä tavoin).',
+    'Verkko-välilehti — haitalliset NIC-säädöt (purkaminen, keskeytysmodulointi, vuon hallinta, Energy Efficient Ethernet) on nyt piilotettu kokonaan Wi-Fi-käyttäjiltä varoituksen näyttämisen sijaan; estää vahingossa tapahtuvan käyttämisen langattomissa sovittimissa.',
   ]},
   { version: '1.4.0', date: 'May 2026', items: [
     'AMD & Intel Max Performance Power Plan — fixed and fully working: creates a custom plan tuned for your CPU with EPP=0, CPPC, full boost policy, and no idle/sleep',
@@ -5143,6 +5343,16 @@ const WHATS_NEW = [
     'Discord Rich Presence — toggle setting now correctly enables/disables at runtime without restart',
     'Session Start embed — GPU now shows in the Discord session start notification (was missing due to detection timing)',
     'Bug fix — AMD and Intel power plan tweaks were silently calling the wrong function (regAdd instead of runCmd); all powercfg commands now execute correctly',
+  ], items_fi: [
+    'AMD & Intel Enimmäissuorituskyky-virrankäyttösuunnitelma — korjattu ja toimii täysin: luo mukautetun suunnitelman, joka on viritetty prosessorillesi EPP=0:lla, CPPC:llä, täydellä boost-käytännöllä ja ilman tyhjäkäyntiä tai unta.',
+    'Virrankäyttösuunnitelma — "Siivoa vanhat virrankäyttösuunnitelmat" -painike poistaa kaksoiskappaleet ja kolmannen osapuolen suunnitelmat pitäen Tasapainoisen palauttamista varten.',
+    'Automaattinen säätöjen terveystarkistus — jokaisella käynnistyksellä sovellus tarkistaa hiljaa, onko Windows palauttanut säätöjä, ja kehottaa käyttämään ne uudelleen yhdellä klikkauksella.',
+    'LibreHardwareMonitor — PawnIO:n asennusikkuna ei enää ilmesty käynnistyksen yhteydessä.',
+    'Sovelluksen sisäinen päivitys — korjattu: päivityksen lataaminen toimii nyt oikein kaikilla käyttäjillä.',
+    'Palautuspisteen turvallisuus — Automaattioptimointi estetään nyt oikein, jos palautuspisteen luominen epäonnistuu; näyttää ohjeet korjaamiseen.',
+    'Discord Rich Presence — vaihtoasetus ottaa nyt oikein käyttöön tai poistaa käytöstä ajon aikana ilman uudelleenkäynnistystä.',
+    'Sessioaloitusupotus — GPU näkyy nyt Discordin session aloitusilmoituksessa (puuttui aiemmin havainnoinnin ajoituksen vuoksi).',
+    'Bugikorjaus — AMD- ja Intel-virrankäyttösäädöt kutsuivat hiljaa väärää funktiota (regAdd runCmd:n sijaan); kaikki powercfg-komennot suoritetaan nyt oikein.',
   ]},
   { version: '1.3.9', date: 'May 2026', items: [
     'Settings tab — replaces Personalization; organized into Appearance, Behavior, System, and About sections',
@@ -5250,7 +5460,12 @@ const WHATS_NEW = [
   ]},
 ]
 
-ipcMain.handle('get-whats-new', () => WHATS_NEW)
+ipcMain.handle('get-whats-new', (_, lang) => {
+  return WHATS_NEW.map(v => ({
+    ...v,
+    items: (lang === 'fi' && v.items_fi) ? v.items_fi : v.items,
+  }))
+})
 
 // ─── Tweak Health Verification ────────────────────────────────────────────────
 // One representative registry key per tweak. Tweaks using only services/bcdedit/one-time
@@ -6468,6 +6683,20 @@ ipcMain.handle('start-game-watcher', async () => {
       // Update Discord presence to show the active game
       discordActiveGame = detectedGame
       updateDiscordPresence()
+
+      // FiveM: silently ensure fullscreen compat flag is set on every session start
+      if (detectedGame === 'fivem') {
+        const compatPath = 'HKCU:\\Software\\Microsoft\\Windows NT\\CurrentVersion\\AppCompatFlags\\Layers'
+        await runPS(`New-Item -Path "${compatPath}" -Force -EA SilentlyContinue | Out-Null`)
+        for (const exe of ['FiveM.exe', 'GTA5.exe', 'FiveM_b3095_GTAProcess.exe']) {
+          const cur = await runPS(`(Get-ItemProperty -Path "${compatPath}" -Name "${exe}" -EA SilentlyContinue)."${exe}"`)
+          if (!(cur.out || '').includes('DISABLEDXMAXIMIZEDWINDOWEDMODE')) {
+            const base = (cur.out || '').trim()
+            const newVal = base ? `${base} DISABLEDXMAXIMIZEDWINDOWEDMODE` : '~ DISABLEDXMAXIMIZEDWINDOWEDMODE'
+            await runPS(`Set-ItemProperty -Path "${compatPath}" -Name "${exe}" -Value "${newVal}" -Force`)
+          }
+        }
+      }
 
       const mmcssBase = 'HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Multimedia\\SystemProfile'
       await runPS(`Set-ItemProperty -Path "${mmcssBase}" -Name SystemResponsiveness -Value 10 -Force`)

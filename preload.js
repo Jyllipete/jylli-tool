@@ -73,7 +73,7 @@ contextBridge.exposeInMainWorld('api', {
   checkUpdate:        ()           => ipcRenderer.invoke('check-update'),
   downloadUpdate:     ()           => ipcRenderer.invoke('download-update'),
   installUpdate:      ()           => ipcRenderer.invoke('install-update'),
-  getWhatsNew:        ()           => ipcRenderer.invoke('get-whats-new'),
+  getWhatsNew:        (lang)       => ipcRenderer.invoke('get-whats-new', lang),
   runAppOptimizer:    (id, action) => ipcRenderer.invoke('run-app-optimizer', { id, action }),
   onWindowsHealthProgress: (cb) => ipcRenderer.on('windows-health-progress', (_, d) => cb(d)),
   onSpecProgress:     (cb) => ipcRenderer.on('spec-progress',     (_, d) => cb(d)),
@@ -116,4 +116,9 @@ contextBridge.exposeInMainWorld('api', {
   getDriverInfo:      ()            => ipcRenderer.invoke('get-driver-info'),
   runBenchmark:       ()            => ipcRenderer.invoke('run-benchmark'),
   cleanPowerPlans:    ()            => ipcRenderer.invoke('clean-power-plans'),
+  authStart:          ()            => ipcRenderer.invoke('auth-start'),
+  authPoll:           (state)       => ipcRenderer.invoke('auth-poll', state),
+  authVerify:         ()            => ipcRenderer.invoke('auth-verify'),
+  authLogout:         ()            => ipcRenderer.invoke('auth-logout'),
+  onAuthRequired:     (cb)          => ipcRenderer.on('auth-required', () => cb()),
 })
