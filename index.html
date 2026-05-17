@@ -1893,6 +1893,18 @@ const LANG = {
       aomUncheckAll:'Uncheck All', aomCheckAll:'Check All', aomSelectedCount:'{n} / {total} selected',
       aomSkipForNow:'Skip for Now', aomProceedAnyway:'Proceed Anyway',
       aomViewHistory:'View History', aomElapsed:'Elapsed:', aomEstTime:'Est. ~{s}s',
+      lsSubtitle:'This app requires membership in the Jylli Tool Discord server.',
+      lsLinkBtn:'Link Discord', lsOpeningBrowser:'Opening browser…', lsWaiting:'Waiting for Discord…',
+      lsAuthorize:'Authorize in the browser tab that just opened.',
+      lsBrowserFailed:'Browser didn\'t open. Use the link below to authenticate.',
+      lsBrowserFallback:'Browser didn\'t open?', lsClickHere:'Click here to authenticate',
+      lsGranted:'✓ Access granted! Loading…',
+      lsDenied:'Access denied — you don\'t have the required role.',
+      lsDeniedHint:'Make sure you are a member of the Jylli Tool Discord server.',
+      lsTimedOut:'Timed out. Try again.',
+      lsNoServer:'Could not reach server. Check your internet connection.',
+      lsAlreadyHave:'Already have access?', lsRetry:'Retry verification',
+      lsChecking:'Checking…', lsCancel:'Cancel', lsSecsLeft:'s remaining',
       cleanupQuickCleanTitle:'Quick Clean',
       cleanupQuickCleanDesc:'Runs all safe cleanup jobs in one click — skips dangerous items that require confirmation.',
       cleanupQuickCleanBtn:'Quick Clean', cleanupEstimateBtn:'Estimate Size',
@@ -2717,6 +2729,18 @@ const LANG = {
       aomUncheckAll:'Poista kaikki valinnat', aomCheckAll:'Valitse kaikki', aomSelectedCount:'{n} / {total} valittu',
       aomSkipForNow:'Ohita nyt', aomProceedAnyway:'Jatka silti',
       aomViewHistory:'Näytä historia', aomElapsed:'Kulunut:', aomEstTime:'Arvio ~{s}s',
+      lsSubtitle:'Tämä sovellus vaatii jäsenyyttä Jylli Tool Discord-palvelimella.',
+      lsLinkBtn:'Yhdistä Discord', lsOpeningBrowser:'Avataan selain…', lsWaiting:'Odotetaan Discordia…',
+      lsAuthorize:'Hyväksy äsken avautuneessa selainvälilehdessä.',
+      lsBrowserFailed:'Selain ei auennut. Käytä alla olevaa linkkiä kirjautuaksesi.',
+      lsBrowserFallback:'Selain ei auennut?', lsClickHere:'Klikkaa tästä kirjautuaksesi',
+      lsGranted:'✓ Pääsy myönnetty! Ladataan…',
+      lsDenied:'Pääsy estetty — sinulla ei ole vaadittua roolia.',
+      lsDeniedHint:'Varmista että olet Jylli Tool Discord-palvelimen jäsen.',
+      lsTimedOut:'Aikakatkaisu. Yritä uudelleen.',
+      lsNoServer:'Palvelimeen ei saatu yhteyttä. Tarkista internet-yhteys.',
+      lsAlreadyHave:'Onko sinulla jo pääsy?', lsRetry:'Yritä vahvistusta uudelleen',
+      lsChecking:'Tarkistetaan…', lsCancel:'Peruuta', lsSecsLeft:'s jäljellä',
       cleanupQuickCleanTitle:'Pikäsiivous',
       cleanupQuickCleanDesc:'Suorittaa kaikki turvalliset siivoustehtävät yhdellä klikkauksella — ohittaa vaaralliset kohteet, jotka vaativat vahvistuksen.',
       cleanupQuickCleanBtn:'Pikäsiivous', cleanupEstimateBtn:'Arvioi koko',
@@ -10782,86 +10806,136 @@ window.applyTweak = async function(id, action = 'apply') {
 function showLockScreen(deniedMsg) {
   const el = document.createElement('div')
   el.id = 'lock-screen'
-  el.style.cssText = 'position:fixed;inset:0;z-index:99999;background:#0d0d0d;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;font-family:"Segoe UI",system-ui,sans-serif'
+  el.style.cssText = 'position:fixed;inset:0;z-index:99999;background:#0d0d0d;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;font-family:"Segoe UI",system-ui,sans-serif;opacity:0;transition:opacity 0.2s'
   el.innerHTML = `
-    <div style="width:64px;height:64px;background:#1a0a10;border:1.5px solid #FF2E63;border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:28px">⚡</div>
+    <div style="width:64px;height:64px;background:#1a0a10;border:1.5px solid #FF2E63;border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:28px;box-shadow:0 0 24px rgba(255,46,99,0.25)">⚡</div>
     <div style="text-align:center">
       <div style="font-size:22px;font-weight:700;color:#fff;margin-bottom:6px">Jylli Tool</div>
-      <div style="font-size:13px;color:#888;max-width:340px;line-height:1.5">${deniedMsg || 'This app requires membership in the<br>Jylli Tool Discord server.'}</div>
+      <div style="font-size:13px;color:#888;max-width:340px;line-height:1.6">${deniedMsg || tUI('lsSubtitle')}</div>
     </div>
-    <button id="lock-link-btn" style="background:#FF2E63;color:#fff;border:none;border-radius:8px;padding:11px 28px;font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:8px">
-      <i class="fab fa-discord"></i> Link Discord
+    <button id="lock-link-btn" style="background:#FF2E63;color:#fff;border:none;border-radius:8px;padding:11px 28px;font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:8px;transition:background .15s"
+      onmouseenter="if(!this.disabled)this.style.background='#e0264f'"
+      onmouseleave="if(!this.disabled)this.style.background='#FF2E63'">
+      <i class="fab fa-discord"></i> ${tUI('lsLinkBtn')}
     </button>
-    <div id="lock-status" style="font-size:12px;color:#666;min-height:18px;text-align:center"></div>
+    <button id="lock-cancel-btn" style="display:none;background:transparent;color:#666;border:1px solid #333;border-radius:8px;padding:7px 18px;font-size:12px;cursor:pointer;transition:border-color .15s,color .15s"
+      onmouseenter="this.style.borderColor='#555';this.style.color='#999'"
+      onmouseleave="this.style.borderColor='#333';this.style.color='#666'">
+      ${tUI('lsCancel')}
+    </button>
+    <div id="lock-status" style="font-size:12px;color:#666;min-height:20px;text-align:center"></div>
+    <div id="lock-denied-hint" style="display:none;font-size:11px;color:#888;text-align:center;max-width:300px;line-height:1.6"></div>
     <div id="lock-manual-url" style="display:none;font-size:11px;color:#888;text-align:center;max-width:320px;line-height:1.7">
-      Browser didn't open? <a id="lock-open-url" href="#" style="color:#FF2E63;text-decoration:underline">Click here to authenticate</a>
+      ${tUI('lsBrowserFallback')} <a id="lock-open-url" href="#" style="color:#FF2E63;text-decoration:underline">${tUI('lsClickHere')}</a>
     </div>
-    <div style="font-size:11px;color:#444;margin-top:8px">Already have access? <span id="lock-retry" style="color:#FF2E63;cursor:pointer;text-decoration:underline">Retry verification</span></div>
+    <div style="font-size:11px;color:#444;margin-top:8px">${tUI('lsAlreadyHave')} <span id="lock-retry" style="color:#FF2E63;cursor:pointer;text-decoration:underline">${tUI('lsRetry')}</span></div>
   `
   document.body.appendChild(el)
+  requestAnimationFrame(() => { el.style.opacity = '1' })
 
-  const btn    = document.getElementById('lock-link-btn')
-  const status = document.getElementById('lock-status')
-  const retry  = document.getElementById('lock-retry')
-  let pollTimer = null
+  const btn       = document.getElementById('lock-link-btn')
+  const cancelBtn = document.getElementById('lock-cancel-btn')
+  const status    = document.getElementById('lock-status')
+  const retry     = document.getElementById('lock-retry')
+  let pollTimer     = null
+  let countdownTimer = null
+
+  function resetToIdle() {
+    clearInterval(pollTimer); clearInterval(countdownTimer)
+    pollTimer = null; countdownTimer = null
+    btn.disabled = false
+    btn.style.display = ''
+    btn.innerHTML = `<i class="fab fa-discord"></i> ${tUI('lsLinkBtn')}`
+    btn.style.background = '#FF2E63'
+    status.textContent = ''; status.style.color = ''
+    cancelBtn.style.display = 'none'
+    document.getElementById('lock-manual-url').style.display = 'none'
+    document.getElementById('lock-denied-hint').style.display = 'none'
+  }
+
+  cancelBtn.addEventListener('click', resetToIdle)
 
   async function startAuth() {
     btn.disabled = true
-    btn.innerHTML = '<i class="fa fa-rotate fa-spin"></i> Opening browser…'
+    btn.innerHTML = `<i class="fa fa-rotate fa-spin"></i> ${tUI('lsOpeningBrowser')}`
     status.textContent = ''
+    status.style.color = ''
+    document.getElementById('lock-denied-hint').style.display = 'none'
     try {
       const r = await api.authStart()
-      if (!r?.ok) { status.textContent = 'Could not reach server. Check your internet connection.'; btn.disabled = false; btn.innerHTML = '<i class="fab fa-discord"></i> Link Discord'; return }
+      if (!r?.ok) {
+        status.textContent = tUI('lsNoServer')
+        btn.disabled = false; btn.innerHTML = `<i class="fab fa-discord"></i> ${tUI('lsLinkBtn')}`
+        return
+      }
 
-      // Fallback link for browsers that don't open (e.g. Brave not running)
       const manualDiv  = document.getElementById('lock-manual-url')
       const manualLink = document.getElementById('lock-open-url')
       if (r.url && manualDiv && manualLink) {
         manualLink.onclick = (e) => { e.preventDefault(); api.openExternal(r.url) }
         if (r.browserFailed) {
           manualDiv.style.display = 'block'
-          status.textContent = 'Browser didn\'t open. Use the link below to authenticate.'
+          status.textContent = tUI('lsBrowserFailed')
         } else {
           setTimeout(() => { if (document.getElementById('lock-manual-url')) manualDiv.style.display = 'block' }, 4000)
         }
       }
 
-      btn.innerHTML = '<i class="fa fa-rotate fa-spin"></i> Waiting for Discord…'
-      if (!r.browserFailed) status.textContent = 'Authorize in the browser tab that just opened.'
+      cancelBtn.style.display = 'block'
+      btn.innerHTML = `<i class="fa fa-rotate fa-spin"></i> ${tUI('lsWaiting')}`
+      if (!r.browserFailed) status.textContent = tUI('lsAuthorize')
+
+      let secsLeft = 120
+      countdownTimer = setInterval(() => {
+        secsLeft--
+        if (secsLeft >= 0 && document.getElementById('lock-status'))
+          status.textContent = `${tUI('lsWaiting')} (${secsLeft}${tUI('lsSecsLeft')})`
+      }, 1000)
+
       let attempts = 0
       pollTimer = setInterval(async () => {
         attempts++
-        if (attempts > 60) { clearInterval(pollTimer); status.textContent = 'Timed out. Try again.'; btn.disabled = false; btn.innerHTML = '<i class="fab fa-discord"></i> Link Discord'; return }
+        if (attempts > 60) {
+          clearInterval(pollTimer); clearInterval(countdownTimer)
+          status.textContent = tUI('lsTimedOut')
+          cancelBtn.style.display = 'none'
+          btn.disabled = false; btn.innerHTML = `<i class="fab fa-discord"></i> ${tUI('lsLinkBtn')}`
+          return
+        }
         try {
           const p = await api.authPoll(r.state)
           if (p.status === 'ok') {
-            clearInterval(pollTimer)
+            clearInterval(pollTimer); clearInterval(countdownTimer)
             if (p.discordUserId) settings.discordUserId = p.discordUserId
             status.style.color = '#2ecc71'
-            status.textContent = '✓ Access granted! Loading…'
-            btn.style.display = 'none'
+            status.textContent = tUI('lsGranted')
+            btn.style.display = 'none'; cancelBtn.style.display = 'none'
             setTimeout(() => { document.getElementById('lock-screen')?.remove(); init() }, 800)
           } else if (p.status === 'denied') {
-            clearInterval(pollTimer)
+            clearInterval(pollTimer); clearInterval(countdownTimer)
             status.style.color = '#e74c3c'
-            status.textContent = 'Access denied — you don\'t have the required role.'
-            btn.disabled = false; btn.innerHTML = '<i class="fab fa-discord"></i> Link Discord'
+            status.textContent = tUI('lsDenied')
+            const hint = document.getElementById('lock-denied-hint')
+            hint.textContent = tUI('lsDeniedHint'); hint.style.display = 'block'
+            cancelBtn.style.display = 'none'
+            btn.disabled = false; btn.innerHTML = `<i class="fab fa-discord"></i> ${tUI('lsLinkBtn')}`
           }
         } catch {}
       }, 2000)
     } catch (e) {
       status.textContent = 'Error: ' + e.message
-      btn.disabled = false; btn.innerHTML = '<i class="fab fa-discord"></i> Link Discord'
+      btn.disabled = false; btn.innerHTML = `<i class="fab fa-discord"></i> ${tUI('lsLinkBtn')}`
+      cancelBtn.style.display = 'none'
     }
   }
 
   btn.addEventListener('click', startAuth)
   retry.addEventListener('click', async () => {
     retry.style.color = '#888'
-    retry.textContent = 'Checking…'
+    retry.textContent = tUI('lsChecking')
     const r = await api.authVerify().catch(() => ({ ok: false }))
     if (r.ok) { document.getElementById('lock-screen')?.remove(); init() }
-    else { retry.style.color = '#FF2E63'; retry.textContent = 'Retry verification' }
+    else { retry.style.color = '#FF2E63'; retry.textContent = tUI('lsRetry') }
   })
 }
 
