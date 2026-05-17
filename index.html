@@ -3735,9 +3735,13 @@ function tFixDesc(id) { return (LANG[currentLang]?.fixDescs?.[id]      ?? LANG.e
 function tWizard(key) { return (LANG[currentLang]?.wizard?.[key]     ?? LANG.en.wizard?.[key])   ?? key }
 function tAOName(id)  { return (LANG[currentLang]?.aoNames?.[id]  ?? LANG.en.aoNames?.[id])  ?? id }
 function tAODesc(id)  { return (LANG[currentLang]?.aoDescs?.[id]  ?? LANG.en.aoDescs?.[id])  ?? '' }
+function applyI18n() {
+  document.querySelectorAll('[data-i18n]').forEach(el => { el.textContent = tUI(el.dataset.i18n) })
+}
+
 function initLanguage() {
   currentLang = settings.language || 'en'
-  document.querySelectorAll('[data-i18n]').forEach(el => { el.textContent = tUI(el.dataset.i18n) })
+  applyI18n()
 }
 
 // ─── State ───────────────────────────────────────────────────────────────────
@@ -4637,7 +4641,7 @@ async function setLanguage(lang) {
   currentLang = lang
   settings.language = lang
   await api.saveSettings(settings).catch(() => {})
-  document.querySelectorAll('[data-i18n]').forEach(el => { el.textContent = tUI(el.dataset.i18n) })
+  applyI18n()
   showPage(currentPage)
 }
 
