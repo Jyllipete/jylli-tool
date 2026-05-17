@@ -5299,16 +5299,22 @@ ipcMain.handle('clean-power-plans', async () => {
 // What's New content
 const WHATS_NEW = [
   { version: '1.4.3', date: 'May 2026', items: [
+    'Discord login — the app now requires a Discord account to sign in, ensuring only authorised users can access the tool',
+    'Spec detection screen — on startup the app now detects and displays your CPU, GPU, RAM, and RAM speed on the dashboard',
+    'Language picker — on first launch you can now choose between English and Finnish; changeable anytime from Settings',
     'Finnish translations — App Optimizer card names and descriptions are now fully translated',
     'Finnish translations — FiveM tab tweak names and descriptions are now fully translated',
-    'Finnish translations — What\'s New modal now shows release notes in Finnish when the app language is set to Finnish (recent versions)',
+    'Finnish translations — What\'s New modal now shows release notes in Finnish when the app language is set to Finnish',
     'Finnish translations — Pulse "Activating…" and "Restoring…" button states now show in Finnish',
     'Finnish translations — What\'s New modal title and Close button are now translated',
     'FiveM fullscreen fix — app now automatically sets the DISABLEDXMAXIMIZEDWINDOWEDMODE compat flag when FiveM is detected running, so Alt+Enter fullscreen works without any manual steps',
   ], items_fi: [
+    'Discord-kirjautuminen — sovellus vaatii nyt Discord-tilin sisäänkirjautumiseen, joka varmistaa että vain valtuutetut käyttäjät pääsevät sovellukseen',
+    'Speksintunnistusnäyttö — sovellus tunnistaa nyt käynnistyksessä CPU:n, GPU:n, RAM:n ja RAM-nopeuden ja näyttää ne kojelaudalla',
+    'Kielivalinta — ensimmäisellä käynnistyksellä voit valita suomen tai englannin kielen; vaihdettavissa milloin tahansa asetuksista',
     'Suomenkieliset käännökset — Sovelluksen optimoijan korttien nimet ja kuvaukset on nyt täysin käännetty',
     'Suomenkieliset käännökset — FiveM-välilehden säätöjen nimet ja kuvaukset on nyt täysin käännetty',
-    'Suomenkieliset käännökset — Mitä uutta -ikkuna näyttää nyt julkaisutiedot suomeksi, kun sovelluksen kieli on asetettu suomeksi (uusimmat versiot)',
+    'Suomenkieliset käännökset — Mitä uutta -ikkuna näyttää nyt julkaisutiedot suomeksi, kun sovelluksen kieli on asetettu suomeksi',
     'Suomenkieliset käännökset — Pulsen "Aktivoidaan…" ja "Palautetaan…" -tilatekstit näkyvät nyt suomeksi',
     'Suomenkieliset käännökset — Mitä uutta -ikkunan otsikko ja Sulje-painike on nyt käännetty',
     'FiveM kokoruututilakorjaus — sovellus asettaa nyt automaattisesti DISABLEDXMAXIMIZEDWINDOWEDMODE-yhteensopivuusliputuksen, kun FiveM havaitaan käynnissä, joten Alt+Enter-kokoruututila toimii ilman manuaalisia toimenpiteitä',
