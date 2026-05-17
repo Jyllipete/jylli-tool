@@ -4645,6 +4645,16 @@ if ($r.Count -eq 0) { Write-Output "NONE_FOUND" } else { foreach ($x in $r) { Wr
       s('AMD services restored.', 'ok')
     }
   },
+  'audio-exclusive-mode': {
+    apply: async (s, ps) => {
+      await ps(`Set-ItemProperty -Path 'HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Audio' -Name DisableProtectedAudioDG -Value 1 -Type DWord -Force`)
+      s('Audio exclusive-mode sharing disabled — reduces audio processing latency.', 'ok')
+    },
+    restore: async (s, ps) => {
+      await ps(`Remove-ItemProperty -Path 'HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Audio' -Name DisableProtectedAudioDG -ErrorAction SilentlyContinue`)
+      s('Audio exclusive-mode sharing restored to default.', 'ok')
+    }
+  },
   'corsair-audio-off': {
     apply: async (s, ps, _, cmd) => {
       await cmd('sc config CorsairVBusDriver start= disabled')

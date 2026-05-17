@@ -2146,8 +2146,9 @@ const LANG = {
       hwSecGpuAdvanced:'GPU Advanced',
       hwSecMemMitigations:'Memory & Mitigations',
       hwSecAmdGpu:'AMD GPU',
-      hwSecAudio:'Audio',
+      hwSecAudio:'Audio & Peripherals',
       hwCleanPowerPlans:'Clean up old power plans',
+      hwTipTitle:'These tweaks modify GPU drivers, power plans, and CPU behaviour. Start with Power Plan, then GPU tweaks. Reboot after each section for best results.',
       // BIOS Tuner — danger banner
       biosDangerTitle:'BIOS TUNER — HIGH RISK TOOL',
       biosDangerLine1:'Writing incorrect values to your BIOS can cause your system to fail to boot. Only change settings you understand.',
@@ -2985,8 +2986,9 @@ const LANG = {
       hwSecGpuAdvanced:'GPU lisäasetukset',
       hwSecMemMitigations:'Muisti & rajoitukset',
       hwSecAmdGpu:'AMD GPU',
-      hwSecAudio:'Ääni',
+      hwSecAudio:'Ääni & oheislaitteet',
       hwCleanPowerPlans:'Poista vanhat virrankäyttösuunnitelmat',
+      hwTipTitle:'Nämä säädöt muokkaavat GPU-ajureita, virrankäyttösuunnitelmia ja CPU-toimintaa. Aloita virrankäyttösuunnitelmasta, sitten GPU-säädöt. Käynnistä uudelleen jokaisen osion jälkeen parhaan tuloksen saavuttamiseksi.',
       // BIOS Tuner — danger banner
       biosDangerTitle:'BIOS-SÄÄTÄJÄ — KORKEAN RISKIN TYÖKALU',
       biosDangerLine1:'Virheellisten arvojen kirjoittaminen BIOS:iin voi estää järjestelmäsi käynnistymisen. Muuta vain asetuksia, jotka ymmärrät.',
@@ -9467,19 +9469,34 @@ function buildHardware(c) {
   warn.innerHTML = `<span style="font-size:20px"><i class="fa fa-shield-halved"></i></span><div class="hw-warn-text">${tUI('hwWarnText')}</div><button class="btn btn-primary btn-sm" onclick="quickCreateRP()">${tUI('hwCreateRP')}</button>`
   c.appendChild(warn)
 
+  c.appendChild(makeTip(tUI('hwTipTitle'), 'warning'))
+
+  const hwtoolbar = document.createElement('div')
+  hwtoolbar.style.cssText = 'display:flex;align-items:center;gap:10px;margin-bottom:4px'
+  hwtoolbar.innerHTML = `
+    <div style="position:relative;flex:1">
+      <i class="fa fa-magnifying-glass" style="position:absolute;left:11px;top:50%;transform:translateY(-50%);color:#555;font-size:12px;pointer-events:none"></i>
+      <input id="hw-search" type="text" placeholder="${tUI('genSearchPlaceholder')}"
+        style="width:100%;box-sizing:border-box;background:#111;border:1px solid #222;border-radius:8px;padding:8px 10px 8px 32px;color:#ccc;font-size:12px;outline:none;transition:border-color .15s"
+        onfocus="this.style.borderColor='#333'" onblur="this.style.borderColor='#222'"
+        oninput="hwFilterTweaks(this.value)">
+    </div>
+  `
+  c.appendChild(hwtoolbar)
+
   const SECTIONS = [
     ...(isNvidia ? [{ get title() { return tUI('hwSecNvidiaGpu') }, get sub() { return tUI('hwSecNvidiaGpuSub') }, cards:[
-      { id:'nvidia-max-perf',    name:'Force Maximum Performance Mode', desc:'Sets PowerMizerLevel=1 in GPU class registry. Keeps GPU at max clocks at all times. Reboot required.', icon:'<i class="fa fa-gamepad"></i>' },
+      { id:'nvidia-max-perf',    name:'Force Maximum Performance Mode', desc:'Sets PowerMizerLevel=1 in GPU class registry. Keeps GPU at max clocks at all times. Reboot required.', icon:'<i class="fa fa-gamepad"></i>', reboot:true },
       { id:'nvidia-low-latency', name:'NVIDIA Ultra Low-Latency Mode',  desc:'Sets D3PCLatency=1, F1MaxLatency=0 — equivalent to "Ultra" in NVIDIA Control Panel.', icon:'<i class="fa fa-bolt"></i>' },
-      { id:'disable-hdcp',       name:'Disable HDCP (DRM overhead)',    desc:'May break HDMI audio on some monitors. Reboot required.', icon:'<i class="fa fa-lock-open"></i>', danger:true, dangerLabel:'Confirm HDCP off' },
+      { id:'disable-hdcp',       name:'Disable HDCP (DRM overhead)',    desc:'May break HDMI audio on some monitors. Reboot required.', icon:'<i class="fa fa-lock-open"></i>', danger:true, dangerLabel:'Confirm HDCP off', reboot:true },
     ]}] : []),
     { get title() { return tUI('hwSecPowerPlan') }, cards:[
-      ...((si.cpu||'').toLowerCase().includes('amd') ? [] : [{ id:'intel-power-plan', name:'Intel Max Performance Power Plan', desc:'Creates a custom power plan tuned for Intel CPUs — Speed Shift (HWP) on, aggressive boost mode, no C-state idle, all cores active, PCIe and USB suspend off.', icon:'<i class="fa fa-bolt"></i>', warning: isLaptop ? tUI('warnLaptopHeat') : '' }]),
-      ...((si.cpu||'').toLowerCase().includes('intel') ? [] : [{ id:'amd-power-plan', name:'AMD Max Performance Power Plan', desc:'Creates a custom power plan tuned for AMD CPUs — CPPC preferred cores on, aggressive boost mode, no C-state idle, all cores active, PCIe and USB suspend off.', icon:'<i class="fa fa-bolt"></i>', warning: isLaptop ? tUI('warnLaptopHeat') : '' }]),
-      { id:'cpu-parking',   name:'Disable CPU Core Parking',         desc:'Forces all CPU cores to stay active. Reduces wake-up latency.', icon:'<i class="fa fa-wrench"></i>', warning: isLaptop ? tUI('warnLaptopParking') : '' },
-      { id:'cstates',       name:'Disable CPU C-States',              desc:'Prevents CPU from entering low-power idle states. Eliminates frequency transition stutters.', icon:'<i class="fa fa-bolt"></i>', danger:true, dangerLabel:'Confirm', warning: isLaptop ? tUI('warnLaptopCstates') : '' },
+      ...((si.cpu||'').toLowerCase().includes('amd') ? [] : [{ id:'intel-power-plan', name:'Intel Max Performance Power Plan', desc:'Creates a custom power plan tuned for Intel CPUs — Speed Shift (HWP) on, aggressive boost mode, no C-state idle, all cores active, PCIe and USB suspend off.', icon:'<i class="fa fa-bolt"></i>', warning: isLaptop ? tUI('warnLaptopHeat') : '', reboot:true }]),
+      ...((si.cpu||'').toLowerCase().includes('intel') ? [] : [{ id:'amd-power-plan', name:'AMD Max Performance Power Plan', desc:'Creates a custom power plan tuned for AMD CPUs — CPPC preferred cores on, aggressive boost mode, no C-state idle, all cores active, PCIe and USB suspend off.', icon:'<i class="fa fa-bolt"></i>', warning: isLaptop ? tUI('warnLaptopHeat') : '', reboot:true }]),
+      { id:'cpu-parking',   name:'Disable CPU Core Parking',         desc:'Forces all CPU cores to stay active. Reduces wake-up latency.', icon:'<i class="fa fa-wrench"></i>', warning: isLaptop ? tUI('warnLaptopParking') : '', reboot:true },
+      { id:'cstates',       name:'Disable CPU C-States',              desc:'Prevents CPU from entering low-power idle states. Eliminates frequency transition stutters.', icon:'<i class="fa fa-bolt"></i>', danger:true, dangerLabel:'Confirm', warning: isLaptop ? tUI('warnLaptopCstates') : '', reboot:true },
       ...(isIntel ? [{ id:'speed-shift', name:'Enable Intel Speed Shift (HWP)', desc:'Autonomous frequency scaling for Intel CPUs. 6th gen+: reduces frequency transition latency.', icon:'<i class="fa fa-wind"></i>' }] : []),
-      { id:'pcie-power',    name:'Disable PCIe Link State Power Management', desc:'Stops the PCIe bus power-cycling your GPU and NVMe between transitions. Eliminates the latency spikes caused by waking them back up. Applies to both AC and DC.', icon:'<i class="fa fa-plug-circle-bolt"></i>', warning: isLaptop ? tUI('warnLaptopPcie') : '' },
+      { id:'pcie-power',    name:'Disable PCIe Link State Power Management', desc:'Stops the PCIe bus power-cycling your GPU and NVMe between transitions. Eliminates the latency spikes caused by waking them back up. Applies to both AC and DC.', icon:'<i class="fa fa-plug-circle-bolt"></i>', warning: isLaptop ? tUI('warnLaptopPcie') : '', reboot:true },
     ]},
     { get title() { return tUI('hwSecStorage') }, cards:[
       { id:'nvme-latency', name:'NVMe StorPort Latency Tweak', desc:'Disables performance timer and BusyPauseTime in StorPort driver. Reduces random read latency.', icon:'<i class="fa fa-hard-drive"></i>', warning: !si.nvme ? tUI('warnNoNvme') : '' },
@@ -9490,7 +9507,7 @@ function buildHardware(c) {
         { id:'nvidia-pstate-lock', name:'NVIDIA P-State Lock (P0 always)', desc:'Forces NVIDIA GPU to stay in P0 (maximum performance state) at all times via registry. Eliminates boost-clock ramp-up latency.', icon:'<i class="fa fa-trophy"></i>' },
         { id:'nvidia-profile',     name:'NVIDIA Profile Optimiser', desc:'Applies low-latency, maximum performance and pre-rendered frames settings to the NVIDIA global driver profile via registry.', icon:'<i class="fa fa-sliders"></i>' },
       ] : []),
-      { id:'hvci-offload', name:'HVCI Offload (Hypervisor Code Integrity)', desc:'Enables HVCI offload mode — moves kernel integrity checks to the hypervisor instead of real-time inline. Reduces overhead on Virtualization-Based Security.', icon:'<i class="fa fa-server"></i>', danger:true, dangerLabel:'Confirm', warning:'Modifies VBS/HVCI policy. Reboot required. Revert before troubleshooting boot issues.' },
+      { id:'hvci-offload', name:'HVCI Offload (Hypervisor Code Integrity)', desc:'Enables HVCI offload mode — moves kernel integrity checks to the hypervisor instead of real-time inline. Reduces overhead on Virtualization-Based Security.', icon:'<i class="fa fa-server"></i>', danger:true, dangerLabel:'Confirm', warning:'Modifies VBS/HVCI policy. Reboot required. Revert before troubleshooting boot issues.', reboot:true },
     ]},
     { get title() { return tUI('hwSecMemMitigations') }, cards:[
       { id:'memory-guard-tune',    name:'Memory Guard Tune', desc:'Sets MoveImages and MemoryPressureResponse policies to optimise kernel memory pressure handling and ASLR image placement.', icon:'<i class="fa fa-memory"></i>' },
@@ -9503,6 +9520,7 @@ function buildHardware(c) {
       { id:'amd-service-trim', name:'AMD Service Trim', desc:'Stops and disables non-essential AMD background services (AMDLinkUpdate, AMD Crash Defender, AMD Ryzen Master SDK) that consume CPU idle time.', icon:'<i class="fa fa-scissors"></i>' },
     ]}] : []),
     { get title() { return tUI('hwSecAudio') }, cards:[
+      { id:'audio-exclusive-mode', name:'Disable Audio Exclusive Mode Sharing', desc:'Sets DisableProtectedAudioDG=1. Prevents audio drivers from competing for exclusive-mode access, reducing audio processing latency.', icon:'<i class="fa fa-volume-high"></i>' },
       { id:'corsair-audio-off', name:'Corsair iCUE Audio Off', desc:'Disables Corsair iCUE audio routing services that intercept Windows audio. Reduces audio latency for non-iCUE users. No effect if iCUE is not installed.', icon:'<i class="fa fa-headphones"></i>' },
     ]},
   ]
@@ -9525,6 +9543,19 @@ function buildHardware(c) {
     row.innerHTML = `<button class="btn btn-ghost btn-sm" style="font-size:10px;gap:5px;color:var(--muted)" onclick="doCleanPowerPlans(this)"><i class="fa fa-trash-can"></i> ${tUI('hwCleanPowerPlans')}</button>`
     pc.appendChild(row)
   }
+}
+
+function hwFilterTweaks(query) {
+  const q = query.trim().toLowerCase()
+  const content = document.getElementById('page-content')
+  if (!content) return
+  content.querySelectorAll('.tweak-card-grid .tweak-card').forEach(card => {
+    card.style.display = (!q || card.textContent.toLowerCase().includes(q)) ? '' : 'none'
+  })
+  content.querySelectorAll('.section-card').forEach(sec => {
+    const anyVisible = [...sec.querySelectorAll('.tweak-card')].some(c => c.style.display !== 'none')
+    sec.style.display = anyVisible ? '' : 'none'
+  })
 }
 
 // ─── Page: Network ────────────────────────────────────────────────────────────
