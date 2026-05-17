@@ -2209,6 +2209,12 @@ const LANG = {
       netSecProtocol:'Protocol Cleanup',
       // Fixes hero
       fixesTitle:'Fixes',
+      fixSearchPlaceholder:'Search fixes…',
+      fixCatGaming:'Gaming',
+      fixCatHardware:'Hardware & Connectivity',
+      fixCatSystem:'System & Windows',
+      fixApplied:'Applied',
+      fixRecommended:'Recommended',
       // App Optimizer categories
       aoCatBrowsers:'Browsers',
       aoCatCommunication:'Communication',
@@ -2413,7 +2419,7 @@ const LANG = {
       'fivem-preload-ipl':'Disable Grass (MaximumGrass=0)',
       'fivem-reduce-draw-distance':'Reduce LOD Draw Distance',
       'fivem-defender':'Add FiveM to Defender Exclusions',
-      'fivem-hang-fix':'Fix FiveM Disconnect Hang',
+      'fivem-hang-fix':'Fix FiveM Disconnect Hang + Fullscreen Flicker',
       // Cleanup
       'clean-temp':'Deep Clean System Temps',
       'clean-winsxs':'Windows Component Store (WinSxS)',
@@ -2954,6 +2960,12 @@ const LANG = {
       netSecProtocol:'Protokollasiivous',
       // Fixes hero
       fixesTitle:'Korjaukset',
+      fixSearchPlaceholder:'Hae korjauksia…',
+      fixCatGaming:'Pelit',
+      fixCatHardware:'Laitteisto & Yhteydet',
+      fixCatSystem:'Järjestelmä & Windows',
+      fixApplied:'Käytössä',
+      fixRecommended:'Suositeltava',
       // App Optimizer categories
       aoCatBrowsers:'Selaimet',
       aoCatCommunication:'Viestintä',
@@ -3135,7 +3147,7 @@ const LANG = {
       'fivem-preload-ipl': 'Poistaa kaikki ruohon piirtokutsut CitizenFX.ini:n kautta. Yksi suurimmista FPS-hyödyistä avoimilla alueilla ja autojahdissa — ei visuaalista vaikutusta useimmilla RP-palvelimilla.',
       'fivem-reduce-draw-distance': 'Asettaa MaxLodDistance- ja MaxObjectLodDistance-arvot 30:een (oletus 100). Vähemmän kaukaisia objekteja renderöidään per kehys — huomattava FPS-nousu tiheissä palvelin­ympäristöissä.',
       'fivem-defender': 'Estää Defenderia skannaamasta FiveM-tiedostoja jokaisella latauksella — poistaa skannaukseen liittyvät stutterit ja lataamisviiveet.',
-      'fivem-hang-fix': 'Estää Windowsia jäätymästä 5 sekunniksi FiveM-palvelimelta irrottautumisen jälkeen. Nopeuttaa uudelleen­yhdistämistä.',
+      'fivem-hang-fix': 'Poistaa HungAppTimeout-rekisteriavaimen, jolloin Windows käyttää sisäistä oletusarvoaan. Korjaa hiiren klikkauksesta johtuvan työpöydän välkkymisen koko­ruutu-FiveMissä sekä yhteyden katkeamisesta johtuvan jumiutumisen.',
       // Cleanup
       'clean-temp': 'Tyhjentää %TEMP%-, Windows\\Temp-, Prefetch-, Recent- ja Windows Update -latauskansiot. Tiedostot rakentuvat automaattisesti uudelleen.',
       'clean-winsxs': 'Ajaa DISM /StartComponentCleanup -komennon pakatakseen korvatut komponentit. Tyypillisesti palauttaa 1–5 Gt. Voi kestää useita minuutteja.',
@@ -3277,7 +3289,7 @@ const LANG = {
       'fivem-preload-ipl':'Poista ruoho (MaximumGrass=0)',
       'fivem-reduce-draw-distance':'Pienennä LOD-piirtoetäisyyttä',
       'fivem-defender':'Lisää FiveM Defenderin poissulkuihin',
-      'fivem-hang-fix':'Korjaa FiveM-yhteyden katkeamisesta johtuva jumiutuminen',
+      'fivem-hang-fix':'Korjaa FiveM-katkaisu-jumiutuminen + koko­ruudun välkkyminen',
       // Cleanup
       'clean-temp':'Syvä järjestelmän väliaikaistiedostojen siivous',
       'clean-winsxs':'Windowsin komponenttivarasto (WinSxS)',
@@ -5491,90 +5503,124 @@ async function doDeleteTask(name) {
 // ─── Page: Fixes ──────────────────────────────────────────────────────────────
 const FIXES_DEFS = [
   {
-    id: 'fix-fullscreen-flicker', name: 'Fullscreen Flicker Fix', icon: '<i class="fa fa-display" style="color:#a78bfa"></i>',
+    id: 'fix-fullscreen-flicker', name: 'Fullscreen Flicker Fix', icon: '<i class="fa fa-display" style="color:#a78bfa"></i>', category: 'gaming',
     desc: 'Minimizes Jylli Tool to tray while you game. The app polls system metrics every 3 seconds while open — hiding it to tray stops all background activity and eliminates fullscreen focus interference.',
     handler: async (s) => { await api.minimize() }
   },
   {
-    id: 'fix-fivem-fullscreen', name: 'FiveM Fullscreen Fix', icon: '<i class="fa fa-expand" style="color:#f97316"></i>',
+    id: 'fix-fivem-fullscreen', name: 'FiveM Fullscreen Fix', icon: '<i class="fa fa-expand" style="color:#f97316"></i>', category: 'gaming',
     desc: 'Fixes Alt+Enter not working / FiveM launching in windowed mode. Sets the Windows fullscreen compat flag and writes -fullscreen to GTA V commandline.txt.',
     handler: async (s) => { await api.runTweak('fix-fivem-fullscreen', 'apply') }
   },
   {
-    id: 'fix-valorant-cfg', name: 'Valorant Fix CFG', icon: '<i class="fa fa-shield-halved" style="color:#ff4655"></i>',
+    id: 'fix-valorant-cfg', name: 'Valorant Fix CFG', icon: '<i class="fa fa-shield-halved" style="color:#ff4655"></i>', category: 'gaming',
     desc: 'Enables Control Flow Guard (CFG) and related mitigations for Valorant/Vanguard',
     handler: async (s) => {
       await api.runTweak('fix-valorant-cfg', 'apply')
     }
   },
   {
-    id: 'fix-valorant-hvci', name: 'Valorant HVCI Memory Integrity Fix', icon: '<i class="fa fa-memory" style="color:#ff4655"></i>',
+    id: 'fix-valorant-hvci', name: 'Valorant HVCI Memory Integrity Fix', icon: '<i class="fa fa-memory" style="color:#ff4655"></i>', category: 'gaming',
     desc: 'Enables Memory Integrity (HVCI) for Valorant compatibility',
     handler: async (s) => { await api.runTweak('fix-valorant-hvci', 'apply') }
   },
   {
-    id: 'fix-nvidia-cp', name: 'NVIDIA Control Panel (No Microsoft Store)', icon: '<i class="fa fa-display" style="color:#76b900"></i>',
+    id: 'fix-nvidia-cp', name: 'NVIDIA Control Panel (No Microsoft Store)', icon: '<i class="fa fa-display" style="color:#76b900"></i>', category: 'gaming',
     desc: 'Launches NVIDIA Control Panel without needing Microsoft Store by copying and running the AppX package directly',
     handler: async (s) => { await api.runTweak('fix-nvidia-cp', 'apply') }
   },
   {
-    id: 'fix-wifi', name: 'WiFi Fix', icon: '<i class="fa fa-wifi" style="color:var(--gray)"></i>',
+    id: 'fix-wifi', name: 'WiFi Fix', icon: '<i class="fa fa-wifi" style="color:var(--gray)"></i>', category: 'hardware',
     desc: 'Sets WLAN AutoConfig and WinHttpAutoProxySvc services to Automatic startup, fixing common WiFi connectivity issues',
     handler: async (s) => { await api.runTweak('fix-wifi', 'apply') }
   },
   {
-    id: 'fix-bluetooth', name: 'Bluetooth Fix', icon: '<i class="fa fa-bluetooth" style="color:var(--gray)"></i>',
+    id: 'fix-bluetooth', name: 'Bluetooth Fix', icon: '<i class="fa fa-bluetooth" style="color:var(--gray)"></i>', category: 'hardware',
     desc: 'Configures Bluetooth related services to their correct startup types, fixing common Bluetooth pairing and connectivity issues',
     handler: async (s) => { await api.runTweak('fix-bluetooth', 'apply') }
   },
   {
-    id: 'fix-2502', name: 'Error 2502/2503 Fix', icon: '<i class="fa fa-triangle-exclamation" style="color:var(--gray)"></i>',
-    desc: 'Fixes Windows Installer errors 2502 and 2503 by creating the Temp folder if missing and granting proper permissions to temp directories',
-    handler: async (s) => { await api.runTweak('fix-2502', 'apply') }
-  },
-  {
-    id: 'fix-ms-store', name: 'Microsoft Store/Update Fix', icon: '<i class="fa fa-shop" style="color:var(--gray)"></i>',
-    desc: 'Restores Microsoft Store, Windows Update, and related services to their default state and re-registers Store apps',
-    handler: async (s) => { await api.runTweak('fix-ms-store', 'apply') }
-  },
-  {
-    id: 'fix-audio', name: 'Audio Fix', icon: '<i class="fa fa-volume-high" style="color:var(--gray)"></i>',
-    desc: 'Resets Windows Audio services and re-registers audio DLLs to fix common no-sound or audio stuttering issues',
-    handler: async (s) => { await api.runTweak('fix-audio', 'apply') }
-  },
-  {
-    id: 'fix-winsock', name: 'Network Stack Reset', icon: '<i class="fa fa-network-wired" style="color:var(--gray)"></i>',
-    desc: 'Resets Winsock catalog and TCP/IP stack. Fixes internet connectivity issues after tweaks or software changes. Requires reboot.',
-    handler: async (s) => { await api.runTweak('fix-winsock', 'apply') }
-  },
-  {
-    id: 'fix-windows-defender', name: 'Windows Defender Reset', icon: '<i class="fa fa-shield" style="color:var(--gray)"></i>',
-    desc: 'Re-enables and resets Windows Defender to default state. Use if antivirus stopped working after tweaks.',
-    handler: async (s) => { await api.runTweak('fix-windows-defender', 'apply') }
-  },
-  {
-    id: 'fix-print-spooler', name: 'Print Spooler Fix', icon: '<i class="fa fa-print" style="color:var(--gray)"></i>',
-    desc: 'Clears the print queue and restarts the Print Spooler service to fix stuck print jobs',
-    handler: async (s) => { await api.runTweak('fix-print-spooler', 'apply') }
-  },
-  {
-    id: 'fix-search', name: 'Windows Search Fix', icon: '<i class="fa fa-magnifying-glass" style="color:var(--gray)"></i>',
-    desc: 'Restarts Windows Search indexing service and rebuilds the search index. Fixes Start menu search returning no results.',
-    handler: async (s) => { await api.runTweak('fix-search', 'apply') }
-  },
-  {
-    id: 'fix-usb-ghosting', name: 'Mouse Ghosting / Audio Beeping Fix', icon: '<i class="fa fa-computer-mouse" style="color:var(--gray)"></i>',
+    id: 'fix-usb-ghosting', name: 'Mouse Ghosting / Audio Beeping Fix', icon: '<i class="fa fa-computer-mouse" style="color:var(--gray)"></i>', category: 'hardware',
     desc: 'Restores USB selective suspend settings that can cause mouse ghosting, audio beeping, or USB dropouts. Use this if you applied the USB tweaks and started experiencing these issues.',
     handler: async (s) => { await api.runTweak('fix-usb-ghosting', 'apply') }
   },
   {
-    id: 'fix-phantom-hid', name: 'Remove Phantom HID / USB Devices', icon: '<i class="fa fa-usb" style="color:var(--gray)"></i>',
+    id: 'fix-phantom-hid', name: 'Remove Phantom HID / USB Devices', icon: '<i class="fa fa-usb" style="color:var(--gray)"></i>', category: 'hardware',
     desc: 'Removes ghost USB/HID devices (Status: Unknown) left behind by uninstalled software such as Logitech G HUB and keyboard drivers. These invisible devices cause mouse beeping and input stutters at boot.',
     handler: async (s) => { await api.runTweak('fix-phantom-hid', 'apply') }
   },
+  {
+    id: 'fix-2502', name: 'Error 2502/2503 Fix', icon: '<i class="fa fa-triangle-exclamation" style="color:var(--gray)"></i>', category: 'system',
+    desc: 'Fixes Windows Installer errors 2502 and 2503 by creating the Temp folder if missing and granting proper permissions to temp directories',
+    handler: async (s) => { await api.runTweak('fix-2502', 'apply') }
+  },
+  {
+    id: 'fix-ms-store', name: 'Microsoft Store/Update Fix', icon: '<i class="fa fa-shop" style="color:var(--gray)"></i>', category: 'system',
+    desc: 'Restores Microsoft Store, Windows Update, and related services to their default state and re-registers Store apps',
+    handler: async (s) => { await api.runTweak('fix-ms-store', 'apply') }
+  },
+  {
+    id: 'fix-audio', name: 'Audio Fix', icon: '<i class="fa fa-volume-high" style="color:var(--gray)"></i>', category: 'system',
+    desc: 'Resets Windows Audio services and re-registers audio DLLs to fix common no-sound or audio stuttering issues',
+    handler: async (s) => { await api.runTweak('fix-audio', 'apply') }
+  },
+  {
+    id: 'fix-winsock', name: 'Network Stack Reset', icon: '<i class="fa fa-network-wired" style="color:var(--gray)"></i>', category: 'system',
+    desc: 'Resets Winsock catalog and TCP/IP stack. Fixes internet connectivity issues after tweaks or software changes. Requires reboot.',
+    handler: async (s) => { await api.runTweak('fix-winsock', 'apply') }
+  },
+  {
+    id: 'fix-windows-defender', name: 'Windows Defender Reset', icon: '<i class="fa fa-shield" style="color:var(--gray)"></i>', category: 'system',
+    desc: 'Re-enables and resets Windows Defender to default state. Use if antivirus stopped working after tweaks.',
+    handler: async (s) => { await api.runTweak('fix-windows-defender', 'apply') }
+  },
+  {
+    id: 'fix-print-spooler', name: 'Print Spooler Fix', icon: '<i class="fa fa-print" style="color:var(--gray)"></i>', category: 'system',
+    desc: 'Clears the print queue and restarts the Print Spooler service to fix stuck print jobs',
+    handler: async (s) => { await api.runTweak('fix-print-spooler', 'apply') }
+  },
+  {
+    id: 'fix-search', name: 'Windows Search Fix', icon: '<i class="fa fa-magnifying-glass" style="color:var(--gray)"></i>', category: 'system',
+    desc: 'Restarts Windows Search indexing service and rebuilds the search index. Fixes Start menu search returning no results.',
+    handler: async (s) => { await api.runTweak('fix-search', 'apply') }
+  },
 ]
 
-function buildFixes(c) {
+async function _fixBadgeRecommended(settings) {
+  const addBadge = (id) => {
+    if (settings[`fix_${id}`] === 'applied') return
+    const slot = document.querySelector(`#fix-card-${id} .fix-badge-slot`)
+    if (!slot || slot.querySelector('.fix-rec-badge')) return
+    const badge = document.createElement('span')
+    badge.className = 'fix-rec-badge'
+    badge.style.cssText = 'font-size:9px;font-weight:700;color:#f59e0b;background:rgba(245,158,11,0.12);border:1px solid rgba(245,158,11,0.3);border-radius:4px;padding:1px 6px'
+    badge.textContent = `★ ${tUI('fixRecommended')}`
+    slot.appendChild(badge)
+  }
+
+  // GPU-based: NVIDIA Control Panel
+  if ((sysInfo.gpu || '').toLowerCase().includes('nvidia')) addBadge('fix-nvidia-cp')
+
+  // WiFi-based
+  if (sysInfo.isWifi) addBadge('fix-wifi')
+
+  // USB tweaks applied → ghosting fixes recommended
+  if (settings['tweak_usb-suspend'] === 'applied' || settings['tweak_usb-power-guard'] === 'applied') {
+    addBadge('fix-usb-ghosting')
+    addBadge('fix-phantom-hid')
+  }
+
+  // Game-based recommendations
+  try {
+    const games = await api.detectGames()
+    const installed = new Set(games.filter(g => g.installed).map(g => g.id))
+    if (installed.has('gtav') || installed.has('fivem')) addBadge('fix-fivem-fullscreen')
+    if (installed.has('valorant')) { addBadge('fix-valorant-cfg'); addBadge('fix-valorant-hvci') }
+  } catch {}
+}
+
+async function buildFixes(c) {
+  // Hero
   const hero = document.createElement('div')
   hero.style.cssText = 'background:linear-gradient(135deg,#0d0d18,#10101a);border:1px solid #2a2a3a;border-radius:10px;padding:14px 18px;margin-bottom:14px'
   hero.innerHTML = `
@@ -5582,32 +5628,106 @@ function buildFixes(c) {
     <div style="font-size:11px;color:var(--gray);line-height:1.5">${tUI('fixesHero')}</div>`
   c.appendChild(hero)
 
-  const grid = document.createElement('div')
-  grid.style.cssText = 'display:grid;grid-template-columns:repeat(3,1fr);gap:10px'
-  c.appendChild(grid)
+  // Search bar
+  const searchWrap = document.createElement('div')
+  searchWrap.style.cssText = 'position:relative;margin-bottom:12px'
+  searchWrap.innerHTML = `
+    <i class="fa fa-magnifying-glass" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--gray);font-size:11px;pointer-events:none"></i>
+    <input id="fix-search-input" type="text" placeholder="${tUI('fixSearchPlaceholder')}"
+      style="width:100%;box-sizing:border-box;background:var(--bg-card);border:1px solid var(--border);border-radius:8px;padding:7px 10px 7px 28px;font-size:11px;color:var(--white);outline:none">`
+  c.appendChild(searchWrap)
 
+  // LGHUB warning (async, inserted after search bar if present)
   api.checkLghub?.().then(r => {
     if (!r?.present) return
     const warn = document.createElement('div')
     warn.style.cssText = 'background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.3);border-radius:8px;padding:10px 14px;margin-bottom:10px;display:flex;align-items:center;gap:10px'
     warn.innerHTML = `<i class="fa fa-triangle-exclamation" style="color:#ef4444;font-size:14px;flex-shrink:0"></i><div style="font-size:11px;color:#e0e0e0;line-height:1.5"><strong style="color:#ef4444">${tUI('fixLghubTitle')}</strong> — ${tUI('fixLghubDesc')}</div>`
-    c.insertBefore(warn, grid)
+    c.insertBefore(warn, searchWrap.nextSibling)
   }).catch(() => {})
 
+  // Load settings for applied state
+  const settings = await api.loadSettings().catch(() => ({}))
+
+  // Category definitions
+  const CATS = [
+    { key: 'gaming',   label: tUI('fixCatGaming'),   icon: 'fa-gamepad' },
+    { key: 'hardware', label: tUI('fixCatHardware'),  icon: 'fa-microchip' },
+    { key: 'system',   label: tUI('fixCatSystem'),    icon: 'fa-gear' },
+  ]
+
+  const catSections = {}
+  CATS.forEach(cat => {
+    const section = document.createElement('div')
+    section.className = `fix-cat-section fix-cat-${cat.key}`
+    section.style.cssText = 'margin-bottom:16px'
+
+    const header = document.createElement('div')
+    header.className = `fix-cat-header fix-cat-header-${cat.key}`
+    header.style.cssText = 'display:flex;align-items:center;gap:7px;margin-bottom:8px;padding:0 2px'
+    header.innerHTML = `
+      <i class="fa ${cat.icon}" style="font-size:10px;color:var(--cyan)"></i>
+      <span style="font-size:10px;font-weight:700;color:var(--cyan);text-transform:uppercase;letter-spacing:0.8px">${cat.label}</span>`
+
+    const grid = document.createElement('div')
+    grid.className = `fix-grid fix-grid-${cat.key}`
+    grid.style.cssText = 'display:grid;grid-template-columns:repeat(3,1fr);gap:10px'
+
+    section.appendChild(header)
+    section.appendChild(grid)
+    c.appendChild(section)
+    catSections[cat.key] = { section, grid }
+  })
+
+  // Render fix cards
   FIXES_DEFS.forEach(fix => {
+    const applied = settings[`fix_${fix.id}`] === 'applied'
+    const name = LANG[currentLang]?.fixNames?.[fix.id] || fix.name
+    const desc = tFixDesc(fix.id) || fix.desc
+
     const card = document.createElement('div')
     card.id = `fix-card-${fix.id}`
+    card.className = 'fix-card'
+    card.dataset.name = name.toLowerCase()
+    card.dataset.desc = desc.toLowerCase()
+    card.dataset.cat = fix.category
     card.style.cssText = 'background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:16px 18px;display:flex;flex-direction:column;gap:10px;transition:border-color 0.15s'
+
     card.innerHTML = `
       <div style="display:flex;align-items:center;gap:10px">
         <div style="width:36px;height:36px;background:var(--bg-card2);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">${fix.icon}</div>
-        <div style="font-size:12px;font-weight:700;color:var(--white);line-height:1.3">${LANG[currentLang]?.fixNames?.[fix.id] || fix.name}</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:12px;font-weight:700;color:var(--white);line-height:1.3">${name}</div>
+          <div class="fix-badge-slot" style="display:flex;gap:4px;flex-wrap:wrap;margin-top:3px">
+            ${applied ? `<span class="fix-applied-badge" style="font-size:9px;font-weight:700;color:#4ade80;background:rgba(74,222,128,0.12);border:1px solid rgba(74,222,128,0.3);border-radius:4px;padding:1px 6px">✓ ${tUI('fixApplied')}</span>` : ''}
+          </div>
+        </div>
       </div>
-      <div style="font-size:10px;color:var(--gray);line-height:1.6;flex:1">${tFixDesc(fix.id) || fix.desc}</div>
-      <button class="btn btn-primary btn-sm fix-run-btn" id="fix-btn-${fix.id}" onclick="runFix('${fix.id}',this)">${tUI('runFix')}</button>
+      <div style="font-size:10px;color:var(--gray);line-height:1.6;flex:1">${desc}</div>
+      <button class="btn ${applied ? 'btn-outline' : 'btn-primary'} btn-sm fix-run-btn" id="fix-btn-${fix.id}" onclick="runFix('${fix.id}',this)">${tUI('runFix')}</button>
     `
-    grid.appendChild(card)
+
+    const target = catSections[fix.category]?.grid
+    if (target) target.appendChild(card)
   })
+
+  // Search filter
+  document.getElementById('fix-search-input')?.addEventListener('input', e => {
+    const q = e.target.value.toLowerCase().trim()
+    CATS.forEach(cat => {
+      const { section, grid } = catSections[cat.key]
+      let anyVisible = false
+      grid.querySelectorAll('.fix-card').forEach(card => {
+        const match = !q || card.dataset.name.includes(q) || card.dataset.desc.includes(q)
+        card.style.display = match ? '' : 'none'
+        if (match) anyVisible = true
+      })
+      section.style.display = anyVisible ? '' : 'none'
+    })
+  })
+
+  // Smart recommendations (async, non-blocking)
+  _fixBadgeRecommended(settings)
 }
 
 async function runFix(id, btn) {
@@ -5640,6 +5760,21 @@ async function runFix(id, btn) {
       btn.innerHTML = `<i class="fa fa-check"></i> ${tUI('fixDone')}`
       btn.classList.replace('btn-primary', 'btn-success')
       toast(`Fix applied`, fix.name, 'ok')
+      if (id !== 'fix-fullscreen-flicker') {
+        const s = await api.loadSettings().catch(() => ({}))
+        s[`fix_${id}`] = 'applied'
+        await api.saveSettings(s).catch(() => {})
+        const slot = document.querySelector(`#fix-card-${id} .fix-badge-slot`)
+        if (slot && !slot.querySelector('.fix-applied-badge')) {
+          slot.querySelectorAll('.fix-rec-badge').forEach(b => b.remove())
+          const badge = document.createElement('span')
+          badge.className = 'fix-applied-badge'
+          badge.style.cssText = 'font-size:9px;font-weight:700;color:#4ade80;background:rgba(74,222,128,0.12);border:1px solid rgba(74,222,128,0.3);border-radius:4px;padding:1px 6px'
+          badge.textContent = `✓ ${tUI('fixApplied')}`
+          slot.appendChild(badge)
+        }
+        setTimeout(() => btn.classList.replace('btn-success', 'btn-outline'), 1500)
+      }
       if (id === 'fix-wifi') {
         try {
           await showConfirm({
@@ -8577,7 +8712,7 @@ async function aomRenderStepFiveM() {
     { id: 'fivem-fso',           label: 'Disable Fullscreen Optimizations for FiveM',  safe: true },
     { id: 'fivem-gpu',           label: 'FiveM GPU pre-emption → Low latency mode',    safe: true },
     { id: 'fivem-network',       label: 'FiveM network tweaks (Nagle off, ACK=1)',     safe: true },
-    { id: 'fivem-hang-fix',      label: 'Fix FiveM hang-on-disconnect (timeout → 3s)', safe: true },
+    { id: 'fivem-hang-fix',      label: 'Fix FiveM hang-on-disconnect + fullscreen flicker (HungAppTimeout removed)', safe: true },
     { id: 'fivem-streaming-mem', label: 'StreamingMemory → 1024 MB (reduce pop-in)',   safe: true },
     { id: 'fivem-commandline',   label: 'Command-line flags (+high, DX11, no borders)', safe: true },
   ]
@@ -9214,7 +9349,7 @@ function buildFiveM(c) {
     {
       get title() { return tUI('fivemSecSystem') }, rows: [
         { id:'fivem-defender', name:'Add FiveM folder to Windows Defender exclusions', desc:'Prevents Defender from scanning FiveM files on every load — eliminates scan-related stutters and load time.' },
-        { id:'fivem-hang-fix', name:'Fix FiveM disconnect hang (HungAppTimeout → 3 seconds)', desc:'Stops Windows freezing for 5 seconds after disconnecting from a FiveM server. Improves reconnect speed.' },
+        { id:'fivem-hang-fix', name:'Fix FiveM disconnect hang + fullscreen flicker (HungAppTimeout)', desc:'Removes the HungAppTimeout registry override so Windows uses its built-in default. Fixes desktop flash / peek-through on mouse clicks in fullscreen FiveM, and eliminates the disconnect hang.' },
       ]
     },
   ]

@@ -3201,14 +3201,14 @@ const TWEAKS = {
   },
   'fivem-hang-fix': {
     apply: async (s, ps) => {
-      await ps('Set-ItemProperty -Path "HKCU:\\Control Panel\\Desktop" -Name HungAppTimeout -Value 3000 -Force')
-      await ps('Set-ItemProperty -Path "HKCU:\\Control Panel\\Desktop" -Name WaitToKillAppTimeout -Value 3000 -Force')
-      s('Hang timeout → 3 s. FiveM disconnect hang fixed.', 'ok')
+      await ps('Remove-ItemProperty -Path "HKCU:\\Control Panel\\Desktop" -Name HungAppTimeout -ErrorAction SilentlyContinue')
+      await ps('Remove-ItemProperty -Path "HKCU:\\Control Panel\\Desktop" -Name WaitToKillAppTimeout -ErrorAction SilentlyContinue')
+      s('HungAppTimeout removed — Windows default restored. FiveM disconnect hang fixed.', 'ok')
     },
     restore: async (s, ps) => {
-      await ps('Set-ItemProperty -Path "HKCU:\\Control Panel\\Desktop" -Name HungAppTimeout -Value 5000 -Force')
-      await ps('Set-ItemProperty -Path "HKCU:\\Control Panel\\Desktop" -Name WaitToKillAppTimeout -Value 5000 -Force')
-      s('Hang timeouts restored to 5 s.', 'ok')
+      await ps('Remove-ItemProperty -Path "HKCU:\\Control Panel\\Desktop" -Name HungAppTimeout -ErrorAction SilentlyContinue')
+      await ps('Remove-ItemProperty -Path "HKCU:\\Control Panel\\Desktop" -Name WaitToKillAppTimeout -ErrorAction SilentlyContinue')
+      s('Hang timeout keys removed — Windows default behaviour restored.', 'ok')
     }
   },
   'fivem-network': {
@@ -5298,6 +5298,19 @@ ipcMain.handle('clean-power-plans', async () => {
 
 // What's New content
 const WHATS_NEW = [
+  { version: '1.4.4', date: 'May 2026', items: [
+    'Fullscreen flicker fix — the FiveM Hang Fix tweak now removes HungAppTimeout from registry entirely, eliminating the desktop peek/flash on mouse click in fullscreen FiveM',
+    'Fixes tab redesigned — fixes are now grouped into Gaming, Hardware & Connectivity, and System & Windows categories',
+    'Smart fix recommendations — relevant fixes are highlighted with a Recommended badge based on your hardware and installed games',
+    'Search bar on Fixes tab — type to instantly filter fix cards',
+    'Applied state tracking — fixes you have run show a green Applied badge and are remembered across restarts',
+  ], items_fi: [
+    'Koko­ruudun välkkymiskorjaus — FiveM Hang Fix -säätö poistaa nyt HungAppTimeout-rekisteriavaimen kokonaan, jolloin hiiren klikkaukset eivät enää aiheuta työpöydän välähdystä koko­ruutu-FiveMissä',
+    'Korjaukset-välilehti uudistettu — korjaukset on nyt ryhmitelty Pelit-, Laitteisto & Yhteydet- ja Järjestelmä & Windows-kategorioihin',
+    'Älykäs suositukset — sopivat korjaukset merkitään Suositeltava-merkillä laitteistosi ja asennettujen peliesi perusteella',
+    'Hakupalkki Korjaukset-välilehdellä — kirjoita suodattaaksesi korjauksia välittömästi',
+    'Käytetty-tila tallennetaan — suorittamasi korjaukset näyttävät vihreän Käytössä-merkin ja muistetaan uudelleenkäynnistyksen jälkeen',
+  ]},
   { version: '1.4.3', date: 'May 2026', items: [
     'Discord login — the app now requires a Discord account to sign in, ensuring only authorised users can access the tool',
     'Spec detection screen — on startup the app now detects and displays your CPU, GPU, RAM, and RAM speed on the dashboard',
