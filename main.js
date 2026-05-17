@@ -271,32 +271,34 @@ function sendWebhook(payload, targetUrl) {
 
 function notifyBot(event, extra = {}) {
   debugLog('[notifyBot] called: ' + event)
-  try {
-    const optOut = loadSettings().analyticsOptOut
-    debugLog('[notifyBot] optOut: ' + optOut)
-    if (optOut) return
-    const { winVer, cpu, ram, gpu, isLaptop, isWifi, hasFiveM } = getSystemFields()
-    const analytics = loadAnalytics()
-    const discordUserId = loadSettings().discordUserId || null
-    const payload = JSON.stringify({
-      secret: BOT_SECRET, event, version: APP_VERSION,
-      userId: analytics.userId, discordUserId,
-      sessions: analytics.sessions,
-      totalTweaks: analytics.totalTweaksApplied || 0,
-      cpu, ram, gpu, winVer, isLaptop, isWifi, hasFiveM,
-      ...extra
-    })
-    debugLog('[notifyBot] sending to: ' + BOT_URL)
-    const url = new URL(BOT_URL)
-    const req = require('https').request({
-      hostname: url.hostname, path: '/',
-      method: 'POST', headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(payload) }
-    })
-    req.on('response', r => debugLog('[notifyBot] response: ' + r.statusCode))
-    req.on('error', e => debugLog('[notifyBot] error: ' + e.message))
-    req.write(payload)
-    req.end()
-  } catch (e) { debugLog('[notifyBot] threw: ' + e.message) }
+  return new Promise((resolve) => {
+    try {
+      const optOut = loadSettings().analyticsOptOut
+      debugLog('[notifyBot] optOut: ' + optOut)
+      if (optOut) return resolve()
+      const { winVer, cpu, ram, gpu, isLaptop, isWifi, hasFiveM } = getSystemFields()
+      const analytics = loadAnalytics()
+      const discordUserId = loadSettings().discordUserId || null
+      const payload = JSON.stringify({
+        secret: BOT_SECRET, event, version: APP_VERSION,
+        userId: analytics.userId, discordUserId,
+        sessions: analytics.sessions,
+        totalTweaks: analytics.totalTweaksApplied || 0,
+        cpu, ram, gpu, winVer, isLaptop, isWifi, hasFiveM,
+        ...extra
+      })
+      debugLog('[notifyBot] sending to: ' + BOT_URL)
+      const url = new URL(BOT_URL)
+      const req = require('https').request({
+        hostname: url.hostname, path: '/',
+        method: 'POST', headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(payload) }
+      })
+      req.on('response', r => { debugLog('[notifyBot] response: ' + r.statusCode); resolve() })
+      req.on('error', e => { debugLog('[notifyBot] error: ' + e.message); resolve() })
+      req.write(payload)
+      req.end()
+    } catch (e) { debugLog('[notifyBot] threw: ' + e.message); resolve() }
+  })
 }
 
 // ── Shared helper: build system info fields ───────────────────────────────────
@@ -370,8 +372,8 @@ function webhookSessionEnd(durationMs, pageVisits, tweaksThisSession) {
     analytics.totalTweaksApplied = (analytics.totalTweaksApplied || 0) + (tweaksThisSession || 0)
     saveAnalytics(analytics)
 
-    notifyBot('session_end', { durationLabel, durationMs, tweaksThisSession: tweaksThisSession || 0 })
-  } catch {}
+    return notifyBot('session_end', { durationLabel, durationMs, tweaksThisSession: tweaksThisSession || 0 })
+  } catch { return Promise.resolve() }
 }
 
 function webhookError(type, err) {
@@ -678,9 +680,11 @@ app.on('will-quit', (e) => {
   e.preventDefault()
   stopLhm()
   const duration = Date.now() - sessionStartTime
-  if (duration > 10000) webhookSessionEnd(duration, sessionPageVisits, sessionTweaksCount)
-  // Await clearActivity so Discord status is actually removed before the process exits
-  destroyDiscordRPC().finally(() => app.exit(0))
+  const sessionEndPromise = duration > 10000
+    ? webhookSessionEnd(duration, sessionPageVisits, sessionTweaksCount)
+    : Promise.resolve()
+  // Wait for session_end to reach the bot before exiting, then clear Discord RPC
+  sessionEndPromise.finally(() => destroyDiscordRPC().finally(() => app.exit(0)))
 })
 
 // ── Session tracking IPC ─────────────────────────────────────────────────────
