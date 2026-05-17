@@ -188,6 +188,10 @@ html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(-
 .header-btn:hover { background: var(--bg-card2); color: var(--white); }
 .header-btn.primary { background: var(--pink-dim); border-color: rgba(var(--pink-rgb),0.4); color: var(--pink); }
 .header-btn.primary:hover { background: var(--pink); color: white; }
+.header-btn.danger  { background: var(--danger-bg); color: var(--danger); border-color: rgba(231,76,60,0.3); }
+.header-btn.danger:hover  { background: var(--danger); color: #fff; }
+.header-btn.warning { background: rgba(243,156,18,0.1); color: #F39C12; border-color: rgba(243,156,18,0.3); }
+.header-btn.warning:hover { background: #F39C12; color: #000; }
 .search-btn {
   -webkit-app-region: no-drag; display: flex; align-items: center; gap: 8px;
   background: var(--bg-card); border: 1px solid var(--border2); border-radius: 7px;
@@ -206,7 +210,10 @@ html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(-
   height: var(--log-h); flex-shrink: 0;
   background: #080808; border-top: 1px solid var(--border);
   display: flex; flex-direction: column;
+  transition: height 0.2s cubic-bezier(0.22,1,0.36,1); overflow: hidden;
 }
+#log-pane.collapsed { height: 30px !important; }
+#log-pane.collapsed #log-output { display: none; }
 #log-header { display: flex; align-items: center; padding: 5px 14px; gap: 10px; border-bottom: 1px solid var(--border2); }
 #log-header span { font-size: 9px; font-weight: 700; color: var(--muted); letter-spacing: 1px; }
 #log-header .log-legend { margin-left: auto; font-size: 9px; color: var(--muted2); }
@@ -219,6 +226,10 @@ html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(-
 .log-line.warn { color: var(--warning); }
 .log-line.err  { color: var(--danger); }
 .log-line.info { color: #8a8a8a; }
+
+/* ─── Recent page pills ──────────────────────────────────────────────────── */
+.recent-pill { font-size:9px; padding:1px 7px; border-radius:10px; background:var(--bg-card2); border:1px solid var(--border); color:var(--muted); cursor:pointer; transition:var(--transition); white-space:nowrap; font-family:inherit; }
+.recent-pill:hover { color:var(--gray); border-color:rgba(var(--pink-rgb),0.3); }
 
 /* ─── Cards & Section ────────────────────────────────────────────────────── */
 .section-card {
@@ -1104,6 +1115,8 @@ canvas.radar-canvas { width: 180px; height: 180px; }
 .pill-slider:before { content:''; position:absolute; height:16px; width:16px; left:2px; bottom:2px; background:#888; border-radius:50%; transition: transform 0.2s cubic-bezier(0.34,1.56,0.64,1), background 0.2s ease; }
 input:checked + .pill-slider { background: var(--success); }
 input:checked + .pill-slider:before { transform: translateX(18px); background: white; }
+.startup-group-header { padding:6px 18px 4px; font-size:9px; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; color:var(--muted); border-bottom:1px solid var(--border2); margin-top:4px; display:flex; align-items:center; gap:6px; }
+.startup-group-count { background:var(--bg-card2); border:1px solid var(--border); border-radius:10px; padding:0 6px; font-size:9px; color:var(--gray); }
 
 /* ─── PING TEST ──────────────────────────────────────────────────────────── */
 .ping-row { display: flex; align-items: center; padding: 10px 18px; border-bottom: 1px solid var(--border2); gap: 12px; }
@@ -1235,6 +1248,7 @@ select.styled-select:focus { border-color: var(--pink); }
 .tc-desc { font-size:10px; color:var(--gray); line-height:1.5; }
 .tc-warn { font-size:9px; color:var(--warning); background:var(--warning-bg); border:1px solid var(--warning-bg); border-radius:4px; padding:4px 8px; margin-top:4px; }
 .reboot-badge { display:inline-flex;align-items:center;gap:4px;font-size:9px;color:#f39c12;background:rgba(243,156,18,0.08);border:1px solid rgba(243,156,18,0.22);border-radius:4px;padding:2px 6px;margin-top:4px; }
+.new-badge { display:inline-block;font-size:8px;font-weight:800;letter-spacing:0.06em;color:#fff;background:linear-gradient(135deg,#7c3aed,#a855f7);border-radius:4px;padding:1px 5px;vertical-align:middle;margin-left:5px;animation:badgePop .3s cubic-bezier(.22,1,.36,1) both;text-transform:uppercase; }
 .pf-row-tag { font-size:9px; color:var(--info); margin-top:3px; }
 .tweak-row.pf-preapplied { border-left:2px solid rgba(52,152,219,0.35); }
 .tc-foot { display:flex; align-items:center; justify-content:space-between; margin-top:auto; }
@@ -1661,8 +1675,8 @@ select.styled-select:focus { border-color: var(--pink); }
     <div class="spacer"></div>
     <div style="-webkit-app-region:no-drag;display:flex;align-items:center;gap:6px;padding-right:6px">
 <button id="adv-toggle-btn" class="header-btn" onclick="toggleAdvancedMode()" title="Show/hide advanced tabs"><i class="fa fa-gear"></i> <span data-i18n="topAdvanced">Advanced</span></button>
-      <button onclick="showBugReport()" style="padding:3px 11px;border-radius:5px;font-size:10px;font-weight:600;cursor:pointer;background:rgba(231,76,60,0.1);color:#e74c3c;border:1px solid rgba(231,76,60,0.3);font-family:inherit;transition:all 0.14s ease" onmouseover="this.style.background='#e74c3c';this.style.color='#fff'" onmouseout="this.style.background='rgba(231,76,60,0.1)';this.style.color='#e74c3c'"><i class="fa fa-bug"></i> <span data-i18n="topReportBug">Report Bug</span></button>
-      <button onclick="showWhatsNew()" style="padding:3px 11px;border-radius:5px;font-size:10px;font-weight:600;cursor:pointer;background:rgba(243,156,18,0.1);color:#F39C12;border:1px solid rgba(243,156,18,0.3);font-family:inherit;transition:all 0.14s ease" onmouseover="this.style.background='#F39C12';this.style.color='#000'" onmouseout="this.style.background='rgba(243,156,18,0.1)';this.style.color='#F39C12'"><i class="fa fa-star"></i> <span data-i18n="topWhatsNew">What's New</span></button>
+      <button onclick="showBugReport()" class="header-btn danger" style="padding:3px 11px;font-size:10px"><i class="fa fa-bug"></i> <span data-i18n="topReportBug">Report Bug</span></button>
+      <button onclick="showWhatsNew()" class="header-btn warning" style="padding:3px 11px;font-size:10px"><i class="fa fa-star"></i> <span data-i18n="topWhatsNew">What's New</span></button>
       <div id="admin-badge" class="admin"><i class="fa fa-lock"></i> <span data-i18n="topAdmin">ADMIN</span></div>
       <button class="win-btn" onclick="api.minimize()" title="Minimize">─</button>
       <button class="win-btn" onclick="api.maximize()" title="Maximize">□</button>
@@ -1673,7 +1687,7 @@ select.styled-select:focus { border-color: var(--pink); }
   <div id="body">
     <!-- Sidebar — Paragon sections -->
     <nav id="sidebar">
-      <div class="sidebar-section-label">General</div>
+      <div class="sidebar-section-label" data-i18n="sidebarGeneral">General</div>
       <button class="nav-btn active" data-page="dashboard" data-label="Home" onclick="showPage('dashboard')">
         <span class="nav-icon"><i class="fa fa-house"></i></span><span class="nav-label">Home</span>
       </button>
@@ -1694,7 +1708,7 @@ select.styled-select:focus { border-color: var(--pink); }
       <button class="nav-btn" data-page="latency-monitor" data-label="Latency" data-advanced="true" onclick="showPage('latency-monitor')">
         <span class="nav-icon"><i class="fa fa-wave-square"></i></span><span class="nav-label">Latency</span>
       </button>
-      <div class="sidebar-section-label" style="margin-top:4px">Tweaks</div>
+      <div class="sidebar-section-label" style="margin-top:4px" data-i18n="sidebarTweaks">Tweaks</div>
       <button class="nav-btn" data-page="windows-opti" data-label="General Tweaks" onclick="showPage('windows-opti')">
         <span class="nav-icon"><i class="fa fa-windows fab"></i></span><span class="nav-label">General</span>
       </button>
@@ -1716,7 +1730,7 @@ select.styled-select:focus { border-color: var(--pink); }
       <button class="nav-btn" data-page="app-optimizer" data-label="App Optimizer" onclick="showPage('app-optimizer')">
         <span class="nav-icon"><i class="fa fa-mobile-screen"></i></span><span class="nav-label">App Optimizer</span>
       </button>
-      <div class="sidebar-section-label" style="margin-top:4px">Tools</div>
+      <div class="sidebar-section-label" style="margin-top:4px" data-i18n="sidebarTools">Tools</div>
       <button class="nav-btn" data-page="pulse" data-label="Pulse" onclick="showPage('pulse')">
         <span class="nav-icon"><i class="fa fa-bolt"></i></span><span class="nav-label">Pulse</span>
       </button>
@@ -1728,9 +1742,6 @@ select.styled-select:focus { border-color: var(--pink); }
       </button>
       <button class="nav-btn" data-page="bios-tuner" data-label="BIOS Tuner" data-advanced="true" onclick="showPage('bios-tuner')">
         <span class="nav-icon"><i class="fa fa-microchip"></i></span><span class="nav-label">BIOS Tuner</span>
-      </button>
-      <button class="nav-btn" data-page="ping-test" data-label="Ping Test" data-advanced="true" onclick="showPage('ping-test')">
-        <span class="nav-icon"><i class="fa fa-satellite-dish"></i></span><span class="nav-label">Ping Test</span>
       </button>
       <button class="nav-btn" data-page="scheduler" data-label="Scheduler" onclick="showPage('scheduler')">
         <span class="nav-icon"><i class="fa fa-clock"></i></span><span class="nav-label">Scheduler</span>
@@ -1744,7 +1755,7 @@ select.styled-select:focus { border-color: var(--pink); }
       </button>
       <button class="sidebar-toggle-btn" id="sidebar-toggle-btn" onclick="toggleSidebar()" title="Toggle sidebar">
         <span id="sidebar-toggle-icon"><i class="fa fa-angles-left"></i></span>
-        <span id="sidebar-toggle-label" class="nav-label" style="font-size:11px;margin-left:4px">Collapse</span>
+        <span id="sidebar-toggle-label" class="nav-label" style="font-size:11px;margin-left:4px" data-i18n="sidebarCollapse">Collapse</span>
       </button>
       <div class="sidebar-footer" id="sidebar-ver">v… · Jylli Tool</div>
     </nav>
@@ -1755,6 +1766,7 @@ select.styled-select:focus { border-color: var(--pink); }
         <div id="page-title-wrap">
           <div id="page-title">Dashboard</div>
           <div id="page-subtitle">System overview</div>
+          <div id="recent-pages" style="display:flex;gap:4px;flex-wrap:wrap;margin-top:3px"></div>
         </div>
         <button class="search-btn" onclick="openCmdPalette()">
           <i class="fa fa-magnifying-glass"></i>
@@ -1767,9 +1779,10 @@ select.styled-select:focus { border-color: var(--pink); }
       <div id="page-content"></div>
       <div id="log-pane">
         <div id="log-header">
-          <span>OUTPUT LOG</span>
-          <span class="log-legend">✓=ok &nbsp; <i class="fa fa-triangle-exclamation"></i>=warn &nbsp; ✗=err &nbsp; ◆=section</span>
-          <button id="log-clear" onclick="clearLog()">Clear</button>
+          <span data-i18n="logTitle">OUTPUT LOG</span>
+          <span class="log-legend" data-i18n="logLegend">✓=ok   ⚠=warn   ✗=err   ◆=section</span>
+          <button id="log-clear" onclick="clearLog()" data-i18n="logClear">Clear</button>
+          <button id="log-toggle-btn" onclick="toggleLogPane()" title="Toggle log" style="background:none;border:none;color:var(--muted);font-size:10px;cursor:pointer;padding:2px 6px;border-radius:4px;font-family:inherit;transition:var(--transition)" onmouseover="this.style.color='var(--gray)'" onmouseout="this.style.color='var(--muted)'"><i class="fa fa-chevron-down" id="log-toggle-icon"></i></button>
         </div>
         <div id="log-output"></div>
       </div>
@@ -1803,6 +1816,8 @@ const LANG = {
       apply:'Apply', restore:'Restore', runFix:'Run Fix', done:'Done', running:'Running…',
       confirm:'Confirm', back:'Back', next:'Next', close:'Close',
       advanced:'Advanced', language:'Language', langCode:'EN',
+      sidebarGeneral:'General', sidebarTweaks:'Tweaks', sidebarTools:'Tools', sidebarCollapse:'Collapse',
+      logTitle:'OUTPUT LOG', logLegend:'✓=ok   ⚠=warn   ✗=err   ◆=section', logClear:'Clear',
       preApplied:'Already active on your system — applying again is safe but redundant.',
       safetyRequired:'Safety Toggle Required',
       safetyRequiredMsg:'Flip the safety toggle on this tweak before applying it.',
@@ -1856,8 +1871,34 @@ const LANG = {
       servicesSub:'Disabling wrong services can break Windows features. Read warnings carefully.',
       servicesGaming:'Gaming Recommended', servicesDisable:'Disable Selected',
       servicesWSearch:'Slows file searches in Explorer.',
+      uwpSectionTitle:'UWP App Removal', tasksSectionTitle:'Scheduled Tasks', devsSectionTitle:'Unused / Ghost Devices', svcsSectionTitle:'Services',
+      debloatMasterSelect:'Select:', debloatPreparing:'Preparing…',
+      debloatRemovingPkg:'Removing {current}/{total}: {pkg}',
+      debloatTipTitle:"Scan first to see what's installed, then remove only what you don't need. All UWP apps can be reinstalled from the Microsoft Store.",
+      uwpSelected:'selected',
+      debloatForTier:'Selected for {tier}-end PC', debloatLaptop:' (laptop)', debloatLowRam:' · {ram}GB RAM — extra background apps included',
+      debloatRecToastMsg:'Selection tuned for your {tier}-end {type}.',
+      svcDescs:{
+        SysMain:'Prefetches frequently used apps into RAM — increases memory usage, not needed for gaming.',
+        WSearch:'Indexes files for fast Explorer search — uses CPU/disk in background.',
+        Fax:'Legacy fax support — safe to disable if you have no fax machine.',
+        RemoteRegistry:'Allows remote editing of the registry — security risk, disable unless needed.',
+        DiagTrack:'Sends usage and diagnostic data to Microsoft in the background.',
+        dmwappushservice:'Routing service for WAP push messages — unused on modern PCs.',
+        XblAuthManager:'Xbox authentication — safe to disable if you don\'t use Xbox services.',
+        XblGameSave:'Syncs Xbox game saves to the cloud.',
+        XboxNetApiSvc:'Xbox Live network features — not needed for non-Xbox gaming.',
+        RetailDemo:'Used only in store demo mode — safe to disable on all personal PCs.',
+        lfsvc:'Provides location data to apps — disable if you don\'t use location features.',
+        WerSvc:'Collects and sends crash reports to Microsoft.',
+        Spooler:'Required for printing — only disable if you have NO printers connected.',
+        bthserv:'Required for Bluetooth devices — disable only if no Bluetooth peripherals are used.',
+        WMPNetworkSvc:'Shares Windows Media Player library over the network — unused on most PCs.',
+      },
+      netTipTitle:'Apply tweaks from top to bottom. Start with TCP Stack + DNS, then bandwidth, then NIC settings. Reboot once after applying all changes.',
       networkWifiTip:'Wi-Fi detected ({adapter}). Some network tweaks target Ethernet and may cause instability on Wi-Fi. Proceed carefully.',
       networkPingTip:'Ping tip: Cloudflare DNS + disable QoS + disable NetBIOS/WPAD + Nagle off = lowest stable ping.',
+      fivemTipTitle:'Apply tweaks top to bottom. Combine with Graphics Settings (FPS presets) for best results. Run Mod Conflict Detector if you experience crashes or desyncs.',
       fivemOrderTip:'Best order: Create RP → Clear Cache → Defender Exclusion → MMCSS → FSO → GPU Settings → Network → Restart FiveM.',
       fivemGpuRebootTip:'After applying GPU tweaks, reboot your PC for Hardware Scheduling to take effect.',
       fivemCfgTip:'CitizenFX.ini tweaks (grass, LOD, worker threads) require a FiveM restart to take effect.',
@@ -1881,6 +1922,14 @@ const LANG = {
       gpCoreSettings:'CORE SETTINGS', gpApplyProfile:'Apply Profile', gpRestoreDefaults:'Restore Defaults',
       gpAutoProfile:'AUTO-PROFILE ON LAUNCH', gpNoProfile:'— No profile assigned —',
       gpWhatApplies:'WHAT THIS APPLIES',
+      gpWhatIfeo:'IFEO HIGH CPU + I/O priority for game executables',
+      gpWhatMmcss:'MMCSS: GPU Priority=8, Scheduling=High, Clock=10000',
+      gpWhatFso:'Fullscreen Optimizations disabled for game EXEs',
+      gpWhatDefender:'Defender exclusion added for game install path',
+      gpWhatDvr:'Game DVR / Xbox recording disabled',
+      gpLastSeen:'Last seen: {date}',
+      gpOpenFolder:'Open Folder',
+      gpTipTitle:'Select a game to view its profile and apply per-game optimizations. Run Scan to detect installed games automatically.',
       gpWatcherOn:'Disable Auto-Profiles', gpWatcherOff:'Enable Auto-Profiles',
       fivemHeroTweaks:'System Tweaks',
       fivemHeroTweaksDesc:'Registry, CPU priority, GPU scheduling, network, memory, and CitizenFX.ini optimisations.',
@@ -2012,6 +2061,20 @@ const LANG = {
       dashUnusedDevices:'Unused devices',
       dashRemovableApps:'Removable apps',
       dashTempData:'Temp data',
+      dashRemaining:'remaining', dashEnabled:'enabled', dashFound:'found',
+      dashCpuUpTo:'Up to', dashDisk:'disk',
+      view:'View', manage:'Manage', remove:'Remove', clear:'Clear',
+      dashHealthChecking:'Checking…',
+      dashHealthRunning:'Running SFC + DISM + SMART disk check — this takes 1–2 minutes…',
+      dashHealthOk:'Windows is healthy — SFC clean, DISM OK, disk SMART OK',
+      dashHealthFailed:'Health check failed',
+      dashHealthBtn:'Windows Health',
+      dashHealthBtnHealthy:'Healthy',
+      dashHealthBtnIssues:'Issues Found',
+      dashHealthNeverRun:'Health check never run — click the button to verify your Windows installation is healthy before optimizing',
+      dashHealthStale:'Last health check was {h}h ago — consider running again before applying tweaks',
+      dashHealthIssues:'Previous health check found issues — repair Windows before optimizing for best results',
+      dashHealthIssueCount:'{n} issue(s) found',
       pmRunningProcesses:'RUNNING PROCESSES',
       pmFilter:'Filter…',
       pmColProcess:'Process',
@@ -2057,6 +2120,11 @@ const LANG = {
       startupAlreadyOptimized:'Already Optimized',
       startupAlreadyOptimizedMsg:'No startup items needed disabling.',
       startupUnknown:'Unknown',
+      startupGroupHkcu:'Current User (Registry)', startupGroupHklm:'All Users (Registry)', startupGroupTasks:'Task Scheduler',
+      startupTotal:'total', startupEnabled2:'enabled', startupDisabled2:'disabled', startupHighEnabled:'high-impact active',
+      startupOpenLocation:'Open file location',
+      startupToastEnabled:'Enabled', startupToastDisabled:'Disabled',
+      startupDisabledMsg:'Disabled {n} high-impact startup item(s).', startupLaptopSafe:'(laptop-safe)',
       // FiveM section group titles
       fivemSecCacheShaders:'Cache & Shaders',
       fivemSecCpuIo:'CPU & I/O Priority',
@@ -2457,6 +2525,9 @@ const LANG = {
       'fivem-reduce-draw-distance':'Reduce LOD Draw Distance',
       'fivem-defender':'Add FiveM to Defender Exclusions',
       'fivem-hang-fix':'Fix FiveM Disconnect Hang + Fullscreen Flicker',
+      'fivem-gamebar':'Disable Xbox Game Bar & Game DVR Recording',
+      'fivem-mouse-accel':'Disable Mouse Acceleration (Enhance Pointer Precision)',
+      'fivem-power-plan':'Set Power Plan → High Performance',
       // Cleanup
       'clean-temp':'Deep Clean System Temps',
       'clean-winsxs':'Windows Component Store (WinSxS)',
@@ -2514,6 +2585,8 @@ const LANG = {
       'gpu-hags-off':'Disables a Windows 10+ performance feature. Only beneficial on specific GPU/driver combos — test before keeping.',
       'hvci-offload':'Modifies VBS/HVCI policy. Reboot required. Revert before troubleshooting boot issues.',
       'full-mitigation-wipe':'DANGEROUS: Disables nearly all kernel and process mitigations including ASLR, CFG, CET, DEP extensions. Never on a shared or internet-exposed PC.',
+      'fivem-mouse-accel':'Affects all Windows mice system-wide. Restore if you use other apps that rely on pointer precision.',
+      'fivem-power-plan':'Increases power consumption and heat. Restore when not gaming.',
     },
     rpCards: [
       { title:"What's protected?", body:"Registry changes, system files, and driver installs. Personal files and documents are NOT protected." },
@@ -2643,6 +2716,8 @@ const LANG = {
       apply:'Käytä', restore:'Palauta', runFix:'Suorita korjaus', done:'Valmis', running:'Käynnissä…',
       confirm:'Vahvista', back:'Takaisin', next:'Seuraava', close:'Sulje',
       advanced:'Lisäasetukset', language:'Kieli', langCode:'FI',
+      sidebarGeneral:'Yleiset', sidebarTweaks:'Säädöt', sidebarTools:'Työkalut', sidebarCollapse:'Pienennä',
+      logTitle:'LOKI', logLegend:'✓=ok   ⚠=varoitus   ✗=virhe   ◆=osio', logClear:'Tyhjennä',
       preApplied:'Jo aktiivisena järjestelmässäsi — uudelleenkäyttö on turvallista mutta tarpeetonta.',
       safetyRequired:'Turvalukko vaaditaan',
       safetyRequiredMsg:'Käännä tämän säädön turvalukko päälle ennen käyttöä.',
@@ -2696,8 +2771,34 @@ const LANG = {
       servicesSub:'Väärien palveluiden poistaminen käytöstä voi rikkoa Windows-ominaisuuksia. Lue varoitukset huolellisesti.',
       servicesGaming:'Pelaamiseen suositeltu', servicesDisable:'Poista valitut käytöstä',
       servicesWSearch:'Hidastaa tiedostohakuja Resurssienhallinnassa.',
+      uwpSectionTitle:'UWP-sovellusten poisto', tasksSectionTitle:'Ajoitetut tehtävät', devsSectionTitle:'Käyttämättömät / haamulaitteet', svcsSectionTitle:'Palvelut',
+      debloatMasterSelect:'Valitse:', debloatPreparing:'Valmistellaan…',
+      debloatRemovingPkg:'Poistetaan {current}/{total}: {pkg}',
+      debloatTipTitle:'Skannaa ensin nähdäksesi mitä on asennettuna, sitten poista vain tarpeeton. Kaikki UWP-sovellukset voidaan asentaa uudelleen Microsoft Storesta.',
+      uwpSelected:'valittu',
+      debloatForTier:'Valittu {tier}-tason PC:lle', debloatLaptop:' (kannettava)', debloatLowRam:' · {ram}GB RAM — lisää tausta-sovelluksia mukana',
+      debloatRecToastMsg:'Valinta viritetty {tier}-tason {type}:lle.',
+      svcDescs:{
+        SysMain:'Lataa usein käytetyt sovellukset RAM-muistiin ennakkoon — lisää muistinkäyttöä, ei tarpeen pelaamiseen.',
+        WSearch:'Indeksoi tiedostot nopeaa Resurssienhallintahakua varten — käyttää CPU:ta ja levyä taustalla.',
+        Fax:'Vanhentunut faksituki — turvallista poistaa käytöstä ilman faksikoneita.',
+        RemoteRegistry:'Mahdollistaa rekisterin etämuokkauksen — tietoturvariski, poista käytöstä ellei tarvita.',
+        DiagTrack:'Lähettää käyttö- ja diagnostiikkatietoja Microsoftille taustalla.',
+        dmwappushservice:'Reitityspalvelu WAP-push-viesteille — käyttämätön nykyaikaisissa tietokoneissa.',
+        XblAuthManager:'Xbox-todennus — turvallista poistaa käytöstä ilman Xbox-palveluita.',
+        XblGameSave:'Synkronoi Xbox-pelitallennukset pilveen.',
+        XboxNetApiSvc:'Xbox Live -verkkotoiminnot — ei tarvita ei-Xbox-pelaamiseen.',
+        RetailDemo:'Käytetään vain myymälä-esittelytilassa — turvallista poistaa kaikissa henkilökohtaisissa tietokoneissa.',
+        lfsvc:'Tarjoaa sijaintitietoja sovelluksille — poista käytöstä jos et käytä sijaintiominaisuuksia.',
+        WerSvc:'Kerää ja lähettää kaatumisraportteja Microsoftille.',
+        Spooler:'Vaaditaan tulostamiseen — poista käytöstä vain jos sinulla EI ole tulostimia liitettynä.',
+        bthserv:'Vaaditaan Bluetooth-laitteisiin — poista käytöstä vain jos sinulla ei ole Bluetooth-oheislaitteita.',
+        WMPNetworkSvc:'Jakaa Windows Media Player -kirjaston verkon kautta — käyttämätön useimmissa tietokoneissa.',
+      },
+      netTipTitle:'Käytä säätöjä ylhäältä alas. Aloita TCP Stack + DNS:llä, sitten kaistanleveys, sitten NIC-asetukset. Käynnistä uudelleen kaikkien muutosten jälkeen.',
       networkWifiTip:'Wi-Fi havaittu ({adapter}). Jotkin verkkoasetukset kohdistuvat Ethernetiin ja voivat aiheuttaa epävakautta Wi-Fi:llä. Jatka varovasti.',
       networkPingTip:'Ping-vinkki: Cloudflare DNS + poista QoS + poista NetBIOS/WPAD + Nagle pois = alhaisin vakaa ping.',
+      fivemTipTitle:'Käytä säätöjä ylhäältä alas. Yhdistä Grafiikka-asetuksiin (FPS-esiasetukset) parhaan tuloksen saavuttamiseksi. Suorita Mod-konfliktianalyysi jos koet kaatumisia tai desynkkejä.',
       fivemOrderTip:'Paras järjestys: Luo palautuspiste → Tyhjennä välimuisti → Defender-poikkeus → MMCSS → FSO → GPU-asetukset → Verkko → Käynnistä FiveM uudelleen.',
       fivemGpuRebootTip:'GPU-säätöjen jälkeen käynnistä tietokoneesi uudelleen, jotta Hardware Scheduling tulee voimaan.',
       fivemCfgTip:'CitizenFX.ini-säädöt (ruoho, LOD, työsäikeet) vaativat FiveM-uudelleenkäynnistyksen tullakseen voimaan.',
@@ -2722,6 +2823,14 @@ const LANG = {
       gpCoreSettings:'PERUSASETUKSET', gpApplyProfile:'Käytä profiili', gpRestoreDefaults:'Palauta oletukset',
       gpAutoProfile:'AUTOMAATTINEN PROFIILI KÄYNNISTYKSESSÄ', gpNoProfile:'— Ei profiilia asetettu —',
       gpWhatApplies:'MITÄ TÄMÄ KÄYTTÄÄ',
+      gpWhatIfeo:'IFEO HIGH CPU + I/O -prioriteetti peliohjelmille',
+      gpWhatMmcss:'MMCSS: GPU-prioriteetti=8, Ajastus=Korkea, Kellotaajuus=10000',
+      gpWhatFso:'Kokoruutuoptimoinnit poistettu käytöstä peli-ohjelmille',
+      gpWhatDefender:'Defender-poikkeus lisätty pelin asennuspolkuun',
+      gpWhatDvr:'Game DVR / Xbox-tallennus poistettu käytöstä',
+      gpLastSeen:'Viimeksi nähty: {date}',
+      gpOpenFolder:'Avaa kansio',
+      gpTipTitle:'Valitse peli nähdäksesi sen profiilin ja käyttääksesi pelikohtaiset optimoinnit. Suorita skannaus havaitaksesi asennetut pelit automaattisesti.',
       gpWatcherOn:'Poista automaattiset profiilit käytöstä', gpWatcherOff:'Ota automaattiset profiilit käyttöön',
       fivemHeroTweaks:'Järjestelmäsäädöt',
       fivemHeroTweaksDesc:'Registry, CPU-prioriteetti, GPU-ajastus, verkko, muisti ja CitizenFX.ini-optimoinnit.',
@@ -2853,6 +2962,20 @@ const LANG = {
       dashUnusedDevices:'Käyttämättömät laitteet',
       dashRemovableApps:'Poistettavat sovellukset',
       dashTempData:'Väliaikaistiedostot',
+      dashRemaining:'jäljellä', dashEnabled:'käytössä', dashFound:'löydetty',
+      dashCpuUpTo:'Enintään', dashDisk:'levy',
+      view:'Näytä', manage:'Hallitse', remove:'Poista', clear:'Tyhjennä',
+      dashHealthChecking:'Tarkistetaan…',
+      dashHealthRunning:'Suoritetaan SFC + DISM + SMART-levytarkistus — tämä kestää 1–2 minuuttia…',
+      dashHealthOk:'Windows on terve — SFC puhdas, DISM OK, levy SMART OK',
+      dashHealthFailed:'Tarkistus epäonnistui',
+      dashHealthBtn:'Windows-terveys',
+      dashHealthBtnHealthy:'Terve',
+      dashHealthBtnIssues:'Ongelmia löydetty',
+      dashHealthNeverRun:'Terveystarkkailua ei ole koskaan suoritettu — napsauta painiketta tarkistaaksesi Windowsin asennuksen terveyden ennen optimointia',
+      dashHealthStale:'Viimeisin terveystarkkistus oli {h}h sitten — harkitse uudelleen ajamista ennen säätöjen käyttöönottoa',
+      dashHealthIssues:'Edellinen terveystarkkistus löysi ongelmia — korjaa Windows ennen optimointia parhaan tuloksen saavuttamiseksi',
+      dashHealthIssueCount:'{n} ongelma(a) löydetty',
       pmRunningProcesses:'KÄYNNISSÄ OLEVAT PROSESSIT',
       pmFilter:'Suodata…',
       pmColProcess:'Prosessi',
@@ -2898,6 +3021,11 @@ const LANG = {
       startupAlreadyOptimized:'Jo optimoitu',
       startupAlreadyOptimizedMsg:'Yhtään käynnistysohjelmaa ei tarvinnut poistaa käytöstä.',
       startupUnknown:'Tuntematon',
+      startupGroupHkcu:'Nykyinen käyttäjä (rekisteri)', startupGroupHklm:'Kaikki käyttäjät (rekisteri)', startupGroupTasks:'Tehtävien ajoitus',
+      startupTotal:'yhteensä', startupEnabled2:'käytössä', startupDisabled2:'poistettu', startupHighEnabled:'korkea vaikutus aktiivinen',
+      startupOpenLocation:'Avaa tiedoston sijainti',
+      startupToastEnabled:'Otettu käyttöön', startupToastDisabled:'Poistettu käytöstä',
+      startupDisabledMsg:'Poistettu käytöstä {n} korkean vaikutuksen käynnistysohjelmaa.', startupLaptopSafe:'(kannettava-turvallinen)',
       // FiveM section group titles
       fivemSecCacheShaders:'Välimuisti & varjostimet',
       fivemSecCpuIo:'CPU & I/O-prioriteetti',
@@ -3268,6 +3396,9 @@ const LANG = {
       'fivem-reduce-draw-distance': 'Asettaa MaxLodDistance- ja MaxObjectLodDistance-arvot 30:een (oletus 100). Vähemmän kaukaisia objekteja renderöidään per kehys — huomattava FPS-nousu tiheissä palvelin­ympäristöissä.',
       'fivem-defender': 'Estää Defenderia skannaamasta FiveM-tiedostoja jokaisella latauksella — poistaa skannaukseen liittyvät stutterit ja lataamisviiveet.',
       'fivem-hang-fix': 'Poistaa HungAppTimeout-rekisteriavaimen, jolloin Windows käyttää sisäistä oletusarvoaan. Korjaa hiiren klikkauksesta johtuvan työpöydän välkkymisen koko­ruutu-FiveMissä sekä yhteyden katkeamisesta johtuvan jumiutumisen.',
+      'fivem-gamebar': 'Pysäyttää Xbox Game Barin taustatallennuksen GTA V:lle ja FiveMille. Game DVR aiheuttaa ruudunpäivityspiikkejä korkean toiminnan kohtauksissa — erityisesti heikommilla kokoonpanoilla.',
+      'fivem-mouse-accel': 'Asettaa MouseSpeed=0 ja MouseThreshold arvoon 0. Poistaa Windowsin hiirikiihtyvyyden tarkalle, 1:1-tähtäykselle FiveMissä. Vaikuttaa koko järjestelmään — palauta jos haluat normaalin Windowsin toiminnan.',
+      'fivem-power-plan': 'Vaihtaa Windowsin virrankäyttösuunnitelman Korkea suorituskyky -tilaan. Estää CPU-kellon rajoittamisen pelin aikana — erityisen hyödyllinen kannettavissa, jotka käyttävät Tasapainoinen-suunnitelmaa.',
       // Cleanup
       'clean-temp': 'Tyhjentää %TEMP%-, Windows\\Temp-, Prefetch-, Recent- ja Windows Update -latauskansiot. Tiedostot rakentuvat automaattisesti uudelleen.',
       'clean-winsxs': 'Ajaa DISM /StartComponentCleanup -komennon pakatakseen korvatut komponentit. Tyypillisesti palauttaa 1–5 Gt. Voi kestää useita minuutteja.',
@@ -3410,6 +3541,9 @@ const LANG = {
       'fivem-reduce-draw-distance':'Pienennä LOD-piirtoetäisyyttä',
       'fivem-defender':'Lisää FiveM Defenderin poissulkuihin',
       'fivem-hang-fix':'Korjaa FiveM-katkaisu-jumiutuminen + koko­ruudun välkkyminen',
+      'fivem-gamebar':'Poista Xbox Game Bar ja Game DVR tallennus käytöstä',
+      'fivem-mouse-accel':'Poista hiirikiihtyvyys käytöstä (Paranna osoittimen tarkkuutta)',
+      'fivem-power-plan':'Aseta virrankäyttösuunnitelma → Korkea suorituskyky',
       // Cleanup
       'clean-temp':'Syvä järjestelmän väliaikaistiedostojen siivous',
       'clean-winsxs':'Windowsin komponenttivarasto (WinSxS)',
@@ -3484,6 +3618,8 @@ const LANG = {
       'gpu-hags-off':'Poistaa Windows 10+ -suorituskykyominaisuuden. Hyödyllinen vain tietyillä GPU/ohjain-yhdistelmillä — testaa ennen käyttöä.',
       'hvci-offload':'Muokkaa VBS/HVCI-käytäntöä. Vaatii uudelleenkäynnistyksen. Palauta ennen käynnistysongelmien vianmääritystä.',
       'full-mitigation-wipe':'VAARALLINEN: Poistaa lähes kaikki ytimen ja prosessin lieventämiset (ASLR, CFG, CET, DEP jne.). Ei koskaan jaetulle tai internet-alttiille PC:lle.',
+      'fivem-mouse-accel':'Vaikuttaa kaikkiin Windows-hiiriin koko järjestelmässä. Palauta jos käytät muita sovelluksia, jotka tarvitsevat osoittimen tarkkuutta.',
+      'fivem-power-plan':'Lisää virrankulutusta ja lämpöä. Palauta kun et pelaa.',
     },
     rpCards: [
       { title:'Mitä suojataan?', body:'Rekisterimuutokset, järjestelmätiedostot ja ajuriasennukset. Henkilökohtaisia tiedostoja ja asiakirjoja EI suojata.' },
@@ -3610,6 +3746,7 @@ let settings = {}
 let appVersion = null
 let metricsInterval = null
 let currentPage = 'dashboard'
+let _recentPages = []
 let installedApps = new Set()
 let gameWatcherRunning = false
 let autoPulseEnabled = false
@@ -3649,6 +3786,7 @@ const init = async function _init() {
   appVersion = await api.getAppVersion()
 
   // Auto-show What's New when user opens app after an update
+  window._isNewVersion = settings.lastSeenVersion !== appVersion
   if (settings.lastSeenVersion && settings.lastSeenVersion !== appVersion) {
     setTimeout(() => showWhatsNew(appVersion), 1500)
   }
@@ -3744,7 +3882,7 @@ const init = async function _init() {
     const bar = document.getElementById('debloat-remove-bar')
     const lbl = document.getElementById('debloat-remove-label')
     if (bar) bar.style.width = `${(current/total)*100}%`
-    if (lbl) lbl.textContent = `Removing ${current}/${total}: ${pkg}`
+    if (lbl) lbl.textContent = tUI('debloatRemovingPkg').replace('{current}', current).replace('{total}', total).replace('{pkg}', pkg)
     document.getElementById('debloat-remove-prog')?.classList.remove('hidden')
   })
 
@@ -3947,7 +4085,7 @@ function toggleSidebar() {
   const label = document.getElementById('sidebar-toggle-label')
   sidebar.classList.toggle('collapsed', sidebarCollapsed)
   icon.innerHTML = sidebarCollapsed ? '<i class="fa fa-angles-right"></i>' : '<i class="fa fa-angles-left"></i>'
-  if (label) label.textContent = sidebarCollapsed ? '' : 'Collapse'
+  if (label) label.textContent = sidebarCollapsed ? '' : tUI('sidebarCollapse')
   document.documentElement.style.setProperty('--sidebar-w', sidebarCollapsed ? '52px' : '200px')
 }
 
@@ -3968,7 +4106,6 @@ const CMD_PAGES = [
   { name: 'App Optimizer', sub: 'App-specific tweaks',    page: 'app-optimizer',   icon: 'fa-mobile-screen' },
   { name: 'FiveM',         sub: 'FiveM / GTA V tools',   page: 'fivem',           icon: 'fa-car-side' },
   { name: 'Cleanup',       sub: 'Clean temp files',       page: 'cleanup',         icon: 'fa-broom' },
-  { name: 'Ping Test',     sub: 'Latency to game servers',page: 'ping-test',       icon: 'fa-satellite-dish' },
   { name: 'Scheduler',     sub: 'Automated tweaks',       page: 'scheduler',       icon: 'fa-clock' },
   { name: 'Tweak History', sub: 'Changelog of changes',   page: 'changelog',       icon: 'fa-clipboard-list' },
   { name: 'Settings',       sub: 'App preferences',       page: 'settings',        icon: 'fa-gear' },
@@ -4063,6 +4200,16 @@ document.addEventListener('keydown', e => {
 
 // ─── Navigation ───────────────────────────────────────────────────────────────
 function showPage(page) {
+  // Update recent pages trail before changing currentPage
+  const recentEl = document.getElementById('recent-pages')
+  if (recentEl && currentPage && currentPage !== page) {
+    _recentPages = [currentPage, ..._recentPages.filter(p => p !== currentPage && p !== page)].slice(0, 3)
+    recentEl.innerHTML = _recentPages.map(p => {
+      const label = LANG[currentLang]?.titles?.[p] || LANG.en.titles[p] || p
+      return `<button class="recent-pill" onclick="showPage('${p}')">${label}</button>`
+    }).join('')
+  }
+
   currentPage = page
   document.querySelectorAll('.nav-btn').forEach(b => b.classList.toggle('active', b.dataset.page === page))
 
@@ -4108,7 +4255,7 @@ function showPage(page) {
       debloater: buildDebloater, network: buildNetwork, hardware: buildHardware,
       'startup-manager': buildStartupManager, 'game-opti': buildGameOpti,
       'app-optimizer': buildAppOptimizer, fivem: buildFiveM, cleanup: buildCleanup,
-      'ping-test': buildPingTest, scheduler: buildScheduler, changelog: buildChangelog,
+      scheduler: buildScheduler, changelog: buildChangelog,
       settings: buildSettings, 'latency-monitor': buildLatencyMonitor,
       pulse: buildPulse,
       'bios-tuner': buildBiosTuner,
@@ -4279,7 +4426,7 @@ function toggleAdvancedMode() {
   if (isOn) {
     document.getElementById('advanced-intro-overlay').style.display = 'flex'
   } else {
-    const advancedPages = ['latency-monitor', 'ping-test', 'process-manager', 'bios-tuner']
+    const advancedPages = ['latency-monitor', 'process-manager', 'bios-tuner']
     if (advancedPages.includes(currentPage)) showPage('dashboard')
   }
 }
@@ -5401,6 +5548,16 @@ const STARTUP_RECOMMENDED_DISABLE = [
   'Google Update','GoogleCrashHandler','GoogleDriveFS',
   'DropBox','DropboxAutoUpdate','OneDriveStandaloneUpdater',
   'iTunesHelper','QuickTime Task','Apple Push','AppleSoftwareUpdate',
+  'Cortana','BingSearch',
+  'WinZip','Malwarebytes','HitmanPro',
+  'NortonLifeLock','TotalAV','PCMatic','IObitUnlocker',
+  'CCleaner','Driver Booster','IObit','RealPlayer',
+  'Zoom','Slack','Teams Machine-Wide',
+  'AnyDesk','TeamViewer',
+  'Java Update','SunJavaUpdateSched',
+  'Skype','SkypeUpdate',
+  'YourPhone','PhoneExperienceHost',
+  'EdgeUpdate','MicrosoftEdgeUpdate',
 ]
 
 function buildStartupManager(c) {
@@ -5417,6 +5574,11 @@ function buildStartupManager(c) {
     <span style="font-size:10px;color:#7a7a8a">${tUI('startupImpact')}</span>
   `
   card.appendChild(toolbar)
+
+  const searchWrap = document.createElement('div')
+  searchWrap.className = 'search-bar-wrap'
+  searchWrap.innerHTML = `<i class="fa fa-magnifying-glass"></i><input class="search-bar-input" id="startup-search" placeholder="${tUI('genSearchPlaceholder')}" oninput="startupFilter(this.value)">`
+  card.appendChild(searchWrap)
 
   const list = document.createElement('div')
   list.id = 'startup-list'
@@ -5457,8 +5619,29 @@ async function applyStartupRecommended() {
       disabled++
     }
   }
-  if (disabled > 0) toast(tUI('startupDisabledToast'), `Disabled ${disabled} high-impact startup item${disabled !== 1 ? 's' : ''}${isLaptop ? ' (laptop-safe)' : ''}.`, 'ok')
+  if (disabled > 0) toast(tUI('startupDisabledToast'), tUI('startupDisabledMsg').replace('{n}', disabled) + (isLaptop ? ' ' + tUI('startupLaptopSafe') : ''), 'ok')
   else toast(tUI('startupAlreadyOptimized'), tUI('startupAlreadyOptimizedMsg'), 'info')
+}
+
+function renderStartupRow(item) {
+  const impact = item.Impact || 'Low'
+  const impactOrder = { High: 0, Medium: 1, Low: 2 }
+  const hasPath = /^["A-Za-z]/.test((item.Command || '').trim())
+  const openBtn = hasPath
+    ? `<button class="btn btn-ghost btn-sm" style="padding:2px 6px;font-size:10px;opacity:0.55" title="${tUI('startupOpenLocation')}" onclick="startupOpenLocation(${JSON.stringify(JSON.stringify(item.Command)).slice(1,-1)})"><i class="fa fa-folder-open"></i></button>`
+    : ''
+  return `<div class="startup-row">
+    <div style="flex:1;min-width:0">
+      <div class="startup-name">${item.Name || tUI('startupUnknown')}</div>
+      <div class="startup-cmd">${item.Command || ''}</div>
+    </div>
+    ${openBtn}
+    <span class="startup-impact ${impact.toLowerCase()}">${impact}</span>
+    <label class="toggle-pill" title="${item.Enabled ? tUI('startupToastDisabled') : tUI('startupToastEnabled')}">
+      <input type="checkbox" ${item.Enabled ? 'checked' : ''} onchange="toggleStartup(this,${JSON.stringify(JSON.stringify(item)).slice(1,-1)})">
+      <span class="pill-slider"></span>
+    </label>
+  </div>`
 }
 
 async function loadStartupItems(btn) {
@@ -5473,27 +5656,63 @@ async function loadStartupItems(btn) {
     return
   }
 
-  list.innerHTML = items.map((item, i) => {
-    const impact = item.Impact || 'Low'
-    return `<div class="startup-row">
-      <div style="flex:1">
-        <div class="startup-name">${item.Name || tUI('startupUnknown')}</div>
-        <div class="startup-cmd">${item.Command || ''}</div>
-      </div>
-      <span class="startup-source">${item.Source || ''}</span>
-      <span class="startup-impact ${impact.toLowerCase()}">${impact}</span>
-      <label class="toggle-pill" title="${item.Enabled ? 'Click to disable' : 'Click to enable'}">
-        <input type="checkbox" ${item.Enabled ? 'checked' : ''} onchange="toggleStartup(this,${JSON.stringify(JSON.stringify(item)).slice(1,-1)})">
-        <span class="pill-slider"></span>
-      </label>
-    </div>`
-  }).join('')
+  const impactOrder = { High: 0, Medium: 1, Low: 2 }
+  const sortItems = arr => arr.slice().sort((a, b) => {
+    const io = (impactOrder[a.Impact] ?? 2) - (impactOrder[b.Impact] ?? 2)
+    return io !== 0 ? io : (a.Name || '').localeCompare(b.Name || '')
+  })
+
+  const enabledCount = items.filter(i => i.Enabled).length
+  const highActive = items.filter(i => i.Impact === 'High' && i.Enabled).length
+  const summaryHtml = `<div id="startup-summary" style="padding:6px 18px;font-size:10px;color:var(--muted);border-bottom:1px solid var(--border2);display:flex;gap:12px;align-items:center">
+    <span>${items.length} ${tUI('startupTotal')}</span>
+    <span style="color:var(--success)">${enabledCount} ${tUI('startupEnabled2')}</span>
+    <span>${items.length - enabledCount} ${tUI('startupDisabled2')}</span>
+    ${highActive > 0 ? `<span style="color:var(--danger);margin-left:auto"><i class="fa fa-triangle-exclamation"></i> ${highActive} ${tUI('startupHighEnabled')}</span>` : ''}
+  </div>`
+
+  const groups = [
+    { key: 'HKCU Registry',  label: tUI('startupGroupHkcu') },
+    { key: 'HKLM Registry',  label: tUI('startupGroupHklm') },
+    { key: 'Task Scheduler', label: tUI('startupGroupTasks') },
+  ]
+  let groupsHtml = ''
+  for (const g of groups) {
+    const gItems = sortItems(items.filter(i => i.Source === g.key))
+    if (!gItems.length) continue
+    groupsHtml += `<div class="startup-group-header">${g.label} <span class="startup-group-count">${gItems.length}</span></div>`
+    groupsHtml += gItems.map(item => renderStartupRow(item)).join('')
+  }
+
+  list.innerHTML = summaryHtml + groupsHtml
 }
 
 async function toggleStartup(cb, itemJson) {
   const item = JSON.parse(itemJson)
-  const r = await api.toggleStartupItem({ ...item, enable: cb.checked })
-  toast(cb.checked ? `Enabled: ${item.Name}` : `Disabled: ${item.Name}`, '', 'ok')
+  await api.toggleStartupItem({ ...item, enable: cb.checked })
+  toast(cb.checked ? `${tUI('startupToastEnabled')}: ${item.Name}` : `${tUI('startupToastDisabled')}: ${item.Name}`, '', 'ok')
+}
+
+function startupFilter(query) {
+  const q = query.trim().toLowerCase()
+  document.querySelectorAll('#startup-list .startup-row').forEach(row => {
+    row.style.display = (!q || row.textContent.toLowerCase().includes(q)) ? '' : 'none'
+  })
+  document.querySelectorAll('#startup-list .startup-group-header').forEach(hdr => {
+    let next = hdr.nextElementSibling
+    let anyVisible = false
+    while (next && !next.classList.contains('startup-group-header')) {
+      if (next.style.display !== 'none') anyVisible = true
+      next = next.nextElementSibling
+    }
+    hdr.style.display = anyVisible ? '' : 'none'
+  })
+}
+
+function startupOpenLocation(cmd) {
+  const raw = cmd.replace(/^"([^"]+)".*/, '$1').replace(/^(\S+).*/, '$1')
+  const folder = raw.includes('\\') ? raw.substring(0, raw.lastIndexOf('\\')) : raw
+  api.openPath(folder)
 }
 
 // ─── Page: Ping Test ──────────────────────────────────────────────────────────
@@ -7528,6 +7747,15 @@ function appendLog(msg, level = 'info', ts = null) {
 }
 function clearLog() { document.getElementById('log-output').innerHTML = '' }
 
+let logPaneCollapsed = false
+function toggleLogPane() {
+  logPaneCollapsed = !logPaneCollapsed
+  const pane = document.getElementById('log-pane')
+  const icon = document.getElementById('log-toggle-icon')
+  pane.classList.toggle('collapsed', logPaneCollapsed)
+  if (icon) icon.className = logPaneCollapsed ? 'fa fa-chevron-up' : 'fa fa-chevron-down'
+}
+
 // ─── Tweak execution ──────────────────────────────────────────────────────────
 async function applyTweak(id, action = 'apply') {
   // Guard: warn if G HUB is running before applying USB tweaks that cause phantom HID
@@ -7590,9 +7818,10 @@ async function applyTweak(id, action = 'apply') {
 function tweakState(id) { return settings[`tweak_${id}`] || 'default' }
 function badgeClass(id) { const s = tweakState(id); return s === 'applied' ? 'applied' : s === 'restored' ? 'restored' : '' }
 function badgeText(id) { const s = tweakState(id); return s === 'applied' ? '<i class="fa fa-check"></i> APPLIED' : s === 'restored' ? '<i class="fa fa-rotate-left"></i> RESTORED' : 'DEFAULT' }
+function newBadge(v) { return (window._isNewVersion && v && v === appVersion) ? '<span class="new-badge">NEW</span>' : '' }
 
 // ─── Row builder ──────────────────────────────────────────────────────────────
-function makeRow({ id, name, desc, danger = false, dangerLabel = 'I understand the risk', restore = true, warning = '' }) {
+function makeRow({ id, name, desc, danger = false, dangerLabel = 'I understand the risk', restore = true, warning = '', reboot = false, sinceVersion = '' }) {
   desc = tDesc(id) || desc
   name = tName(id) || name
   warning = tWarn(id) || warning
@@ -7606,8 +7835,9 @@ function makeRow({ id, name, desc, danger = false, dangerLabel = 'I understand t
   div.innerHTML = `
     ${warning ? `<div class="spec-warning"><span><i class="fa fa-triangle-exclamation"></i></span>${warning}</div>` : ''}
     <div class="tweak-info">
-      <div class="tweak-name">${name}</div>
+      <div class="tweak-name">${name}${newBadge(sinceVersion)}</div>
       ${desc ? `<div class="tweak-desc">${desc}</div>` : ''}
+      ${reboot ? `<span class="reboot-badge"><i class="fa fa-arrow-rotate-right"></i> ${tUI('genRebootBadge')}</span>` : ''}
       ${preApplied ? `<div class="pf-row-tag"><i class="fa fa-magnifying-glass"></i> Already active on your system — detected by Pre-Flight scan</div>` : ''}
     </div>
     <div class="tweak-right">
@@ -7818,6 +8048,14 @@ async function updateMetrics() {
 
     // Update radar scores
     updateRadar(m)
+
+    // Disk + net footer bar
+    const diskEl = document.getElementById('db-util-disk')
+    const netDown2El = document.getElementById('db-net-down2')
+    const netUp2El   = document.getElementById('db-net-up2')
+    if (diskEl) diskEl.textContent = m.disk != null ? m.disk : '—'
+    if (netDown2El) netDown2El.textContent = fmtBytes(m.netDown)
+    if (netUp2El)   netUp2El.textContent   = fmtBytes(m.netUp)
 
   } catch (e) { /* silent */ }
 }
@@ -8056,10 +8294,36 @@ async function initQuickHealth() {
   const tweakPct = Math.round((appliedCount / totalTweaks) * 100)
   setQH('tweaks-applied', `${appliedCount} / ${totalTweaks}`, tweakPct, tweakPct >= 60 ? 'good' : tweakPct >= 30 ? 'warn' : 'bad')
 
-  setQH('bloat-services', '~28 found',  60, 'bad')
-  setQH('bloat-tasks',    '~34 found',  70, 'bad')
-  setQH('unused-devices', '~8 found',   30, 'warn')
-  setQH('removable-apps', '~12 found',  50, 'bad')
+  // Bloat services — count safe services not yet disabled by the tool
+  const svcRemaining = (typeof SERVICES !== 'undefined' ? SERVICES : []).filter(s => saved[`tweak_svc_${s.id}`] !== 'applied' && s.safe).length
+  const svcTotal = (typeof SERVICES !== 'undefined' ? SERVICES : []).filter(s => s.safe).length || 1
+  const svcPct = Math.round((svcRemaining / svcTotal) * 100)
+  setQH('bloat-services', `${svcRemaining} ${tUI('dashRemaining')}`, svcPct, svcRemaining > 10 ? 'bad' : svcRemaining > 4 ? 'warn' : 'good')
+
+  // Startup items — real count
+  setQH('bloat-tasks', '…', 0, '')
+  api.getStartupItems().then(items => {
+    const enabled = (items || []).filter(i => i.enabled !== false).length
+    const startPct = Math.min(100, Math.round((enabled / 20) * 100))
+    setQH('bloat-tasks', `${enabled} ${tUI('dashEnabled')}`, startPct, enabled > 10 ? 'bad' : enabled > 5 ? 'warn' : 'good')
+  }).catch(() => setQH('bloat-tasks', '—', 0, ''))
+
+  // Unused devices — real count
+  setQH('unused-devices', '…', 0, '')
+  api.getUnusedDevices().then(devs => {
+    const count = (devs || []).length
+    const devPct = Math.min(100, count * 10)
+    setQH('unused-devices', `${count} ${tUI('dashFound')}`, devPct, count > 5 ? 'bad' : count > 2 ? 'warn' : 'good')
+  }).catch(() => setQH('unused-devices', '—', 0, ''))
+
+  // Removable UWP apps — real count
+  setQH('removable-apps', '…', 0, '')
+  api.scanUwpApps().then(apps => {
+    const count = (apps || []).length
+    const appPct = Math.min(100, Math.round((count / 30) * 100))
+    setQH('removable-apps', `${count} ${tUI('dashFound')}`, appPct, count > 15 ? 'bad' : count > 8 ? 'warn' : 'good')
+  }).catch(() => setQH('removable-apps', '—', 0, ''))
+
   setQH('temp-data', '…', 0, '')
   api.getTempSize().then(r => {
     const color = r.mb > 2048 ? 'bad' : r.mb > 512 ? 'warn' : 'good'
@@ -8080,12 +8344,12 @@ async function runWindowsHealthDash(btn) {
   const banner = document.getElementById('win-health-banner')
   if (!banner) return
   btn.disabled = true
-  btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Checking…'
+  btn.innerHTML = `<i class="fa fa-spinner fa-spin"></i> ${tUI('dashHealthChecking')}`
   banner.style.display = 'block'
   banner.style.background = 'rgba(52,152,219,0.07)'
   banner.style.border = '1px solid rgba(52,152,219,0.2)'
   banner.style.color = '#3498db'
-  banner.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Running SFC + DISM + SMART disk check — this takes 1–2 minutes…'
+  banner.innerHTML = `<i class="fa fa-spinner fa-spin"></i> ${tUI('dashHealthRunning')}`
 
   api.onWindowsHealthProgress(({ msg, level }) => {
     const colors = { ok:'rgba(46,204,113,0.07)', warn:'rgba(230,126,34,0.07)', err:pinkA(0.07), info:'rgba(52,152,219,0.07)' }
@@ -8102,8 +8366,8 @@ async function runWindowsHealthDash(btn) {
   let result
   try { result = await api.runWindowsHealth() } catch (e) {
     banner.style.background = pinkA(0.07); banner.style.border = `1px solid ${pinkA(0.2)}`
-    banner.innerHTML = `<i class="fa fa-circle-xmark" style="color:var(--danger)"></i> Health check failed: ${e.message}`
-    btn.disabled = false; btn.innerHTML = '<i class="fa fa-heart-pulse"></i> Windows Health'; return
+    banner.innerHTML = `<i class="fa fa-circle-xmark" style="color:var(--danger)"></i> ${tUI('dashHealthFailed')}: ${e.message}`
+    btn.disabled = false; btn.innerHTML = `<i class="fa fa-heart-pulse"></i> ${tUI('dashHealthBtn')}`; return
   }
 
   localStorage.setItem('health_check_ts', Date.now())
@@ -8111,12 +8375,12 @@ async function runWindowsHealthDash(btn) {
 
   if (result.ok) {
     banner.style.background = 'rgba(46,204,113,0.07)'; banner.style.border = '1px solid rgba(46,204,113,0.2)'; banner.style.color = 'var(--success)'
-    banner.innerHTML = '<i class="fa fa-circle-check"></i> <strong>Windows is healthy</strong> — SFC clean, DISM OK, disk SMART OK'
-    btn.innerHTML = '<i class="fa fa-circle-check" style="color:var(--success)"></i> Healthy'
+    banner.innerHTML = `<i class="fa fa-circle-check"></i> <strong>${tUI('dashHealthOk')}</strong>`
+    btn.innerHTML = `<i class="fa fa-circle-check" style="color:var(--success)"></i> ${tUI('dashHealthBtnHealthy')}`
   } else {
     banner.style.background = pinkA(0.07); banner.style.border = `1px solid ${pinkA(0.2)}`; banner.style.color = 'var(--pink)'
-    banner.innerHTML = `<i class="fa fa-triangle-exclamation"></i> <strong>${result.issues.length} issue(s) found</strong><br><span style="font-size:9.5px;opacity:.85">${result.issues.join('<br>')}</span>`
-    btn.innerHTML = '<i class="fa fa-triangle-exclamation" style="color:var(--pink)"></i> Issues Found'
+    banner.innerHTML = `<i class="fa fa-triangle-exclamation"></i> <strong>${tUI('dashHealthIssueCount').replace('{n}', result.issues.length)}</strong><br><span style="font-size:9.5px;opacity:.85">${result.issues.join('<br>')}</span>`
+    btn.innerHTML = `<i class="fa fa-triangle-exclamation" style="color:var(--pink)"></i> ${tUI('dashHealthBtnIssues')}`
   }
   btn.disabled = false
 }
@@ -8130,15 +8394,15 @@ function showHealthNudgeIfNeeded() {
   if (healthTs === 0) {
     banner.style.display = 'block'
     banner.style.background = 'rgba(230,126,34,0.07)'; banner.style.border = '1px solid rgba(230,126,34,0.2)'; banner.style.color = '#e67e22'
-    banner.innerHTML = '<i class="fa fa-triangle-exclamation"></i> <strong>Health check never run</strong> — click the button to verify your Windows installation is healthy before optimizing'
+    banner.innerHTML = `<i class="fa fa-triangle-exclamation"></i> <strong>${tUI('dashHealthNeverRun').split('—')[0].trim()}</strong> — ${tUI('dashHealthNeverRun').split('—').slice(1).join('—').trim()}`
   } else if (ageHours > 72) {
     banner.style.display = 'block'
     banner.style.background = 'rgba(52,152,219,0.07)'; banner.style.border = '1px solid rgba(52,152,219,0.2)'; banner.style.color = '#3498db'
-    banner.innerHTML = `<i class="fa fa-clock-rotate-left"></i> Last health check was ${Math.round(ageHours)}h ago — consider running again before applying tweaks`
+    banner.innerHTML = `<i class="fa fa-clock-rotate-left"></i> ${tUI('dashHealthStale').replace('{h}', Math.round(ageHours))}`
   } else if (localStorage.getItem('health_check_ok') === '0') {
     banner.style.display = 'block'
     banner.style.background = pinkA(0.07); banner.style.border = `1px solid ${pinkA(0.2)}`; banner.style.color = 'var(--pink)'
-    banner.innerHTML = '<i class="fa fa-triangle-exclamation"></i> <strong>Previous health check found issues</strong> — repair Windows before optimizing for best results'
+    banner.innerHTML = `<i class="fa fa-triangle-exclamation"></i> <strong>${tUI('dashHealthIssues').split('—')[0].trim()}</strong> — ${tUI('dashHealthIssues').split('—').slice(1).join('—').trim()}`
   }
 }
 
@@ -8148,7 +8412,7 @@ function buildDashboard(c) {
 
   // Format helpers
   const vramGB = si.vramMB >= 1024 ? `${(si.vramMB/1024) % 1 === 0 ? si.vramMB/1024 : (si.vramMB/1024).toFixed(1)} GB` : si.vramMB > 0 ? `${si.vramMB} MB` : '?'
-  const cpuSpeed = si.cpuSpeed >= 1000 ? `Up to ${(si.cpuSpeed/1000).toFixed(1)} GHz` : si.cpuSpeed > 0 ? `${si.cpuSpeed} MHz` : ''
+  const cpuSpeed = si.cpuSpeed >= 1000 ? `${tUI('dashCpuUpTo')} ${(si.cpuSpeed/1000).toFixed(1)} GHz` : si.cpuSpeed > 0 ? `${si.cpuSpeed} MHz` : ''
   const cpuCores = si.cpuCores ? `${si.cpuCores}C` : ''
   const cpuThreads = si.cpuThreads ? `/ ${si.cpuThreads}T` : ''
   const netType = si.isWifi ? 'Wi-Fi' : 'Ethernet'
@@ -8173,7 +8437,7 @@ function buildDashboard(c) {
           <span style="font-size:9px;font-weight:700;color:var(--muted);background:var(--bg-card2);padding:1px 6px;border-radius:4px;border:1px solid var(--border)">v${wn.version}</span>
         </div>
         <div style="display:flex;flex-wrap:wrap;gap:4px">
-          ${wn.items.slice(0,4).map(item => `<span style="font-size:10px;color:var(--gray);background:var(--bg-card2);border:1px solid var(--border);border-radius:5px;padding:2px 8px">${item.split('—')[0].trim()}</span>`).join('')}
+          ${wn.items.slice(0,4).map(item => { const t = item.length > 52 ? item.slice(0,50)+'…' : item; return `<span style="font-size:10px;color:var(--gray);background:var(--bg-card2);border:1px solid var(--border);border-radius:5px;padding:2px 8px">${t}</span>` }).join('')}
           ${wn.items.length > 4 ? `<span style="font-size:10px;color:var(--muted);padding:2px 4px">+${wn.items.length - 4} more</span>` : ''}
         </div>
       </div>
@@ -8267,6 +8531,11 @@ function buildDashboard(c) {
           <i class="fa fa-wifi dmt-icon"></i>
         </div>
       </div>
+      <div style="display:flex;gap:12px;margin-top:8px;padding:6px 4px 2px;border-top:1px solid var(--border);font-size:10px;color:var(--muted)">
+        <span><i class="fa fa-hard-drive" style="margin-right:4px;color:var(--gray)"></i><span id="db-util-disk">—</span>% ${tUI('dashDisk')}</span>
+        <span style="margin-left:auto"><i class="fa fa-arrow-down" style="margin-right:3px;color:var(--success)"></i><span id="db-net-down2">—</span></span>
+        <span><i class="fa fa-arrow-up" style="margin-right:3px;color:var(--pink)"></i><span id="db-net-up2">—</span></span>
+      </div>
     </div>
   </div>
 
@@ -8344,12 +8613,12 @@ function buildDashboard(c) {
       <div id="win-health-banner" style="display:none;margin-bottom:10px;padding:8px 10px;border-radius:7px;font-size:10px;line-height:1.5"></div>
       <div id="qh-body">
         ${[
-          {id:'bloat-services', label:tUI('dashBloatServices'),  btn:'View',     action:"showPage('debloater')"},
-          {id:'bloat-tasks',    label:tUI('dashBloatTasks'),     btn:'View',     action:"showPage('debloater')"},
-          {id:'tweaks-applied', label:tUI('dashTweaksApplied'),  btn:'Apply',    action:"showPage('windows-opti')"},
-          {id:'unused-devices', label:tUI('dashUnusedDevices'),  btn:'Manage',   action:"showPage('debloater')"},
-          {id:'removable-apps', label:tUI('dashRemovableApps'),  btn:'Remove',   action:"showPage('debloater')"},
-          {id:'temp-data',      label:tUI('dashTempData'),       btn:'Clear',    action:"quickClearTemp()"},
+          {id:'bloat-services', label:tUI('dashBloatServices'),  btn:tUI('view'),    action:"showPage('debloater')"},
+          {id:'bloat-tasks',    label:tUI('dashBloatTasks'),     btn:tUI('view'),    action:"showPage('debloater')"},
+          {id:'tweaks-applied', label:tUI('dashTweaksApplied'),  btn:tUI('apply'),   action:"showPage('windows-opti')"},
+          {id:'unused-devices', label:tUI('dashUnusedDevices'),  btn:tUI('manage'),  action:"showPage('debloater')"},
+          {id:'removable-apps', label:tUI('dashRemovableApps'),  btn:tUI('remove'),  action:"showPage('debloater')"},
+          {id:'temp-data',      label:tUI('dashTempData'),       btn:tUI('clear'),   action:"quickClearTemp()"},
         ].map(row => `
           <div class="qh-row" id="qh-row-${row.id}">
             <div class="qh-left">
@@ -9563,14 +9832,30 @@ function buildNetwork(c) {
   const si = sysInfo
   const wifiWarn = si.isWifi ? tUI('warnWifi') : ''
 
+  c.appendChild(makeTip(tUI('netTipTitle'), 'info'))
+
   if (si.isWifi) c.appendChild(makeTip(`<i class="fa fa-triangle-exclamation"></i> ${tUI('networkWifiTip').replace('{adapter}', si.wifiAdapter || 'wireless adapter')}`, 'warning'))
+
+  const toolbar = document.createElement('div')
+  toolbar.style.cssText = 'display:flex;align-items:center;gap:10px;margin-bottom:4px'
+  toolbar.innerHTML = `
+    <div style="position:relative;flex:1">
+      <i class="fa fa-magnifying-glass" style="position:absolute;left:11px;top:50%;transform:translateY(-50%);color:#555;font-size:12px;pointer-events:none"></i>
+      <input id="net-search" type="text" placeholder="${tUI('genSearchPlaceholder')}"
+        style="width:100%;box-sizing:border-box;background:#111;border:1px solid #222;border-radius:8px;padding:8px 10px 8px 32px;color:#ccc;font-size:12px;outline:none;transition:border-color .15s"
+        onfocus="this.style.borderColor='#333'" onblur="this.style.borderColor='#222'"
+        oninput="netFilterTweaks(this.value)">
+    </div>
+  `
+  c.appendChild(toolbar)
 
   const sections = [
     {
       get title() { return tUI('netSecTcpStack') }, rows: [
         { id:'tcp-stack', name:'Tune TCP: Autotuning, RSS, disable Chimney/ECN/Timestamps', desc:'Full TCP stack optimisation — normal autotuning, RSS enabled, chimney/ECN/timestamps off, MaxSynRetransmissions=2.' },
         { id:'tcp-buffers', name:'TCP buffers + Nagle algorithm disabled (TcpAckFrequency=1, TCPNoDelay=1)', desc:'Disables Nagle\'s algorithm which batches packets for efficiency — bad for real-time games. Sends packets immediately.' },
-        { id:'winsock-reset', name:'Reset Winsock catalog & IP stack (fix network corruption)', desc:'Fixes issues caused by VPNs, broken antivirus installs, or corrupted network stacks. Reboot required.', danger:true, dangerLabel:'Confirm Winsock reset' },
+        { id:'tcp-keepalive', name:'Tune TCP Keep-Alive intervals', desc:'Sets KeepAliveTime=30s (from 2h) and KeepAliveInterval=1s. Drops stale connections faster — reduces ghost connections in multiplayer games.', sinceVersion:'1.4.6' },
+        { id:'winsock-reset', name:'Reset Winsock catalog & IP stack (fix network corruption)', desc:'Fixes issues caused by VPNs, broken antivirus installs, or corrupted network stacks.', danger:true, dangerLabel:'Confirm Winsock reset', reboot:true },
       ]
     },
     {
@@ -9578,6 +9863,7 @@ function buildNetwork(c) {
         { id:'flush-dns', name:'Flush DNS cache', desc:'Clears the local DNS resolver cache. Fixes stale DNS entries causing connection issues.', restore:false },
         { id:'dns-cloudflare', name:'Set DNS → Cloudflare 1.1.1.1 / 1.0.0.1', desc:'Fastest DNS for most EU/US users. Privacy-focused — does not log queries. Applied to all active adapters.' },
         { id:'dns-google', name:'Set DNS → Google 8.8.8.8 / 8.8.4.4', desc:'Highly reliable alternative public DNS. More logging than Cloudflare. Applied to all active adapters.' },
+        { id:'dns-doh', name:'Enable DNS over HTTPS (DoH)', desc:'Routes DNS queries over encrypted HTTPS instead of plain UDP. Prevents ISP DNS snooping. Applies Cloudflare DoH (1.1.1.1) via Windows 11 native DoH setting.', sinceVersion:'1.4.6' },
       ]
     },
     {
@@ -9597,8 +9883,9 @@ function buildNetwork(c) {
     {
       get title() { return tUI('netSecProtocol') }, rows: [
         { id:'disable-netbios', name:'Disable NetBIOS over TCP/IP', desc:'Legacy Windows network protocol not needed for modern gaming or internet connections.' },
-        { id:'disable-ipv6', name:'Disable IPv6 on all adapters', desc:'Safe for gaming. May break some corporate VPNs. Reboot required.', danger:true, dangerLabel:'Confirm IPv6 disable', warning: wifiWarn },
+        { id:'disable-ipv6', name:'Disable IPv6 on all adapters', desc:'Safe for gaming. May break some corporate VPNs.', danger:true, dangerLabel:'Confirm IPv6 disable', warning: wifiWarn, reboot:true },
         { id:'disable-wpad', name:'Disable WPAD (Web Proxy Auto-Discovery)', desc:'WPAD polls for a proxy configuration on every network change — a security risk and source of latency.' },
+        { id:'disable-autoproxy', name:'Disable Auto-Proxy Detection (WinHTTP)', desc:'Stops Windows from auto-detecting proxy settings on every connection. Eliminates a source of connection delay and DNS-level latency spikes.', sinceVersion:'1.4.6' },
       ]
     },
   ]
@@ -9610,11 +9897,25 @@ function buildNetwork(c) {
     c.appendChild(card)
   })
 
-  c.appendChild(makeTip(tUI('networkPingTip'), 'success'))
+  buildPingTest(c)
+}
+
+function netFilterTweaks(query) {
+  const q = query.trim().toLowerCase()
+  const content = document.getElementById('page-content')
+  if (!content) return
+  content.querySelectorAll('.tweak-row').forEach(row => {
+    row.style.display = (!q || row.textContent.toLowerCase().includes(q)) ? '' : 'none'
+  })
+  content.querySelectorAll('.section-card').forEach(sec => {
+    const anyVisible = [...sec.querySelectorAll('.tweak-row')].some(r => r.style.display !== 'none')
+    sec.style.display = anyVisible ? '' : 'none'
+  })
 }
 
 // ─── Page: FiveM ──────────────────────────────────────────────────────────────
 function buildFiveM(c) {
+  c.appendChild(makeTip(tUI('fivemTipTitle'), 'info'))
   // ── Not-detected banner ────────────────────────────────────────────────────
   if (!sysInfo?.fivemInstalled) {
     const nb = document.createElement('div')
@@ -9640,6 +9941,7 @@ function buildFiveM(c) {
       get title() { return tUI('fivemSecDvr') }, rows: [
         { id:'fivem-mmcss', name:'Apply MMCSS top-priority game scheduling (GPU Priority=8, Clock=10000)', desc:'Configures MMCSS to give FiveM the highest game scheduling category with Clock Rate=10000.' },
         { id:'fivem-fso', name:'Disable Fullscreen Optimizations for FiveM.exe + GTA5.exe', desc:'FSO adds latency overhead in exclusive fullscreen mode. Disabling it reduces input lag noticeably.' },
+        { id:'fivem-gamebar', name:'Disable Xbox Game Bar & Game DVR Recording', desc:'Stops Xbox Game Bar background recording for GTA V / FiveM. GameDVR causes frame-time spikes during high-action scenes — especially on lower-end systems.', sinceVersion:'1.4.6' },
       ]
     },
     {
@@ -9677,6 +9979,8 @@ function buildFiveM(c) {
       get title() { return tUI('fivemSecSystem') }, rows: [
         { id:'fivem-defender', name:'Add FiveM folder to Windows Defender exclusions', desc:'Prevents Defender from scanning FiveM files on every load — eliminates scan-related stutters and load time.' },
         { id:'fivem-hang-fix', name:'Fix FiveM disconnect hang + fullscreen flicker (HungAppTimeout)', desc:'Removes the HungAppTimeout registry override so Windows uses its built-in default. Fixes desktop flash / peek-through on mouse clicks in fullscreen FiveM, and eliminates the disconnect hang.' },
+        { id:'fivem-mouse-accel', name:'Disable Mouse Acceleration (Enhance Pointer Precision)', desc:'Sets MouseSpeed=0 and MouseThreshold to 0. Disables Windows mouse acceleration for precise, 1:1 aiming in FiveM. Affects the whole system — restore if you prefer standard Windows behaviour.', sinceVersion:'1.4.6' },
+        { id:'fivem-power-plan', name:'Set Power Plan → High Performance', desc:'Switches Windows power plan to High Performance. Prevents CPU clock throttling mid-game — especially impactful on laptops running on Balanced plan.', sinceVersion:'1.4.6' },
       ]
     },
   ]
@@ -9704,6 +10008,12 @@ function buildFiveM(c) {
   `
   c.appendChild(hero)
 
+  // ── Search bar ────────────────────────────────────────────────────────────
+  const searchWrap = document.createElement('div')
+  searchWrap.className = 'search-bar-wrap'
+  searchWrap.innerHTML = `<i class="fa fa-magnifying-glass"></i><input class="search-bar-input" placeholder="${tUI('searchTweaks')}" oninput="fivemFilterTweaks(this.value)">`
+  c.appendChild(searchWrap)
+
   // ── System Tweaks sections ─────────────────────────────────────────────────
   const sectionLabel = document.createElement('div')
   sectionLabel.className = 'fivem-section-label'
@@ -9719,7 +10029,7 @@ function buildFiveM(c) {
         r.innerHTML = `
           <div class="tweak-info"><div class="tweak-name">${tName(row.id) || row.name}</div><div class="tweak-desc">${tDesc(row.id) || row.desc}</div></div>
           <div class="tweak-right">
-            <button class="btn btn-primary btn-sm" onclick="doFivemClearCache(this)">Apply</button>
+            <button class="btn btn-primary btn-sm" onclick="doFivemClearCache(this)">${tUI('apply')}</button>
           </div>
           <div class="tweak-progress" id="prog-fivem-cache"><div class="tweak-progress-bar indeterminate" id="prog-bar-fivem-cache" style="display:none"></div></div>
         `
@@ -9748,6 +10058,19 @@ function buildFiveM(c) {
   modList.id = 'fivem-mod-list'
   modCard.appendChild(modList)
   c.appendChild(modCard)
+}
+
+function fivemFilterTweaks(query) {
+  const q = query.trim().toLowerCase()
+  const content = document.getElementById('page-content')
+  if (!content) return
+  content.querySelectorAll('.tweak-row').forEach(row => {
+    row.style.display = (!q || row.textContent.toLowerCase().includes(q)) ? '' : 'none'
+  })
+  content.querySelectorAll('.section-card').forEach(sec => {
+    const anyVisible = [...sec.querySelectorAll('.tweak-row')].some(r => r.style.display !== 'none')
+    sec.style.display = anyVisible ? '' : 'none'
+  })
 }
 
 async function doFivemModScan(btn) {
@@ -9803,7 +10126,7 @@ function getPreflightStates() {
   try { return JSON.parse(localStorage.getItem('pf_tweak_states') || '{}') } catch { return {} }
 }
 
-function makeCard({ id, name, desc, icon = '<i class="fa fa-gear"></i>', danger = false, dangerLabel = 'Confirm', restore = true, warning = '', reboot = false }) {
+function makeCard({ id, name, desc, icon = '<i class="fa fa-gear"></i>', danger = false, dangerLabel = 'Confirm', restore = true, warning = '', reboot = false, sinceVersion = '' }) {
   desc = tDesc(id) || desc
   name = tName(id) || name
   warning = tWarn(id) || warning
@@ -9820,7 +10143,7 @@ function makeCard({ id, name, desc, icon = '<i class="fa fa-gear"></i>', danger 
     <div class="tc-top">
       <div class="tc-icon">${icon}</div>
       <div class="tc-meta">
-        <div class="tc-name">${name}</div>
+        <div class="tc-name">${name}${newBadge(sinceVersion)}</div>
         <div class="tc-desc">${desc}</div>
         ${preApplied ? `<div class="tc-warn" style="color:var(--info)"><i class="fa fa-lock"></i> Already active on your system — applying again is safe but redundant.</div>` : ''}
         ${warning ? `<div class="tc-warn"><i class="fa fa-triangle-exclamation"></i> ${warning}</div>` : ''}
@@ -9947,6 +10270,7 @@ let selectedGameId = 'fortnite'
 let gpScanned = false
 
 function buildGameOpti(c) {
+  c.appendChild(makeTip(tUI('gpTipTitle'), 'info'))
   // Auto-profile watcher strip
   const watchStrip = document.createElement('div')
   watchStrip.style.cssText = 'background:linear-gradient(135deg,#080d18,#0d1020);border:1px solid #1a2a5c;border-radius:10px;padding:12px 16px;margin-bottom:10px'
@@ -9999,12 +10323,19 @@ function renderGPList(games, filter = '') {
   const el = document.getElementById('gp-items')
   if (!el) return
   const filtered = filter ? games.filter(g => g.name.toLowerCase().includes(filter.toLowerCase())) : games
-  el.innerHTML = filtered.map(g => `
-    <div class="gp-item ${g.id === selectedGameId ? 'active' : ''}" onclick="selectGPGame('${g.id}')">
+  const sorted = [...filtered].sort((a, b) => {
+    const aScore = a.running ? 2 : a.installed ? 1 : 0
+    const bScore = b.running ? 2 : b.installed ? 1 : 0
+    if (bScore !== aScore) return bScore - aScore
+    return a.name.localeCompare(b.name)
+  })
+  el.innerHTML = sorted.map(g => `
+    <div class="gp-item ${g.id === selectedGameId ? 'active' : ''}" onclick="selectGPGame('${g.id}')" style="${!g.installed && !g.running ? 'opacity:0.55' : ''}">
       <div class="gp-emoji">${g.emoji}</div>
       <div class="gp-item-info">
         <div class="gp-item-name">${g.name}</div>
         <div class="gp-item-dev">${g.dev}</div>
+        ${g.installed && g.installPath ? `<div style="font-size:9px;color:var(--muted);margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:140px">${g.installPath.split('\\').slice(-2).join('\\')}</div>` : ''}
       </div>
       <span class="gp-status ${g.running ? 'running' : g.installed ? 'installed' : 'not-installed'}">
         ${g.running ? `<i class="fa fa-circle" style="color:var(--cyan)"></i> ${tUI('gpStatusRun')}` : g.installed ? `<i class="fa fa-check"></i> ${tUI('gpStatusInst')}` : tUI('gpStatusNotInst')}
@@ -10033,8 +10364,8 @@ function renderGPDetail(g) {
       <div style="flex:1">
         <div class="gp-detail-name">${g.name}</div>
         <div class="gp-detail-sub">${g.dev}</div>
-        ${g.installPath ? `<div class="gp-detail-path"><i class="fa fa-folder-open"></i> ${g.installPath}</div>` : ''}
-        ${g.lastPlayed && g.installed ? `<div style="font-size:9px;color:var(--muted);margin-top:2px">Last seen: ${g.lastPlayed}</div>` : ''}
+        ${g.installPath ? `<div class="gp-detail-path"><i class="fa fa-folder-open"></i> ${g.installPath}</div><button class="btn btn-ghost btn-sm" style="margin-top:6px;font-size:10px;padding:3px 8px" onclick="api.openPath('${g.installPath.replace(/\\/g,'\\\\')}')" ><i class="fa fa-folder-open"></i> ${tUI('gpOpenFolder')}</button>` : ''}
+        ${g.lastPlayed && g.installed ? `<div style="font-size:9px;color:var(--muted);margin-top:2px">${tUI('gpLastSeen').replace('{date}', g.lastPlayed)}</div>` : ''}
       </div>
       <span class="gp-status ${g.running ? 'running' : g.installed ? 'installed' : 'not-installed'}">
         ${g.running ? `<i class="fa fa-circle" style="color:var(--cyan)"></i> ${tUI('gpStatusRunning')}` : g.installed ? `<i class="fa fa-check"></i> ${tUI('gpStatusInstalled')}` : tUI('gpStatusNotInstalled')}
@@ -10063,11 +10394,11 @@ function renderGPDetail(g) {
       </div>
       <div class="gp-section-lbl">${tUI('gpWhatApplies')}</div>
       <div style="font-size:10px;color:var(--gray);line-height:1.9">
-        <div><i class="fa fa-bolt"></i> IFEO HIGH CPU + I/O priority for game executables</div>
-        <div><i class="fa fa-gamepad"></i> MMCSS: GPU Priority=8, Scheduling=High, Clock=10000</div>
-        <div><i class="fa fa-display"></i> Fullscreen Optimizations disabled for game EXEs</div>
-        <div><i class="fa fa-shield-halved"></i> Defender exclusion added for game install path</div>
-        <div><i class="fa fa-bullseye"></i> Game DVR / Xbox recording disabled</div>
+        <div><i class="fa fa-bolt"></i> ${tUI('gpWhatIfeo')}</div>
+        <div><i class="fa fa-gamepad"></i> ${tUI('gpWhatMmcss')}</div>
+        <div><i class="fa fa-display"></i> ${tUI('gpWhatFso')}</div>
+        <div><i class="fa fa-shield-halved"></i> ${tUI('gpWhatDefender')}</div>
+        <div><i class="fa fa-bullseye"></i> ${tUI('gpWhatDvr')}</div>
       </div>
     </div>`
   setTimeout(addRippleToButtons, 50)
@@ -10096,7 +10427,7 @@ async function doGPApply(gameId, action) {
   const g = GAME_LIST.find(g => g.id === gameId)
   if (!g) return
   toast(action === 'apply' ? tUI('gpApplyingProfile') : tUI('gpRestoringProfile'), g.name, 'info', 1500)
-  await api.applyGameTweak(gameId, action)
+  await api.applyGameTweak(gameId, action, g.installPath)
   settings[`tweak_game-${gameId}`] = action === 'apply' ? 'applied' : 'restored'
   await api.saveSettings(settings)
   await api.addChangelogEntry({ id: `game-${gameId}`, action }).catch(() => {})
@@ -10402,26 +10733,49 @@ const UWP_APPS = {
 }
 
 const SERVICES = [
-  { id:'SysMain',           name:'SysMain (SuperFetch)',                     safe:true,  gaming:true  },
-  { id:'WSearch',           name:'Windows Search Indexer',                   safe:true,  gaming:true,  warn:'Slows file searches in Explorer.' },
-  { id:'Fax',               name:'Fax Service',                              safe:true,  gaming:true  },
-  { id:'RemoteRegistry',    name:'Remote Registry',                          safe:true,  gaming:true  },
-  { id:'DiagTrack',         name:'Connected User Experiences (Telemetry)',   safe:true,  gaming:true  },
-  { id:'dmwappushservice',  name:'WAP Push Message Routing',                 safe:true,  gaming:true  },
-  { id:'XblAuthManager',    name:'Xbox Live Auth Manager',                   safe:true,  gaming:true  },
-  { id:'XblGameSave',       name:'Xbox Live Game Save',                      safe:true,  gaming:true  },
-  { id:'XboxNetApiSvc',     name:'Xbox Live Networking',                     safe:true,  gaming:true  },
-  { id:'RetailDemo',        name:'Retail Demo Service',                      safe:true,  gaming:true  },
-  { id:'lfsvc',             name:'Geolocation Service',                      safe:true,  gaming:false, warn:'Disable if you don\'t use location apps.' },
-  { id:'WerSvc',            name:'Windows Error Reporting',                  safe:true,  gaming:true  },
-  { id:'Spooler',           name:'Print Spooler',                            safe:false, gaming:false, warn:'<i class="fa fa-triangle-exclamation"></i> ONLY disable if you have NO printers!' },
+  { id:'SysMain',           name:'SysMain (SuperFetch)',                     safe:true,  gaming:true,  desc:'Prefetches frequently used apps into RAM — increases memory usage, not needed for gaming.' },
+  { id:'WSearch',           name:'Windows Search Indexer',                   safe:true,  gaming:true,  warn:'Slows file searches in Explorer.', desc:'Indexes files for fast Explorer search — uses CPU/disk in background.' },
+  { id:'Fax',               name:'Fax Service',                              safe:true,  gaming:true,  desc:'Legacy fax support — safe to disable if you have no fax machine.' },
+  { id:'RemoteRegistry',    name:'Remote Registry',                          safe:true,  gaming:true,  desc:'Allows remote editing of the registry — security risk, disable unless needed.' },
+  { id:'DiagTrack',         name:'Connected User Experiences (Telemetry)',   safe:true,  gaming:true,  desc:'Sends usage and diagnostic data to Microsoft in the background.' },
+  { id:'dmwappushservice',  name:'WAP Push Message Routing',                 safe:true,  gaming:true,  desc:'Routing service for WAP push messages — unused on modern PCs.' },
+  { id:'XblAuthManager',    name:'Xbox Live Auth Manager',                   safe:true,  gaming:true,  desc:'Xbox authentication — safe to disable if you don\'t use Xbox services.' },
+  { id:'XblGameSave',       name:'Xbox Live Game Save',                      safe:true,  gaming:true,  desc:'Syncs Xbox game saves to the cloud.' },
+  { id:'XboxNetApiSvc',     name:'Xbox Live Networking',                     safe:true,  gaming:true,  desc:'Xbox Live network features — not needed for non-Xbox gaming.' },
+  { id:'RetailDemo',        name:'Retail Demo Service',                      safe:true,  gaming:true,  desc:'Used only in store demo mode — safe to disable on all personal PCs.' },
+  { id:'lfsvc',             name:'Geolocation Service',                      safe:true,  gaming:false, warn:'Disable if you don\'t use location apps.', desc:'Provides location data to apps — disable if you don\'t use location features.' },
+  { id:'WerSvc',            name:'Windows Error Reporting',                  safe:true,  gaming:true,  desc:'Collects and sends crash reports to Microsoft.' },
+  { id:'Spooler',           name:'Print Spooler',                            safe:false, gaming:false, warn:'<i class="fa fa-triangle-exclamation"></i> ONLY disable if you have NO printers!', desc:'Required for printing — only disable if you have NO printers connected.' },
+  { id:'bthserv',           name:'Bluetooth Support Service',                safe:true,  gaming:false, desc:'Required for Bluetooth devices — disable only if no Bluetooth peripherals are used.', sinceVersion:'1.4.6' },
+  { id:'WMPNetworkSvc',     name:'Windows Media Player Network Sharing',     safe:true,  gaming:true,  desc:'Shares Windows Media Player library over the network — unused on most PCs.', sinceVersion:'1.4.6' },
 ]
 
 let appVars = {}
 let debloatInstalledSet = new Set()
 
+const BLOAT_TASKS = [
+  { path: '\\Microsoft\\Windows\\Application Experience\\', name: 'Microsoft Compatibility Appraiser', safe: true,  desc: 'Sends app compatibility data to Microsoft' },
+  { path: '\\Microsoft\\Windows\\Application Experience\\', name: 'ProgramDataUpdater',               safe: true,  desc: 'Collects program telemetry data' },
+  { path: '\\Microsoft\\Windows\\Autochk\\',                name: 'Proxy',                            safe: true,  desc: 'Auto-checks disk on boot (telemetry proxy)' },
+  { path: '\\Microsoft\\Windows\\Customer Experience Improvement Program\\', name: 'Consolidator',    safe: true,  desc: 'CEIP data consolidation — sends usage data' },
+  { path: '\\Microsoft\\Windows\\Customer Experience Improvement Program\\', name: 'UsbCeip',         safe: true,  desc: 'USB device telemetry' },
+  { path: '\\Microsoft\\Windows\\DiskDiagnostic\\',         name: 'Microsoft-Windows-DiskDiagnosticDataCollector', safe: true, desc: 'Disk diagnostic data collection' },
+  { path: '\\Microsoft\\Windows\\Feedback\\Siuf\\',         name: 'DmClient',                        safe: true,  desc: 'Feedback notifications / surveys' },
+  { path: '\\Microsoft\\Windows\\Feedback\\Siuf\\',         name: 'DmClientOnScenarioDownload',      safe: true,  desc: 'Downloads feedback scenarios' },
+  { path: '\\Microsoft\\Windows\\Maps\\',                   name: 'MapsToastTask',                   safe: true,  desc: 'Maps update notifications' },
+  { path: '\\Microsoft\\Windows\\Maps\\',                   name: 'MapsUpdateTask',                  safe: true,  desc: 'Automatic maps data updates' },
+  { path: '\\Microsoft\\Windows\\Shell\\',                  name: 'FamilySafetyMonitor',              safe: true,  desc: 'Family safety monitoring' },
+  { path: '\\Microsoft\\Windows\\Shell\\',                  name: 'FamilySafetyRefreshTask',          safe: true,  desc: 'Family safety data refresh' },
+  { path: '\\Microsoft\\Windows\\Windows Error Reporting\\',name: 'QueueReporting',                  safe: true,  desc: 'Sends crash/error reports to Microsoft' },
+  { path: '\\Microsoft\\Windows\\WindowsUpdate\\',          name: 'Automatic App Update',            safe: false, desc: 'Auto-updates Store apps — disable with caution' },
+  { path: '\\Microsoft\\XblGameSave\\',                     name: 'XblGameSaveTask',                 safe: true,  desc: 'Xbox Game Save sync' },
+  { path: '\\Microsoft\\Windows\\CloudExperienceHost\\',    name: 'CreateObjectTask',                safe: true,  desc: 'Cloud experience / OneDrive prompts' },
+]
+
 function buildDebloater(c) {
   appVars = {}
+
+  c.appendChild(makeTip(tUI('debloatTipTitle'), 'info'))
 
   // Scanner card
   const scanCard = document.createElement('div')
@@ -10440,7 +10794,19 @@ function buildDebloater(c) {
   c.appendChild(scanCard)
 
   // UWP card
-  const uwpCard = makeSection('UWP App Removal', tUI('uwpSub'))
+  const uwpCard = makeSection(tUI('uwpSectionTitle'), tUI('uwpSub'))
+
+  const uwpSearch = document.createElement('div')
+  uwpSearch.style.cssText = 'padding:8px 18px 4px;position:relative'
+  uwpSearch.innerHTML = `
+    <i class="fa fa-magnifying-glass" style="position:absolute;left:29px;top:50%;transform:translateY(-50%);color:#555;font-size:12px;pointer-events:none"></i>
+    <input id="uwp-search" type="text" placeholder="${tUI('genSearchPlaceholder')}"
+      style="width:100%;box-sizing:border-box;background:#111;border:1px solid #222;border-radius:8px;padding:8px 10px 8px 32px;color:#ccc;font-size:12px;outline:none;transition:border-color .15s"
+      onfocus="this.style.borderColor='#333'" onblur="this.style.borderColor='#222'"
+      oninput="uwpFilterApps(this.value)">
+  `
+  uwpCard.appendChild(uwpSearch)
+
   Object.entries(UWP_APPS).forEach(([cat, apps]) => {
     const catDiv = document.createElement('div')
     catDiv.className = 'app-category'
@@ -10462,7 +10828,7 @@ function buildDebloater(c) {
       item.id = `app-item-${app.pkg}`
       item.innerHTML = `
         <label>
-          <input type="checkbox" id="chk-${app.pkg}" ${app.recommended ? 'checked' : ''}>
+          <input type="checkbox" id="chk-${app.pkg}" ${app.recommended ? 'checked' : ''} onchange="updateUwpCount()">
           <span class="app-name">${app.name}</span>
           ${app.warn ? `<span class="app-warn">${app.warn}</span>` : ''}
         </label>
@@ -10477,11 +10843,12 @@ function buildDebloater(c) {
   const masterRow = document.createElement('div')
   masterRow.className = 'master-select-row'
   masterRow.innerHTML = `
-    <span class="master-select-label">Select:</span>
+    <span class="master-select-label">${tUI('debloatMasterSelect')}</span>
     <button class="btn btn-ghost btn-sm" onclick="allSelect(true)"><i class="fa fa-check"></i> ${tUI('uwpAll')}</button>
     <button class="btn btn-ghost btn-sm" onclick="allSelect(false)"><i class="fa fa-xmark"></i> ${tUI('uwpNone')}</button>
     <button class="btn btn-ghost btn-sm" onclick="safeOnlySelect()"><i class="fa fa-shield-halved"></i> ${tUI('uwpSafeOnly')}</button>
     <button class="btn btn-ghost btn-sm" onclick="doDebloatRecommended()"><i class="fa fa-gamepad"></i> ${tUI('scanGaming')}</button>
+    <span id="uwp-selected-count" style="font-size:11px;color:#888;margin-left:auto"></span>
   `
   uwpCard.appendChild(masterRow)
 
@@ -10490,7 +10857,7 @@ function buildDebloater(c) {
   progDiv.className = 'debloat-remove-prog hidden'
   progDiv.id = 'debloat-remove-prog'
   progDiv.innerHTML = `
-    <div class="debloat-remove-prog-label" id="debloat-remove-label">Preparing…</div>
+    <div class="debloat-remove-prog-label" id="debloat-remove-label">${tUI('debloatPreparing')}</div>
     <div class="debloat-remove-bar-track"><div class="debloat-remove-bar" id="debloat-remove-bar"></div></div>
   `
   uwpCard.appendChild(progDiv)
@@ -10504,26 +10871,7 @@ function buildDebloater(c) {
   c.appendChild(makeTip(tUI('uwpTip'), 'warning'))
 
   // Scheduled Tasks card
-  const BLOAT_TASKS = [
-    { path: '\\Microsoft\\Windows\\Application Experience\\', name: 'Microsoft Compatibility Appraiser', safe: true,  desc: 'Sends app compatibility data to Microsoft' },
-    { path: '\\Microsoft\\Windows\\Application Experience\\', name: 'ProgramDataUpdater',               safe: true,  desc: 'Collects program telemetry data' },
-    { path: '\\Microsoft\\Windows\\Autochk\\',                name: 'Proxy',                            safe: true,  desc: 'Auto-checks disk on boot (telemetry proxy)' },
-    { path: '\\Microsoft\\Windows\\Customer Experience Improvement Program\\', name: 'Consolidator',    safe: true,  desc: 'CEIP data consolidation — sends usage data' },
-    { path: '\\Microsoft\\Windows\\Customer Experience Improvement Program\\', name: 'UsbCeip',         safe: true,  desc: 'USB device telemetry' },
-    { path: '\\Microsoft\\Windows\\DiskDiagnostic\\',         name: 'Microsoft-Windows-DiskDiagnosticDataCollector', safe: true, desc: 'Disk diagnostic data collection' },
-    { path: '\\Microsoft\\Windows\\Feedback\\Siuf\\',         name: 'DmClient',                        safe: true,  desc: 'Feedback notifications / surveys' },
-    { path: '\\Microsoft\\Windows\\Feedback\\Siuf\\',         name: 'DmClientOnScenarioDownload',      safe: true,  desc: 'Downloads feedback scenarios' },
-    { path: '\\Microsoft\\Windows\\Maps\\',                   name: 'MapsToastTask',                   safe: true,  desc: 'Maps update notifications' },
-    { path: '\\Microsoft\\Windows\\Maps\\',                   name: 'MapsUpdateTask',                  safe: true,  desc: 'Automatic maps data updates' },
-    { path: '\\Microsoft\\Windows\\Shell\\',                  name: 'FamilySafetyMonitor',              safe: true,  desc: 'Family safety monitoring' },
-    { path: '\\Microsoft\\Windows\\Shell\\',                  name: 'FamilySafetyRefreshTask',          safe: true,  desc: 'Family safety data refresh' },
-    { path: '\\Microsoft\\Windows\\Windows Error Reporting\\',name: 'QueueReporting',                  safe: true,  desc: 'Sends crash/error reports to Microsoft' },
-    { path: '\\Microsoft\\Windows\\WindowsUpdate\\',          name: 'Automatic App Update',            safe: false, desc: 'Auto-updates Store apps — disable with caution' },
-    { path: '\\Microsoft\\XblGameSave\\',                     name: 'XblGameSaveTask',                 safe: true,  desc: 'Xbox Game Save sync' },
-    { path: '\\Microsoft\\Windows\\CloudExperienceHost\\',    name: 'CreateObjectTask',                safe: true,  desc: 'Cloud experience / OneDrive prompts' },
-  ]
-
-  const taskCard = makeSection('Scheduled Tasks', tUI('tasksSub'))
+  const taskCard = makeSection(tUI('tasksSectionTitle'), tUI('tasksSub'))
   BLOAT_TASKS.forEach(task => {
     const row = document.createElement('div')
     row.className = 'service-item'
@@ -10547,7 +10895,7 @@ function buildDebloater(c) {
   c.appendChild(taskCard)
 
   // Unused Devices card
-  const devCard = makeSection('Unused / Ghost Devices', tUI('devicesSub'))
+  const devCard = makeSection(tUI('devsSectionTitle'), tUI('devicesSub'))
   const devBody = document.createElement('div')
   devBody.id = 'unused-devices-body'
   devBody.style.cssText = 'padding:12px 18px'
@@ -10563,16 +10911,17 @@ function buildDebloater(c) {
   c.appendChild(devCard)
 
   // Services card
-  const svcCard = makeSection('Services', tUI('servicesSub'))
+  const svcCard = makeSection(tUI('svcsSectionTitle'), tUI('servicesSub'))
   SERVICES.forEach(svc => {
     const row = document.createElement('div')
     row.className = 'service-item'
     row.innerHTML = `
       <label>
         <input type="checkbox" id="svc-${svc.id}" ${svc.safe ? 'checked' : ''} style="accent-color:var(--pink)">
-        <span class="service-name">${svc.name}</span>
+        <span class="service-name">${svc.name}${newBadge(svc.sinceVersion || '')}</span>
         ${svc.warn ? `<span class="service-warn">${svc.id === 'WSearch' ? tUI('servicesWSearch') : svc.warn}</span>` : ''}
       </label>
+      <span style="font-size:10px;color:#555;flex:1;padding-left:8px">${LANG[currentLang]?.svcDescs?.[svc.id] || svc.desc || ''}</span>
     `
     svcCard.appendChild(row)
   })
@@ -10584,13 +10933,36 @@ function buildDebloater(c) {
   `
   svcCard.appendChild(svcBtns)
   c.appendChild(svcCard)
+
+  updateUwpCount()
 }
 
 function catSelect(cat, val) {
   UWP_APPS[cat]?.forEach(app => { const el = document.getElementById(`chk-${app.pkg}`); if (el) el.checked = val })
+  updateUwpCount()
 }
-function allSelect(val) { Object.keys(appVars).forEach(pkg => { const el = document.getElementById(`chk-${pkg}`); if (el) el.checked = val }) }
-function safeOnlySelect() { Object.entries(UWP_APPS).flat(1).flat(0).forEach(cat => { if (Array.isArray(cat)) return; /* skip */ }); Object.entries(UWP_APPS).forEach(([,apps]) => apps.forEach(app => { const el = document.getElementById(`chk-${app.pkg}`); if (el) el.checked = app.safe })) }
+function allSelect(val) { Object.keys(appVars).forEach(pkg => { const el = document.getElementById(`chk-${pkg}`); if (el) el.checked = val }); updateUwpCount() }
+function safeOnlySelect() { Object.entries(UWP_APPS).forEach(([,apps]) => apps.forEach(app => { const el = document.getElementById(`chk-${app.pkg}`); if (el) el.checked = app.safe })); updateUwpCount() }
+
+function updateUwpCount() {
+  const total = Object.keys(appVars).length
+  const checked = Object.keys(appVars).filter(pkg => document.getElementById(`chk-${pkg}`)?.checked).length
+  const el = document.getElementById('uwp-selected-count')
+  if (el) el.textContent = `${checked} / ${total} ${tUI('uwpSelected')}`
+}
+
+function uwpFilterApps(query) {
+  const q = query.trim().toLowerCase()
+  document.querySelectorAll('.app-category').forEach(catDiv => {
+    let anyVisible = false
+    catDiv.querySelectorAll('.app-item').forEach(item => {
+      const show = !q || item.textContent.toLowerCase().includes(q)
+      item.style.display = show ? '' : 'none'
+      if (show) anyVisible = true
+    })
+    catDiv.style.display = anyVisible ? '' : 'none'
+  })
+}
 
 function doDebloatRecommended() {
   const { tier, ram, isLaptop } = pcTier()
@@ -10624,8 +10996,14 @@ function doDebloatRecommended() {
   }))
 
   const hint = document.getElementById('debloat-rec-hint')
-  if (hint) hint.textContent = `Selected for ${tier}-end PC${isLaptop ? ' (laptop)' : ''}${ram < 8 ? ` · ${ram}GB RAM — extra background apps included` : ''}`
-  toast('Gaming Recommended', `Selection tuned for your ${tier}-end ${isLaptop ? 'laptop' : 'desktop'}.`, 'ok')
+  if (hint) {
+    let hintText = tUI('debloatForTier').replace('{tier}', tier)
+    if (isLaptop) hintText += tUI('debloatLaptop')
+    if (ram > 0 && ram < 8) hintText += tUI('debloatLowRam').replace('{ram}', ram)
+    hint.textContent = hintText
+  }
+  toast(tUI('scanGaming'), tUI('debloatRecToastMsg').replace('{tier}', tier).replace('{type}', isLaptop ? tUI('debloatLaptop').trim().replace(/[()]/g,'') : 'desktop'), 'ok')
+  updateUwpCount()
 }
 
 async function doDebloatScan() {
@@ -10724,24 +11102,6 @@ async function doDisableServices() {
 }
 
 async function doDisableTasks() {
-  const BLOAT_TASKS = [
-    { path: '\\Microsoft\\Windows\\Application Experience\\', name: 'Microsoft Compatibility Appraiser' },
-    { path: '\\Microsoft\\Windows\\Application Experience\\', name: 'ProgramDataUpdater' },
-    { path: '\\Microsoft\\Windows\\Autochk\\',                name: 'Proxy' },
-    { path: '\\Microsoft\\Windows\\Customer Experience Improvement Program\\', name: 'Consolidator' },
-    { path: '\\Microsoft\\Windows\\Customer Experience Improvement Program\\', name: 'UsbCeip' },
-    { path: '\\Microsoft\\Windows\\DiskDiagnostic\\',         name: 'Microsoft-Windows-DiskDiagnosticDataCollector' },
-    { path: '\\Microsoft\\Windows\\Feedback\\Siuf\\',         name: 'DmClient' },
-    { path: '\\Microsoft\\Windows\\Feedback\\Siuf\\',         name: 'DmClientOnScenarioDownload' },
-    { path: '\\Microsoft\\Windows\\Maps\\',                   name: 'MapsToastTask' },
-    { path: '\\Microsoft\\Windows\\Maps\\',                   name: 'MapsUpdateTask' },
-    { path: '\\Microsoft\\Windows\\Shell\\',                  name: 'FamilySafetyMonitor' },
-    { path: '\\Microsoft\\Windows\\Shell\\',                  name: 'FamilySafetyRefreshTask' },
-    { path: '\\Microsoft\\Windows\\Windows Error Reporting\\',name: 'QueueReporting' },
-    { path: '\\Microsoft\\Windows\\WindowsUpdate\\',          name: 'Automatic App Update' },
-    { path: '\\Microsoft\\XblGameSave\\',                     name: 'XblGameSaveTask' },
-    { path: '\\Microsoft\\Windows\\CloudExperienceHost\\',    name: 'CreateObjectTask' },
-  ]
   const selected = BLOAT_TASKS.filter(t => {
     const el = document.getElementById(`task-chk-${t.name.replace(/\W/g,'_')}`)
     return el?.checked

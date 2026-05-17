@@ -1237,6 +1237,7 @@ ipcMain.handle('delete-profile', (_, name) => {
 })
 
 ipcMain.handle('open-external', (_, url) => shell.openExternal(url))
+ipcMain.handle('open-path', (_, p) => shell.openPath(p))
 
 // ─── Discord RPC update handlers ──────────────────────────────────────────────
 ipcMain.handle('set-discord-rpc', async (_, enabled) => {
@@ -2719,6 +2720,18 @@ const TWEAKS = {
     apply: async (s, _, cmd) => { await cmd('netsh winsock reset catalog'); await cmd('netsh int ip reset resetlog.txt'); s('Winsock & IP stack reset. REBOOT required.', 'ok') },
     restore: async (s) => s('Winsock reset is permanent — reboot was applied.', 'info')
   },
+  'tcp-keepalive': {
+    apply: async (s, ps) => {
+      await ps(`Set-ItemProperty -Path 'HKLM:\\SYSTEM\\CurrentControlSet\\Services\\Tcpip\\Parameters' -Name KeepAliveTime -Value 30000 -Type DWord -Force`)
+      await ps(`Set-ItemProperty -Path 'HKLM:\\SYSTEM\\CurrentControlSet\\Services\\Tcpip\\Parameters' -Name KeepAliveInterval -Value 1000 -Type DWord -Force`)
+      s('TCP keep-alive tuned — stale connections dropped faster.', 'ok')
+    },
+    restore: async (s, ps) => {
+      await ps(`Remove-ItemProperty -Path 'HKLM:\\SYSTEM\\CurrentControlSet\\Services\\Tcpip\\Parameters' -Name KeepAliveTime -ErrorAction SilentlyContinue`)
+      await ps(`Remove-ItemProperty -Path 'HKLM:\\SYSTEM\\CurrentControlSet\\Services\\Tcpip\\Parameters' -Name KeepAliveInterval -ErrorAction SilentlyContinue`)
+      s('TCP keep-alive restored to Windows defaults.', 'ok')
+    }
+  },
   'flush-dns': {
     apply: async (s, _, cmd) => { const r = await cmd('ipconfig /flushdns'); s(r.out || 'DNS cache flushed.', 'ok') },
     restore: async (s) => s('DNS flush is one-time only.', 'info')
@@ -2758,6 +2771,26 @@ const TWEAKS = {
       s('DNS restored to DHCP.', 'ok')
     }
   },
+  'dns-doh': {
+    apply: async (s, ps) => {
+      await ps(`Add-DnsClientDohServerAddress -ServerAddress '1.1.1.1' -DohTemplate 'https://cloudflare-dns.com/dns-query' -AllowFallbackToUdp $false -AutoUpgrade $true -ErrorAction SilentlyContinue`)
+      await ps(`Add-DnsClientDohServerAddress -ServerAddress '1.0.0.1' -DohTemplate 'https://cloudflare-dns.com/dns-query' -AllowFallbackToUdp $false -AutoUpgrade $true -ErrorAction SilentlyContinue`)
+      const adapters = await ps("Get-NetAdapter | Where-Object {$_.Status -eq 'Up'} | Select-Object -ExpandProperty Name")
+      for (const a of adapters.out.split('\n').map(l => l.trim()).filter(Boolean)) {
+        await ps(`Set-DnsClientServerAddress -InterfaceAlias '${a}' -ServerAddresses ('1.1.1.1','1.0.0.1') -ErrorAction SilentlyContinue`)
+      }
+      s('DNS over HTTPS enabled via Cloudflare DoH.', 'ok')
+    },
+    restore: async (s, ps) => {
+      await ps(`Remove-DnsClientDohServerAddress -ServerAddress '1.1.1.1' -ErrorAction SilentlyContinue`)
+      await ps(`Remove-DnsClientDohServerAddress -ServerAddress '1.0.0.1' -ErrorAction SilentlyContinue`)
+      const adapters = await ps("Get-NetAdapter | Where-Object {$_.Status -eq 'Up'} | Select-Object -ExpandProperty Name")
+      for (const a of adapters.out.split('\n').map(l => l.trim()).filter(Boolean)) {
+        await new Promise(res => require('child_process').exec(`netsh interface ip set dns name="${a}" dhcp`, { windowsHide: true }, res))
+      }
+      s('DoH removed — DNS restored to adapter defaults.', 'ok')
+    }
+  },
   'disable-netbios': {
     apply: async (s, ps) => { await ps('Set-ItemProperty -Path "HKLM:\\SYSTEM\\CurrentControlSet\\Services\\NetBT\\Parameters" -Name NetbiosOptions -Value 2 -Force'); s('NetBIOS over TCP/IP disabled.', 'ok') },
     restore: async (s, ps) => { await ps('Set-ItemProperty -Path "HKLM:\\SYSTEM\\CurrentControlSet\\Services\\NetBT\\Parameters" -Name NetbiosOptions -Value 0 -Force'); s('NetBIOS restored.', 'ok') }
@@ -2769,6 +2802,16 @@ const TWEAKS = {
   'disable-wpad': {
     apply: async (s, _, cmd) => { await cmd('sc config WinHttpAutoProxySvc start= disabled'); await cmd('sc stop WinHttpAutoProxySvc'); s('WPAD disabled.', 'ok') },
     restore: async (s, _, cmd) => { await cmd('sc config WinHttpAutoProxySvc start= manual'); await cmd('sc start WinHttpAutoProxySvc'); s('WPAD restored.', 'ok') }
+  },
+  'disable-autoproxy': {
+    apply: async (s, ps) => {
+      await ps(`Set-ItemProperty -Path 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Internet Settings' -Name AutoDetect -Value 0 -Type DWord -Force`)
+      s('Auto-proxy detection disabled.', 'ok')
+    },
+    restore: async (s, ps) => {
+      await ps(`Set-ItemProperty -Path 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Internet Settings' -Name AutoDetect -Value 1 -Type DWord -Force`)
+      s('Auto-proxy detection restored.', 'ok')
+    }
   },
   'net-throttling': {
     apply: async (s, ps) => { await ps('Set-ItemProperty -Path "HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Multimedia\\SystemProfile" -Name NetworkThrottlingIndex -Value 0xFFFFFFFF -Force'); s('Network throttling disabled.', 'ok') },
@@ -3215,6 +3258,44 @@ const TWEAKS = {
       await ps('Remove-ItemProperty -Path "HKCU:\\Control Panel\\Desktop" -Name HungAppTimeout -ErrorAction SilentlyContinue')
       await ps('Remove-ItemProperty -Path "HKCU:\\Control Panel\\Desktop" -Name WaitToKillAppTimeout -ErrorAction SilentlyContinue')
       s('Hang timeout keys removed — Windows default behaviour restored.', 'ok')
+    }
+  },
+  'fivem-gamebar': {
+    apply: async (s, ps) => {
+      await ps(`Set-ItemProperty -Path 'HKCU:\\System\\GameConfigStore' -Name GameDVR_Enabled -Value 0 -Type DWord -Force`)
+      await ps(`Set-ItemProperty -Path 'HKCU:\\System\\GameConfigStore' -Name GameDVR_FSEBehaviorMode -Value 2 -Type DWord -Force`)
+      await ps(`$p = 'HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\GameDVR'; if (!(Test-Path $p)) { New-Item $p -Force | Out-Null }; Set-ItemProperty -Path $p -Name AllowGameDVR -Value 0 -Type DWord -Force`)
+      s('Xbox Game Bar & Game DVR disabled for GTA V / FiveM.', 'ok')
+    },
+    restore: async (s, ps) => {
+      await ps(`Remove-ItemProperty 'HKCU:\\System\\GameConfigStore' GameDVR_Enabled -ErrorAction SilentlyContinue`)
+      await ps(`Remove-ItemProperty 'HKCU:\\System\\GameConfigStore' GameDVR_FSEBehaviorMode -ErrorAction SilentlyContinue`)
+      await ps(`Remove-ItemProperty 'HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\GameDVR' AllowGameDVR -ErrorAction SilentlyContinue`)
+      s('Xbox Game Bar & Game DVR settings restored to default.', 'ok')
+    }
+  },
+  'fivem-mouse-accel': {
+    apply: async (s, ps) => {
+      await ps(`Set-ItemProperty 'HKCU:\\Control Panel\\Mouse' MouseSpeed 0`)
+      await ps(`Set-ItemProperty 'HKCU:\\Control Panel\\Mouse' MouseThreshold1 0`)
+      await ps(`Set-ItemProperty 'HKCU:\\Control Panel\\Mouse' MouseThreshold2 0`)
+      s('Mouse acceleration disabled — 1:1 raw input active.', 'ok')
+    },
+    restore: async (s, ps) => {
+      await ps(`Set-ItemProperty 'HKCU:\\Control Panel\\Mouse' MouseSpeed 1`)
+      await ps(`Set-ItemProperty 'HKCU:\\Control Panel\\Mouse' MouseThreshold1 6`)
+      await ps(`Set-ItemProperty 'HKCU:\\Control Panel\\Mouse' MouseThreshold2 10`)
+      s('Mouse acceleration restored to Windows default.', 'ok')
+    }
+  },
+  'fivem-power-plan': {
+    apply: async (s, ps) => {
+      await ps(`powercfg /setactive 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c`)
+      s('Power plan set to High Performance.', 'ok')
+    },
+    restore: async (s, ps) => {
+      await ps(`powercfg /setactive 381b4222-f694-41f0-9685-ff5bb260df2e`)
+      s('Power plan restored to Balanced.', 'ok')
     }
   },
   'fivem-network': {
@@ -5123,6 +5204,9 @@ ipcMain.handle('run-preflight-scan', async () => {
     $r['fivem-disable-update-checks']       = $iniRaw -match 'UpdateChannel\s*=\s*canary'
     $r['fivem-preload-ipl']      = $iniRaw -match 'MaximumGrass\s*=\s*0'
     $r['fivem-reduce-draw-distance'] = $iniRaw -match 'MaxLodDistance\s*=\s*30'
+    $r['fivem-gamebar']          = (gp 'HKCU:\\System\\GameConfigStore' 'GameDVR_Enabled' -EA SilentlyContinue) -eq 0
+    $r['fivem-mouse-accel']      = (gp 'HKCU:\\Control Panel\\Mouse' 'MouseSpeed' -EA SilentlyContinue) -eq 0
+    $r['fivem-power-plan']       = (powercfg /getactivescheme) -match '8c5e7fda'
 
     # Emit KEY=VALUE lines
     foreach ($k in $r.Keys) {
@@ -5315,6 +5399,75 @@ ipcMain.handle('clean-power-plans', async () => {
 
 // What's New content
 const WHATS_NEW = [
+  { version: '1.4.6', date: 'May 2026', items: [
+    'General tab — search bar filters all tweak cards live; section headers with no matches hide automatically',
+    'General tab — Safe Defaults button applies ~23 safe no-reboot tweaks in one click with a confirm dialog',
+    'General tab — reboot badges on hpet, tsc-sync, msi-mode, gpu-hwsch, cursor-max-rate, bcd-tweaks, and spectre-meltdown',
+    'Advanced tab — warning tip banner guides users to start with Power Plan then GPU tweaks and reboot between sections',
+    'Advanced tab — search bar filters all hardware tweak cards live',
+    'Advanced tab — reboot badges on nvidia-max-perf, disable-hdcp, intel-power-plan, amd-power-plan, cpu-parking, cstates, pcie-power, hvci-offload',
+    'Advanced tab — new tweak: Disable Audio Exclusive Mode Sharing (DisableProtectedAudioDG=1) reduces audio driver contention latency',
+    'Debloating tab — all 13 existing + 2 new services now show a description column; Finnish translations added',
+    'Debloating tab — 2 new services: Bluetooth Support (laptop-safe aware) and WMP Network Sharing',
+    'Debloating tab — UWP app search bar filters the removable apps list live; empty categories collapse',
+    'Debloating tab — live X / Y selected counter in the master-select row updates on every checkbox change',
+    'Networking tab — Ping Test moved into the Networking page; sidebar nav item removed',
+    'Networking tab — search bar filters all tweak rows live',
+    'Networking tab — reboot badges on winsock-reset and disable-ipv6',
+    'Networking tab — 3 new tweaks: TCP Keep-Alive, Cloudflare DNS-over-HTTPS, and Disable WinHTTP Auto-Proxy',
+    'Game Profiles — 8 missing games added: R6 Siege, Overwatch 2, Tarkov, Squad, DayZ, Cyberpunk 2077, RDR2, PUBG',
+    'Game Profiles — Defender exclusion is now actually applied when installing a profile (passes installPath to handler)',
+    'Game Profiles — Open Folder button on profile detail when install path is known',
+    'Game Profiles — list sorted by running > installed > not installed then alphabetical; non-installed games visually greyed',
+    'NEW badge — newly added tweaks and features show a purple NEW badge on first open of a new version; disappears after that',
+    'FiveM tab — tip banner, live search bar, and 3 new tweaks: Disable Game Bar, Disable Mouse Acceleration, and Force High-Performance Power Plan',
+    'Home tab — Windows Health nudge banner now fully translated (EN/FI); disk % and net speed shown in metrics footer',
+    'Home tab — What\'s New pills show full item text instead of cutting off at the first dash',
+    'Startup Manager — grouped by source (Registry User / Registry All / Task Scheduler) with count badges',
+    'Startup Manager — search bar filters rows live; groups with no visible rows hide their header',
+    'Startup Manager — summary bar shows total / enabled / disabled counts; red warning when high-impact items are active',
+    'Startup Manager — Open Folder button on registry rows opens Explorer to the exe location',
+    'Startup Manager — bloatware auto-disable list expanded with 20+ entries including Zoom, Slack, AnyDesk, EdgeUpdate',
+    'UI — sidebar section labels (General / Tweaks / Tools) and Collapse toggle now translate to Finnish',
+    'UI — log pane header (OUTPUT LOG, Clear, legend) now translates to Finnish',
+    'UI — log pane can be collapsed to a slim header bar with the new chevron toggle button',
+    'UI — Report Bug and What\'s New titlebar buttons now use proper CSS classes instead of inline style hacks',
+    'UI — recent pages trail: last 3 visited pages appear as clickable pills under the page title',
+  ], items_fi: [
+    'Yleiset-välilehti — hakupalkki suodattaa kaikki säätökortit reaaliajassa; tyhjät osiot piiloutuvat automaattisesti',
+    'Yleiset-välilehti — Turvalliset oletukset -painike käyttää ~23 turvallista säätöä yhdellä klikkauksella vahvistusdialogilla',
+    'Yleiset-välilehti — uudelleenkäynnistysmerkit hpet, tsc-sync, msi-mode, gpu-hwsch, cursor-max-rate, bcd-tweaks ja spectre-meltdown',
+    'Lisäasetukset-välilehti — varoitusvinkki ohjaa aloittamaan Virrankäyttösuunnitelmasta sitten GPU-säädöistä ja käynnistämään uudelleen osioiden välillä',
+    'Lisäasetukset-välilehti — hakupalkki suodattaa laitteistosäätöjä reaaliajassa',
+    'Lisäasetukset-välilehti — uudelleenkäynnistysmerkit nvidia-max-perf, disable-hdcp, intel-power-plan, amd-power-plan, cpu-parking, cstates, pcie-power, hvci-offload',
+    'Lisäasetukset-välilehti — uusi säätö: Poista äänilaitteen yksinomainen jakomoodi käytöstä — vähentää ääniohjaimen viivettä',
+    'Bloatwaren poisto -välilehti — kaikki 13 olemassa olevaa + 2 uutta palvelua näyttävät nyt kuvauskentän; suomenkieliset käännökset lisätty',
+    'Bloatwaren poisto -välilehti — 2 uutta palvelua: Bluetooth-tuki (kannettaville turvallinen) ja WMP-verkkonjako',
+    'Bloatwaren poisto -välilehti — UWP-sovellusten hakupalkki suodattaa reaaliajassa; tyhjät kategoriat sulkeutuvat',
+    'Bloatwaren poisto -välilehti — reaaliaikainen X / Y valittu -laskuri päivittyy jokaisella valintamuutoksella',
+    'Verkko-välilehti — Ping-testi siirretty Verkko-sivulle; erillinen sivupalkkirivi poistettu',
+    'Verkko-välilehti — hakupalkki suodattaa kaikki säätörivit reaaliajassa',
+    'Verkko-välilehti — uudelleenkäynnistysmerkit winsock-reset ja disable-ipv6',
+    'Verkko-välilehti — 3 uutta säätöä: TCP Keep-Alive, Cloudflare DNS-over-HTTPS ja WinHTTP-automaattiproxyn poisto',
+    'Peliprofiilit — 8 puuttuvaa peliä lisätty: R6 Siege, Overwatch 2, Tarkov, Squad, DayZ, Cyberpunk 2077, RDR2, PUBG',
+    'Peliprofiilit — Defender-poissulku nyt oikeasti käytössä profiilin asennuksessa',
+    'Peliprofiilit — Avaa kansio -painike profiilitiedoissa kun asennuspolku on tiedossa',
+    'Peliprofiilit — lista järjestetään: käynnissä > asennettu > ei asennettu, sitten aakkosjärjestyksessä',
+    'UUSI-merkki — uudet säädöt ja ominaisuudet näyttävät violetti UUSI-merkin ensimmäisellä avauskerralla uudessa versiossa',
+    'FiveM-välilehti — vinkki, hakupalkki ja 3 uutta säätöä: Poista Game Bar ja hiiren kiihtyvyys käytöstä sekä pakota suorituskykyvirtatila',
+    'Koti-välilehti — Windows-terveysvinkki nyt täysin käännetty; levyn käyttö ja verkon nopeus näytetään mittaripalkissa',
+    'Koti-välilehti — Uudet ominaisuudet -pillsit näyttävät koko tekstin eikä katkaise ensimmäisen viivan kohdalla',
+    'Käynnistyshallinta — ryhmitelty lähteen mukaan (rekisteri käyttäjä / kaikki / Tehtävien ajoitus) lukumäärämerkinnöillä',
+    'Käynnistyshallinta — hakupalkki suodattaa rivejä reaaliajassa; tyhjät ryhmät piilottavat otsikkonsa',
+    'Käynnistyshallinta — yhteenvetopalkki näyttää kokonais- / käytössä / poistettu-luvut; punainen varoitus korkean vaikutuksen kohteista',
+    'Käynnistyshallinta — Avaa kansio -painike rekisteririveillä avaa Resurssienhallinnan exe-sijaintiin',
+    'Käynnistyshallinta — bloatware-poistolista laajennettu yli 20 uudella kohteella kuten Zoom, Slack, AnyDesk, EdgeUpdate',
+    'Käyttöliittymä — sivupalkin osiotunnisteet (Yleiset / Säädöt / Työkalut) ja Pienennä-painike kääntyvät suomeksi',
+    'Käyttöliittymä — lokipalkin otsikko (LOKI, Tyhjennä, selite) kääntyvät suomeksi',
+    'Käyttöliittymä — lokipalkki voidaan pienentää ohueksi otsikkoriviksi uudella nuolipainikkeella',
+    'Käyttöliittymä — Ilmoita virheestä ja Uudet ominaisuudet -painikkeet käyttävät nyt CSS-luokkia inline-tyylien sijaan',
+    'Käyttöliittymä — viimeisimmät sivut: 3 viimeisintä vierailtua sivua näkyvät klikattavina pillsinä sivuotsikon alla',
+  ]},
   { version: '1.4.5', date: 'May 2026', items: [
     'App Optimizer — install detection: cards for apps not installed on your PC are now hidden; only relevant apps are shown',
     'App Optimizer — 6 new apps: Epic Games, EA App, Riot Client, NVIDIA App, Playnite, and VS Code are now supported',
@@ -5948,9 +6101,17 @@ const GAME_EXE_MAP = {
   'warzone':       ['cod.exe', 'ModernWarfare.exe', 'Warzone.exe', 'battle.net.exe'],
   'rust':          ['RustClient.exe', 'rust.exe'],
   'the-finals':    ['FINALS-Win64-Shipping.exe', 'Discovery.exe'],
+  'r6siege':       ['RainbowSix.exe', 'RainbowSix_BE.exe', 'upc.exe'],
+  'overwatch2':    ['Overwatch.exe', 'Battle.net.exe'],
+  'tarkov':        ['EscapeFromTarkov.exe', 'EscapeFromTarkov_BE.exe'],
+  'squad':         ['Squad.exe', 'Squad_BE.exe'],
+  'dayz':          ['DayZ_x64.exe', 'DayZ_BE.exe'],
+  'cyberpunk':     ['Cyberpunk2077.exe'],
+  'rdr2':          ['RDR2.exe', 'PlayRDR2.exe'],
+  'pubg':          ['TslGame.exe', 'TslGame_BE.exe'],
 }
 
-ipcMain.handle('apply-game-tweak', async (_, { gameId, action }) => {
+ipcMain.handle('apply-game-tweak', async (_, { gameId, action, installPath }) => {
   const send = (msg, level) => mainWindow?.webContents.send('log', { msg, level, ts: new Date().toLocaleTimeString() })
   const exes = GAME_EXE_MAP[gameId] || []
   const ifeoBase = 'HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options'
@@ -5983,6 +6144,12 @@ ipcMain.handle('apply-game-tweak', async (_, { gameId, action }) => {
     await runPS('Set-ItemProperty -Path "HKCU:\\System\\GameConfigStore" -Name GameDVR_Enabled -Value 0 -Force')
     send('Game DVR disabled.', 'ok')
 
+    // Defender exclusion for install path
+    if (installPath) {
+      await runPS(`Add-MpPreference -ExclusionPath '${installPath.replace(/'/g, "''")}' -ErrorAction SilentlyContinue`)
+      send(`Defender exclusion added: ${installPath}`, 'ok')
+    }
+
     send(`✓ ${gameId} optimizations applied!`, 'ok')
   } else {
     // Restore: set Normal priority
@@ -5991,6 +6158,12 @@ ipcMain.handle('apply-game-tweak', async (_, { gameId, action }) => {
       await runPS(`Set-ItemProperty -Path "${ifeoBase}\\${exe}\\PerfOptions" -Name IoPriority -Value 2 -Force -EA SilentlyContinue`)
     }
     send(`${gameId} priorities restored to Normal.`, 'ok')
+
+    // Remove Defender exclusion
+    if (installPath) {
+      await runPS(`Remove-MpPreference -ExclusionPath '${installPath.replace(/'/g, "''")}' -ErrorAction SilentlyContinue`)
+      send(`Defender exclusion removed: ${installPath}`, 'ok')
+    }
   }
 
   return { ok: true }
@@ -6817,6 +6990,14 @@ ipcMain.handle('detect-games', async () => {
     { id:'warzone',       name:'Warzone',               exe:'cod.exe',               searchNames:['Call of Duty','Modern Warfare','Warzone'] },
     { id:'rust',          name:'Rust',                  exe:'RustClient.exe',        searchNames:['Rust'] },
     { id:'the-finals',    name:'THE FINALS',            exe:'FINALS-Win64-Shipping.exe', searchNames:['THE FINALS','Discovery'] },
+    { id:'r6siege',       name:'Rainbow Six Siege',     exe:'RainbowSix.exe',        searchNames:["Tom Clancy's Rainbow Six Siege"] },
+    { id:'overwatch2',    name:'Overwatch 2',           exe:'Overwatch.exe',         searchNames:['Overwatch'] },
+    { id:'tarkov',        name:'Escape from Tarkov',    exe:'EscapeFromTarkov.exe',  searchNames:['Escape from Tarkov','BsgLauncher'] },
+    { id:'squad',         name:'Squad',                 exe:'Squad.exe',             searchNames:['Squad'] },
+    { id:'dayz',          name:'DayZ',                  exe:'DayZ_x64.exe',          searchNames:['DayZ'] },
+    { id:'cyberpunk',     name:'Cyberpunk 2077',         exe:'Cyberpunk2077.exe',     searchNames:['Cyberpunk 2077'] },
+    { id:'rdr2',          name:'Red Dead Redemption 2',  exe:'RDR2.exe',              searchNames:['Red Dead Redemption 2'] },
+    { id:'pubg',          name:'PUBG',                  exe:'TslGame.exe',           searchNames:['PUBG: BATTLEGROUNDS','TslGame'] },
   ]
 
   // Common install base paths
