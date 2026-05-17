@@ -370,7 +370,7 @@ function webhookSessionEnd(durationMs, pageVisits, tweaksThisSession) {
     analytics.totalTweaksApplied = (analytics.totalTweaksApplied || 0) + (tweaksThisSession || 0)
     saveAnalytics(analytics)
 
-    notifyBot('session_end', { durationLabel, tweaksThisSession: tweaksThisSession || 0 })
+    notifyBot('session_end', { durationLabel, durationMs, tweaksThisSession: tweaksThisSession || 0 })
   } catch {}
 }
 
