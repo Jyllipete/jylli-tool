@@ -5306,6 +5306,13 @@ ipcMain.handle('clean-power-plans', async () => {
 // What's New content
 const WHATS_NEW = [
   { version: '1.4.5', date: 'May 2026', items: [
+    'App Optimizer — install detection: cards for apps not installed on your PC are now hidden; only relevant apps are shown',
+    'App Optimizer — 6 new apps: Epic Games, EA App, Riot Client, NVIDIA App, Playnite, and VS Code are now supported',
+    'App Optimizer — bullet list of what each optimization does, visible on each card before applying',
+    'App Optimizer — health check scan: cards show a DRIFTED badge if a previously applied optimization has been partially reverted',
+    'FiveM tab — new tweak: Suppress FiveM Update Nags (sets UpdateChannel=canary in CitizenFX.ini)',
+    'FiveM Settings window — Balanced preset added alongside Quality and Performance',
+    'FiveM Settings window — Export button copies your current settings summary to clipboard',
     'Auto-Optimize wizard fully translated — all gate screens, step labels, questions, review screen, and run log now respond to your language setting (EN/FI)',
     'Smart select toggle — the "Uncheck All" button now shows how many tweaks are selected (e.g. "9 / 10 selected") and toggles to "Check All" when everything is unchecked',
     'Estimated time on review screen — a chip shows the approximate time the run will take based on tweak count',
@@ -5316,6 +5323,13 @@ const WHATS_NEW = [
     'Dashboard status auto-clears — the progress bar and status text in the dashboard reset 3 seconds after Auto-Optimize completes',
     'Brave browser auth fix — if your default browser fails to open when clicking "Link Discord", a "Browser didn\'t open? Click here" fallback link now appears immediately; for all users a soft fallback link appears after 4 seconds',
   ], items_fi: [
+    'Sovelluksen optimoija — asennustunnistus: kortit sovelluksille, joita ei ole asennettu, on nyt piilotettu; näytetään vain olennaiset sovellukset',
+    'Sovelluksen optimoija — 6 uutta sovellusta: Epic Games, EA App, Riot Client, NVIDIA App, Playnite ja VS Code ovat nyt tuettuja',
+    'Sovelluksen optimoija — luettelo siitä mitä kukin optimointi tekee, näkyy jokaisessa kortissa ennen soveltamista',
+    'Sovelluksen optimoija — terveystarkistus: kortit näyttävät MUUTTUNUT-merkin, jos aiemmin sovellettu optimointi on osittain palautettu',
+    'FiveM-välilehti — uusi säätö: Estä FiveM-päivitysilmoitukset (asettaa UpdateChannel=canary CitizenFX.ini-tiedostoon)',
+    'FiveM-asetusikkuna — Tasapainoinen-esiasetus lisätty Laatu- ja Suorituskyky-esiasetusten rinnalle',
+    'FiveM-asetusikkuna — Vie-painike kopioi nykyiset asetusyhteenvetosi leikepöydälle',
     'Automaattioptimoinnin velho täysin käännetty — kaikki porttinäytöt, vaiheiden otsikot, kysymykset, tarkistusnäyttö ja ajokirjaus vastaavat nyt kieliasetustasi (EN/FI)',
     'Älykäs valintapainike — "Poista kaikki valinnat" -painike näyttää nyt valittujen säätöjen määrän (esim. "9 / 10 valittu") ja vaihtuu "Valitse kaikki" -tilaan kun kaikki on poistettu',
     'Arvioitu aika tarkistusnäytöllä — siru näyttää arvioidun suoritusajan säätöjen määrän perusteella',
