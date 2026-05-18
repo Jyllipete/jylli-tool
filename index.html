@@ -2350,6 +2350,35 @@ const LANG = {
       biosWarnFastBoot:'If Fast Boot is on and you need BIOS access, hold Shift while clicking Restart in Windows.',
       biosWarnCsm:'Old GPUs (pre-2012) that don\'t support UEFI GOP may show no display output if CSM is disabled.',
       biosWarnPsu:'Setting this incorrectly for your PSU can cause system crashes under load.',
+      // Toast messages
+      tipTrayTitle:'Tip: hide to tray while gaming', tipTrayBody:'Press the tray icon to hide Jylli Tool — stops background activity and prevents fullscreen interference',
+      bugReportSent:'Bug Report Sent', bugReportThanks:'Thanks — we\'ll look into it.',
+      updateUpToDate:'Already up to date',
+      powerPlanCleanFail:'Could not clean power plans',
+      pulseFailedTitle:'Pulse Failed', pulseFailedBody:'Could not activate — check log',
+      mouseFixTitle:'Mouse Fix', mouseFixBody:'Interrupt affinity cleared — mouse should be normal now',
+      gameBoostActiveTitle:'Game Boost Active', gameBoostActiveBody:'Background processes killed',
+      gameBoostEndedTitle:'Boost Ended', gameBoostEndedBody:'Priorities restored',
+      pingCompleteTitle:'Ping test complete',
+      historyCleared:'History cleared',
+      autoProfilesOn:'Auto-Profiles enabled', autoProfilesOnBody:'Monitoring for game launches',
+      autoProfilesOff:'Auto-Profiles disabled',
+      autoPulseStoppedTitle:'Auto-Pulse stopped', autoPulseStoppedBody:'Pulse deactivated manually',
+      fanNotFound:'FanControl not found', fanNotFoundBody:'Place FanControl files in assets\\fancontrol\\',
+      fanStarted:'FanControl running in background',
+      fanStopped:'FanControl stopped',
+      // Confirm dialogs
+      killProcessTitle:'Kill Process', killProcessBody:'This process will be terminated immediately.', killProcessOk:'Kill',
+      schedClearDlTitle:'Clear Downloads Folder', schedClearDlBody:'This will permanently delete all files in your Downloads folder.', schedClearDlOk:'Schedule Anyway',
+      schedRemoveTitle:'Remove Scheduled Task', schedRemoveBody:'This scheduled task will be deleted.',
+      clearHistoryTitle:'Clear Tweak History', clearHistoryBody:'All recorded tweak history will be permanently deleted.',
+      deleteProfileTitle:'Delete Profile', deleteProfileBody:'This profile will be permanently removed.',
+      debloatConfirmTitle:'Remove App(s)', debloatConfirmBody:'The selected UWP apps will be removed from this device.',
+      disableSvcTitle:'Disable Service(s)', disableSvcBody:'The selected Windows services will be disabled.',
+      disableTaskTitle:'Disable Scheduled Task(s)', disableTaskBody:'The selected scheduled tasks will be disabled.',
+      disableDevTitle:'Disable Device(s)', disableDevBody:'These devices will be disabled in Device Manager.',
+      restoreConfirmTitle:'Restore to Point', restoreConfirmBody:'Save all open work first. Windows will restart to apply the restore.', restoreConfirmOk:'Restore & Restart',
+      deleteOk:'Delete', disableOk:'Disable', removeOk:'Remove',
     },
     titles: {
       'dashboard':'Home','restore-points':'System Restore','process-manager':'Processes',
@@ -3244,6 +3273,35 @@ const LANG = {
       biosWarnFastBoot:'Jos Fast Boot on päällä ja tarvitset BIOS-pääsyn, pidä Shift alhaalla napsauttaessasi Käynnistä uudelleen Windowsissa.',
       biosWarnCsm:'Vanhat GPU:t (ennen 2012), jotka eivät tue UEFI GOP:ta, voivat menettää näyttösignaalin CSM:n poistamisen jälkeen.',
       biosWarnPsu:'Väärä arvo virtalähteellesi voi aiheuttaa järjestelmän kaatumisia kuormituksessa.',
+      // Toast messages
+      tipTrayTitle:'Vinkki: piilota telakkaan pelatessa', tipTrayBody:'Paina telakkapalkin kuvaketta piilottaaksesi Jylli Tool — lopettaa taustatoiminnot ja estää kokonäytön häiriöt',
+      bugReportSent:'Virheraportti lähetetty', bugReportThanks:'Kiitos — tutustumme asiaan.',
+      updateUpToDate:'Sinulla on uusin versio',
+      powerPlanCleanFail:'Virransäästösuunnitelmien siivous epäonnistui',
+      pulseFailedTitle:'Pulse epäonnistui', pulseFailedBody:'Aktivointi epäonnistui — tarkista loki',
+      mouseFixTitle:'Hiirikorjaus', mouseFixBody:'Keskeytyksen affiniteetti nollattu — hiiren pitäisi toimia normaalisti',
+      gameBoostActiveTitle:'Peli-Boost aktiivinen', gameBoostActiveBody:'Taustaprosessit lopetettu',
+      gameBoostEndedTitle:'Boost lopetettu', gameBoostEndedBody:'Prioriteetit palautettu',
+      pingCompleteTitle:'Ping-testi valmis',
+      historyCleared:'Historia tyhjennetty',
+      autoProfilesOn:'Automaattiset profiilit käytössä', autoProfilesOnBody:'Seurataan pelien käynnistymistä',
+      autoProfilesOff:'Automaattiset profiilit poistettu',
+      autoPulseStoppedTitle:'Auto-Pulse pysäytetty', autoPulseStoppedBody:'Pulse poistettiin manuaalisesti',
+      fanNotFound:'FanControl-ohjelmaa ei löydy', fanNotFoundBody:'Sijoita FanControl-tiedostot kansioon assets\\fancontrol\\',
+      fanStarted:'FanControl käynnissä taustalla',
+      fanStopped:'FanControl pysäytetty',
+      // Confirm dialogs
+      killProcessTitle:'Lopeta prosessi', killProcessBody:'Tämä prosessi lopetetaan välittömästi.', killProcessOk:'Lopeta',
+      schedClearDlTitle:'Tyhjennä latauskansio', schedClearDlBody:'Tämä poistaa pysyvästi kaikki latauskansiosi tiedostot.', schedClearDlOk:'Aikatauluta silti',
+      schedRemoveTitle:'Poista ajastettu tehtävä', schedRemoveBody:'Tämä ajastettu tehtävä poistetaan.',
+      clearHistoryTitle:'Tyhjennä säätöhistoria', clearHistoryBody:'Kaikki tallennettu säätöhistoria poistetaan pysyvästi.',
+      deleteProfileTitle:'Poista profiili', deleteProfileBody:'Tämä profiili poistetaan pysyvästi.',
+      debloatConfirmTitle:'Poista sovellus(ia)', debloatConfirmBody:'Valitut UWP-sovellukset poistetaan tältä laitteelta.',
+      disableSvcTitle:'Poista palvelu(ita) käytöstä', disableSvcBody:'Valitut Windows-palvelut poistetaan käytöstä.',
+      disableTaskTitle:'Poista ajastettu tehtävä(t) käytöstä', disableTaskBody:'Valitut ajastetut tehtävät poistetaan käytöstä.',
+      disableDevTitle:'Poista laite(ita) käytöstä', disableDevBody:'Nämä laitteet poistetaan käytöstä Laitehallinnassa.',
+      restoreConfirmTitle:'Palauta pisteeseen', restoreConfirmBody:'Tallenna kaikki avoimet työt ensin. Windows käynnistyy uudelleen palautuksen aikana.', restoreConfirmOk:'Palauta & Käynnistä uudelleen',
+      deleteOk:'Poista', disableOk:'Poista käytöstä', removeOk:'Poista',
     },
     aoNames: {
       'edge-optimize':'Microsoft Edge -optimointi',
@@ -3977,7 +4035,7 @@ const init = async function _init() {
       // One-time nudge: suggest hiding to tray to avoid any fullscreen interference
       if (!_flickerNudgeSent && !document.hidden) {
         _flickerNudgeSent = true
-        toast('Tip: hide to tray while gaming', 'Press the tray icon to hide Jylli Tool — stops background activity and prevents fullscreen interference', 'info', 7000)
+        toast(tUI('tipTrayTitle'), tUI('tipTrayBody'), 'info', 7000)
       }
     } else if (event === 'game-closed') {
       const lbl = document.getElementById('watcher-active-game')
@@ -4341,7 +4399,7 @@ async function submitBugReport() {
 
   await api.submitBugReport({ title, description, steps: steps || null, page: currentPage })
   closeBugReport()
-  toast('Bug Report Sent', 'Thanks — we\'ll look into it.', 'ok')
+  toast(tUI('bugReportSent'), tUI('bugReportThanks'), 'ok')
 }
 
 // ─── Personalization ──────────────────────────────────────────────────────────
@@ -4708,7 +4766,7 @@ async function runUpdateCheck() {
   }
 
   if (!updateResult?.available) {
-    toast('Already up to date', '', 'ok')
+    toast(tUI('updateUpToDate'), '', 'ok')
   }
 }
 
@@ -4728,7 +4786,7 @@ async function doCleanPowerPlans(btn) {
   btn.disabled = false
   btn.innerHTML = '<i class="fa fa-trash-can"></i> Clean up old power plans'
   if (r.ok) toast(r.deleted > 0 ? `Removed ${r.deleted} old power plan(s)` : 'No old plans to remove', 'Balanced plan is now active', r.deleted > 0 ? 'ok' : 'info')
-  else toast('Could not clean power plans', '', 'err')
+  else toast(tUI('powerPlanCleanFail'), '', 'err')
 }
 
 async function autoHealthCheck() {
@@ -5367,14 +5425,6 @@ async function doPulseStart(btn) {
   if (logEl) { logEl.style.display = 'block'; logEl.innerHTML = '' }
 
   // Listen for log events streamed from main process
-  const logListener = ({ msg, level }) => {
-    if (!logEl) return
-    const color = level === 'ok' ? '#2ecc71' : level === 'head' ? 'var(--pink)' : level === 'err' ? 'var(--danger)' : '#888'
-    logEl.innerHTML += `<div style="color:${color};margin-bottom:2px">${msg}</div>`
-    logEl.scrollTop = logEl.scrollHeight
-  }
-  api.onLog(logListener)
-
   const r = await api.pulseStart({ presetId: pulseSelectedPreset, killBg })
 
   if (r?.ok) {
@@ -5393,7 +5443,7 @@ async function doPulseStart(btn) {
   } else {
     btn.disabled = false
     btn.innerHTML = `<i class="fa fa-bolt"></i> ${tUI('pulseActivate')}`
-    toast('Pulse Failed', 'Could not activate — check log', 'err')
+    toast(tUI('pulseFailedTitle'), tUI('pulseFailedBody'), 'err')
   }
 }
 
@@ -5425,7 +5475,7 @@ async function doPulseFixMouse(btn) {
   btn.disabled = true
   btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Fixing…'
   await api.pulseFixMouse()
-  toast('Mouse Fix', 'Interrupt affinity cleared — mouse should be normal now', 'ok')
+  toast(tUI('mouseFixTitle'), tUI('mouseFixBody'), 'ok')
   btn.innerHTML = '<i class="fa fa-check"></i> Done'
 }
 
@@ -5515,7 +5565,7 @@ function renderProcessTable(data) {
 }
 
 async function doKillProcess(pid, name) {
-  try { await showConfirm({ title: 'Kill Process', body: `<strong style="color:#e0e0e0">${name}</strong> (PID ${pid}) will be terminated immediately.`, okText: 'Kill', okStyle: 'danger', icon: 'fa-skull' }) } catch { return }
+  try { await showConfirm({ title: tUI('killProcessTitle'), body: `<strong style="color:#e0e0e0">${name}</strong> (PID ${pid}) ${tUI('killProcessBody')}`, okText: tUI('killProcessOk'), okStyle: 'danger', icon: 'fa-skull' }) } catch { return }
   const r = await api.killProcess(pid)
   toast(r.ok ? `Killed ${name}` : `Failed to kill ${name}`, '', r.ok ? 'ok' : 'err')
   loadProcesses()
@@ -5529,7 +5579,7 @@ async function doGameBoost() {
   btn.innerHTML = '<i class="fa fa-check"></i> Boost Active'
   document.getElementById('boost-restore-btn')?.removeAttribute('disabled')
   document.getElementById('badge-boost').style.display = ''
-  toast('Game Boost Active', 'Background processes killed', 'ok')
+  toast(tUI('gameBoostActiveTitle'), tUI('gameBoostActiveBody'), 'ok')
   setTimeout(() => loadProcesses(), 1000)
 }
 
@@ -5539,7 +5589,7 @@ async function doBoostRestore() {
   document.getElementById('boost-btn')?.innerHTML && (document.getElementById('boost-btn').innerHTML = '<i class="fa fa-bolt"></i> Activate Boost')
   if (document.getElementById('boost-restore-btn')) document.getElementById('boost-restore-btn').disabled = true
   document.getElementById('badge-boost').style.display = 'none'
-  toast('Boost Ended', 'Priorities restored', 'info')
+  toast(tUI('gameBoostEndedTitle'), tUI('gameBoostEndedBody'), 'info')
 }
 
 
@@ -5696,6 +5746,7 @@ async function toggleStartup(cb, itemJson) {
   const item = JSON.parse(itemJson)
   await api.toggleStartupItem({ ...item, enable: cb.checked })
   toast(cb.checked ? `${tUI('startupToastEnabled')}: ${item.Name}` : `${tUI('startupToastDisabled')}: ${item.Name}`, '', 'ok')
+  loadStartupItems()
 }
 
 function startupFilter(query) {
@@ -5722,6 +5773,7 @@ function startupOpenLocation(cmd) {
 
 // ─── Page: Ping Test ──────────────────────────────────────────────────────────
 function buildPingTest(c) {
+  pingResults = []; pingRunning = false; pingDone = 0
   const hero = document.createElement('div')
   hero.style.cssText = 'background:linear-gradient(135deg,#0a0d18 0%,#0d1020 100%);border:1px solid #1a2a5c;border-radius:12px;padding:18px 20px;margin-bottom:12px'
   hero.innerHTML = `
@@ -5775,7 +5827,7 @@ async function runPingTest() {
   pingRunning = false
   if (btn) { btn.innerHTML = '<i class="fa fa-play"></i> Run Again'; btn.disabled = false }
   document.getElementById('ping-status').textContent = `Complete — ${pingResults.filter(r=>r.avg!=null).length}/${pingResults.length} servers reachable`
-  toast('Ping test complete', `${pingResults.filter(r=>r.avg!=null).length} servers tested`, 'ok')
+  toast(tUI('pingCompleteTitle'), `${pingResults.filter(r=>r.avg!=null).length} servers tested`, 'ok')
 }
 
 function renderPingResults() {
@@ -5861,7 +5913,7 @@ async function doScheduleTask() {
     'clean-downloads':  'CleanDownloads',
   }
   if (action === 'clean-downloads') {
-    try { await showConfirm({ title: 'Clear Downloads Folder', body: 'This will permanently delete <strong>all files</strong> in your Downloads folder on schedule. Are you sure?', okText: 'Schedule Anyway', okStyle: 'danger', icon: 'fa-triangle-exclamation' }) } catch { return }
+    try { await showConfirm({ title: tUI('schedClearDlTitle'), body: tUI('schedClearDlBody'), okText: tUI('schedClearDlOk'), okStyle: 'danger', icon: 'fa-triangle-exclamation' }) } catch { return }
   }
   const r = await api.scheduleTweak({ taskName: labels[action] || action, schedule: when, action })
   toast(r.ok ? 'Task scheduled!' : 'Schedule failed', r.ok ? `JT_${labels[action]} created` : r.error, r.ok ? 'ok' : 'err')
@@ -5888,7 +5940,7 @@ async function loadScheduledTasks() {
 }
 
 async function doDeleteTask(name) {
-  try { await showConfirm({ title: 'Remove Scheduled Task', body: `The task <strong style="color:#e0e0e0">${name}</strong> will be deleted from Task Scheduler.`, okText: 'Delete', okStyle: 'danger', icon: 'fa-trash' }) } catch { return }
+  try { await showConfirm({ title: tUI('schedRemoveTitle'), body: `${tUI('schedRemoveBody')} <strong style="color:#e0e0e0">${name}</strong>`, okText: tUI('deleteOk'), okStyle: 'danger', icon: 'fa-trash' }) } catch { return }
   await api.deleteScheduledTweak(name)
   toast(`Removed: ${name}`, '', 'ok')
   loadScheduledTasks()
@@ -6703,9 +6755,9 @@ async function loadChangelogPage() {
 }
 
 async function doClearChangelog() {
-  try { await showConfirm({ title: 'Clear Tweak History', body: 'All recorded tweak history will be permanently deleted.', okText: 'Clear', okStyle: 'warning', icon: 'fa-trash' }) } catch { return }
+  try { await showConfirm({ title: tUI('clearHistoryTitle'), body: tUI('clearHistoryBody'), okText: tUI('logClear'), okStyle: 'warning', icon: 'fa-trash' }) } catch { return }
   await api.clearChangelog()
-  toast('History cleared', '', 'ok')
+  toast(tUI('historyCleared'), '', 'ok')
   loadChangelogPage()
 }
 
@@ -6750,7 +6802,7 @@ async function toggleGameWatcher() {
     const gpDot = document.getElementById('gp-watcher-dot')
     if (gpBtn) { gpBtn.innerHTML = '<i class="fa fa-stop"></i> Disable Auto-Profiles'; gpBtn.className = 'btn btn-sm btn-danger' }
     if (gpDot) { gpDot.style.background = 'var(--success)'; gpDot.style.animation = 'pulse 1.5s infinite' }
-    toast('Auto-Profiles enabled', 'Monitoring for game launches', 'ok')
+    toast(tUI('autoProfilesOn'), tUI('autoProfilesOnBody'), 'ok')
   } else {
     await api.stopGameWatcher()
     gameWatcherRunning = false
@@ -6766,7 +6818,7 @@ async function toggleGameWatcher() {
     const gpDot = document.getElementById('gp-watcher-dot')
     if (gpBtn) { gpBtn.innerHTML = '<i class="fa fa-play"></i> Enable Auto-Profiles'; gpBtn.className = 'btn btn-sm btn-info' }
     if (gpDot) { gpDot.style.background = 'var(--muted)'; gpDot.style.animation = '' }
-    toast('Auto-Profiles disabled', '', 'info')
+    toast(tUI('autoProfilesOff'), '', 'info')
   }
 }
 
@@ -6791,16 +6843,16 @@ async function doAutoPulseManualStop() {
   if (badge) badge.style.display = 'none'
   await api.pulseStop()
   syncPulseUIState()
-  toast('Auto-Pulse stopped', 'Pulse deactivated manually', 'info')
+  toast(tUI('autoPulseStoppedTitle'), tUI('autoPulseStoppedBody'), 'info')
 }
 
 const GAME_EMOJIS = { fortnite:'<i class="fa fa-wind"></i>', gtav:'<i class="fa fa-car"></i>', valorant:'<i class="fa fa-crosshairs"></i>', 'arma-reforger':'<i class="fa fa-helmet-safety"></i>', minecraft:'<i class="fa fa-cube"></i>', cs2:'<i class="fa fa-crosshairs"></i>', apex:'<i class="fa fa-dragon"></i>', warzone:'<i class="fa fa-skull"></i>', rust:'<i class="fa fa-wrench"></i>', 'the-finals':'<i class="fa fa-trophy"></i>' }
 
 async function doGameScan(btn) {
-  btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Scanning…'; btn.disabled = true
-  document.getElementById('game-scan-status').textContent = 'Scanning install paths and registry…'
+  btn.innerHTML = `<i class="fa fa-spinner fa-spin"></i> ${tUI('pfScanning')}`; btn.disabled = true
+  document.getElementById('game-scan-status').textContent = tUI('pfScanning')
   const games = await api.detectGames()
-  btn.innerHTML = '<i class="fa fa-magnifying-glass"></i> Scan Again'; btn.disabled = false
+  btn.innerHTML = `<i class="fa fa-magnifying-glass"></i> ${tUI('gpScanBtn')}`; btn.disabled = false
   const installed = games.filter(g => g.installed)
   document.getElementById('game-scan-status').textContent = `Found ${installed.length} / ${games.length} games installed`
 
@@ -7087,7 +7139,7 @@ async function buildBiosTuner(c) {
 
 async function doFanControlOpen() {
   const r = await api.fancontrolStart(false)
-  if (!r.ok) toast('FanControl not found', 'Place FanControl files in assets\\fancontrol\\', 'error')
+  if (!r.ok) toast(tUI('fanNotFound'), tUI('fanNotFoundBody'), 'error')
   else setTimeout(async () => {
     const s = await api.fancontrolStatus()
     const el = document.getElementById('fancontrol-status')
@@ -7096,12 +7148,12 @@ async function doFanControlOpen() {
 }
 async function doFanControlBackground() {
   const r = await api.fancontrolStart(true)
-  if (!r.ok) toast('FanControl not found', 'Place FanControl files in assets\\fancontrol\\', 'error')
-  else toast('FanControl running in background', '', 'ok')
+  if (!r.ok) toast(tUI('fanNotFound'), tUI('fanNotFoundBody'), 'error')
+  else toast(tUI('fanStarted'), '', 'ok')
 }
 async function doFanControlStop() {
   await api.fancontrolStop()
-  toast('FanControl stopped', '', 'info')
+  toast(tUI('fanStopped'), '', 'info')
   const el = document.getElementById('fancontrol-status')
   if (el) { el.textContent = '○ Not running'; el.style.color = 'var(--gray)' }
 }
@@ -7111,13 +7163,13 @@ async function doBiosScan() {
   const status = document.getElementById('bios-scan-status')
   const results = document.getElementById('bios-info-results')
   btn.disabled = true
-  btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Scanning…'
-  status.textContent = 'Reading BIOS info from Windows…'
+  btn.innerHTML = `<i class="fa fa-spinner fa-spin"></i> ${tUI('pfScanning')}`
+  status.textContent = tUI('pfScanning')
   const info = await api.getBiosInfo()
   btn.disabled = false
-  btn.innerHTML = '<i class="fa fa-magnifying-glass"></i> Scan System'
-  if (!info.ok) { status.textContent = 'Scan failed.'; return }
-  status.textContent = 'Scan complete.'
+  btn.innerHTML = `<i class="fa fa-magnifying-glass"></i> ${tUI('biosScanBtn')}`
+  if (!info.ok) { status.textContent = tUI('pfFailed') || 'Scan failed.'; return }
+  status.textContent = tUI('pfComplete') || 'Scan complete.'
   const xmpGap = info.ramRated > 0 && info.ramActual > 0 && info.ramActual < info.ramRated * 0.95
   _biosXmpGap = xmpGap
   const xmpBanner = xmpGap ? `<div style="background:#1a1200;border:1px solid #b87800;border-radius:8px;padding:10px 14px;margin-bottom:10px;font-size:11px;color:#f0c060;display:flex;gap:8px;align-items:center"><i class="fa fa-triangle-exclamation"></i><div><strong>XMP / DOCP not enabled.</strong> Your RAM is running at ${info.ramActual} MHz but is rated for ${info.ramRated} MHz. Enable XMP in BIOS for a free performance gain.</div></div>` : ''
@@ -7235,12 +7287,12 @@ async function doBiosScewinScan() {
   const status = document.getElementById('scewin-scan-status')
   const out    = document.getElementById('scewin-results')
   btn.disabled = true
-  btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Reading BIOS…'
-  status.textContent = 'Running SCEWIN dump…'
+  btn.innerHTML = `<i class="fa fa-spinner fa-spin"></i> ${tUI('pfScanning')}`
+  status.textContent = tUI('pfScanning')
   out.innerHTML = ''
   const r = await api.biosScewinRead()
   btn.disabled = false
-  btn.innerHTML = '<i class="fa fa-bolt"></i> Scan BIOS'
+  btn.innerHTML = `<i class="fa fa-bolt"></i> ${tUI('biosScewinScanBtn')}`
   if (!r.ok) {
     if (r.error === 'not_found') {
       out.innerHTML = `<div style="padding:12px 18px 14px;font-size:11px;color:var(--gray)">
@@ -7334,11 +7386,11 @@ async function doRamDiagScan() {
   const status = document.getElementById('ram-scan-status')
   const out    = document.getElementById('ram-diag-results')
   btn.disabled = true
-  btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Scanning…'
-  status.textContent = 'Reading RAM info…'
+  btn.innerHTML = `<i class="fa fa-spinner fa-spin"></i> ${tUI('pfScanning')}`
+  status.textContent = tUI('pfScanning')
   const r = await api.getRamInfo()
   btn.disabled = false
-  btn.innerHTML = '<i class="fa fa-memory"></i> Scan RAM'
+  btn.innerHTML = `<i class="fa fa-memory"></i> ${tUI('biosRamScanBtn')}`
   if (!r.ok || !r.sticks?.length) {
     status.textContent = 'Scan failed or no RAM detected.'
     return
@@ -7710,11 +7762,12 @@ async function applyProfile(name) {
   }
   await api.saveSettings(settings)
   toast(`Profile applied`, `${done} tweaks applied${failed ? `, ${failed} failed` : ''}`, done > 0 ? 'ok' : 'warn')
+  loadProfilesList()
 }
 
 async function deleteProfile(name) {
   try {
-    await showConfirm({ title: 'Delete Profile', body: `Delete "${name}"?`, okText: 'Delete', okStyle: 'warning', icon: 'fa-trash' })
+    await showConfirm({ title: tUI('deleteProfileTitle'), body: `${tUI('deleteProfileBody')} "${name}"?`, okText: tUI('deleteOk'), okStyle: 'warning', icon: 'fa-trash' })
   } catch { return }
   await api.deleteProfile(name)
   toast('Profile deleted', name, 'info')
@@ -10016,7 +10069,7 @@ function buildFiveM(c) {
   // ── Search bar ────────────────────────────────────────────────────────────
   const searchWrap = document.createElement('div')
   searchWrap.className = 'search-bar-wrap'
-  searchWrap.innerHTML = `<i class="fa fa-magnifying-glass"></i><input class="search-bar-input" placeholder="${tUI('searchTweaks')}" oninput="fivemFilterTweaks(this.value)">`
+  searchWrap.innerHTML = `<i class="fa fa-magnifying-glass"></i><input class="search-bar-input" placeholder="${tUI('genSearchPlaceholder')}" oninput="fivemFilterTweaks(this.value)">`
   c.appendChild(searchWrap)
 
   // ── System Tweaks sections ─────────────────────────────────────────────────
@@ -11039,7 +11092,7 @@ async function doDebloatScan() {
 async function doUwpRemove() {
   const selected = Object.entries(UWP_APPS).flatMap(([,apps]) => apps.filter(app => document.getElementById(`chk-${app.pkg}`)?.checked).map(app => app.pkg))
   if (!selected.length) { toast('Nothing Selected', 'Select at least one app to remove.', 'warn'); return }
-  try { await showConfirm({ title: `Remove ${selected.length} App${selected.length > 1 ? 's' : ''}`, body: `These UWP apps will be removed from your system.<br><span style="color:#888">They can be reinstalled from the Microsoft Store if needed.</span>`, okText: 'Remove', okStyle: 'danger', icon: 'fa-trash' }) } catch { return }
+  try { await showConfirm({ title: `${tUI('debloatConfirmTitle')} (${selected.length})`, body: `${tUI('debloatConfirmBody')}<br><span style="color:#888">They can be reinstalled from the Microsoft Store if needed.</span>`, okText: tUI('removeOk'), okStyle: 'danger', icon: 'fa-trash' }) } catch { return }
   document.getElementById('debloat-remove-prog').classList.remove('hidden')
   await api.removeUwpApps(selected)
 }
@@ -11102,7 +11155,7 @@ function doTasksRecommended() {
 async function doDisableServices() {
   const selected = SERVICES.filter(s => document.getElementById(`svc-${s.id}`)?.checked).map(s => s.id)
   if (!selected.length) { toast('Nothing Selected', 'Select at least one service to disable.', 'warn'); return }
-  try { await showConfirm({ title: `Disable ${selected.length} Service${selected.length > 1 ? 's' : ''}`, body: `The selected Windows services will be stopped and set to disabled.<br><span style="color:#888">Create a Restore Point first if unsure.</span>`, okText: 'Disable', okStyle: 'danger', icon: 'fa-ban' }) } catch { return }
+  try { await showConfirm({ title: `${tUI('disableSvcTitle')} (${selected.length})`, body: `${tUI('disableSvcBody')}<br><span style="color:#888">Create a Restore Point first if unsure.</span>`, okText: tUI('disableOk'), okStyle: 'danger', icon: 'fa-ban' }) } catch { return }
   await api.disableServices(selected)
 }
 
@@ -11112,7 +11165,7 @@ async function doDisableTasks() {
     return el?.checked
   })
   if (!selected.length) { toast('Nothing Selected', 'Select at least one task to disable.', 'warn'); return }
-  try { await showConfirm({ title: `Disable ${selected.length} Scheduled Task${selected.length > 1 ? 's' : ''}`, body: `The selected scheduled tasks will be disabled. They run in the background and are not needed for gaming.<br><span style="color:#888">Can be re-enabled from Task Scheduler.</span>`, okText: 'Disable', okStyle: 'danger', icon: 'fa-ban' }) } catch { return }
+  try { await showConfirm({ title: `${tUI('disableTaskTitle')} (${selected.length})`, body: `${tUI('disableTaskBody')}<br><span style="color:#888">Can be re-enabled from Task Scheduler.</span>`, okText: tUI('disableOk'), okStyle: 'danger', icon: 'fa-ban' }) } catch { return }
   appendLog(`Disabling ${selected.length} scheduled tasks…`, 'head')
   await api.disableScheduledTasks(selected)
   appendLog('Done. Tasks disabled.', 'ok')
@@ -11142,7 +11195,7 @@ async function doScanDevices() {
 async function doRemoveDevices() {
   const selected = _scannedDevices.filter((_, i) => document.getElementById(`dev-chk-${i}`)?.checked).map(d => d.id)
   if (!selected.length) { toast('Nothing Selected', 'Select at least one device.', 'warn'); return }
-  try { await showConfirm({ title: `Disable ${selected.length} Device${selected.length > 1 ? 's' : ''}`, body: `These devices will be disabled in Device Manager.<br><span style="color:#888">They can be re-enabled at any time from Device Manager.</span>`, okText: 'Disable', okStyle: 'warning', icon: 'fa-microchip' }) } catch { return }
+  try { await showConfirm({ title: `${tUI('disableDevTitle')} (${selected.length})`, body: `${tUI('disableDevBody')}<br><span style="color:#888">They can be re-enabled at any time from Device Manager.</span>`, okText: tUI('disableOk'), okStyle: 'warning', icon: 'fa-microchip' }) } catch { return }
   appendLog(`Disabling ${selected.length} unused device(s)…`, 'head')
   await api.removeDevices(selected)
   appendLog('Done.', 'ok')
@@ -11227,7 +11280,7 @@ async function loadRPList() {
 async function doRestoreToPoint() {
   const seq = parseInt(document.getElementById('rp-seq')?.value)
   if (isNaN(seq)) { toast('Invalid Input', 'Enter a valid sequence number from the list above.', 'warn'); return }
-  try { await showConfirm({ title: `Restore to Point #${seq}`, body: `<strong style="color:var(--pink)">Save all open work before continuing.</strong><br><br>Windows will restore to this point and <strong style="color:#e0e0e0">restart automatically</strong>.<br><br><span style="font-size:12px;color:var(--muted)">Tweak states will be reset to match the restored system.</span>`, okText: 'Restore & Restart', okStyle: 'danger', icon: 'fa-triangle-exclamation' }) } catch { return }
+  try { await showConfirm({ title: `${tUI('restoreConfirmTitle')} #${seq}`, body: `<strong style="color:var(--pink)">${tUI('restoreConfirmBody')}</strong><br><br>Windows will restore to this point and <strong style="color:#e0e0e0">restart automatically</strong>.<br><br><span style="font-size:12px;color:var(--muted)">Tweak states will be reset to match the restored system.</span>`, okText: tUI('restoreConfirmOk'), okStyle: 'danger', icon: 'fa-triangle-exclamation' }) } catch { return }
   // Clear all tweak states so the UI reflects real state after reboot
   const cleared = {}
   for (const key of Object.keys(settings)) {

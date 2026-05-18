@@ -757,7 +757,11 @@ function loadSettings() {
   return {}
 }
 function saveSettings(data) {
-  try { fs.writeFileSync(SETTINGS_PATH, JSON.stringify(data, null, 2)) } catch {}
+  try {
+    const tmp = SETTINGS_PATH + '.tmp'
+    fs.writeFileSync(tmp, JSON.stringify(data, null, 2))
+    fs.renameSync(tmp, SETTINGS_PATH)
+  } catch (e) { debugLog(`[Settings] Save failed: ${e.message}`) }
 }
 
 // ─── System Info Detection ────────────────────────────────────────────────────
@@ -7082,7 +7086,9 @@ ipcMain.handle('start-game-watcher', async () => {
   mainWindow?.webContents.send('log', { msg: '◆ Game Watcher started — monitoring for game launches…', level: 'ok', ts: new Date().toLocaleTimeString() })
 
   gameWatcherInterval = setInterval(async () => {
+    try {
     const r = await runCmd('tasklist /fo csv /nh')
+    if (!r.ok || !r.out) return
     const running = new Set(r.out.split('\n').map(l => l.split(',')[0]?.replace(/"/g, '').replace(/\.exe$/i, '').trim().toLowerCase()))
 
     // Detect by matching directly against PULSE_PRESETS exe names
@@ -7184,6 +7190,9 @@ ipcMain.handle('start-game-watcher', async () => {
         mainWindow?.webContents.send('game-watcher-event', { event: 'auto-pulse-stop', gameId: prev })
         deactivatePulse(send).catch(() => {})
       }
+    }
+    } catch (e) {
+      mainWindow?.webContents.send('log', { msg: `Game watcher error: ${e.message}`, level: 'err', ts: new Date().toLocaleTimeString() })
     }
   }, 5000)
 
