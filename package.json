@@ -1,6 +1,6 @@
 {
   "name": "jylli-tool",
-  "version": "1.4.6",
+  "version": "1.4.7",
   "description": "Professional Windows Optimization Tool",
   "main": "main.js",
   "scripts": {
@@ -29,7 +29,8 @@
       "assets/fancontrol/**",
       "assets/cpuz/**",
       "assets/ryzenadj/**",
-      "assets/scewin/**"
+      "assets/scewin/**",
+      "assets/presentmon/**"
     ],
     "publish": {
       "provider": "github",

@@ -1,30 +1,23 @@
-## Translations
+## Translations (EN & FI)
+All UI text needs both `en` and `fi` in the `LANG` object (`index.html`).
 
-This app supports **English (en)** and **Finnish (fi)**. The translation system lives in the `LANG` object near the top of `index.html`.
+Helper functions: `tUI` (labels/buttons), `tTitle`/`tSub` (sidebar/header),
+`tWizard` (onboarding), `tDesc`/`tFixDesc` (descriptions).
 
-**Rule: whenever you add new user-facing UI text, you MUST also add the Finnish translation with the same key.**
+**Never translate:** CPU, RAM, GPU, VRAM, BIOS, UEFI, DPC, ISR, SFC, DISM,
+SMART, MHz, GB, FPS, NVMe, Registry, PowerShell, Discord, FiveM, GTA V,
+Windows, process names, file paths. Main.js logs always in English.
 
-### Where strings go
+Flow: First launch → `language-picker` → save `settings.language`.
+Settings tab toggle calls `setLanguage(lang)`.
 
-| Content type | Object key | Helper function |
-|---|---|---|
-| UI labels, buttons, status text | `LANG.en.ui` / `LANG.fi.ui` | `tUI('key')` |
-| Page titles (sidebar + header) | `LANG.en.titles` / `LANG.fi.titles` | `tTitle('page-id')` |
-| Page subtitles | `LANG.en.subtitles` / `LANG.fi.subtitles` | `tSub('page-id')` |
-| Onboarding wizard strings | `LANG.en.wizard` / `LANG.fi.wizard` | `tWizard('key')` |
-| Tweak descriptions (optional) | `LANG.en.tweakDescs` / `LANG.fi.tweakDescs` | `tDesc('tweak-id')` |
-| Fix descriptions (optional) | `LANG.en.fixDescs` / `LANG.fi.fixDescs` | `tFixDesc('fix-id')` |
+## Large File Rules (>100KB)
+- Use `replace` tool only — never rewrite whole file.
+- Move ONE logical block per turn when refactoring.
+- Run `npm run build` + user verify after every structural change. Never run `npm start` or launch the app — build only.
+- Define global state (LANG, settings, api) before feature logic.
+- Present plan and wait for approval before any structural edit.
 
-### What to translate
-
-Translate: descriptions, instructions, button labels, section headers, status messages, tooltips, modal text, empty states, toast messages.
-
-Keep in English (never translate): CPU, RAM, GPU, VRAM, BIOS, UEFI, DPC, ISR, SFC, DISM, SMART, MHz, GB, MB, FPS, NVMe, Wi-Fi, Ethernet, Registry, PowerShell, Task Scheduler, Discord, FiveM, GTA V, CitizenFX.ini, Pulse, Windows, Microsoft Store, OneDrive, Xbox, Bluetooth, process names, file paths, tweak IDs, technical metric labels.
-
-Log messages in `main.js` stay in English always.
-
-### Language picker
-
-On first launch (when `settings.language` is not set), the app shows a full-screen language picker before the loading screen. After selection it saves `settings.language` and continues the auth/boot flow.
-
-The Settings tab → Appearance section has an EN / FI toggle that calls `setLanguage(lang)`.
+## Context
+- Check `/context` regularly. If Messages > 80k, remind user to `/clear`.
+- Before `/clear`: summarize current task status for easy resumption.

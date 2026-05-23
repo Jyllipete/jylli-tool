@@ -2,24 +2,28 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<link rel="stylesheet" href="css/tokens.css">
 <link rel="stylesheet" href="assets/fa/css/all.min.css">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline';">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com;">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700;800&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
 <title>FiveM Graphics Settings</title>
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 :root {
-  --pink:       #FF2E63;
-  --pink-hover: #E8254F;
-  --pink-dim:   #3a0f1a;
-  --pink-glow:  rgba(255,46,99,0.18);
-  --bg:         #0d0d0d;
-  --bg-card:    #141414;
-  --bg-dark:    #0a0a0a;
-  --border:     #1e1e1e;
-  --border2:    #222;
-  --white:      #f0f0f0;
-  --gray:       #6a6a6a;
-  --muted:      #333333;
+  --pink:       var(--c-accent);
+  --pink-hover: color-mix(in srgb, var(--c-accent) 82%, #fff);
+  --pink-dim:   var(--c-accent-muted);
+  --pink-glow:  var(--c-accent-ring);
+  --bg:         var(--c-bg-base);
+  --bg-card:    var(--c-bg-elevated);
+  --bg-dark:    var(--c-bg-base);
+  --border:     var(--c-border-default);
+  --border2:    var(--c-border-subtle);
+  --white:      var(--c-text-primary);
+  --gray:       var(--c-text-secondary);
+  --muted:      var(--c-text-tertiary);
   --success:    #2ECC71;
   --success-bg: #0a1f12;
   --warning:    #F39C12;
@@ -30,7 +34,7 @@
 html, body {
   background: var(--bg);
   color: var(--white);
-  font-family: 'Segoe UI', system-ui, sans-serif;
+  font-family: 'Geist', 'Segoe UI', system-ui, sans-serif;
   font-size: 13px;
   height: 100%;
   overflow: hidden;
@@ -135,20 +139,33 @@ html, body {
 .btn-primary {
   background: var(--pink);
   color: white;
+  transition: background 0.13s ease, box-shadow 0.13s ease;
 }
-.btn-primary:not(:disabled):hover { background: var(--pink-hover); }
+.btn-primary:not(:disabled):hover {
+  background: var(--pink-hover);
+  box-shadow: 0 0 0 1px rgba(255,46,99,0.4), 0 0 18px rgba(255,46,99,0.22);
+}
+.btn-primary:not(:disabled):active { transform: scale(0.97); }
 .btn-ghost {
   background: rgba(255,255,255,0.05);
   border: 1px solid var(--border2);
   color: var(--white);
+  position: relative; overflow: hidden;
+  transition: background 0.13s ease, border-color 0.13s ease;
 }
-.btn-ghost:not(:disabled):hover { background: rgba(255,255,255,0.09); }
+.btn-ghost:not(:disabled):hover { background: rgba(255,255,255,0.09); border-color: #333; }
+.btn-ghost:not(:disabled):active { transform: scale(0.97); }
 .btn-success {
   background: var(--success-bg);
   border: 1px solid #1a5c35;
   color: var(--success);
+  transition: background 0.13s ease, box-shadow 0.13s ease;
 }
-.btn-success:not(:disabled):hover { background: var(--success); color: #0a2a14; }
+.btn-success:not(:disabled):hover {
+  background: var(--success); color: #0a2a14;
+  box-shadow: 0 0 0 1px rgba(46,204,113,0.4), 0 0 14px rgba(46,204,113,0.2);
+}
+.btn-success:not(:disabled):active { transform: scale(0.97); }
 
 /* ── Empty / error states ── */
 #empty-state {
@@ -366,6 +383,22 @@ html, body {
       <button class="btn btn-ghost" style="font-size:10px;padding:5px 10px;" onclick="applyRecommended()">
         <i class="fa fa-wand-sparkles"></i> <span id="lbl-preset-recommended">Recommended</span>
       </button>
+      <button class="btn btn-ghost" style="font-size:10px;padding:5px 10px;border-color:rgba(255,46,99,0.4);color:#FF2E63" onclick="applySmartPreset()" id="btn-smart-recommend">
+        <i class="fa fa-microchip"></i> <span id="lbl-smart-recommend">Smart Recommend</span>
+      </button>
+    </div>
+
+    <!-- Hardware info strip (shown after Smart Recommend) -->
+    <div id="smart-hw-info" style="display:none;font-size:10px;color:#555;padding:4px 2px 0;text-align:center"></div>
+
+    <!-- Profile toolbar -->
+    <div id="profile-bar" style="display:flex;gap:6px;align-items:center;padding:6px 0 2px">
+      <span style="font-size:10px;font-weight:700;color:#444;text-transform:uppercase;letter-spacing:0.05em;white-space:nowrap" id="lbl-profiles">Profiles</span>
+      <select id="profile-select" onchange="loadProfileOnChange()" style="flex:1;padding:4px 8px;border-radius:6px;border:1px solid #1e1e1e;background:#0e0e0e;color:#ccc;font-size:11px;outline:none">
+        <option value="" id="opt-profile-placeholder">— Select profile —</option>
+      </select>
+      <button class="btn btn-ghost" style="font-size:10px;padding:4px 10px" onclick="saveProfile()" id="btn-profile-save">Save</button>
+      <button class="btn btn-ghost" style="font-size:10px;padding:4px 10px;color:#e74c3c;border-color:rgba(231,76,60,0.3)" onclick="deleteProfile()" id="btn-profile-delete">Delete</button>
     </div>
 
     <!-- Settings body (populated by JS) -->
@@ -443,6 +476,17 @@ const LANG_FIVEM = {
     catRendering: 'Rendering', catRenderingDesc: 'GPU shading & effects',
     catEffects: 'Visual Effects', catEffectsDesc: 'DoF, blur & depth effects',
     impLow: 'Low', impMed: 'Med', impHigh: 'High', impVeryHigh: 'Very High',
+    smartRecommendBtn: 'Smart Recommend',
+    smartHwLabel: 'Hardware detected:',
+    smartPresetApplied: 'Smart preset applied',
+    profileSelect: '— Select profile —',
+    profileSaveBtn: 'Save',
+    profileDeleteBtn: 'Delete',
+    profileNamePrompt: 'Profile name:',
+    profileSaved: 'Profile saved',
+    profileLoaded: 'Profile loaded',
+    profileDeleted: 'Profile deleted',
+    profilesLabel: 'Profiles',
   },
   fi: {
     titleSub: 'gta5_settings.xml -muokkain',
@@ -480,6 +524,17 @@ const LANG_FIVEM = {
     catRendering: 'Renderöinti', catRenderingDesc: 'GPU-varjostimet & efektit',
     catEffects: 'Visuaaliset efektit', catEffectsDesc: 'DoF, blur & syvyysefektit',
     impLow: 'Matala', impMed: 'Keski', impHigh: 'Korkea', impVeryHigh: 'Erittäin korkea',
+    smartRecommendBtn: 'Älykäs suositus',
+    smartHwLabel: 'Laitteisto havaittu:',
+    smartPresetApplied: 'Älykäs esiasetus käytetty',
+    profileSelect: '— Valitse profiili —',
+    profileSaveBtn: 'Tallenna',
+    profileDeleteBtn: 'Poista',
+    profileNamePrompt: 'Profiilin nimi:',
+    profileSaved: 'Profiili tallennettu',
+    profileLoaded: 'Profiili ladattu',
+    profileDeleted: 'Profiili poistettu',
+    profilesLabel: 'Profiilit',
   }
 }
 function getLangF() {
@@ -754,7 +809,13 @@ function renderSettings() {
   }
 }
 
+// 3a: debounce — collect rapid dropdown changes into a single write
+let _saveDebounceTimer = null
+// 3c: guard against concurrent XML writes
+let _saving = false
+
 function onSettingChange(key) {
+  if (_saving) return  // 3c: ignore changes while a save is in flight
   const el = document.getElementById(`sval-${key}`)
   const def = currentDefs.find(d => d.key === key)
   if (!def || !el) return
@@ -835,7 +896,102 @@ function applyRecommended() {
   }
 }
 
+async function applySmartPreset() {
+  const btn = document.getElementById('btn-smart-recommend')
+  if (btn) { btn.disabled = true }
+  let si = null
+  try { si = await window.api.getSystemInfo() } catch (e) { si = null }
+  if (btn) btn.disabled = false
+  let preset = 'balanced'
+  if (si) {
+    const vram = si.vramGB || si.gpuVramGB || 0
+    const ram = si.ramGB || si.totalRamGB || 0
+    if (vram >= 8 && ram >= 16) preset = 'quality'
+    else if (vram <= 3 || ram <= 8) preset = 'performance'
+  }
+  applyPreset(preset)
+  const labels = { quality: tF('presetQuality'), balanced: tF('presetBalanced'), performance: tF('presetPerformance') }
+  const strip = document.getElementById('smart-hw-info')
+  if (strip && si) {
+    const vram = si.vramGB || si.gpuVramGB || 0
+    const ram = si.ramGB || si.totalRamGB || 0
+    strip.textContent = `${tF('smartHwLabel')} ${si.cpu || 'Unknown CPU'} | ${vram}GB VRAM | ${ram}GB RAM → ${labels[preset]}`
+    strip.style.display = 'block'
+  }
+}
+
+// ─── Profile system ───────────────────────────────────────────────────────────
+function getGtaProfiles() {
+  try { return JSON.parse(localStorage.getItem('fivem_gta_profiles') || '{}') } catch { return {} }
+}
+function populateProfileSelect() {
+  const sel = document.getElementById('profile-select')
+  if (!sel) return
+  const saved = sel.value
+  const profiles = getGtaProfiles()
+  sel.innerHTML = `<option value="" id="opt-profile-placeholder">${tF('profileSelect')}</option>`
+  Object.keys(profiles).forEach(name => {
+    const opt = document.createElement('option')
+    opt.value = name; opt.textContent = name
+    sel.appendChild(opt)
+  })
+  if (saved && profiles[saved]) sel.value = saved
+}
+function saveProfile() {
+  const name = prompt(tF('profileNamePrompt'))
+  if (!name) return
+  const snapshot = {}
+  currentDefs.forEach(def => {
+    const el = document.getElementById(`sval-${def.key}`)
+    if (el) snapshot[def.key] = el.value
+  })
+  const profiles = getGtaProfiles()
+  profiles[name] = snapshot
+  localStorage.setItem('fivem_gta_profiles', JSON.stringify(profiles))
+  populateProfileSelect()
+  const sel = document.getElementById('profile-select')
+  if (sel) sel.value = name
+  showToastFivem(tF('profileSaved') + ': ' + name)
+}
+function loadProfileOnChange() {
+  const sel = document.getElementById('profile-select')
+  if (!sel || !sel.value) return
+  const snapshot = getGtaProfiles()[sel.value]
+  if (!snapshot) return
+  currentDefs.forEach(def => {
+    if (snapshot[def.key] !== undefined) {
+      const el = document.getElementById(`sval-${def.key}`)
+      if (el) { el.value = snapshot[def.key]; onSettingChange(def.key) }
+    }
+  })
+  showToastFivem(tF('profileLoaded') + ': ' + sel.value)
+}
+function deleteProfile() {
+  const sel = document.getElementById('profile-select')
+  if (!sel || !sel.value) return
+  const name = sel.value
+  const profiles = getGtaProfiles()
+  delete profiles[name]
+  localStorage.setItem('fivem_gta_profiles', JSON.stringify(profiles))
+  populateProfileSelect()
+  showToastFivem(tF('profileDeleted') + ': ' + name)
+}
+function showToastFivem(msg) {
+  let t = document.getElementById('fivem-settings-toast')
+  if (!t) {
+    t = document.createElement('div')
+    t.id = 'fivem-settings-toast'
+    t.style.cssText = 'position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:#1e1e1e;border:1px solid #2a2a2a;color:#ccc;padding:8px 16px;border-radius:8px;font-size:11px;z-index:999;transition:opacity 0.3s'
+    document.body.appendChild(t)
+  }
+  t.textContent = msg
+  t.style.opacity = '1'
+  clearTimeout(t._timer)
+  t._timer = setTimeout(() => { t.style.opacity = '0' }, 2500)
+}
+
 async function saveSettings() {
+  if (_saving) return  // 3c: prevent concurrent saves
   const btn = document.getElementById('btn-save')
   if (!currentDefs.length) return
 
@@ -862,10 +1018,12 @@ async function saveSettings() {
     return
   }
 
+  _saving = true  // 3c: lock
   btn.disabled = true
   btn.innerHTML = `<i class="fa fa-spinner fa-spin"></i> ${tF('savingBtn')}`
 
   const r = await window.api.fivemWriteSettings(changes, getManualPath())
+  _saving = false  // 3c: unlock
   btn.disabled = false
 
   if (r.ok) {
@@ -927,6 +1085,8 @@ function applyTranslationsF() {
   t('lbl-preset-balanced', 'presetBalanced')
   t('lbl-preset-performance', 'presetPerformance')
   t('lbl-preset-recommended', 'presetRecommended')
+  t('lbl-smart-recommend', 'smartRecommendBtn')
+  t('lbl-profiles', 'profilesLabel')
   t('lbl-export-btn', 'exportBtn')
   t('lbl-empty-title', 'emptyTitle')
   t('lbl-empty-small', 'emptySmall')
@@ -942,6 +1102,7 @@ function applyTranslationsF() {
 // Auto-load on open
 window.addEventListener('DOMContentLoaded', () => {
   applyTranslationsF()
+  populateProfileSelect()
   loadSettings()
 })
 </script>

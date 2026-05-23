@@ -2,25 +2,29 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<link rel="stylesheet" href="css/tokens.css">
 <link rel="stylesheet" href="assets/fa/css/all.min.css">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline';">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com;">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700;800&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
 <title>Arma Reforger Graphics Settings</title>
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 :root {
   --arma:     #5c8c3e;
-  --bg:       #0d0d0d;
-  --bg-card:  #141414;
-  --bg-dark:  #0a0a0a;
-  --border:   #1e1e1e;
-  --border2:  #222;
-  --white:    #f0f0f0;
-  --muted:    #444;
+  --bg:       var(--c-bg-base);
+  --bg-card:  var(--c-bg-elevated);
+  --bg-dark:  var(--c-bg-base);
+  --border:   var(--c-border-default);
+  --border2:  var(--c-border-subtle);
+  --white:    var(--c-text-primary);
+  --muted:    var(--c-text-tertiary);
   --success:  #2ECC71;
   --danger:   #E74C3C;
   --warning:  #F39C12;
 }
-html, body { background: var(--bg); color: var(--white); font-family: 'Segoe UI', system-ui, sans-serif; font-size: 13px; height: 100%; overflow: hidden; user-select: none; -webkit-app-region: no-drag; }
+html, body { background: var(--bg); color: var(--white); font-family: 'Geist', 'Segoe UI', system-ui, sans-serif; font-size: 13px; height: 100%; overflow: hidden; user-select: none; -webkit-app-region: no-drag; }
 
 /* Titlebar */
 #titlebar { display:flex; align-items:center; height:44px; background:var(--bg-dark); border-bottom:1px solid var(--border); padding:0 14px; -webkit-app-region:drag; flex-shrink:0; gap:10px; }
@@ -44,12 +48,14 @@ html, body { background: var(--bg); color: var(--white); font-family: 'Segoe UI'
 #path-status { font-size:10px; color:#444; padding:2px 0 4px; min-height:18px; }
 
 /* Buttons */
-.btn { display:inline-flex; align-items:center; gap:6px; border:none; border-radius:7px; padding:7px 14px; font-size:11px; font-weight:600; cursor:pointer; transition:all 0.12s; white-space:nowrap; font-family:inherit; }
+.btn { display:inline-flex; align-items:center; gap:6px; border:none; border-radius:7px; padding:7px 14px; font-size:11px; font-weight:600; cursor:pointer; transition:background 0.13s ease, box-shadow 0.13s ease; white-space:nowrap; font-family:inherit; }
 .btn:disabled { opacity:0.45; cursor:not-allowed; }
 .btn-primary { background:var(--arma); color:white; }
-.btn-primary:not(:disabled):hover { background:#4a7832; }
+.btn-primary:not(:disabled):hover { background:#4a7832; box-shadow:0 0 0 1px rgba(92,140,62,0.4), 0 0 16px rgba(92,140,62,0.2); }
+.btn-primary:not(:disabled):active { transform:scale(0.97); }
 .btn-ghost { background:rgba(255,255,255,0.05); border:1px solid var(--border2); color:var(--white); }
-.btn-ghost:not(:disabled):hover { background:rgba(255,255,255,0.09); }
+.btn-ghost:not(:disabled):hover { background:rgba(255,255,255,0.09); border-color:#333; }
+.btn-ghost:not(:disabled):active { transform:scale(0.97); }
 
 /* Sysinfo bar */
 #sysinfo-bar { display:none; align-items:center; gap:10px; background:rgba(92,140,62,0.06); border:1px solid rgba(92,140,62,0.2); border-radius:8px; padding:8px 14px; font-size:10px; color:#6a9a4a; }
@@ -58,7 +64,7 @@ html, body { background: var(--bg); color: var(--white); font-family: 'Segoe UI'
 #preset-bar { display:none; align-items:center; gap:8px; flex-wrap:wrap; }
 .preset-label { font-size:10px; font-weight:600; color:#444; text-transform:uppercase; letter-spacing:0.06em; white-space:nowrap; }
 .preset-btn { display:inline-flex; align-items:center; gap:6px; border-radius:8px; padding:6px 13px; font-size:11px; font-weight:600; cursor:pointer; transition:all 0.12s; border:1px solid transparent; white-space:nowrap; font-family:inherit; }
-.preset-btn:hover { transform:translateY(-1px); }
+.preset-btn:hover { box-shadow:0 0 0 1px rgba(255,255,255,0.1); }
 .preset-quality     { background:rgba(52,152,219,0.1); border-color:rgba(52,152,219,0.3); color:#3498DB; }
 .preset-performance { background:rgba(92,140,62,0.1);  border-color:rgba(92,140,62,0.3);  color:var(--arma); }
 .preset-recommended { background:rgba(243,156,18,0.1); border-color:rgba(243,156,18,0.3); color:#F39C12; }

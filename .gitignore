@@ -4,3 +4,8 @@ dist/
 .claude/
 bot.js
 bot-state.json
+assets/cpuz/
+assets/lhm/
+assets/fancontrol/
+assets/ryzenadj/
+assets/scewin/

@@ -1,0 +1,96 @@
+/* ─── Design Tokens — shared across all windows ──────────────────────────── */
+:root {
+  /* ── Surfaces: warm chrome (purple-black undertone) ── */
+  --c-bg-base:        #14141A;
+  --c-bg-elevated:    #1E1E28;
+  --c-bg-raised:      #272735;
+  --c-bg-glass:       rgba(30,30,40,0.62);
+
+  /* ── Text ── */
+  --c-text-primary:   #ECEEF2;
+  --c-text-secondary: rgba(236,238,242,0.52);
+  --c-text-tertiary:  rgba(236,238,242,0.32);
+
+  /* ── Accent: electric indigo (Jylli default — overridden at runtime by applyTheme) ── */
+  --c-accent:         #6C63FF;
+  --c-accent-muted:   rgba(108,99,255,0.10);
+  --c-accent-ring:    rgba(108,99,255,0.22);
+  --c-accent-glow:    rgba(108,99,255,0.12);
+
+  /* ── Borders ── */
+  --c-border-subtle:  rgba(255,255,255,0.05);
+  --c-border-default: rgba(255,255,255,0.09);
+  --c-border-strong:  rgba(255,255,255,0.14);
+
+  /* ── Overlay ── */
+  --c-overlay:        rgba(0,0,0,0.78);
+
+  /* ── Per-page identity (used ONLY for .section-accent stripe, not sidebar) ── */
+  --c-page-accent:    var(--c-accent);
+
+  /* ── Spacing (8px grid) ── */
+  --sp-1: 8px;  --sp-2: 16px; --sp-3: 24px;
+  --sp-4: 32px; --sp-5: 48px; --sp-6: 64px;
+
+  /* ── Radius ── */
+  --r-sm:   7px;
+  --r-md:   10px;
+  --r-lg:   14px;
+  --r-xl:   18px;
+  --r-pill: 9999px;
+
+  /* ── Shadows: pure depth, accent only in shadow-3 hairline ── */
+  --shadow-1: 0 1px 4px rgba(0,0,0,0.40);
+  --shadow-2: 0 4px 16px rgba(0,0,0,0.55);
+  --shadow-3: 0 8px 32px rgba(0,0,0,0.75), 0 0 0 1px rgba(108,99,255,0.06);
+
+  /* ── Easing ── */
+  --ease-default: cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  --ease-spring:  cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-snap:    cubic-bezier(0.22, 1, 0.36, 1);
+
+  /* ── Duration ── */
+  --dur-micro:  80ms;
+  --dur-short:  150ms;
+  --dur-medium: 280ms;
+  --dur-long:   450ms;
+
+  /* ── Semantic motion tokens (reference --dur-* so they follow motion mode) ── */
+  --motion-enter:       var(--dur-medium) var(--ease-spring);
+  --motion-exit:        var(--dur-short)  var(--ease-snap);
+  --motion-interaction: var(--dur-micro)  var(--ease-default);
+  --motion-reveal:      var(--dur-long)   var(--ease-spring);
+
+  /* ── Backward-compat aliases — canvas code reads --pink-rgb at runtime ── */
+  --pink:       var(--c-accent);
+  --pink-hover: color-mix(in srgb, var(--c-accent) 82%, #fff);
+  --pink-dim:   var(--c-accent-muted);
+  --pink-glow:  var(--c-accent-ring);
+  --pink-rgb:   108,99,255;
+  --cyan:       var(--c-accent);
+  --cyan-rgb:   108,99,255;
+  --cyan-glow:  var(--c-accent-ring);
+  --cyan-dim:   var(--c-accent-muted);
+}
+
+/* ── Motion speed modes — toggled via body class from Settings ── */
+body.motion-snappy {
+  --dur-micro:  40ms;
+  --dur-short:  80ms;
+  --dur-medium: 130ms;
+  --dur-long:   200ms;
+}
+body.motion-smooth {
+  --dur-micro:  120ms;
+  --dur-short:  220ms;
+  --dur-medium: 400ms;
+  --dur-long:   620ms;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
