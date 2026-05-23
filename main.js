@@ -768,6 +768,13 @@ function createWindow() {
   })
 
   mainWindow.on('closed', () => { mainWindow = null })
+
+  mainWindow.webContents.on('did-finish-load', () => {
+    // Auto-check for updates 10s after load so the UI is settled before any prompt appears
+    setTimeout(() => {
+      if (autoUpdater) autoUpdater.checkForUpdates().catch(() => {})
+    }, 10000)
+  })
 }
 
 function updateTrayMenu() {
@@ -3195,7 +3202,12 @@ const TWEAKS = {
     apply: async (s, ps, cmd) => {
       await ps('Set-ItemProperty -Path "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\VisualEffects" -Name VisualFXSetting -Value 2 -Force')
       await cmd('reg add "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced" /v TaskbarAnimations /t REG_DWORD /d 0 /f')
-      s('Visual effects → Best Performance.', 'ok')
+      // Keep smooth fonts, drag-full-windows, and thumbnails on despite Best Performance mode
+      await cmd('reg add "HKCU\\Control Panel\\Desktop" /v FontSmoothing /t REG_SZ /d 2 /f')
+      await cmd('reg add "HKCU\\Control Panel\\Desktop" /v FontSmoothingType /t REG_SZ /d 2 /f')
+      await cmd('reg add "HKCU\\Control Panel\\Desktop" /v DragFullWindows /t REG_SZ /d 1 /f')
+      await cmd('reg add "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced" /v IconsOnly /t REG_DWORD /d 0 /f')
+      s('Visual effects → Best Performance (fonts, drag, thumbnails kept on).', 'ok')
     },
     restore: async (s, ps) => {
       await ps('Set-ItemProperty -Path "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\VisualEffects" -Name VisualFXSetting -Value 0 -Force')
@@ -9562,7 +9574,7 @@ ipcMain.handle('bios-cstates', async (_, { action }) => {
 
 ipcMain.handle('get-ram-info', async () => {
   const r = await runPS(`
-    $sticks = Get-WmiObject Win32_PhysicalMemory -EA SilentlyContinue
+    $sticks = Get-CimInstance Win32_PhysicalMemory -EA SilentlyContinue
     foreach ($s in $sticks) {
       $cap = [math]::Round($s.Capacity / 1GB, 0)
       Write-Output "SLOT=$($s.DeviceLocator)|$cap|$($s.Speed)|$($s.ConfiguredClockSpeed)|$($s.Manufacturer)|$($s.PartNumber)|$($s.ConfiguredVoltage)|$($s.MinVoltage)|$($s.MaxVoltage)|$($s.SMBIOSMemoryType)"
@@ -9633,7 +9645,11 @@ ipcMain.handle('cpuz-read-timings', async () => {
   if (!fs.existsSync(exe)) return { ok: false, error: 'not_found' }
   const outPath = path.join(app.getPath('temp'), 'cpuz_out.txt')
   try {
-    require('child_process').execSync(`"${exe}" -txt="${outPath}"`, { timeout: 10000 })
+    await new Promise((resolve, reject) => {
+      require('child_process').execFile(exe, [`-txt=${outPath}`], { timeout: 10000, windowsHide: true }, (err) => {
+        if (err) reject(err); else resolve()
+      })
+    })
     await new Promise(r => setTimeout(r, 2000))
     const txt = fs.readFileSync(outPath, 'utf16le')
     const getField = (label) => txt.match(new RegExp(label + '\\s*[:\\-]\\s*(.+)'))?.[1]?.trim() ?? ''
