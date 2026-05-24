@@ -438,7 +438,7 @@ async function destroyDiscordRPC() {
 // ─── Analytics ───────────────────────────────────────────────────────────────
 const BUG_WEBHOOK_URL = 'https://discord.com/api/webhooks/1505200051280936981/XdFEtv10IH-B9ZSIVkfW0cBOkGx0DcOf71YrnbUVgggjYnwGHmdZEcm_CKG-U8hNPmZV'
 const BOT_URL         = 'https://jylli-bot-production.up.railway.app'
-const BOT_SECRET      = 'jyllibot-secret'
+const BOT_SECRET      = 'lq2f0j2vkYkolkTLo9ejqU5Z+FeyfhU6Mude0KZYrLg='
 const PREMIUM_STORE_URL = 'https://jyllitool.netlify.app/'
 let ANALYTICS_PATH = null
 let APP_VERSION    = null
@@ -919,8 +919,29 @@ app.whenReady().then(() => {
   createWindow(); createTray()
   startupTrace('createWindow done')
   if (loadSettings().discordRpcEnabled !== false) initDiscordRPC()
+  try { app.setLoginItemSettings({ openAtLogin: !!loadSettings().startAtLogin }) } catch (_e) {}
   startLhm()
   startContextDetector()
+  // Auto-snapshot on launch if overdue
+  setTimeout(async () => {
+    try {
+      const s = loadSettings()
+      const days = parseInt(s.autoSnapshotDays) || 0
+      if (!days) return
+      const last = s.lastAutoSnapshot ? new Date(s.lastAutoSnapshot) : null
+      const now = new Date()
+      const msPerDay = 86400000
+      if (last && (now - last) < days * msPerDay) return
+      const send = (msg, level) => mainWindow?.webContents.send('log', { msg, level, ts: new Date().toLocaleTimeString() })
+      send(`Auto-snapshot (every ${days}d): creating restore point…`, 'head')
+      const result = await createRestorePointInternal(send)
+      if (result.ok !== false) {
+        const updated = { ...loadSettings(), lastAutoSnapshot: now.toISOString() }
+        fs.writeFileSync(SETTINGS_PATH, JSON.stringify(updated, null, 2), 'utf8')
+        mainWindow?.webContents.send('auto-snapshot-done', { ts: now.toISOString() })
+      }
+    } catch {}
+  }, 5000)
 })
 app.on('window-all-closed', () => { /* stay alive in tray */ })
 
@@ -1086,7 +1107,7 @@ async function checkAdmin() {
 }
 
 // ─── Settings persistence ────────────────────────────────────────────────────
-const SETTINGS_SCHEMA_VERSION = 2
+const SETTINGS_SCHEMA_VERSION = 3
 
 function migrateSettings(s) {
   if (!s || typeof s !== 'object') return {}
@@ -1101,6 +1122,10 @@ function migrateSettings(s) {
     if (s.tweak_impacts !== undefined && typeof s.tweak_impacts !== 'object') {
       delete s.tweak_impacts
     }
+  }
+
+  if (v < 3) {
+    if (s.startAtLogin === undefined) s.startAtLogin = false
   }
 
   s.__schemaVersion = SETTINGS_SCHEMA_VERSION
@@ -1354,6 +1379,7 @@ $cpu   = Get-CimInstance Win32_Processor | Select-Object -First 1
 $os    = Get-CimInstance Win32_OperatingSystem
 $nic   = Get-CimInstance Win32_NetworkAdapterConfiguration | Where-Object { $_.IPEnabled -eq $true } | Select-Object -First 1
 $nicPh = Get-CimInstance Win32_NetworkAdapter | Where-Object { $_.Name -eq $nic.Description } | Select-Object -First 1
+$nicDrv = Get-NetAdapter | Where-Object { $_.Status -eq 'Up' -and $_.PhysicalMediaType -ne 'Native 802.11' -and $_.PhysicalMediaType -ne 'Wireless LAN' -and $_.InterfaceDescription -notlike '*Wireless*' -and $_.InterfaceDescription -notlike '*Wi-Fi*' } | Select-Object -First 1
 $gpu   = Get-CimInstance Win32_VideoController | Select-Object -First 1
 $ram   = Get-CimInstance Win32_PhysicalMemory | Select-Object -First 1
 $sys   = Get-CimInstance Win32_ComputerSystem
@@ -1363,6 +1389,7 @@ Write-Output "CPU_THREADS=$($cpu.NumberOfLogicalProcessors)"
 Write-Output "OS_CAPTION=$($os.Caption)"
 Write-Output "NIC_NAME=$($nic.Description)"
 Write-Output "NIC_SPEED=$($nicPh.Speed)"
+Write-Output "NIC_DRIVER=$($nicDrv.DriverVersion)"
 Write-Output "GPU_DRIVER=$($gpu.DriverVersion)"
 Write-Output "RAM_SPEED=$($ram.Speed)"
 Write-Output "RAM_TYPE=$($ram.SMBIOSMemoryType)"
@@ -1380,6 +1407,7 @@ Write-Output "DISK_SIZE_GB=$([math]::Round($disk.Size / 1GB, 0))"
       if (key === 'OS_CAPTION' && val) info.osCaption = val
       if (key === 'NIC_NAME' && val) info.nicName = val
       if (key === 'NIC_SPEED' && parseInt(val)) info.nicSpeed = Math.round(parseInt(val) / 1e9)
+      if (key === 'NIC_DRIVER' && val) info.nicDriver = val
       if (key === 'GPU_DRIVER' && val) info.gpuDriver = val
       if (key === 'RAM_SPEED' && parseInt(val)) info.ramHz = parseInt(val)
       if (key === 'RAM_TYPE') {
@@ -1413,14 +1441,31 @@ Write-Output "DISK_SIZE_GB=$([math]::Round($disk.Size / 1GB, 0))"
           $_.Name -like '*Wireless*'
         )
       } | Select-Object -First 1
-      if ($wifi) { Write-Output "WIFI_YES=$($wifi.InterfaceDescription)" } else { Write-Output "WIFI_NO" }
+      if ($wifi) {
+        Write-Output "WIFI_YES=$($wifi.InterfaceDescription)"
+        try {
+          $wlan = netsh wlan show interfaces 2>$null
+          $ssidLine   = $wlan | Select-String '^\s+SSID\s+:' | Select-Object -First 1
+          $bandLine   = $wlan | Select-String 'Radio type|Band' | Select-Object -First 1
+          $signalLine = $wlan | Select-String 'Signal' | Select-Object -First 1
+          if ($ssidLine)   { Write-Output "WIFI_SSID=$($ssidLine.Line.Split(':',2)[1].Trim())" }
+          if ($bandLine)   { Write-Output "WIFI_BAND=$($bandLine.Line.Split(':',2)[1].Trim())" }
+          if ($signalLine) { Write-Output "WIFI_SIGNAL=$($signalLine.Line.Split(':',2)[1].Trim())" }
+        } catch {}
+      } else { Write-Output "WIFI_NO" }
     `, 10000),
       runPS('if (Get-CimInstance Win32_Battery -EA SilentlyContinue) { Write-Output "LAPTOP" } else { Write-Output "DESKTOP" }', 8000),
     ])
-    const wifiLine = wifiR.out.trim()
+    const wifiLines = wifiR.out.trim().split('\n').map(l => l.trim())
+    const wifiLine = wifiLines[0] || ''
     if (wifiLine.startsWith('WIFI_YES=')) {
       info.isWifi = true
       info.wifiAdapter = wifiLine.replace('WIFI_YES=', '').trim()
+      for (const wl of wifiLines.slice(1)) {
+        if (wl.startsWith('WIFI_SSID='))   info.wifiSsid   = wl.replace('WIFI_SSID=', '').trim()
+        if (wl.startsWith('WIFI_BAND='))   info.wifiBand   = wl.replace('WIFI_BAND=', '').trim()
+        if (wl.startsWith('WIFI_SIGNAL=')) info.wifiSignal = wl.replace('WIFI_SIGNAL=', '').trim()
+      }
     }
     info.isLaptop = laptopR.out.trim() === 'LAPTOP'
     emitSpecProgress('Network detected', info.isWifi ? `Wi-Fi (${info.wifiAdapter || 'wireless'})` : 'Ethernet')
@@ -1508,9 +1553,23 @@ ipcMain.handle('window-maximize', (e) => {
   else win?.maximize()
 })
 ipcMain.handle('window-close', (e) => BrowserWindow.fromWebContents(e.sender)?.close())
+ipcMain.handle('reboot', async () => { const { exec } = require('child_process'); exec('shutdown /r /t 5') })
+ipcMain.handle('get-boot-time', async () => {
+  try {
+    const r = await runPS(
+      '$os = Get-CimInstance Win32_OperatingSystem\n' +
+      'Write-Output ([DateTimeOffset]$os.LastBootUpTime).ToUnixTimeMilliseconds()'
+    )
+    const ms = parseInt(r.out.trim())
+    return isNaN(ms) ? null : ms
+  } catch { return null }
+})
 
 ipcMain.handle('load-settings', () => { startupTrace('IPC load-settings handler called'); return loadSettings() })
 ipcMain.handle('save-settings', (_, data) => { saveSettings(data); return true })
+ipcMain.handle('set-startup', (_, enabled) => {
+  try { app.setLoginItemSettings({ openAtLogin: !!enabled }) } catch (_e) {}
+})
 
 // ─── Tweak Profiles ───────────────────────────────────────────────────────────
 let PROFILES_PATH = null
@@ -1951,6 +2010,68 @@ ipcMain.handle('restore-to-point', async (_, seq) => {
   const n = assertPositiveInt(seq, 'seq')
   const r = await runPS(`Restore-Computer -RestorePoint ${n} -Confirm:$false -ErrorAction Stop`)
   if (!r.ok) { shell.openPath('rstrui.exe'); return { ok: false } }
+  return { ok: true }
+})
+
+// ─── Restore Points: extended ─────────────────────────────────────────────────
+ipcMain.handle('check-is-admin', async () => {
+  const r = await runPS('([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)')
+  return { isAdmin: r.ok && r.out.trim().toLowerCase() === 'true' }
+})
+
+ipcMain.handle('delete-restore-point', async (_, seq) => {
+  const send = (msg, level) => mainWindow?.webContents.send('log', { msg, level, ts: new Date().toLocaleTimeString() })
+  const n = assertPositiveInt(seq, 'seq')
+  send(`Deleting restore point #${n}…`, 'head')
+
+  // Match the restore point to its Win32_ShadowCopy instance by creation time (within 60s),
+  // then call .Delete() on the shadow copy — the only reliable way to remove a restore point.
+  const ps = `
+$ErrorActionPreference = 'Stop'
+$rp = Get-ComputerRestorePoint | Where-Object { $_.SequenceNumber -eq ${n} }
+if (-not $rp) { throw "Restore point ${n} not found" }
+$rpTime = $rp.ConvertToDateTime($rp.CreationTime)
+$sc = Get-WmiObject -Class Win32_ShadowCopy | Where-Object {
+    $scTime = [Management.ManagementDateTimeConverter]::ToDateTime($_.InstallDate)
+    [Math]::Abs(($scTime - $rpTime).TotalSeconds) -lt 60
+} | Select-Object -First 1
+if (-not $sc) { throw "No shadow copy found matching restore point ${n}" }
+$id = $sc.ID
+$sc.Delete()
+Write-Output "deleted:$id"
+`
+  const r = await runPS(ps)
+  if (r.ok && r.out && r.out.includes('deleted:')) {
+    send(`✓ Restore point #${n} deleted.`, 'ok')
+    return { ok: true }
+  }
+  // vssadmin fallback: extract shadow ID from output if WMI .Delete() threw but printed the ID
+  const idMatch = (r.out || '').match(/\{[0-9a-fA-F-]{36}\}/)
+  if (idMatch) {
+    const r2 = await runPS(`vssadmin delete shadows /Shadow="${idMatch[0]}" /Quiet`)
+    if (r2.ok) { send(`✓ Restore point #${n} deleted (vssadmin).`, 'ok'); return { ok: true } }
+  }
+  send(`Failed to delete restore point #${n}: ${r.err}`, 'err')
+  return { ok: false, error: r.err || 'Shadow copy not found or access denied. Run as admin.' }
+})
+
+ipcMain.handle('get-sr-disk-usage', async () => {
+  const r = await runPS('Get-WmiObject Win32_ShadowStorage | Select-Object AllocatedSpace,MaxSpace,UsedSpace | ConvertTo-Json')
+  if (!r.ok || !r.out) return { available: false }
+  try {
+    const raw = JSON.parse(r.out)
+    const arr = Array.isArray(raw) ? raw : [raw]
+    let used = 0, max = 0, alloc = 0
+    arr.forEach(s => { used += Number(s.UsedSpace) || 0; max += Number(s.MaxSpace) || 0; alloc += Number(s.AllocatedSpace) || 0 })
+    return { available: true, usedBytes: used, maxBytes: max, allocBytes: alloc }
+  } catch { return { available: false } }
+})
+
+ipcMain.handle('save-text-file', async (_, { filename, content }) => {
+  const { dialog } = require('electron')
+  const { canceled, filePath } = await dialog.showSaveDialog(mainWindow, { defaultPath: filename, filters: [{ name: 'Text', extensions: ['txt'] }] })
+  if (canceled || !filePath) return { ok: false }
+  fs.writeFileSync(filePath, content, 'utf8')
   return { ok: true }
 })
 
@@ -2752,6 +2873,18 @@ ipcMain.handle('run-auto-opti', async (_, sysInfo) => {
     const plan = buildRunPlan(runMode, _systemContext, sysInfo)
     selected = plan.map(p => p.id)
   }
+
+  // Backend premium enforcement — strip premium-only tweak IDs for free users.
+  // Extend PREMIUM_AOM_PREFIXES when Advanced tweaks are added to AOM.
+  const PREMIUM_AOM_PREFIXES = ['fivem-']
+  if (selected && !requiresPremium('run-auto-opti-premium-check')) {
+    const before = selected.length
+    selected = selected.filter(id => !PREMIUM_AOM_PREFIXES.some(p => id.startsWith(p)))
+    if (selected.length < before) {
+      send('  [tier] Premium tweaks stripped — upgrade to Premium to apply FiveM tweaks', 'warn')
+    }
+  }
+
   const failedTasks = []
   const taskTimeout = (ms) => new Promise((_, rej) => setTimeout(() => rej(new Error(`Timed out after ${ms / 1000}s`)), ms))
   if (selected && Array.isArray(selected) && selected.length > 0) {
@@ -3980,6 +4113,73 @@ const TWEAKS = {
       s('DoH removed — DNS restored to adapter defaults.', 'ok')
     }
   },
+  'dns-quad9': {
+    name: 'DNS → Quad9 9.9.9.9',
+    category: 'network',
+    safetyTier: 1,
+    gamerImpact: 'medium',
+    apply: async (s, ps) => {
+      const adapters = await ps("Get-NetAdapter | Where-Object {$_.Status -eq 'Up'} | Select-Object -ExpandProperty Name")
+      for (const a of adapters.out.split('\n').map(l => l.trim()).filter(Boolean)) {
+        await new Promise(res => require('child_process').exec(`netsh interface ip set dns name="${a}" static 9.9.9.9 primary`, { windowsHide: true }, res))
+        await new Promise(res => require('child_process').exec(`netsh interface ip add dns name="${a}" 149.112.112.112 index=2`, { windowsHide: true }, res))
+        s(`  ${a}: Quad9 9.9.9.9 set`, 'ok')
+      }
+    },
+    restore: async (s, ps) => {
+      const adapters = await ps("Get-NetAdapter | Where-Object {$_.Status -eq 'Up'} | Select-Object -ExpandProperty Name")
+      for (const a of adapters.out.split('\n').map(l => l.trim()).filter(Boolean)) {
+        await new Promise(res => require('child_process').exec(`netsh interface ip set dns name="${a}" dhcp`, { windowsHide: true }, res))
+      }
+      s('DNS restored to DHCP.', 'ok')
+    }
+  },
+  'dns-adguard': {
+    name: 'DNS → AdGuard 94.140.14.14',
+    category: 'network',
+    safetyTier: 1,
+    gamerImpact: 'medium',
+    apply: async (s, ps) => {
+      const adapters = await ps("Get-NetAdapter | Where-Object {$_.Status -eq 'Up'} | Select-Object -ExpandProperty Name")
+      for (const a of adapters.out.split('\n').map(l => l.trim()).filter(Boolean)) {
+        await new Promise(res => require('child_process').exec(`netsh interface ip set dns name="${a}" static 94.140.14.14 primary`, { windowsHide: true }, res))
+        await new Promise(res => require('child_process').exec(`netsh interface ip add dns name="${a}" 94.140.15.15 index=2`, { windowsHide: true }, res))
+        s(`  ${a}: AdGuard DNS 94.140.14.14 set`, 'ok')
+      }
+    },
+    restore: async (s, ps) => {
+      const adapters = await ps("Get-NetAdapter | Where-Object {$_.Status -eq 'Up'} | Select-Object -ExpandProperty Name")
+      for (const a of adapters.out.split('\n').map(l => l.trim()).filter(Boolean)) {
+        await new Promise(res => require('child_process').exec(`netsh interface ip set dns name="${a}" dhcp`, { windowsHide: true }, res))
+      }
+      s('DNS restored to DHCP.', 'ok')
+    }
+  },
+  'dns-custom': {
+    name: 'DNS → Custom',
+    category: 'network',
+    safetyTier: 1,
+    gamerImpact: 'medium',
+    apply: async (s, ps) => {
+      const cfg = loadSettings()
+      const primary = cfg?.customDnsPrimary
+      const secondary = cfg?.customDnsSecondary
+      if (!primary) { s('No custom DNS configured. Use the Configure button in the Networking tab to set your DNS servers.', 'warn'); return }
+      const adapters = await ps("Get-NetAdapter | Where-Object {$_.Status -eq 'Up'} | Select-Object -ExpandProperty Name")
+      for (const a of adapters.out.split('\n').map(l => l.trim()).filter(Boolean)) {
+        await new Promise(res => require('child_process').exec(`netsh interface ip set dns name="${a}" static ${primary} primary`, { windowsHide: true }, res))
+        if (secondary) await new Promise(res => require('child_process').exec(`netsh interface ip add dns name="${a}" ${secondary} index=2`, { windowsHide: true }, res))
+        s(`  ${a}: Custom DNS ${primary} set`, 'ok')
+      }
+    },
+    restore: async (s, ps) => {
+      const adapters = await ps("Get-NetAdapter | Where-Object {$_.Status -eq 'Up'} | Select-Object -ExpandProperty Name")
+      for (const a of adapters.out.split('\n').map(l => l.trim()).filter(Boolean)) {
+        await new Promise(res => require('child_process').exec(`netsh interface ip set dns name="${a}" dhcp`, { windowsHide: true }, res))
+      }
+      s('DNS restored to DHCP.', 'ok')
+    }
+  },
   'disable-netbios': {
     name: 'Disable NetBIOS over TCP/IP',
     category: 'network',
@@ -4203,6 +4403,93 @@ const TWEAKS = {
         }
       `)
       s('Energy Efficient Ethernet restored.', 'ok')
+    }
+  },
+
+  'nic-rss-affinity': {
+    name: 'NIC RSS CPU Affinity',
+    category: 'network',
+    safetyTier: 2,
+    gamerImpact: 'high',
+    apply: async (s, ps) => {
+      const coresR = await ps('(Get-CimInstance Win32_Processor | Select-Object -First 1).NumberOfLogicalProcessors')
+      const cores = parseInt(coresR.out.trim()) || 4
+      const maxProc = Math.min(4, Math.max(2, Math.floor(cores / 4)))
+      await ps(`
+        Get-NetAdapter | Where-Object {
+          $_.Status -eq 'Up' -and
+          $_.PhysicalMediaType -ne 'Native 802.11' -and $_.PhysicalMediaType -ne 'Wireless LAN' -and
+          $_.InterfaceDescription -notlike '*Wireless*' -and $_.InterfaceDescription -notlike '*Wi-Fi*' -and
+          $_.InterfaceDescription -notlike '*Virtual*' -and $_.InterfaceDescription -notlike '*Loopback*'
+        } | ForEach-Object {
+          try {
+            Set-NetAdapterRss -Name $_.Name -BaseProcessorNumber 2 -MaxProcessors ${maxProc} -EA Stop
+            Write-Output "  $($_.Name): RSS pinned to cores 2+ (${maxProc} queues)"
+          } catch { Write-Output "  $($_.Name): RSS affinity skipped (not supported)" }
+        }
+      `)
+      s(`RSS CPU affinity set — NIC interrupt handling pinned away from core 0. ${cores}-core CPU detected.`, 'ok')
+    },
+    restore: async (s, ps) => {
+      await ps(`
+        Get-NetAdapter | Where-Object {
+          $_.Status -eq 'Up' -and $_.PhysicalMediaType -ne 'Native 802.11' -and
+          $_.InterfaceDescription -notlike '*Wireless*' -and $_.InterfaceDescription -notlike '*Wi-Fi*' -and
+          $_.InterfaceDescription -notlike '*Virtual*'
+        } | ForEach-Object {
+          try { Set-NetAdapterRss -Name $_.Name -BaseProcessorNumber 0 -EA SilentlyContinue } catch {}
+        }
+      `)
+      s('RSS CPU affinity restored to default (core 0).', 'ok')
+    }
+  },
+  'nic-ndis-poll': {
+    name: 'Enable NDIS Polling Mode',
+    category: 'network',
+    safetyTier: 2,
+    gamerImpact: 'high',
+    apply: async (s, ps) => {
+      const r = await ps(`
+        $supported = 0
+        Get-NetAdapter | Where-Object {
+          $_.Status -eq 'Up' -and
+          $_.PhysicalMediaType -ne 'Native 802.11' -and $_.PhysicalMediaType -ne 'Wireless LAN' -and
+          $_.InterfaceDescription -notlike '*Wireless*' -and $_.InterfaceDescription -notlike '*Wi-Fi*' -and
+          $_.InterfaceDescription -notlike '*Virtual*' -and $_.InterfaceDescription -notlike '*Loopback*'
+        } | ForEach-Object {
+          $n = $_.Name
+          foreach ($prop in @("NDIS Polling","ndis polling","Ndis Polling")) {
+            try {
+              Set-NetAdapterAdvancedProperty -Name $n -DisplayName $prop -DisplayValue "Enabled" -EA Stop
+              Write-Output "  $n: NDIS polling enabled"
+              $supported++
+              break
+            } catch {}
+          }
+        }
+        Write-Output "SUPPORTED=$supported"
+      `)
+      const supported = parseInt((r.out.split('\n').find(l => l.trim().startsWith('SUPPORTED=')) || '').split('=')[1] || '0')
+      if (supported === 0) {
+        s('NDIS polling not available on this NIC (supported on Intel I225/I226 and Realtek 8125). Skipped.', 'warn')
+      } else {
+        s(`NDIS polling enabled on ${supported} adapter(s) — interrupt-driven delivery replaced with polling for lower DPC latency.`, 'ok')
+      }
+    },
+    restore: async (s, ps) => {
+      await ps(`
+        Get-NetAdapter | Where-Object {
+          $_.Status -eq 'Up' -and $_.PhysicalMediaType -ne 'Native 802.11' -and
+          $_.InterfaceDescription -notlike '*Wireless*' -and $_.InterfaceDescription -notlike '*Wi-Fi*' -and
+          $_.InterfaceDescription -notlike '*Virtual*'
+        } | ForEach-Object {
+          $n = $_.Name
+          foreach ($prop in @("NDIS Polling","ndis polling","Ndis Polling")) {
+            try { Set-NetAdapterAdvancedProperty -Name $n -DisplayName $prop -DisplayValue "Disabled" -EA Stop; break } catch {}
+          }
+        }
+      `)
+      s('NDIS polling disabled.', 'ok')
     }
   },
 
@@ -8852,6 +9139,251 @@ ipcMain.handle('fivem-server-health', async () => {
       status: isTimeout ? 'timeout' : packetLoss > 0 ? 'loss' : parseFloat(avg) > 80 ? 'high' : parseFloat(avg) > 40 ? 'medium' : 'good',
     })
   }
+  return { ok: true, results }
+})
+
+// ─── DNS Benchmarker ──────────────────────────────────────────────────────────
+ipcMain.handle('benchmark-dns', async () => {
+  const providers = [
+    { name: 'Cloudflare', server: '1.1.1.1',       tweak: 'dns-cloudflare' },
+    { name: 'Google',     server: '8.8.8.8',       tweak: 'dns-google' },
+    { name: 'Quad9',      server: '9.9.9.9',       tweak: 'dns-quad9' },
+    { name: 'AdGuard',    server: '94.140.14.14',  tweak: 'dns-adguard' },
+  ]
+  const makeScript = (server) => `
+$times = [System.Collections.Generic.List[double]]::new()
+1..5 | ForEach-Object {
+  try {
+    $sw = [System.Diagnostics.Stopwatch]::StartNew()
+    [System.Net.Dns]::GetHostEntry((New-Object System.Net.IPEndPoint([System.Net.IPAddress]::Parse('${server}'), 53))) | Out-Null
+  } catch {}
+  try {
+    $sw = [System.Diagnostics.Stopwatch]::StartNew()
+    $req = [System.Net.WebRequest]::Create("http://${server}/")
+    $req.Timeout = 2000
+    $req.GetResponse() | Out-Null
+    $sw.Stop()
+  } catch {
+    try {
+      $sw2 = [System.Diagnostics.Stopwatch]::StartNew()
+      $client = New-Object System.Net.Sockets.TcpClient
+      $client.Connect('${server}', 53)
+      $sw2.Stop()
+      $times.Add($sw2.Elapsed.TotalMilliseconds)
+      $client.Close()
+    } catch {}
+    if (-not $sw2 -or $sw2.IsRunning) { $sw.Stop() }
+  }
+  Start-Sleep -Milliseconds 100
+}
+if ($times.Count -eq 0) {
+  $ping = New-Object System.Net.NetworkInformation.Ping
+  1..5 | ForEach-Object {
+    try {
+      $sw = [System.Diagnostics.Stopwatch]::StartNew()
+      $r = $ping.Send('${server}', 2000)
+      $sw.Stop()
+      if ($r.Status -eq 'Success') { $times.Add($r.RoundtripTime) }
+    } catch {}
+    Start-Sleep -Milliseconds 50
+  }
+}
+if ($times.Count -gt 0) {
+  $sorted = $times | Sort-Object
+  $med = if ($sorted.Count % 2 -eq 1) { $sorted[($sorted.Count - 1) / 2] } else { ($sorted[$sorted.Count/2 - 1] + $sorted[$sorted.Count/2]) / 2 }
+  Write-Output "MED=$([math]::Round($med, 1))"
+  Write-Output "MIN=$([math]::Round(($sorted | Select-Object -First 1), 1))"
+  Write-Output "MAX=$([math]::Round(($sorted | Select-Object -Last 1), 1))"
+} else { Write-Output "FAIL" }
+`
+
+  const results = await Promise.all(providers.map(async (p) => {
+    try {
+      const r = await runPS(makeScript(p.server), 20000)
+      const lines = r.out.split('\n').map(l => l.trim())
+      if (lines.some(l => l === 'FAIL')) return { ...p, fail: true, median: 9999 }
+      const get = (key) => parseFloat((lines.find(l => l.startsWith(key + '=')) || '').split('=')[1] || 'NaN')
+      return { ...p, fail: false, median: get('MED'), min: get('MIN'), max: get('MAX') }
+    } catch { return { ...p, fail: true, median: 9999 } }
+  }))
+
+  results.sort((a, b) => a.median - b.median)
+  return { ok: true, results }
+})
+
+// ─── Live Ping Monitor ────────────────────────────────────────────────────────
+let _livePingInterval = null
+
+ipcMain.handle('start-live-ping', (_, { host } = {}) => {
+  if (_livePingInterval) { clearInterval(_livePingInterval); _livePingInterval = null }
+  const target = (host || '1.1.1.1').replace(/[^a-zA-Z0-9.\-:]/g, '')
+  _livePingInterval = setInterval(async () => {
+    try {
+      const r = await runPS(`
+        try {
+          $p = New-Object System.Net.NetworkInformation.Ping
+          $r = $p.Send('${target}', 2000)
+          if ($r.Status -eq 'Success') { Write-Output $r.RoundtripTime } else { Write-Output 'timeout' }
+        } catch { Write-Output 'timeout' }
+      `, 5000)
+      const raw = r.out.trim()
+      const rtt = raw === 'timeout' ? null : parseInt(raw)
+      mainWindow?.webContents.send('live-ping-tick', { rtt, ts: Date.now(), host: target })
+    } catch {}
+  }, 2000)
+  return { ok: true }
+})
+
+ipcMain.handle('stop-live-ping', () => {
+  if (_livePingInterval) { clearInterval(_livePingInterval); _livePingInterval = null }
+  return { ok: true }
+})
+
+// ─── Network Health Check ─────────────────────────────────────────────────────
+ipcMain.handle('run-net-health', async () => {
+  const results = {}
+
+  // Step 1: Gateway RTT (20 pings)
+  const gwScript = `
+$gw = try { (Get-NetRoute -DestinationPrefix '0.0.0.0/0' -EA SilentlyContinue | Sort-Object RouteMetric | Select-Object -First 1).NextHop } catch { $null }
+if (-not $gw) { Write-Output "GW_FAIL"; exit }
+Write-Output "GW_IP=$gw"
+$rtts = [System.Collections.Generic.List[int]]::new()
+1..20 | ForEach-Object {
+  try {
+    $p = New-Object System.Net.NetworkInformation.Ping
+    $r = $p.Send($gw, 2000)
+    if ($r.Status -eq 'Success') { $rtts.Add([int]$r.RoundtripTime) } else { $rtts.Add(9999) }
+  } catch { $rtts.Add(9999) }
+  Start-Sleep -Milliseconds 100
+}
+$good = $rtts | Where-Object { $_ -ne 9999 }
+$loss = $rtts | Where-Object { $_ -eq 9999 }
+if ($good.Count -gt 0) {
+  $avg = [math]::Round(($good | Measure-Object -Average).Average, 1)
+  $min = ($good | Measure-Object -Minimum).Minimum
+  $max = ($good | Measure-Object -Maximum).Maximum
+  $jitter = if ($good.Count -gt 1) { [math]::Round([math]::Sqrt((($good | ForEach-Object { ($_ - $avg) * ($_ - $avg) }) | Measure-Object -Sum).Sum / $good.Count), 1) } else { 0 }
+  Write-Output "GW_AVG=$avg"
+  Write-Output "GW_MIN=$min"
+  Write-Output "GW_MAX=$max"
+  Write-Output "GW_JITTER=$jitter"
+  Write-Output "GW_LOSS=$([math]::Round($loss.Count / 20 * 100, 0))"
+} else { Write-Output "GW_FAIL" }
+`
+
+  // Step 2: DNS resolution time (5 samples)
+  const dnsScript = `
+$times = [System.Collections.Generic.List[double]]::new()
+1..5 | ForEach-Object {
+  try {
+    $sw = [System.Diagnostics.Stopwatch]::StartNew()
+    [System.Net.Dns]::GetHostAddresses('google.com') | Out-Null
+    $sw.Stop()
+    $times.Add($sw.Elapsed.TotalMilliseconds)
+  } catch {}
+  Start-Sleep -Milliseconds 50
+}
+if ($times.Count -gt 0) {
+  $sorted = $times | Sort-Object
+  $median = if ($sorted.Count % 2 -eq 1) { $sorted[($sorted.Count - 1) / 2] } else { ($sorted[$sorted.Count/2 - 1] + $sorted[$sorted.Count/2]) / 2 }
+  Write-Output "DNS_MED=$([math]::Round($median, 1))"
+  Write-Output "DNS_MIN=$([math]::Round(($sorted | Select-Object -First 1), 1))"
+  Write-Output "DNS_MAX=$([math]::Round(($sorted | Select-Object -Last 1), 1))"
+} else { Write-Output "DNS_FAIL" }
+`
+
+  // Step 3: ISP first 3 hops via tracert
+  const tracertScript = `
+$output = tracert -d -h 3 -w 2000 8.8.8.8 2>$null | Select-Object -Skip 4
+$hop = 0
+foreach ($line in $output) {
+  if ($line -match '^\\s*(\\d+)\\s') {
+    $hop++
+    $rtts = [regex]::Matches($line, '(\\d+)\\s*ms') | ForEach-Object { [int]$_.Groups[1].Value }
+    $ip   = [regex]::Match($line, '(\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3})').Value
+    if ($rtts.Count -gt 0) {
+      $avg = [math]::Round(($rtts | Measure-Object -Average).Average, 1)
+      Write-Output "HOP${hop}_IP=$ip"
+      Write-Output "HOP${hop}_AVG=$avg"
+    } else {
+      Write-Output "HOP${hop}_IP=*"
+      Write-Output "HOP${hop}_AVG=*"
+    }
+    if ($hop -ge 3) { break }
+  }
+}
+`
+
+  // Step 4: Packet loss to 1.1.1.1 (20 pings)
+  const lossScript = `
+$lost = 0
+1..20 | ForEach-Object {
+  try {
+    $p = New-Object System.Net.NetworkInformation.Ping
+    $r = $p.Send('1.1.1.1', 2000)
+    if ($r.Status -ne 'Success') { $lost++ }
+  } catch { $lost++ }
+  Start-Sleep -Milliseconds 100
+}
+Write-Output "CF_LOSS=$([math]::Round($lost / 20 * 100, 0))"
+`
+
+  // Run steps 1 and 2 in parallel, then 3 and 4 in parallel
+  const [gwR, dnsR] = await Promise.all([
+    runPS(gwScript, 30000).catch(() => ({ out: '' })),
+    runPS(dnsScript, 15000).catch(() => ({ out: '' })),
+  ])
+  const [tracertR, lossR] = await Promise.all([
+    runPS(tracertScript, 30000).catch(() => ({ out: '' })),
+    runPS(lossScript, 30000).catch(() => ({ out: '' })),
+  ])
+
+  // Parse gateway
+  const gwLines = gwR.out.split('\n').map(l => l.trim())
+  const gw = {}
+  for (const l of gwLines) {
+    if (l === 'GW_FAIL') { gw.fail = true; break }
+    const [k, v] = l.split('='); if (!k || !v) continue
+    if (k === 'GW_IP') gw.ip = v
+    if (k === 'GW_AVG') gw.avg = parseFloat(v)
+    if (k === 'GW_MIN') gw.min = parseFloat(v)
+    if (k === 'GW_MAX') gw.max = parseFloat(v)
+    if (k === 'GW_JITTER') gw.jitter = parseFloat(v)
+    if (k === 'GW_LOSS') gw.loss = parseInt(v)
+  }
+  results.gateway = gw
+
+  // Parse DNS
+  const dns = {}
+  for (const l of dnsR.out.split('\n').map(s => s.trim())) {
+    if (l === 'DNS_FAIL') { dns.fail = true; break }
+    const [k, v] = l.split('='); if (!k || !v) continue
+    if (k === 'DNS_MED') dns.median = parseFloat(v)
+    if (k === 'DNS_MIN') dns.min = parseFloat(v)
+    if (k === 'DNS_MAX') dns.max = parseFloat(v)
+  }
+  results.dns = dns
+
+  // Parse tracert hops
+  const hops = []
+  const tLines = tracertR.out.split('\n').map(l => l.trim())
+  const hopMap = {}
+  for (const l of tLines) {
+    const m = l.match(/^(HOP\d+)_(\w+)=(.+)/)
+    if (m) {
+      const [, hopKey, field, val] = m
+      if (!hopMap[hopKey]) hopMap[hopKey] = {}
+      hopMap[hopKey][field.toLowerCase()] = val
+    }
+  }
+  for (const key of Object.keys(hopMap).sort()) hops.push(hopMap[key])
+  results.hops = hops
+
+  // Parse loss
+  const cfLossLine = lossR.out.split('\n').find(l => l.trim().startsWith('CF_LOSS='))
+  results.cloudflare = { loss: cfLossLine ? parseInt(cfLossLine.split('=')[1]) : null }
+
   return { ok: true, results }
 })
 
