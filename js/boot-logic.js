@@ -189,7 +189,7 @@ function showLockScreen(deniedMsg) {
 // The renderer starts locked and only unlocks when main says ok.
 let _authCleared = false
 api.onAuthRequired(() => {
-  if (!_authCleared) showLockScreen()
+  if (!_authCleared && !document.getElementById('lock-screen')) showLockScreen()
 })
 
 async function _bootAuth() {

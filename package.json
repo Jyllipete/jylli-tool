@@ -1,6 +1,6 @@
 {
   "name": "jylli-tool",
-  "version": "1.4.7",
+  "version": "1.4.8",
   "description": "Professional Windows Optimization Tool",
   "main": "main.js",
   "scripts": {
@@ -19,7 +19,7 @@
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
-      "artifactName": "${productName} Setup.exe",
+      "artifactName": "Jylli-Tool-Setup.exe",
       "installerSidebar": "assets/installer-sidebar.bmp",
       "uninstallerSidebar": "assets/installer-sidebar.bmp",
       "installerHeader": "assets/installer-header.bmp"

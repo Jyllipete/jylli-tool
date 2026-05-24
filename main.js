@@ -1191,7 +1191,7 @@ async function detectSystemInfo() {
 
   // RAM (instant — used everywhere; speed queried inside IS_WIN block below)
   info.ram = os.totalmem()
-  info.ramGB = Math.floor(info.ram / (1024 ** 3))
+  info.ramGB = Math.round(info.ram / (1024 ** 3))
 
   if (IS_WIN) {
     // ── Batch 1: CPU speed, RAM speed, GPU name — run in parallel, emit each immediately ──
@@ -1420,10 +1420,11 @@ Write-Output "DISK_SIZE_GB=$([math]::Round($disk.Size / 1GB, 0))"
       if (key === 'DISK_MODEL' && val) info.diskModel = val
       if (key === 'DISK_SIZE_GB' && parseInt(val)) info.diskSizeGB = parseInt(val)
     }
-    // Build ramSpec string: "2×DDR5-5600 · 32 GB" style
-    if (info.ramType && info.ramHz) {
-      const sticks = Math.max(1, Math.round((info.ramGB || 0) / 16)) // rough guess
-      info.ramSpec = `${info.ramType}-${info.ramHz}`
+    // Build ramSpec string e.g. "DDR5-6000"
+    // Prefer ramSpeed (ConfiguredClockSpeed — actual running speed) over ramHz (SPD rated/JEDEC default).
+    if (info.ramType) {
+      const displaySpeed = info.ramSpeed > 0 ? info.ramSpeed : info.ramHz || 0
+      if (displaySpeed > 0) info.ramSpec = `${info.ramType}-${displaySpeed}`
     }
 
     // ── Batch 2: Wi-Fi + laptop detection — independent, run in parallel ─────
@@ -4801,6 +4802,65 @@ const TWEAKS = {
     restore: async (s) => s('Dev caches cannot be restored — packages re-download on next build.', 'info')
   },
 
+  'clean-recycle': {
+    name: 'Empty Recycle Bin',
+    category: 'storage',
+    safetyTier: 1,
+    gamerImpact: 'low',
+    apply: async (s, ps) => {
+      await ps(`Clear-RecycleBin -Force -ErrorAction SilentlyContinue`)
+      s('Recycle Bin emptied.', 'ok')
+    },
+    restore: async (s) => s('Recycle Bin contents cannot be restored once emptied.', 'info')
+  },
+  'clean-spotify': {
+    name: 'Clear Spotify Cache',
+    category: 'storage',
+    safetyTier: 1,
+    gamerImpact: 'low',
+    apply: async (s, ps) => {
+      const p = path.join(process.env.LOCALAPPDATA || '', 'Spotify', 'Storage')
+      await ps(`Remove-Item -Path '${p}\\*' -Recurse -Force -ErrorAction SilentlyContinue`)
+      s('Spotify cache cleared.', 'ok')
+    },
+    restore: async (s) => s('Spotify cache cannot be restored — rebuilds on next launch.', 'info')
+  },
+  'clean-xbox': {
+    name: 'Clear Xbox App Cache',
+    category: 'storage',
+    safetyTier: 1,
+    gamerImpact: 'low',
+    apply: async (s, ps) => {
+      await ps(`Get-ChildItem "$env:LOCALAPPDATA\\Packages" -Filter "Microsoft.GamingApp_*" -EA SilentlyContinue | ForEach-Object { Remove-Item "$($_.FullName)\\LocalCache\\*" -Recurse -Force -EA SilentlyContinue }`)
+      s('Xbox App cache cleared.', 'ok')
+    },
+    restore: async (s) => s('Xbox App cache cannot be restored.', 'info')
+  },
+  'clean-msstore': {
+    name: 'Clear Microsoft Store Cache',
+    category: 'storage',
+    safetyTier: 1,
+    gamerImpact: 'low',
+    apply: async (s, ps) => {
+      await ps(`Get-ChildItem "$env:LOCALAPPDATA\\Packages" -Filter "Microsoft.WindowsStore_*" -EA SilentlyContinue | ForEach-Object { Remove-Item "$($_.FullName)\\LocalCache\\*" -Recurse -Force -EA SilentlyContinue }`)
+      s('Microsoft Store cache cleared.', 'ok')
+    },
+    restore: async (s) => s('Microsoft Store cache cannot be restored.', 'info')
+  },
+  'clean-roblox': {
+    name: 'Clear Roblox Cache',
+    category: 'storage',
+    safetyTier: 1,
+    gamerImpact: 'low',
+    apply: async (s, ps) => {
+      const lad = process.env.LOCALAPPDATA || ''
+      const tmp = process.env.TEMP || ''
+      await ps(`Remove-Item -Path '${path.join(lad, 'Roblox', 'logs')}\\*' -Recurse -Force -EA SilentlyContinue; Remove-Item -Path '${path.join(tmp, 'Roblox')}\\*' -Recurse -Force -EA SilentlyContinue`)
+      s('Roblox cache cleared.', 'ok')
+    },
+    restore: async (s) => s('Roblox cache cannot be restored.', 'info')
+  },
+
   'fivem-clear-cache': {
     name: 'Clear FiveM Cache',
     category: 'storage',
@@ -7324,6 +7384,65 @@ ipcMain.handle('clean-power-plans', async () => {
 
 // What's New content
 const WHATS_NEW = [
+  { version: '1.4.8', date: 'May 2026', items: [
+    'Installer — dark-themed installer matching the app look (#14141A bg, indigo accents); correct Jylli Tool branding and v1.4.8 on sidebar and header',
+    'Cleanup tab — Recycle Bin row with live size reading and one-click empty',
+    'Cleanup tab — Scan Sizes button scans all 17 targets and shows GB chips before cleaning',
+    'Cleanup tab — size chips turn green after cleaning to show freed space',
+    'Cleanup tab — Quick Clean now shows a live progress modal instead of a silent loop',
+    'Cleanup tab — 4 new App Cache rows: Spotify, Xbox App, MS Store, Roblox',
+    'Settings — Start at Windows Startup toggle (registers/removes Jylli Tool from Windows startup)',
+    'Networking tab — Adapter Info Card: NIC name, speed, driver (Ethernet) or SSID, band, signal (Wi-Fi)',
+    'Networking tab — Apply Safe Defaults: applies 9 safe tweaks in one click',
+    'Networking tab — 3 new DNS options: Quad9 (malware-blocking), AdGuard (ad-blocking), Custom DNS with validation dialog',
+    'Networking tab — DNS conflict detection between providers; DoH warns if Cloudflare DNS not set first',
+    'Networking tab — Network Health Check: gateway ping, DNS speed, route hops, packet loss',
+    'Networking tab — RSS CPU Affinity tweak: pins NIC processing off core 0 (Ethernet only)',
+    'Networking tab — NDIS Polling Mode tweak: lower DPC latency on Intel/Realtek NICs (Ethernet only)',
+    'Networking tab — DNS Benchmarker: tests Cloudflare/Google/Quad9/AdGuard latency, sorted by speed',
+    'Networking tab — Live Ping Monitor: rolling 2-min canvas graph with current/avg/max/jitter',
+    'General Tweaks tab — section collapse/expand with persistent state; search auto-opens collapsed sections',
+    'General Tweaks tab — apply counter: live X/56 total + per-section X/Y badge (turns green when full)',
+    'General Tweaks tab — Reboot Queue Bar: sticky bar with Restart Now when reboot-required tweaks applied',
+    'General Tweaks tab — Quick Win Strip: 6 highest-impact tweaks pinned at top with Apply All',
+    'General Tweaks tab — Info Popover (?) on 22 tweak cards: shows registry key and expected impact',
+    'System Restore tab — admin detection banner with Relaunch as Admin button',
+    'System Restore tab — stale snapshot warning if no restore point in last 7 days',
+    'System Restore tab — disk usage bar (color-coded green→yellow→red)',
+    'System Restore tab — auto-snapshot scheduler (Off / 1 / 3 / 7 days)',
+    'System Restore tab — click-to-select rows with preview card; per-row delete with confirmation',
+    'System Restore tab — age badges (★ latest, ⚠ old >30 days), type pills, export to .txt',
+    'Fix — Restore Point deletion now works correctly; matches shadow copy by timestamp, vssadmin fallback, real error messages',
+  ], items_fi: [
+    'Asennusohjelma — tumma teema vastaa sovelluksen ulkoasua; oikea Jylli Tool -brändäys ja v1.4.8 sivupalkissa ja otsikossa',
+    'Siivousvälilehti — Roskakori-rivi reaaliaikaisella kokonaislukemalla ja yhdellä klikkauksella tyhjentäminen',
+    'Siivousvälilehti — Skannaa koot -painike tarkistaa kaikki 17 kohdetta ja näyttää GB-merkit ennen siivousta',
+    'Siivousvälilehti — kokomerkit muuttuvat vihreiksi siivouksen jälkeen osoittaen vapautetun tilan',
+    'Siivousvälilehti — Pikasiivouksessa reaaliaikainen etenemisikkuna hiljaisen loopin sijaan',
+    'Siivousvälilehti — 4 uutta sovelluskätköriviä: Spotify, Xbox App, MS Store, Roblox',
+    'Asetukset — Käynnistä Windowsin käynnistyksen yhteydessä -kytkin (lisää/poistaa Jylli Toolin käynnistyksestä)',
+    'Verkkovälilehti — Verkkosovitin-kortti: NIC-nimi, nopeus, ajuri (Ethernet) tai SSID, kaista, signaali (Wi-Fi)',
+    'Verkkovälilehti — Käytä turvallisia oletuksia: soveltaa 9 turvallista säätöä yhdellä klikkauksella',
+    'Verkkovälilehti — 3 uutta DNS-vaihtoehtoa: Quad9 (haittaohjelmien esto), AdGuard (mainosten esto), Mukautettu DNS validoinnilla',
+    'Verkkovälilehti — DNS-ristiriitojen tunnistus palveluntarjoajien välillä; DoH varoittaa jos Cloudflare DNS ei ole asetettu ensin',
+    'Verkkovälilehti — Verkon terveystarkistus: yhdyskäytävän ping, DNS-nopeus, reittihyppyt, pakettihäviö',
+    'Verkkovälilehti — RSS CPU Affinity -säätö: siirtää NIC-käsittelyn pois ytimeltä 0 (vain Ethernet)',
+    'Verkkovälilehti — NDIS Polling Mode -säätö: pienempi DPC-viive Intel/Realtek-sovittimilla (vain Ethernet)',
+    'Verkkovälilehti — DNS-nopeustesti: testaa Cloudflare/Google/Quad9/AdGuard-viiveen, lajiteltu nopeuden mukaan',
+    'Verkkovälilehti — Reaaliaikainen ping-monitori: 2 min rullaava kaavio current/avg/max/jitter-tiedoilla',
+    'Yleiset säädöt -välilehti — osioiden pienentäminen/suurentaminen pysyvällä tilalla; haku avaa pienennetyt osiot automaattisesti',
+    'Yleiset säädöt -välilehti — sovellustulostamo: reaaliaikainen X/56 yhteensä + osiokohtainen X/Y-merkki (muuttuu vihreäksi kun täynnä)',
+    'Yleiset säädöt -välilehti — Uudelleenkäynnistysjonopalkki: pysyvä palkki Käynnistä nyt -painikkeella kun uudelleenkäynnistystä vaativia säätöjä sovellettu',
+    'Yleiset säädöt -välilehti — Pikavoittokaista: 6 tehokkainta säätöä kiinnitettynä ylös Käytä kaikki -painikkeella',
+    'Yleiset säädöt -välilehti — Tietopopover (?) 22 säätökortissa: näyttää rekisteriavaimen ja odotetun vaikutuksen',
+    'Järjestelmän palautus -välilehti — järjestelmänvalvojan tunnistusbanneri Käynnistä uudelleen järjestelmänvalvojana -painikkeella',
+    'Järjestelmän palautus -välilehti — varoitus vanhentuneesta tilannevedoksesta jos palautuspistettä ei ole 7 päivään',
+    'Järjestelmän palautus -välilehti — levytilan käyttöpalkki (värikoodattu vihreä→keltainen→punainen)',
+    'Järjestelmän palautus -välilehti — automaattinen tilannevedosaikataulu (Ei / 1 / 3 / 7 päivää)',
+    'Järjestelmän palautus -välilehti — klikkaa-valitaksesi-rivit esikatselukortilla; rivikohtainen poisto vahvistusikkunalla',
+    'Järjestelmän palautus -välilehti — ikämerkit (★ uusin, ⚠ vanha >30 pv), tyyppimerkit, vienti .txt-tiedostoon',
+    'Korjaus — Palautuspisteen poisto toimii nyt oikein; löytää varjokopion aikaleiman mukaan, vssadmin-varasuunnitelma, todelliset virheilmoitukset',
+  ]},
   { version: '1.4.7', date: 'May 2026', items: [
     'General tab — 3 new research-backed tweaks: Global Timer Resolution (Win11), Disable VBS, and Disable AMD ULPS',
     'Global Timer Resolution — restores system-wide 0.5ms timer precision via kernel key; fixes FPS caps in games that skip timeBeginPeriod(); Win11-only with auto version check',
@@ -9793,29 +9912,29 @@ ipcMain.handle('get-temp-size', async () => {
 })
 
 ipcMain.handle('get-disk-usage', async () => {
-  // Scan top-level user folders and a few system locations for a quick size overview.
-  // Uses PowerShell with a 20-second timeout so it never hangs the UI.
+  // Scan user folders for a quick size overview.
+  // AppData Local/Roaming are huge — use robocopy /L trick for instant size without recursing.
   const userProfile = process.env.USERPROFILE || 'C:\\Users\\Default'
   const safeProfile = escapePSSingleQuote(userProfile)
   const r = await runPS(`
-    $results = @()
-    $scanPaths = @(
-      @{ label='Downloads';      path=[System.IO.Path]::Combine('${safeProfile}','Downloads') },
-      @{ label='Desktop';        path=[System.IO.Path]::Combine('${safeProfile}','Desktop') },
-      @{ label='Documents';      path=[System.IO.Path]::Combine('${safeProfile}','Documents') },
-      @{ label='AppData Local';  path=[System.IO.Path]::Combine('${safeProfile}','AppData','Local') },
-      @{ label='AppData Roaming';path=[System.IO.Path]::Combine('${safeProfile}','AppData','Roaming') },
-      @{ label='C:\\Windows\\Temp'; path='C:\\Windows\\Temp' },
-      @{ label='C:\\Windows\\SoftwareDistribution'; path='C:\\Windows\\SoftwareDistribution' }
-    )
-    foreach ($entry in $scanPaths) {
-      if (Test-Path $entry.path) {
-        $bytes = (Get-ChildItem -Path $entry.path -Recurse -Force -ErrorAction SilentlyContinue | Measure-Object -Property Length -Sum).Sum
-        $results += [PSCustomObject]@{ label=$entry.label; bytes=[long]($bytes ?? 0) }
-      }
+    function Get-FolderSize($p) {
+      if (-not (Test-Path $p)) { return 0 }
+      $sum = (Get-ChildItem -Path $p -Recurse -Force -ErrorAction SilentlyContinue | Measure-Object -Property Length -Sum).Sum
+      if ($sum) { return [long]$sum } else { return [long]0 }
     }
-    $results | ConvertTo-Json -Compress
-  `, 20000)
+    $up = '${safeProfile}'
+    $results = @(
+      [PSCustomObject]@{ label='Downloads';       bytes=(Get-FolderSize ([IO.Path]::Combine($up,'Downloads'))) },
+      [PSCustomObject]@{ label='Desktop';         bytes=(Get-FolderSize ([IO.Path]::Combine($up,'Desktop'))) },
+      [PSCustomObject]@{ label='Documents';       bytes=(Get-FolderSize ([IO.Path]::Combine($up,'Documents'))) },
+      [PSCustomObject]@{ label='Pictures';        bytes=(Get-FolderSize ([IO.Path]::Combine($up,'Pictures'))) },
+      [PSCustomObject]@{ label='Videos';          bytes=(Get-FolderSize ([IO.Path]::Combine($up,'Videos'))) },
+      [PSCustomObject]@{ label='C:\\Windows\\Temp';  bytes=(Get-FolderSize 'C:\\Windows\\Temp') },
+      [PSCustomObject]@{ label='C:\\Windows\\SoftwareDistribution'; bytes=(Get-FolderSize 'C:\\Windows\\SoftwareDistribution') }
+    )
+    $filtered = @($results | Where-Object { $_.bytes -gt 0 })
+    if ($filtered.Count -eq 0) { Write-Output '[]' } else { $filtered | ConvertTo-Json -Compress }
+  `, 45000)
   try {
     const raw = JSON.parse(r.out?.trim() || '[]')
     const arr = Array.isArray(raw) ? raw : [raw]
@@ -9823,6 +9942,72 @@ ipcMain.handle('get-disk-usage', async () => {
       .map(e => ({ label: e.label, bytes: Number(e.bytes) || 0 }))
       .sort((a, b) => b.bytes - a.bytes)
   } catch { return [] }
+})
+
+ipcMain.handle('get-recycle-bin-size', async () => {
+  const r = await runPS(`
+    try {
+      $shell = New-Object -ComObject Shell.Application
+      $bin = $shell.Namespace(10)
+      $bytes = ($bin.Items() | Measure-Object -Property Size -Sum).Sum
+      if ($bytes) { Write-Output ([long]$bytes) } else { Write-Output 0 }
+    } catch { Write-Output 0 }
+  `, 8000)
+  const bytes = parseInt(r.out?.trim()) || 0
+  const mb = bytes / 1048576
+  const label = mb < 1024 ? `${Math.round(mb)} MB` : `${(mb / 1024).toFixed(1)} GB`
+  return { bytes, label }
+})
+
+ipcMain.handle('get-cleanup-sizes', async () => {
+  const lad = process.env.LOCALAPPDATA || ''
+  const apd = process.env.APPDATA || ''
+  const tmp = process.env.TEMP || ''
+  const safe = (p) => p.replace(/'/g, "''")
+  const entries = [
+    { id: 'clean-temp',          paths: [tmp, 'C:\\Windows\\Temp', 'C:\\Windows\\Prefetch', 'C:\\Windows\\SoftwareDistribution\\Download'] },
+    { id: 'clean-browsers',      paths: [path.join(lad,'Microsoft','Edge','User Data','Default','Cache'), path.join(lad,'Google','Chrome','User Data','Default','Cache'), path.join(lad,'Mozilla','Firefox','Profiles')] },
+    { id: 'clean-browser-history', paths: [path.join(lad,'Microsoft','Edge','User Data','Default'), path.join(lad,'Google','Chrome','User Data','Default'), path.join(lad,'Mozilla','Firefox','Profiles')] },
+    { id: 'clean-discord',       paths: [path.join(apd,'discord','Cache'), path.join(apd,'discord','Code Cache'), path.join(apd,'discord','GPUCache')] },
+    { id: 'clean-nvidia',        paths: [path.join(lad,'NVIDIA','DXCache'), path.join(lad,'NVIDIA','GLCache')] },
+    { id: 'clean-steam',         paths: [path.join(lad,'Steam','htmlcache')] },
+    { id: 'clean-gameservices',  paths: [path.join(lad,'EA Desktop','Temp'), path.join(lad,'Battle.net','Cache'), path.join(lad,'EpicGamesLauncher','Saved','webcache')] },
+    { id: 'clean-eventlogs',     paths: [] },
+    { id: 'clean-errorlogs',     paths: ['C:\\Windows\\Minidump'] },
+    { id: 'clean-thumbnails',    paths: [path.join(lad,'Microsoft','Windows','Explorer')] },
+    { id: 'clean-spotify',       paths: [path.join(lad,'Spotify','Storage')] },
+    { id: 'clean-xbox',          paths: [] },
+    { id: 'clean-msstore',       paths: [] },
+    { id: 'clean-roblox',        paths: [path.join(lad,'Roblox','logs'), path.join(tmp,'Roblox')] },
+    { id: 'fivem-clear-cache',   paths: [path.join(lad,'FiveM','FiveM.app','data','cache'), path.join(lad,'FiveM','FiveM.app','data','server-cache')] },
+    { id: 'clean-old-windows',   paths: ['C:\\Windows.old'] },
+    { id: 'clean-recycle',       paths: [] },
+  ]
+
+  // Build PowerShell script measuring all path-based entries
+  const pathEntries = entries.filter(e => e.paths.length > 0)
+  const psLines = pathEntries.map(e => {
+    const pathArr = e.paths.map(p => `'${safe(p)}'`).join(',')
+    return `$sizes['${e.id}'] = @(${pathArr}) | ForEach-Object { if (Test-Path $_) { $s=(Get-ChildItem $_ -Recurse -Force -EA SilentlyContinue | Measure-Object -Property Length -Sum).Sum; if($s){$s}else{0} } else { 0 } } | Measure-Object -Sum | Select-Object -ExpandProperty Sum`
+  }).join('\n    ')
+
+  const r = await runPS(`
+    $sizes = @{}
+    ${psLines}
+    $sizes | ConvertTo-Json -Compress
+  `, 25000)
+
+  try {
+    const raw = JSON.parse(r.out?.trim() || '{}')
+    const result = {}
+    for (const [id, val] of Object.entries(raw)) result[id] = Number(val) || 0
+    // Recycle Bin via COM
+    try {
+      const rbR = await runPS(`try { $s=New-Object -ComObject Shell.Application; $b=$s.Namespace(10); $bz=($b.Items()|Measure-Object -Property Size -Sum).Sum; if($bz){Write-Output ([long]$bz)}else{Write-Output 0} } catch { Write-Output 0 }`, 6000)
+      result['clean-recycle'] = parseInt(rbR.out?.trim()) || 0
+    } catch {}
+    return result
+  } catch { return {} }
 })
 
 ipcMain.handle('export-report', async () => {

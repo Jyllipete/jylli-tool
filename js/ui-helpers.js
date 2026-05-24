@@ -1,9 +1,18 @@
 'use strict'
 
 // ─── Modal open/close helpers ─────────────────────────────────────────────────
+const _closeTimers = new WeakMap()
+
 function _openModal(id) {
   const el = document.getElementById(id)
   if (!el) return
+  // Cancel any pending close animation so a rapid open doesn't get hidden by
+  // the previous modal's 160ms setTimeout (race condition with sequential dialogs)
+  if (_closeTimers.has(el)) {
+    clearTimeout(_closeTimers.get(el))
+    _closeTimers.delete(el)
+  }
+  el.classList.remove('closing')
   el.style.display = 'flex'
   // Double-rAF guarantees a paint boundary so the CSS animation fires reliably
   requestAnimationFrame(() => requestAnimationFrame(() => el.classList.add('open')))
@@ -13,10 +22,12 @@ function _closeModal(id) {
   if (!el) return
   el.classList.remove('open')
   el.classList.add('closing')
-  setTimeout(() => {
+  const t = setTimeout(() => {
     el.style.display = 'none'
     el.classList.remove('closing')
+    _closeTimers.delete(el)
   }, 160)
+  _closeTimers.set(el, t)
 }
 
 // ─── Custom confirm dialog ────────────────────────────────────────────────────

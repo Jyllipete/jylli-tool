@@ -587,6 +587,7 @@ const LANG = {
       pingCustomAdd:'Add', pingCustomPlaceholder:'Custom IP or hostname…',
       pingJitter:'Jitter', pingP95:'P95', pingMin:'Min', pingMax:'Max',
       pingRecommend:'Recommendation', pingHistory:'Test History', pingHistoryEmpty:'No history yet',
+      pingLiveTimeline:'Live Timeline', pingLiveTimelineSub:'Real-time latency for all hosts as pings arrive',
       pingStatusParallel:'Testing all {total} servers in parallel…',
       pingGradeTitle:'Grade',
       pingRecHighLatency:'High latency — consider a wired connection or closer DNS',
@@ -663,6 +664,50 @@ const LANG = {
       netTipTitle:'Apply tweaks from top to bottom. Start with TCP Stack + DNS, then bandwidth, then NIC settings. Reboot once after applying all changes.',
       networkWifiTip:'Wi-Fi detected ({adapter}). Some network tweaks target Ethernet and may cause instability on Wi-Fi. Proceed carefully.',
       networkPingTip:'Ping tip: Cloudflare DNS + disable QoS + disable NetBIOS/WPAD + Nagle off = lowest stable ping.',
+      nicCardTitle:'Active Network Adapter',
+      nicCardSpeed:'Link Speed',
+      nicCardDriver:'Driver',
+      nicCardSsid:'SSID',
+      nicCardBand:'Band',
+      nicCardSignal:'Signal',
+      nicCardNoDriver:'—',
+      netApplySafe:'Apply Safe Defaults',
+      netApplySafeConfirm:'Apply all safe, non-destructive network tweaks in sequence? Skips tweaks that require a reboot or confirmation.',
+      netApplySafeDone:'{n} network tweaks applied.',
+      liveMonTitle:'Live Ping Monitor',
+      liveMonSub:'Continuous latency graph — see the effect of tweaks in real time.',
+      liveMonStart:'Start Monitor',
+      liveMonStop:'Stop Monitor',
+      liveMonCurrent:'Current',
+      liveMonAvg:'Avg',
+      liveMonMax:'Max',
+      liveMonJitter:'Jitter',
+      liveMonHost:'Target Host',
+      dnsBenchTitle:'DNS Speed Benchmark',
+      dnsBenchRun:'Benchmark DNS Providers',
+      dnsBenchRunning:'Benchmarking…',
+      dnsBenchFastest:'Fastest for you',
+      dnsBenchMs:'ms',
+      dnsBenchSet:'Use this DNS',
+      dnsBenchFail:'Unreachable',
+      netHealthTitle:'Network Health Check',
+      netHealthSub:'Diagnoses gateway RTT, DNS resolution speed, ISP routing, and packet loss.',
+      netHealthRun:'Run Health Check',
+      netHealthRunning:'Running diagnostics…',
+      netHealthGateway:'Gateway RTT',
+      netHealthDns:'DNS Resolution',
+      netHealthHops:'ISP First Hops',
+      netHealthLoss:'Packet Loss (Cloudflare)',
+      netHealthFail:'Could not detect',
+      netHealthGwGood:'Gateway is healthy',
+      netHealthGwWarn:'Elevated gateway RTT — check router',
+      netHealthGwBad:'High gateway RTT — router or cable issue',
+      netHealthGwJitterWarn:'Jitter detected — unstable connection',
+      netHealthDnsGood:'DNS is fast',
+      netHealthDnsMed:'DNS is slow — try Cloudflare DNS for ~5-10x improvement',
+      netHealthDnsBad:'DNS is very slow — switch providers immediately',
+      netHealthLossGood:'No packet loss',
+      netHealthLossBad:'Packet loss detected — unstable connection or ISP issue',
       fivemProgTweaks:'{n} / {total} tweaks applied',
       fivemProgFps:'Score: {n}',
       fivemApplyAllSafe:'Apply All Safe',
@@ -813,6 +858,8 @@ const LANG = {
       premiumLockTitle:'Premium Feature',
       premiumLockDesc:'Oikeuden näihin ominaisuuksiin saat ostamalla Premium jäsenyyden.',
       premiumLockCta:'Get Premium',
+      aomFivemLockedTitle:'FiveM Optimization — Premium Feature',
+      aomFivemLockedDesc:'FiveM tweaks (CPU priority, GPU pre-emption, network optimizations) are only available with Premium.',
       cleanupQuickCleanTitle:'Quick Clean',
       cleanupQuickCleanDesc:'Runs all safe cleanup jobs in one click — skips dangerous items that require confirmation.',
       cleanupQuickCleanBtn:'Quick Clean', cleanupEstimateBtn:'Estimate Size',
@@ -821,6 +868,9 @@ const LANG = {
       cleanupSysJunk:'System Junk', cleanupBrowserCaches:'Browser Caches',
       cleanupAppCaches:'App Caches', cleanupFivemSection:'FiveM / GTA',
       cleanupOldFiles:'Old & Leftover Files',
+      cleanupRecycleBin:'Recycle Bin', cleanupRecycleBinConfirm:'Confirm empty',
+      cleanupScanSizesBtn:'Scan Sizes', cleanupScanning:'Scanning…',
+      cleanupProgressTitle:'Running Quick Clean…', cleanupProgressDone:'All done! {done} jobs completed.',
       healthScoreLabel:'Score', healthScoreGood:'Looking good', healthScoreFair:'A few things to improve', healthScorePoor:'Needs attention',
       diskUsageTitle:'Disk Usage Analyzer', diskUsageSub:'See where your disk space is going — scan top folders for sizes.',
       diskUsageScan:'Scan', diskUsageEmpty:'No data found.',
@@ -911,6 +961,8 @@ const LANG = {
       settingsAdvancedDesc:'Unlock Process Manager, Latency Monitor, Ping Test, and BIOS Tuner',
       settingsAnalytics:'Anonymous Usage Stats',
       settingsAnalyticsDesc:'Send anonymous session data to help improve Jylli Tool',
+      settingsStartup:'Start at Windows Startup',
+      settingsStartupDesc:'Launch Jylli Tool automatically when Windows starts',
       dashWhatsNew:"WHAT'S NEW",
       dashSpecifications:'Specifications',
       dashOptimization:'Optimization overview',
@@ -1153,6 +1205,13 @@ const LANG = {
       genSearchPlaceholder:'Search tweaks…', genSafeDefaults:'Safe Defaults',
       genSafeDefaultsConfirm:'Apply safe tweaks with no danger flags or reboot required?',
       genSafeDefaultsDone:'Safe defaults applied!',
+      genCollapseSection:'Collapse section', genExpandSection:'Expand section',
+      genRebootBarLabel:'{n} tweak(s) need a reboot to take effect',
+      genRebootBarBtn:'Restart Now', genRebootBarConfirm:'Restart Windows now to apply all pending tweaks?',
+      genQuickWinTitle:'Quick Wins — Apply First', genQuickWinApplyAll:'Apply All', genQuickWinApplied:'All Applied ✓',
+      qwBenefitGameDvr:'Less CPU/GPU overhead', qwBenefitFso:'Lower input latency', qwBenefitMouseAccel:'1:1 aim accuracy',
+      qwBenefitMmcss:'More CPU for games', qwBenefitPriority:'Active window boost', qwBenefitBgApps:'Free RAM & CPU',
+      genTipReg:'Registry Key', genTipImpact:'Expected Impact', genTipLearnMore:'Learn more',
       genRebootBadge:'Reboot required', genTipTitle:'Tip: Click <b>Safe Defaults</b> to apply the most impactful tweaks in one go, then fine-tune from there.',
       // Conflict detector
       conflictBadgeLabel:'Conflicts with: {id}',
@@ -1161,6 +1220,7 @@ const LANG = {
       conflictLaptopPower:'This tweak increases power consumption and heat. On a laptop it will drain battery significantly faster.',
       conflictPowerPlan:'This power plan may not apply correctly — your CPU brand does not match the selected plan.',
       conflictNicWifi:'NIC tweaks are for Ethernet adapters. On Wi-Fi they may cause packet loss or disconnect the adapter.',
+      conflictDohNeedsCloudflare:'DNS over HTTPS works best when Cloudflare DNS (1.1.1.1) is also set as your DNS server. Apply the Cloudflare DNS tweak first for full DoH routing.',
       // Advanced/Hardware — warning banner + section group titles + button
       hwWarnText:'Create a System Restore Point before tweaking hardware or registry!',
       hwCreateRP:'Create Restore Point',
@@ -1389,6 +1449,37 @@ const LANG = {
       rpNotFound:'No restore points found or access denied. Ensure System Restore is enabled for C:\\',
       rpInvalidSeq:'Enter a valid sequence number from the list above.',
       rpInvalidSeqTitle:'Invalid Input',
+      rpDeleteConfirmTitle:'Delete Restore Point',
+      rpDeleteConfirmBody:'This will permanently delete restore point <strong>#{{seq}}</strong>. This cannot be undone.',
+      rpDeleteOk:'Delete',
+      rpDeleted:'✓ Restore point deleted.',
+      rpDeleteFailed:'✗ Failed to delete:',
+      rpAdminWarn:'Running without administrator rights — creating or restoring points may fail.',
+      rpRelaunchAdmin:'Relaunch as Admin',
+      rpStaleWarn:'No restore point created in the last 7 days — consider creating one now.',
+      rpDiskLabel:'System Restore storage',
+      rpDiskUsed:'Used',
+      rpDiskMax:'Max',
+      rpDiskUnavailable:'Disk usage data unavailable.',
+      rpScheduleLabel:'Auto-snapshot every:',
+      rpScheduleOff:'Off',
+      rpScheduleDay:'1 day',
+      rpSchedule3Days:'3 days',
+      rpScheduleWeek:'7 days',
+      rpLastAuto:'Last auto-snapshot:',
+      rpLastAutoNever:'Never',
+      rpExportList:'Export list',
+      rpBadgeLatest:'latest',
+      rpBadgeOld:'old',
+      rpTypeModify:'settings',
+      rpTypeInstall:'app install',
+      rpTypeDriver:'driver',
+      rpTypeOther:'other',
+      rpSelectedPreview:'Selected:',
+      rpNoSelection:'No point selected — click a row above.',
+      rpDeleteTitle:'Delete',
+      rpSrEnabled:'Protection: ON',
+      rpSrDisabled:'Protection: OFF',
       // Tooltips
       ttShowAdvanced:'Show/hide advanced tabs',
       ttDismiss:'Dismiss',
@@ -1463,7 +1554,13 @@ const LANG = {
       { label:'Do you use Sticky Keys / Accessibility hotkeys?',  sub:'No = Accidental StickyKeys trigger disabled' },
       { label:'Do you have a third-party antivirus?',             sub:'Yes = Defender notifications will be silenced' },
     ],
-    tweakDescs: {},
+    tweakDescs: {
+      'tcp-keepalive': 'Sets KeepAliveTime=30s (from 2h) and KeepAliveInterval=1s. Drops stale connections faster — reduces ghost connections in multiplayer games.',
+      'dns-doh': 'Routes DNS queries over encrypted HTTPS instead of plain UDP. Prevents ISP DNS snooping. Applies Cloudflare DoH (1.1.1.1) via Windows 11 native DoH setting.',
+      'disable-autoproxy': 'Stops Windows from auto-detecting proxy settings on every connection. Eliminates a source of connection delay and DNS-level latency spikes.',
+      'nic-ndis-poll': 'Replaces interrupt-driven packet delivery with polling — cuts worst-case DPC latency from ~500µs to ~50µs on supported NICs (Intel I225/I226, Realtek 8125). The same technique used in professional gaming infrastructure.',
+      'nic-rss-affinity': 'Pins RSS queue processing to dedicated CPU cores away from core 0, where OS timer interrupts land. Prevents NIC DPC handling from preempting your game thread. Measurable benefit on 6+ core CPUs.',
+    },
     tweakNames: {
       // General
       'game-dvr':'Disable Game DVR / Xbox Game Bar',
@@ -1553,18 +1650,26 @@ const LANG = {
       'flush-dns':'Flush DNS Cache',
       'dns-cloudflare':'DNS → Cloudflare 1.1.1.1',
       'dns-google':'DNS → Google 8.8.8.8',
+      'dns-quad9':'DNS → Quad9 9.9.9.9',
+      'dns-adguard':'DNS → AdGuard 94.140.14.14',
+      'dns-custom':'DNS → Custom',
       'qos-reserve':'Remove QoS Bandwidth Reservation',
       'net-throttling':'Disable Network Throttling',
       'nic-offloads':'Disable NIC Hardware Offloads',
       'nic-interrupt-mod':'Disable NIC Interrupt Moderation',
       'nic-flow-control':'Disable NIC Flow Control',
       'nic-energy-efficient':'Disable Energy Efficient Ethernet',
+      'nic-rss-affinity':'NIC RSS CPU Affinity',
+      'nic-ndis-poll':'Enable NDIS Polling Mode',
       'tcp-retransmit':'TCP Retransmit Limit',
       'tcp-ctcp':'Compound TCP Congestion Provider',
       'tcp-task-offload':'Enable TCP Task Offload (NIC)',
       'disable-netbios':'Disable NetBIOS over TCP/IP',
       'disable-ipv6':'Disable IPv6',
       'disable-wpad':'Disable WPAD',
+      'tcp-keepalive':'Tune TCP Keep-Alive Intervals',
+      'dns-doh':'Enable DNS over HTTPS (DoH)',
+      'disable-autoproxy':'Disable Auto-Proxy Detection (WinHTTP)',
       // FiveM
       'fivem-clear-cache-btn':'Clear FiveM App Cache + NVIDIA DXCache',
       'fivem-priority':'FiveM + GTA5 HIGH CPU Priority',
@@ -1603,6 +1708,11 @@ const LANG = {
       'clean-old-windows':'Old Windows Installations',
       'clean-vs-temp':'Visual Studio / Dev Tool Caches',
       'fivem-clear-cache':'FiveM Game Cache & Server Cache',
+      'clean-recycle':'Recycle Bin',
+      'clean-spotify':'Spotify Cache',
+      'clean-xbox':'Xbox App Cache',
+      'clean-msstore':'Microsoft Store Cache',
+      'clean-roblox':'Roblox Cache',
       // App Optimizer
       'edge-optimize':'Microsoft Edge Optimization',
       'chrome-optimize':'Google Chrome Optimization',
@@ -1871,6 +1981,7 @@ const LANG = {
       pingCustomAdd:'Lisää', pingCustomPlaceholder:'Mukautettu IP tai isäntänimi…',
       pingJitter:'Jitter', pingP95:'P95', pingMin:'Min', pingMax:'Max',
       pingRecommend:'Suositus', pingHistory:'Testihistoria', pingHistoryEmpty:'Ei historiatietoja vielä',
+      pingLiveTimeline:'Reaaliaikainen aikajana', pingLiveTimelineSub:'Reaaliaikainen viive kaikille isännille pingien saapuessa',
       pingStatusParallel:'Testataan kaikki {total} palvelinta rinnakkain…',
       pingGradeTitle:'Arvosana',
       pingRecHighLatency:'Korkea viive — harkitse langallista yhteyttä tai lähempää DNS:ää',
@@ -1947,6 +2058,50 @@ const LANG = {
       netTipTitle:'Käytä säätöjä ylhäältä alas. Aloita TCP Stack + DNS:llä, sitten kaistanleveys, sitten NIC-asetukset. Käynnistä uudelleen kaikkien muutosten jälkeen.',
       networkWifiTip:'Wi-Fi havaittu ({adapter}). Jotkin verkkoasetukset kohdistuvat Ethernetiin ja voivat aiheuttaa epävakautta Wi-Fi:llä. Jatka varovasti.',
       networkPingTip:'Ping-vinkki: Cloudflare DNS + poista QoS + poista NetBIOS/WPAD + Nagle pois = alhaisin vakaa ping.',
+      nicCardTitle:'Aktiivinen verkkosovitin',
+      nicCardSpeed:'Linkkiopeus',
+      nicCardDriver:'Ajuri',
+      nicCardSsid:'SSID',
+      nicCardBand:'Taajuuskaista',
+      nicCardSignal:'Signaali',
+      nicCardNoDriver:'—',
+      netApplySafe:'Käytä turvalliset oletukset',
+      netApplySafeConfirm:'Käytetäänkö kaikki turvalliset, ei-tuhoavat verkkoasetukset järjestyksessä? Ohittaa asetukset, jotka vaativat uudelleenkäynnistyksen tai vahvistuksen.',
+      netApplySafeDone:'{n} verkkoasetusta käytetty.',
+      liveMonTitle:'Reaaliaikainen ping-monitori',
+      liveMonSub:'Jatkuva viivegraafi — näe säätöjen vaikutus reaaliajassa.',
+      liveMonStart:'Käynnistä monitori',
+      liveMonStop:'Pysäytä monitori',
+      liveMonCurrent:'Nykyinen',
+      liveMonAvg:'Keskim.',
+      liveMonMax:'Maks.',
+      liveMonJitter:'Jitteri',
+      liveMonHost:'Kohdeosoite',
+      dnsBenchTitle:'DNS-nopeuden vertailu',
+      dnsBenchRun:'Vertaile DNS-palveluntarjoajia',
+      dnsBenchRunning:'Vertaillaan…',
+      dnsBenchFastest:'Nopein sinulle',
+      dnsBenchMs:'ms',
+      dnsBenchSet:'Käytä tätä DNS:ää',
+      dnsBenchFail:'Ei tavoitettavissa',
+      netHealthTitle:'Verkon terveystarkistus',
+      netHealthSub:'Diagnosoi yhdyskäytävän RTT:n, DNS-nopeuden, operaattorin reitityksen ja pakettihäviön.',
+      netHealthRun:'Suorita terveystarkistus',
+      netHealthRunning:'Suoritetaan diagnostiikkaa…',
+      netHealthGateway:'Yhdyskäytävän RTT',
+      netHealthDns:'DNS-selvitys',
+      netHealthHops:'Operaattorin ensimmäiset hypyt',
+      netHealthLoss:'Pakettihäviö (Cloudflare)',
+      netHealthFail:'Ei voitu tunnistaa',
+      netHealthGwGood:'Yhdyskäytävä on kunnossa',
+      netHealthGwWarn:'Kohonnut yhdyskäytävän RTT — tarkista reititin',
+      netHealthGwBad:'Korkea yhdyskäytävän RTT — reititin- tai kaapelivika',
+      netHealthGwJitterWarn:'Jitteriä havaittu — epävakaa yhteys',
+      netHealthDnsGood:'DNS on nopea',
+      netHealthDnsMed:'DNS on hidas — kokeile Cloudflare DNS:ää 5–10-kertaiseen parannukseen',
+      netHealthDnsBad:'DNS on erittäin hidas — vaihda palveluntarjoajaa heti',
+      netHealthLossGood:'Ei pakettihäviötä',
+      netHealthLossBad:'Pakettihäviötä havaittu — epävakaa yhteys tai ISP-ongelma',
       fivemTipTitle:'Käytä säätöjä ylhäältä alas. Yhdistä Grafiikka-asetuksiin (FPS-esiasetukset) parhaan tuloksen saavuttamiseksi. Suorita Mod-konfliktianalyysi jos koet kaatumisia tai desynkkejä.',
       fivemOrderTip:'Paras järjestys: Luo palautuspiste → Tyhjennä välimuisti → Defender-poikkeus → MMCSS → FSO → GPU-asetukset → Verkko → Käynnistä FiveM uudelleen.',
       fivemGpuRebootTip:'GPU-säätöjen jälkeen käynnistä tietokoneesi uudelleen, jotta Hardware Scheduling tulee voimaan.',
@@ -2073,6 +2228,8 @@ const LANG = {
       premiumLockTitle:'Premium-ominaisuus',
       premiumLockDesc:'Oikeuden näihin ominaisuuksiin saat ostamalla Premium jäsenyyden.',
       premiumLockCta:'Hanki Premium',
+      aomFivemLockedTitle:'FiveM-optimointi — Premium-ominaisuus',
+      aomFivemLockedDesc:'FiveM-muokkaukset (CPU-prioriteetti, GPU-latenssi, verkko-optimoinnit) ovat saatavilla vain Premium-käyttäjille.',
       cleanupQuickCleanTitle:'Pikäsiivous',
       cleanupQuickCleanDesc:'Suorittaa kaikki turvalliset siivoustehtävät yhdellä klikkauksella — ohittaa vaaralliset kohteet, jotka vaativat vahvistuksen.',
       cleanupQuickCleanBtn:'Pikäsiivous', cleanupEstimateBtn:'Arvioi koko',
@@ -2081,6 +2238,9 @@ const LANG = {
       cleanupSysJunk:'Järjestelmäroska', cleanupBrowserCaches:'Selaimen välimuistit',
       cleanupAppCaches:'Sovellusten välimuistit', cleanupFivemSection:'FiveM / GTA',
       cleanupOldFiles:'Vanhat ja jääneet tiedostot',
+      cleanupRecycleBin:'Roskakori', cleanupRecycleBinConfirm:'Vahvista tyhjennys',
+      cleanupScanSizesBtn:'Skannaa koot', cleanupScanning:'Skannataan…',
+      cleanupProgressTitle:'Suoritetaan pikäsiivousta…', cleanupProgressDone:'Valmis! {done} tehtävää suoritettu.',
       healthScoreLabel:'Pisteet', healthScoreGood:'Näyttää hyvältä', healthScoreFair:'Muutama asia parannettavaksi', healthScorePoor:'Tarvitsee huomiota',
       diskUsageTitle:'Levytilan analysaattori', diskUsageSub:'Katso mihin levytilasi menee — skannaa kansioiden koot.',
       diskUsageScan:'Skannaa', diskUsageEmpty:'Ei löydetty tietoja.',
@@ -2171,6 +2331,8 @@ const LANG = {
       settingsAdvancedDesc:'Avaa lukitut työkalut: Prosessienhallinta, Viivemonitori, Ping-testi ja BIOS-säätäjä',
       settingsAnalytics:'Anonyymi käyttötilasto',
       settingsAnalyticsDesc:'Lähetä anonyymiä istuntodataa Jylli Toolin kehittämisen tueksi',
+      settingsStartup:'Käynnistä Windowsin käynnistyksessä',
+      settingsStartupDesc:'Käynnistä Jylli Tool automaattisesti Windowsin käynnistyessä',
       dashWhatsNew:'UUDET OMINAISUUDET',
       dashSpecifications:'Tekniset tiedot',
       dashOptimization:'Optimoinnin yleiskatsaus',
@@ -2437,6 +2599,13 @@ const LANG = {
       genSearchPlaceholder:'Hae säätöjä…', genSafeDefaults:'Turvalliset oletukset',
       genSafeDefaultsConfirm:'Käytetäänkö turvalliset säädöt ilman vaaralippuja tai uudelleenkäynnistystä?',
       genSafeDefaultsDone:'Turvalliset oletukset käytetty!',
+      genCollapseSection:'Pienennä osio', genExpandSection:'Laajenna osio',
+      genRebootBarLabel:'{n} säätöä vaatii uudelleenkäynnistyksen',
+      genRebootBarBtn:'Käynnistä nyt', genRebootBarConfirm:'Käynnistetäänkö Windows uudelleen nyt kaikkien odottavien säätöjen soveltamiseksi?',
+      genQuickWinTitle:'Nopeat voitot — aloita näistä', genQuickWinApplyAll:'Käytä kaikki', genQuickWinApplied:'Kaikki käytössä ✓',
+      qwBenefitGameDvr:'Vähemmän CPU/GPU-rasitusta', qwBenefitFso:'Pienempi syötteen viive', qwBenefitMouseAccel:'1:1 tähtäystarkkuus',
+      qwBenefitMmcss:'Enemmän CPU:ta peleille', qwBenefitPriority:'Aktiivinen ikkuna etusijalle', qwBenefitBgApps:'Vapauta RAM & CPU',
+      genTipReg:'Rekisteriavain', genTipImpact:'Odotettu vaikutus', genTipLearnMore:'Lue lisää',
       genRebootBadge:'Uudelleenkäynnistys vaaditaan', genTipTitle:'Vinkki: Klikkaa <b>Turvalliset oletukset</b> käyttääksesi vaikuttavimmat säädöt kerralla, ja hienosäädä sen jälkeen.',
       // Conflict detector
       conflictBadgeLabel:'Ristiriita: {id}',
@@ -2445,6 +2614,7 @@ const LANG = {
       conflictLaptopPower:'Tämä säätö lisää virrankulutusta ja lämpöä. Kannettavassa se tyhjentää akun huomattavasti nopeammin.',
       conflictPowerPlan:'Tämä virrankäyttöprofiili ei välttämättä toimi oikein — prosessorisi merkki ei vastaa valittua profiilia.',
       conflictNicWifi:'NIC-säädöt on tarkoitettu Ethernet-sovittimille. Wi-Fi-yhteydellä ne voivat aiheuttaa pakettihäviötä tai katkaista yhteyden.',
+      conflictDohNeedsCloudflare:'DNS over HTTPS toimii parhaiten, kun Cloudflare DNS (1.1.1.1) on myös asetettu DNS-palvelimeksesi. Käytä ensin Cloudflare DNS -säätö täydelle DoH-reititykselle.',
       // Advanced/Hardware
       hwWarnText:'Luo järjestelmän palautuspiste ennen laitteisto- tai rekisterisäätöjä!',
       hwCreateRP:'Luo palautuspiste',
@@ -2667,6 +2837,37 @@ const LANG = {
       rpNotFound:'Palautuspisteitä ei löydy tai käyttö estetty. Varmista, että Järjestelmän palautus on käytössä asemalle C:\\',
       rpInvalidSeq:'Syötä kelvollinen järjestysnumero yllä olevasta listasta.',
       rpInvalidSeqTitle:'Virheellinen syöte',
+      rpDeleteConfirmTitle:'Poista palautuspiste',
+      rpDeleteConfirmBody:'Tämä poistaa pysyvästi palautuspisteen <strong>#{{seq}}</strong>. Toimintoa ei voi peruuttaa.',
+      rpDeleteOk:'Poista',
+      rpDeleted:'✓ Palautuspiste poistettu.',
+      rpDeleteFailed:'✗ Poisto epäonnistui:',
+      rpAdminWarn:'Sovellus toimii ilman järjestelmänvalvojan oikeuksia — palautuspisteiden luominen tai palautus saattaa epäonnistua.',
+      rpRelaunchAdmin:'Käynnistä uudelleen järjestelmänvalvojana',
+      rpStaleWarn:'Palautuspistettä ei ole luotu viimeisten 7 päivän aikana — harkitse uuden luomista.',
+      rpDiskLabel:'Järjestelmän palautustila',
+      rpDiskUsed:'Käytetty',
+      rpDiskMax:'Maks',
+      rpDiskUnavailable:'Levytietojen haku epäonnistui.',
+      rpScheduleLabel:'Automaattinen tilannevedos:',
+      rpScheduleOff:'Ei käytössä',
+      rpScheduleDay:'1 päivä',
+      rpSchedule3Days:'3 päivää',
+      rpScheduleWeek:'7 päivää',
+      rpLastAuto:'Viimeisin automaattinen:',
+      rpLastAutoNever:'Ei koskaan',
+      rpExportList:'Vie lista',
+      rpBadgeLatest:'uusin',
+      rpBadgeOld:'vanha',
+      rpTypeModify:'asetukset',
+      rpTypeInstall:'asennus',
+      rpTypeDriver:'ajuri',
+      rpTypeOther:'muu',
+      rpSelectedPreview:'Valittu:',
+      rpNoSelection:'Ei pistettä valittuna — klikkaa riviä yllä.',
+      rpDeleteTitle:'Poista',
+      rpSrEnabled:'Suojaus: PÄÄLLÄ',
+      rpSrDisabled:'Suojaus: POIS',
       // Tooltips
       ttShowAdvanced:'Näytä/piilota lisätoiminnot',
       ttDismiss:'Sulje',
@@ -2726,7 +2927,7 @@ const LANG = {
       'telemetry': 'Lopettaa Windowsin käyttötietojen lähettämisen Microsoftille. Vapauttaa tausta-CPU:ta ja levyaktiivisuutta.',
       'cortana': 'Pysäyttää indeksoijan taustalla tapahtuvan levynkäytön. Tiedostohaut Resurssienhallinnassa hidastuvat hieman.',
       'win-tips': 'Poistaa ehdotukset ja vinkkipainallukset, jotka ponnahtavat esiin ja kuluttavat resursseja.',
-      'visual-effects': 'Poistaa Aeron, tehtäväpalkin animaatiot ja ikkunavarjot. Vapauttaa GPU/CPU-kuormaa pienemmän VRAM:n järjestelmissä.',
+      'visual-effects': 'Poistaa Aeron, tehtäväpalkin animaatiot ja ikkunavarjot. Pitää fonttisilennyksen, ikkunan sisällön vetämisen ja pikkukuvat käytössä. Vapauttaa GPU/CPU-kuormaa pienemmän VRAM:n järjestelmissä.',
       'explorer-perf': 'Poistaa Resurssienhallinnan 10 sekunnin käynnistysviiveen ja asettaa Tämä tietokone oletukseksi.',
       'hibernate': 'Poistaa hiberfil.sys-tiedoston (koko suunnilleen RAM:n verran). Vapauttaa merkittävästi levytilaa.',
       'disable-mouse-accel': 'Poistaa Paranna osoittimen tarkkuutta -asetuksen koko järjestelmästä. Hiiri liikkuu 1:1-suhteessa ilman Windowsin käyrää. Välttämätön johdonmukaisen tähtäyksen kannalta.',
@@ -2808,6 +3009,9 @@ const LANG = {
       'flush-dns': 'Tyhjentää paikallisen DNS-ratkaisijan välimuistin. Korjaa vanhentuneet DNS-kirjaukset, jotka aiheuttavat yhteysongelmia.',
       'dns-cloudflare': 'Nopein DNS useimmille EU/US-käyttäjille. Yksityisyyteen keskittynyt — ei kirjaa kyselyitä. Sovelletaan kaikkiin aktiivisiin sovittimiin.',
       'dns-google': 'Erittäin luotettava vaihtoehtoinen julkinen DNS. Enemmän lokitusta kuin Cloudflare. Sovelletaan kaikkiin aktiivisiin sovittimiin.',
+      'dns-quad9': 'Haittaohjelmat blokkiva DNS ilman kyselyiden kirjausta. Globaali anycast-verkko — usein nopein Pohjoismaissa ja Itä-Euroopassa. Sovelletaan kaikkiin aktiivisiin sovittimiin.',
+      'dns-adguard': 'Blokkaa mainokset ja seurantaohjelmat DNS-tasolla — vähentää taustaliikennettä pelin aikana. EU-pohjainen, ei kirjaa kyselyitä. Sovelletaan kaikkiin aktiivisiin sovittimiin.',
+      'dns-custom': 'Aseta mukautettu ensisijainen ja toissijainen DNS-palvelin. Hyödyllinen paikallisille pelipalvelimen DNS-osoittimille, yritysratkaisuille tai yksityisyyttä korostaville vaihtoehdoille.',
       'qos-reserve': 'Windows varaa oletuksena jopa 20 % kaistanleveydestä taustapalveluille. Poistamalla tämän pelit saavat enemmän kaistanleveyttä.',
       'net-throttling': 'Poistaa keinotekoisen verkkopakettien nopeusrajan, jota Windows soveltaa ei-multimediasovelluksiin.',
       'nic-offloads': 'Laitteisto-ohitukset säästävät CPU:ta mutta lisäävät viiveen ylikuormaa. Poistamalla ne saa johdonmukaisempaa verkkoajoitusta.',
@@ -2820,6 +3024,9 @@ const LANG = {
       'disable-netbios': 'Vanha Windowsin verkkoprotokolla, jota ei tarvita moderniin pelaamiseen tai internet-yhteyksiin.',
       'disable-ipv6': 'Turvallinen pelaamiseen. Saattaa rikkoa jotkut yrityksen VPN:t. Vaatii uudelleenkäynnistyksen.',
       'disable-wpad': 'WPAD kyselee välityspalvelimen konfiguraatiota jokaisella verkon muutoksella — tietoturvariski ja viiveen lähde.',
+      'tcp-keepalive': 'Asettaa KeepAliveTime=30s (aiemmin 2h) ja KeepAliveInterval=1s. Katkaisee vanhentuneet yhteydet nopeammin — vähentää haamuyhteyksiä moninpeleissä.',
+      'dns-doh': 'Reitittää DNS-kyselyt salatun HTTPS:n kautta tavallisen UDP:n sijaan. Estää internetpalveluntarjoajan DNS-urkintaa. Ottaa käyttöön Cloudflare DoH:n (1.1.1.1) Windows 11:n natiivilla DoH-asetuksella.',
+      'disable-autoproxy': 'Estää Windowsia tunnistamasta välityspalvelinasetuksia automaattisesti jokaisella yhteydellä. Poistaa yhteysviiveen ja DNS-tason latenssipiikkien lähteen.',
       // FiveM
       'fivem-clear-cache-btn': 'Pyyhkii kaikki FiveM:n data-välimuisti-, server-cache-, shader-cache- ja NVIDIA DXCache-kansiot. FiveM rakentaa ne uudelleen seuraavalla käynnistyksellä.',
       'fivem-priority': 'Kirjoittaa CpuPriorityClass=3 FiveM.exe-, GTA5.exe- ja CitizenFX.exe-prosesseille. Korkeampi CPU-aikataulutuksen prioriteetti.',
@@ -2960,18 +3167,26 @@ const LANG = {
       'flush-dns':'Tyhjennä DNS-välimuisti',
       'dns-cloudflare':'DNS → Cloudflare 1.1.1.1',
       'dns-google':'DNS → Google 8.8.8.8',
+      'dns-quad9':'DNS → Quad9 9.9.9.9',
+      'dns-adguard':'DNS → AdGuard 94.140.14.14',
+      'dns-custom':'DNS → Mukautettu',
       'qos-reserve':'Poista QoS-kaistanleveysvaraus',
       'net-throttling':'Poista verkon kuristus',
       'nic-offloads':'Poista NIC-laitteistopurku',
       'nic-interrupt-mod':'Poista NIC-keskeytysmodulaatio',
       'nic-flow-control':'Poista NIC-vuonsäätö',
       'nic-energy-efficient':'Poista energiatehokas Ethernet',
+      'nic-rss-affinity':'NIC RSS -suoritinaffiniteetti',
+      'nic-ndis-poll':'Ota käyttöön NDIS-kyselytila',
       'tcp-retransmit':'TCP-uudelleenlähetysraja',
       'tcp-ctcp':'Compound TCP -ruuhkaudenhallintatarjoaja',
       'tcp-task-offload':'Ota käyttöön TCP-tehtävän purku (NIC)',
       'disable-netbios':'Poista NetBIOS TCP/IP:n yli',
       'disable-ipv6':'Poista IPv6',
       'disable-wpad':'Poista WPAD',
+      'tcp-keepalive':'Säädä TCP Keep-Alive -intervallit',
+      'dns-doh':'Ota käyttöön DNS over HTTPS (DoH)',
+      'disable-autoproxy':'Poista automaattinen välityspalvelimen tunnistus (WinHTTP)',
       // FiveM
       'fivem-clear-cache-btn':'Tyhjennä FiveM-sovellusvälimuisti + NVIDIA DXCache',
       'fivem-priority':'FiveM + GTA5 KORKEA CPU-prioriteetti',
@@ -3010,6 +3225,11 @@ const LANG = {
       'clean-old-windows':'Vanhat Windows-asennukset',
       'clean-vs-temp':'Visual Studion / kehitystyökalujen välimuistit',
       'fivem-clear-cache':'FiveM-peli- ja palvelinvälimuisti',
+      'clean-recycle':'Roskakori',
+      'clean-spotify':'Spotify-välimuisti',
+      'clean-xbox':'Xbox-sovellusvälimuisti',
+      'clean-msstore':'Microsoft Store -välimuisti',
+      'clean-roblox':'Roblox-välimuisti',
       // App Optimizer
       'edge-optimize':'Microsoft Edge -optimointi',
       'chrome-optimize':'Google Chrome -optimointi',
@@ -3245,6 +3465,7 @@ function applyI18n() {
   document.querySelectorAll('[data-i18n-title]').forEach(el => { el.textContent = tTitle(el.dataset.i18nTitle) })
   document.querySelectorAll('[data-i18n-placeholder]').forEach(el => { el.placeholder = tUI(el.dataset.i18nPlaceholder) })
   document.querySelectorAll('[data-i18n-tooltip]').forEach(el => { el.dataset.tooltip = tUI(el.dataset.i18nTooltip) })
+  if (typeof genUpdateRebootBar === 'function') genUpdateRebootBar()
 }
 
 function initLanguage() {
@@ -3271,6 +3492,22 @@ let _flickerNudgeSent = false
 async function init(isPremium = false) {
   api.startupTrace?.('init() entered')
   settings = await api.loadSettings() || {}
+  // Detect reboot: if boot time advanced since last run, clear stale 'applied' tweak states
+  try {
+    const currentBootMs = await api.getBootTime().catch(() => null)
+    if (currentBootMs) {
+      const prevBootMs = settings.lastBootTimeMs || 0
+      if (prevBootMs > 0 && currentBootMs > prevBootMs) {
+        const REBOOT_IDS = ['hpet','tsc-sync','msi-mode','gpu-hwsch','cursor-max-rate',
+                            'spectre-meltdown','bcd-tweaks','global-timer-resolution']
+        for (const id of REBOOT_IDS) {
+          if (settings[`tweak_${id}`] === 'applied') settings[`tweak_${id}`] = 'default'
+        }
+      }
+      settings.lastBootTimeMs = currentBootMs
+      await api.saveSettings(settings).catch(() => {})
+    }
+  } catch {}
   settings.isPremium = isPremium
   initPersonalization()
   ;[window._whatsNew, appVersion] = await Promise.all([
@@ -4280,6 +4517,16 @@ function buildSettings(c) {
           <span class="pill-slider"></span>
         </label>
       </div>
+      <div class="startup-row" style="justify-content:space-between">
+        <div>
+          <div class="startup-name">${tUI('settingsStartup')}</div>
+          <div class="startup-cmd">${tUI('settingsStartupDesc')}</div>
+        </div>
+        <label class="toggle-pill">
+          <input type="checkbox" id="settings-startup-check" onchange="settingsToggleStartup(this.checked)">
+          <span class="pill-slider"></span>
+        </label>
+      </div>
     </div>
 
     <!-- Export Report -->
@@ -4408,6 +4655,8 @@ function buildSettings(c) {
   if (advCheck) advCheck.checked = !!settings.advancedMode
   const analyticsCheck = document.getElementById('settings-analytics-check')
   if (analyticsCheck) analyticsCheck.checked = !settings.analyticsOptOut
+  const startupCheck = document.getElementById('settings-startup-check')
+  if (startupCheck) startupCheck.checked = !!settings.startAtLogin
 
   // About version
   const verLabel = document.getElementById('settings-ver-label')
@@ -4469,6 +4718,13 @@ function settingsToggleDiscordRpc(on) {
   api.saveSettings(settings)
   api.setDiscordRpc(on)
   toast(on ? 'Discord status enabled' : 'Discord status disabled', '', on ? 'ok' : 'info')
+}
+
+function settingsToggleStartup(on) {
+  settings.startAtLogin = on
+  api.saveSettings(settings)
+  api.setStartup(on)
+  toast(on ? tUI('settingsStartup') + ' enabled' : tUI('settingsStartup') + ' disabled', '', on ? 'ok' : 'info')
 }
 
 // ─── UI Sounds ────────────────────────────────────────────────────────────────
@@ -5748,7 +6004,7 @@ function buildPingTest(c) {
   resultsCard.appendChild(list)
   c.appendChild(resultsCard)
 
-  const tlCard = makeSection('Live Timeline', 'Real-time latency for all hosts as pings arrive')
+  const tlCard = makeSection(tUI('pingLiveTimeline'), tUI('pingLiveTimelineSub'))
   const tlWrap = document.createElement('div')
   tlWrap.className = 'ping-timeline-wrap'
   tlWrap.innerHTML = '<canvas id="ping-timeline-canvas" height="120"></canvas>'
@@ -8374,6 +8630,14 @@ const TWEAK_CONFLICTS = {
   'nic-flow-control':    { warnIf: si => si.isWifi, warnMsg: 'conflictNicWifi' },
   'nic-energy-efficient':{ warnIf: si => si.isWifi, warnMsg: 'conflictNicWifi' },
   'nic-offloads':        { warnIf: si => si.isWifi, warnMsg: 'conflictNicWifi' },
+  'nic-rss-affinity':    { warnIf: si => si.isWifi, warnMsg: 'conflictNicWifi' },
+  'nic-ndis-poll':       { warnIf: si => si.isWifi, warnMsg: 'conflictNicWifi' },
+  'dns-cloudflare':      { conflictsWith: ['dns-google','dns-quad9','dns-adguard','dns-custom'] },
+  'dns-google':          { conflictsWith: ['dns-cloudflare','dns-quad9','dns-adguard','dns-custom'] },
+  'dns-quad9':           { conflictsWith: ['dns-cloudflare','dns-google','dns-adguard','dns-custom'] },
+  'dns-adguard':         { conflictsWith: ['dns-cloudflare','dns-google','dns-quad9','dns-custom'] },
+  'dns-custom':          { conflictsWith: ['dns-cloudflare','dns-google','dns-quad9','dns-adguard'] },
+  'dns-doh':             { warnIf: () => tweakState('dns-cloudflare') !== 'applied', warnMsg: 'conflictDohNeedsCloudflare' },
 }
 
 function getConflictInfo(id) {
@@ -8450,17 +8714,178 @@ function applyDanger(id) {
   applyTweak(id)
 }
 
-function makeSection(title, subtitle = '') {
+function makeSection(title, subtitle = '', secId = '') {
   const card = document.createElement('div')
   card.className = 'section-card'
+  if (secId) card.dataset.secId = secId
   card.innerHTML = `
     <div class="section-header">
       <div class="section-accent"></div>
       <div class="section-title">${tSection(title)}</div>
+      ${secId ? `<span class="sec-progress-badge" id="spb-${secId}" style="display:none"></span>
+      <button class="sec-collapse-btn" id="scb-${secId}" onclick="genCollapseSection('${secId}')" title="${tUI('genCollapseSection')}"><i class="fa fa-chevron-down"></i></button>` : ''}
     </div>
     ${subtitle ? `<div class="section-subtitle">${subtitle}</div>` : ''}
   `
   return card
+}
+
+function genCollapseSection(secId) {
+  const card = document.querySelector(`.section-card[data-sec-id="${secId}"]`)
+  if (!card) return
+  const grid = card.querySelector('.tweak-card-grid')
+  const btn = document.getElementById('scb-' + secId)
+  if (!grid) return
+  const isCollapsed = grid.classList.toggle('sec-collapsed')
+  if (btn) btn.classList.toggle('collapsed', isCollapsed)
+  try { localStorage.setItem('sec_col_' + secId, isCollapsed ? '1' : '') } catch {}
+}
+
+let _genSections = null
+
+const REBOOT_TWEAK_IDS = new Set(['hpet','tsc-sync','msi-mode','gpu-hwsch','cursor-max-rate','spectre-meltdown','bcd-tweaks','global-timer-resolution'])
+
+function genUpdateRebootBar() {
+  const bar = document.getElementById('reboot-queue-bar')
+  const label = document.getElementById('rqb-label')
+  const btn = document.getElementById('rqb-btn')
+  if (!bar) return
+  const pending = [...REBOOT_TWEAK_IDS].filter(id => settings[`tweak_${id}`] === 'applied')
+  if (pending.length === 0) {
+    bar.classList.remove('visible')
+    document.body.style.paddingBottom = ''
+    return
+  }
+  if (label) label.textContent = tUI('genRebootBarLabel').replace('{n}', pending.length)
+  if (btn) btn.textContent = tUI('genRebootBarBtn')
+  bar.classList.add('visible')
+  document.body.style.paddingBottom = '48px'
+}
+
+async function genRebootNow() {
+  try {
+    await showConfirm({ title: tUI('genRebootBarBtn'), body: tUI('genRebootBarConfirm'), okText: tUI('genRebootBarBtn'), okStyle: 'warning', icon: 'fa-rotate-right' })
+  } catch { return }
+  await api.reboot?.().catch(() => {})
+}
+
+function genRefreshQuickWinStrip() {
+  const QW_IDS = ['game-dvr','disable-fso','disable-mouse-accel','mmcss','priority-sep','disable-background-apps']
+  let allDone = true
+  QW_IDS.forEach(id => {
+    const applied = settings[`tweak_${id}`] === 'applied'
+    if (!applied) allDone = false
+    const card = document.getElementById('qwc-' + id)
+    if (card) card.classList.toggle('qw-done', applied)
+    const badge = document.getElementById('qws-badge-' + id)
+    if (badge) {
+      badge.className = 'qw-badge' + (applied ? ' applied' : '')
+      badge.innerHTML = applied ? `<i class="fa fa-check"></i> ${tUI('statusApplied')}` : tUI('statusDefault')
+    }
+  })
+  const btn = document.getElementById('qw-apply-btn')
+  if (btn) {
+    const remaining = QW_IDS.filter(id => settings[`tweak_${id}`] !== 'applied').length
+    btn.textContent = remaining === 0 ? tUI('genQuickWinApplied') : tUI('genQuickWinApplyAll')
+    btn.disabled = remaining === 0
+  }
+}
+
+async function genApplyQuickWins() {
+  const QW_IDS = ['game-dvr','disable-fso','disable-mouse-accel','mmcss','priority-sep','disable-background-apps']
+  const toApply = QW_IDS.filter(id => settings[`tweak_${id}`] !== 'applied')
+  if (!toApply.length) return
+  await applyTweakBatch(toApply, 'apply')
+}
+
+// ─── Tweak Info Popover ────────────────────────────────────────────────────────
+const GEN_TIP_DATA = {
+  'game-dvr':         { reg:'HKCU\\System\\GameConfigStore: GameDVR_Enabled=0', impact:'Removes 3–8% CPU/GPU overhead; frees recording buffer memory' },
+  'disable-fso':      { reg:'HKCU\\System\\GameConfigStore: GameDVR_FSEBehaviorMode=2', impact:'Reduces input latency by ~1–3ms in exclusive fullscreen' },
+  'visual-effects':   { reg:'HKCU\\Control Panel\\Desktop\\WindowMetrics + SystemParametersInfo SPI_SETANIMATION', impact:'Frees GPU/CPU from rendering shadows, animations, transparency effects' },
+  'mmcss':            { reg:'HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Multimedia\\SystemProfile: SystemResponsiveness=10, NetworkThrottlingIndex=0xffffffff', impact:'Games receive higher CPU time slices; reduces frame time variance' },
+  'priority-sep':     { reg:'HKLM\\SYSTEM\\CurrentControlSet\\Control\\PriorityControl: Win32PrioritySeparation=38', impact:'Active window gets ~75% more CPU quantum than background apps' },
+  'disable-mouse-accel': { reg:'HKCU\\Control Panel\\Mouse: MouseSpeed=0, MouseThreshold1=0, MouseThreshold2=0', impact:'1:1 physical/virtual mouse movement; eliminates Windows pointer curve' },
+  'usb-suspend':      { reg:'HKLM\\SYSTEM\\CurrentControlSet\\Services\\USB: DisableSelectiveSuspend=1 + powercfg per-device', impact:'Eliminates mouse ghosting after screen sleep; fixes 8000Hz polling drops' },
+  'cursor-max-rate':  { reg:'HKLM\\SYSTEM\\CurrentControlSet\\Services\\mouclass\\Parameters: MouseDataQueueSize=100; HIDDeviceInputProcessingMode=0', impact:'Unlocks 8000Hz mice; fixes click loss when dragging across monitors' },
+  'hpet':             { reg:'bcdedit /deletevalue useplatformclock', impact:'On most CPUs improves FPS consistency by 2–5%; requires reboot' },
+  'msi-mode':         { reg:'HKLM\\SYSTEM\\CurrentControlSet\\Enum\\PCI\\...\\Interrupt Management\\MessageSignaledInterruptProperties: MSISupported=1', impact:'Reduces interrupt latency for GPU/NIC; eliminates legacy line-based interrupts' },
+  'gpu-hwsch':        { reg:'HKLM\\SYSTEM\\CurrentControlSet\\Control\\GraphicsDrivers: HwSchMode=2', impact:'Offloads GPU command queue from CPU thread; lowers frame latency 1–3ms' },
+  'tdr-delay':        { reg:'HKLM\\SYSTEM\\CurrentControlSet\\Control\\GraphicsDrivers: TdrDelay=10', impact:'Prevents "Display driver stopped responding" crashes under heavy DXR/mod load' },
+  'ntfs':             { reg:'fsutil behavior set disable8dot3 1; fsutil behavior set disableLastAccess 1', impact:'Reduces metadata writes on every file read; measurable on busy NVMe SSDs' },
+  'sysmain':          { reg:'HKLM\\SYSTEM\\CurrentControlSet\\Services\\SysMain: Start=4', impact:'Stops RAM pre-loading; best on 16 GB+ where games fit without prefetch' },
+  'global-timer-resolution': { reg:'HKLM\\SYSTEM\\CurrentControlSet\\Control\\Session Manager\\kernel: GlobalTimerResolutionRequests=1', impact:'Forces 0.5ms system timer on Win11; fixes silent FPS caps in games that skip timeBeginPeriod()' },
+  'power-throttling': { reg:'HKLM\\SYSTEM\\CurrentControlSet\\Control\\Power\\PowerThrottling: PowerThrottlingOff=1', impact:'Prevents Windows throttling background process clocks; keeps GPU busy' },
+  'raw-aim-curve':    { reg:'HKCU\\Control Panel\\Mouse: MouseSensitivity (flat 1:1 curve array)', impact:'Removes any hidden pointer curve; every mouse count maps exactly to 1 pixel' },
+  'disable-background-apps': { reg:'HKLM\\SOFTWARE\\Policies\\Microsoft\\Windows\\AppPrivacy: LetAppsRunInBackground=2', impact:'Stops UWP apps (Xbox, News, Weather) consuming CPU/RAM while gaming' },
+  'telemetry':        { reg:'HKLM\\SOFTWARE\\Policies\\Microsoft\\Windows\\DataCollection: AllowTelemetry=1 + DiagTrack service disabled', impact:'Eliminates background telemetry uploads; frees ~2–4% CPU on budget hardware' },
+  'disable-delivery-opt': { reg:'HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\DeliveryOptimization\\Config: DODownloadMode=100', impact:'Stops Windows uploading updates to peers on your connection' },
+  'memory-compression': { reg:'Disable-MMAgent -mc (PowerShell)', impact:'Removes CPU overhead of compressing RAM; may increase pagefile use if RAM is tight' },
+  'sticky-keys-guard': { reg:'HKCU\\Control Panel\\Accessibility\\StickyKeys: Flags=506', impact:'Prevents StickyKeys dialog interrupting gameplay when Shift is pressed 5× in a row' },
+  'nudge-blocker':    { reg:'HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\Explorer: NoDriveTypeAutoRun=255', impact:'Stops AutoPlay notifications from USB device inserts during gaming' },
+}
+
+let _genTipActiveId = null
+
+function genTipOpen(id, event) {
+  event.stopPropagation()
+  const pop = document.getElementById('gen-tip-pop')
+  if (!pop) return
+  if (_genTipActiveId === id) { genTipClose(); return }
+  _genTipActiveId = id
+  const tip = GEN_TIP_DATA[id]
+  if (!tip) return
+  pop.innerHTML = `
+    <div style="font-size:12px;font-weight:700;color:var(--white);margin-bottom:10px">${tUI('genTipReg')}</div>
+    <div style="font-size:10px;color:#8080a8;font-family:monospace;word-break:break-all;background:rgba(0,0,0,0.3);padding:6px 8px;border-radius:6px;margin-bottom:10px">${tip.reg}</div>
+    <div style="font-size:12px;font-weight:700;color:var(--white);margin-bottom:6px">${tUI('genTipImpact')}</div>
+    <div style="font-size:11px;color:var(--gray);line-height:1.5">${tip.impact}</div>
+  `
+  const btn = event.currentTarget
+  const rect = btn.getBoundingClientRect()
+  pop.style.display = 'block'
+  const popW = 280
+  let left = rect.right - popW
+  if (left < 8) left = 8
+  let top = rect.bottom + 6
+  if (top + 160 > window.innerHeight) top = rect.top - 170
+  pop.style.left = left + 'px'
+  pop.style.top = top + 'px'
+  requestAnimationFrame(() => pop.classList.add('visible'))
+}
+
+function genTipClose() {
+  _genTipActiveId = null
+  const pop = document.getElementById('gen-tip-pop')
+  if (pop) { pop.classList.remove('visible'); setTimeout(() => { if (!pop.classList.contains('visible')) pop.style.display = 'none' }, 150) }
+}
+
+document.addEventListener('click', e => {
+  if (_genTipActiveId && !e.target.closest('.tc-info-btn') && !e.target.closest('#gen-tip-pop')) genTipClose()
+})
+
+function genRefreshAllCounters() {
+  if (!_genSections) return
+  let totalApplied = 0, totalCards = 0
+  _genSections.forEach(sec => {
+    const secId = sec.id || ''
+    const ids = (sec.cards || []).map(c => c.id)
+    const applied = ids.filter(id => settings[`tweak_${id}`] === 'applied').length
+    totalApplied += applied
+    totalCards += ids.length
+    if (secId) {
+      const badge = document.getElementById('spb-' + secId)
+      if (badge) {
+        badge.textContent = `${applied}/${ids.length}`
+        badge.style.display = ids.length > 0 ? '' : 'none'
+        badge.classList.toggle('complete', applied === ids.length && ids.length > 0)
+      }
+    }
+  })
+  const counter = document.getElementById('gen-applied-counter')
+  if (counter) counter.textContent = `${totalApplied}/${totalCards}`
+  genUpdateRebootBar()
+  genRefreshQuickWinStrip()
 }
 
 function makeTip(text, type = 'info') {
@@ -9854,8 +10279,10 @@ const TWEAK_OPT_WEIGHTS = {
 }
 
 function calcOptScore(settingsObj) {
+  const premiumPrefixes = ['fivem-']
   return Object.entries(settingsObj)
     .filter(([k, v]) => k.startsWith('tweak_') && v === 'applied')
+    .filter(([k]) => settings.isPremium || !premiumPrefixes.some(p => k.startsWith('tweak_' + p)))
     .reduce((sum, [k]) => sum + (TWEAK_OPT_WEIGHTS[k.replace('tweak_', '')] || 1), 0)
 }
 
@@ -10293,6 +10720,22 @@ function aomFivemReadable(val) { return AOM_FIVEM_READABLE[val] ?? val }
 async function aomRenderStepFiveM() {
   aomSetStep(2)
   const body = document.getElementById('aom-body')
+
+  if (!settings.isPremium) {
+    const url = await api.getPremiumUrl().catch(() => 'https://jyllitool.netlify.app/')
+    body.innerHTML = `
+      <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px 20px;gap:12px;text-align:center">
+        <div style="font-size:28px;color:var(--muted)"><i class="fa fa-lock"></i></div>
+        <div style="font-size:13px;font-weight:700;color:var(--white)"><i class="fa fa-crown" style="color:#f39c12;margin-right:6px"></i>${tUI('aomFivemLockedTitle')}</div>
+        <div style="font-size:11px;color:var(--muted);max-width:280px;line-height:1.5">${tUI('aomFivemLockedDesc')}</div>
+        <a href="#" class="btn btn-primary btn-sm" onclick="api.openExternal('${url}');return false"><i class="fa fa-crown"></i> ${tUI('premiumLockCta')}</a>
+      </div>`
+    document.getElementById('aom-footer').innerHTML = `
+      <button class="btn btn-ghost btn-sm" onclick="aomRenderStep1()"><i class="fa fa-arrow-left"></i> ${tUI('back')}</button>
+      <button class="btn btn-success btn-sm" onclick="aomRenderStep2()"><i class="fa fa-arrow-right"></i> Next — Review Tweaks</button>`
+    return
+  }
+
   body.innerHTML = `<div style="text-align:center;padding:30px 0;color:var(--muted)"><i class="fa fa-spinner fa-spin" style="font-size:18px"></i><div style="margin-top:8px;font-size:11px">Checking for FiveM…</div></div>`
   document.getElementById('aom-footer').innerHTML = ''
 
@@ -10479,8 +10922,8 @@ function aomBuildTweakList() {
     { id:'pcie-power',      icon:'fa-plug-circle-bolt',cat:'Power',     label:'Disable PCIe Link State power management',    safe: !si.isLaptop, skipReason:'Skipped — laptop detected' },
     { id:'sysmain',         icon:'fa-brain',          cat:'Memory',     label:'Disable SysMain (SuperFetch)',                safe: si.ramGB >= 16, skipReason:`Skipped — ${si.ramGB}GB RAM (<16GB)` },
     { id:'nvme-latency',    icon:'fa-hard-drive',     cat:'Storage',    label:'NVMe StorPort latency tweak',                 safe: !!si.nvme, skipReason:'Skipped — no NVMe SSD detected' },
-    // FiveM — only included when user said Yes on FiveM step
-    ...(aomFivemEnabled ? [
+    // FiveM — only included when user said Yes on FiveM step AND user is Premium
+    ...(aomFivemEnabled && settings.isPremium ? [
       { id:'fivem-priority',      icon:'fa-gamepad',    cat:'FiveM',  label:'FiveM / GTA5 CPU priority → AboveNormal',     safe:true },
       { id:'fivem-io-priority',   icon:'fa-gamepad',    cat:'FiveM',  label:'FiveM I/O priority → High',                   safe:true },
       { id:'fivem-mmcss',         icon:'fa-gamepad',    cat:'FiveM',  label:'MMCSS scheduling for FiveM',                  safe:true },
@@ -10493,9 +10936,14 @@ function aomBuildTweakList() {
     ] : []),
   ]
 
+  // IDs starting with these prefixes are premium-only — blocked for free users.
+  // Extend this array when Advanced tweaks are added to AOM in the future.
+  const PREMIUM_TWEAK_PREFIXES = ['fivem-']
+
   return all.map(t => {
+    const isPremiumTweak = PREMIUM_TWEAK_PREFIXES.some(p => t.id.startsWith(p))
     const preApplied = skip(t.id)
-    const willRun = t.safe && !t.skip && !preApplied
+    const willRun = t.safe && !t.skip && !preApplied && (!isPremiumTweak || settings.isPremium)
     return { ...t, willRun, preApplied }
   })
 }
@@ -10824,63 +11272,64 @@ function buildWindowsOpti(c) {
       onmouseenter="this.style.background='#222244'" onmouseleave="this.style.background='#1a1a2e'">
       <i class="fa fa-wand-magic-sparkles"></i> ${tUI('genSafeDefaults')}
     </button>
+    <span id="gen-applied-counter" style="font-size:11px;font-weight:700;color:var(--muted);background:rgba(255,255,255,0.05);border:1px solid var(--border2);border-radius:6px;padding:4px 10px;flex-shrink:0;white-space:nowrap">0/0</span>
   `
   c.appendChild(toolbar)
 
   const SECTIONS = [
-    { get title() { return tUI('genSecGameOverlays') }, icon:'<i class="fa fa-gamepad"></i>', cards:[
+    { id:'game-overlays', get title() { return tUI('genSecGameOverlays') }, icon:'<i class="fa fa-gamepad"></i>', cards:[
       { id:'game-dvr',    name:'Disable Game DVR / Xbox Game Bar', desc:'Removes background recording overhead — reduces CPU/GPU usage while gaming even when not recording.', icon:'<i class="fa fa-gamepad"></i>' },
       { id:'disable-fso', name:'Disable Fullscreen Optimizations', desc:'Prevents Windows rendering games in hybrid mode. Reduces input latency in exclusive fullscreen.', icon:'<i class="fa fa-display"></i>' },
     ]},
-    { get title() { return tUI('genSecTelemetry') }, cards:[
+    { id:'telemetry', get title() { return tUI('genSecTelemetry') }, cards:[
       { id:'telemetry', name:'Disable Windows Telemetry', desc:'Stops Windows sending usage data to Microsoft. Frees background CPU and disk activity.', icon:'<i class="fa fa-satellite-dish"></i>', danger:true, dangerLabel:'Confirm off' },
       { id:'cortana',   name:'Disable Cortana + WSearch Indexer', desc:'Stops indexer using disk I/O in background. File searches will be slower in Explorer.', icon:'<i class="fa fa-magnifying-glass"></i>' },
       { id:'win-tips',  name:'Disable Windows Tips & Suggestions', desc:'Removes suggestions and tips overlays that pop up and consume resources.', icon:'<i class="fa fa-lightbulb"></i>' },
     ]},
-    { get title() { return tUI('genSecVisual') }, cards:[
-      { id:'visual-effects', name:'Visual Effects → Best Performance', desc:'Disables Aero, taskbar animations, window shadows. Frees GPU/CPU overhead on low-VRAM systems.', icon:'<i class="fa fa-wand-sparkles"></i>' },
+    { id:'visual', get title() { return tUI('genSecVisual') }, cards:[
+      { id:'visual-effects', name:'Visual Effects → Best Performance', desc:'Disables Aero, taskbar animations, window shadows. Keeps font smoothing, drag contents, and thumbnails on. Frees GPU/CPU overhead on low-VRAM systems.', icon:'<i class="fa fa-wand-sparkles"></i>' },
       { id:'explorer-perf',  name:'Optimise Windows Explorer', desc:'Removes 10-second Explorer startup delay and sets This PC as default view.', icon:'<i class="fa fa-folder-open"></i>' },
       { id:'hibernate',      name:'Disable Hibernate', desc:'Removes hiberfil.sys (~equal to RAM in size). Frees significant disk space.', icon:'<i class="fa fa-moon"></i>', warning: isLaptop ? tUI('warnLaptopHibernate') : '' },
       { id:'disable-mouse-accel', name:'Disable Mouse Acceleration', desc:'Turns off Enhance Pointer Precision system-wide. Your mouse moves at a 1:1 ratio with no Windows curve applied. Essential for consistent aim.', icon:'<i class="fa fa-computer-mouse"></i>' },
     ]},
-    { get title() { return tUI('genSecBackground') }, cards:[
+    { id:'background', get title() { return tUI('genSecBackground') }, cards:[
       { id:'disable-background-apps', name:'Disable UWP Background Apps', desc:'Stops all UWP apps (News, Weather, Mail, Xbox etc.) from running silently in the background. Real CPU and RAM saving during gaming.', icon:'<i class="fa fa-ban"></i>' },
       { id:'disable-auto-maintenance', name:'Disable Automatic Maintenance', desc:'Prevents Windows from running disk scans, defrag and security checks mid-session. Eliminates the frame time spikes caused by background maintenance tasks.', icon:'<i class="fa fa-screwdriver-wrench"></i>' },
       { id:'disable-delivery-opt', name:'Disable Windows Update P2P Sharing', desc:'Stops Windows using your internet connection to upload updates to other PCs. Removes background bandwidth usage and CPU overhead during sessions.', icon:'<i class="fa fa-arrows-turn-to-dots"></i>' },
       { id:'usb-suspend', name:'Disable USB Selective Suspend', desc:'Prevents Windows from cutting power to USB devices between inputs. Eliminates micro-stutter and mouse ghosting after sleep/wake and monitor switches. Applied at both power plan and per-device level so it survives screen sleep.', icon:'<i class="fa fa-usb fab"></i>', warning: isLaptop ? tUI('warnLaptopPcie') : tUI('warnUsbSuspendLghub') },
     ]},
-    { get title() { return tUI('genSecRegistry') }, cards:[
+    { id:'registry', get title() { return tUI('genSecRegistry') }, cards:[
       { id:'mmcss',           name:'MMCSS Game Scheduling (GPU Priority=8)', desc:'Configures Windows Multimedia Class Scheduler to maximise CPU time slices for games. SystemResponsiveness is set to 10 (safe) — never 0, which would starve USB/HID drivers.', icon:'<i class="fa fa-bullseye"></i>' },
       { id:'global-timer-resolution', name:'Global Timer Resolution (Win11)', desc:'Restores system-wide 0.5ms timer precision on Windows 11. Fixes mysterious FPS caps in games that do not call timeBeginPeriod(). Windows 11 only — skipped automatically on Windows 10.', icon:'<i class="fa fa-clock"></i>' },
       { id:'priority-sep',    name:'Foreground Process Priority Boost', desc:'Makes the active window receive significantly more CPU time slices than background apps.', icon:'<i class="fa fa-arrow-trend-up"></i>' },
       { id:'sysmain',         name:'Disable SysMain (SuperFetch)', desc:'Stops pre-loading apps into RAM. Best on 16GB+ RAM. May hurt performance with less.', icon:'<i class="fa fa-brain"></i>', warning: si.ramGB > 0 && si.ramGB < 12 ? tUI('warnLowRamSysmain').replace('{n}', si.ramGB) : '' },
       { id:'power-throttling',name:'Disable Power Throttling', desc:'Prevents Windows reducing clock speeds for background processes.', icon:'<i class="fa fa-bolt"></i>', warning: isLaptop ? tUI('warnLaptopBattery') : '' },
     ]},
-    { get title() { return tUI('genSecTimer') }, cards:[
+    { id:'timer', get title() { return tUI('genSecTimer') }, cards:[
       { id:'hpet',     name:'Disable HPET', desc:'Disables platform clock via bcdedit. Improves FPS consistency on many CPUs. Reboot required.', icon:'<i class="fa fa-stopwatch"></i>', danger:true, dangerLabel:'Confirm', reboot:true },
       { id:'tsc-sync', name:'BCDEdit TSC Sync → Enhanced', desc:'Improves timer synchronisation across CPU cores. Minor FPS consistency gain. Reboot required.', icon:'<i class="fa fa-arrows-rotate"></i>', reboot:true },
       { id:'msi-mode', name:'Enable MSI Interrupt Mode (PCI)', desc:'Replaces legacy interrupt handling. Reduces interrupt latency. Reboot required.', icon:'<i class="fa fa-plug"></i>', reboot:true },
     ]},
-    { get title() { return tUI('genSecGpu') }, cards:[
+    { id:'gpu', get title() { return tUI('genSecGpu') }, cards:[
       { id:'gpu-hwsch', name:'GPU Hardware Scheduling (WDDM 2.7)', desc:'Offloads GPU command scheduling from CPU to GPU driver. Reduces frame latency. Reboot required.', icon:'<i class="fa fa-palette"></i>', reboot:true },
       { id:'tdr-delay', name:'Extend GPU TDR Timeout (10s)', desc:'Prevents GPU driver timeout crashes under heavy DXR/modding load.', icon:'<i class="fa fa-shield-halved"></i>' },
     ]},
-    { get title() { return tUI('genSecFilesystem') }, cards:[
+    { id:'filesystem', get title() { return tUI('genSecFilesystem') }, cards:[
       { id:'ntfs',       name:'NTFS: Disable 8.3 Names + Timestamps', desc:'Reduces metadata overhead on every file read/write. Measurable improvement on busy SSDs.', icon:'<i class="fa fa-hard-drive"></i>' },
       { id:'memory-compression', name:'Disable Memory Compression', desc:'Stops compressing RAM contents. Reduces CPU overhead, may increase pagefile use.', icon:'<i class="fa fa-compress"></i>', danger:true, dangerLabel:'Confirm', warning: si.ramGB > 0 && si.ramGB < 16 ? tUI('warnLowRamCompression').replace('{n}', si.ramGB) : '' },
     ]},
-    { get title() { return `${tUI('genSecAdvanced')} (<i class="fa fa-triangle-exclamation"></i> Security)` }, cards:[
+    { id:'advanced', get title() { return `${tUI('genSecAdvanced')} (<i class="fa fa-triangle-exclamation"></i> Security)` }, cards:[
       { id:'spectre-meltdown', name:'Disable Spectre/Meltdown Mitigations', desc:'WARNING: Disables CPU security mitigations. FPS gain at security cost. ONLY on dedicated gaming PCs.', icon:'<i class="fa fa-triangle-exclamation"></i>', danger:true, dangerLabel:'I accept the risk', warning:'Disables kernel-level CPU security. Never on a shared PC.', reboot:true },
       { id:'bcd-tweaks',       name:'BCDEdit Boot Tweaks', desc:'Removes boot menu timeout, disables boot logging. Slightly faster POST. Reboot required.', icon:'<i class="fa fa-terminal"></i>', danger:true, dangerLabel:'Confirm BCD', reboot:true },
     ]},
-    { get title() { return tUI('genSecInput') }, cards:[
+    { id:'input', get title() { return tUI('genSecInput') }, cards:[
       { id:'raw-aim-curve',    name:'Raw Aim Curve', desc:'Sets MouseSensitivity registry curve to a flat 1:1 raw input table. Eliminates any hidden Windows pointer curve for perfect aim consistency.', icon:'<i class="fa fa-crosshairs"></i>' },
       { id:'proximity-deny',  name:'Proximity Deny (Nearby Sharing Off)', desc:'Disables Windows Nearby Sharing service. Stops background Bluetooth/Wi-Fi proximity scans that cause micro-stutters.', icon:'<i class="fa fa-ban"></i>' },
       { id:'cursor-max-rate', name:'Cursor Max Rate (8000Hz+ support)', desc:'Sets HIDDeviceInputProcessingMode=0 (unified HID input thread) and increases mouse data queue size. Fixes mouse flicking and click loss when dragging windows between monitors. Also allows 8000Hz polling mice without Windows rate-limiting them. Reboot required.', icon:'<i class="fa fa-computer-mouse"></i>', reboot:true },
       { id:'nudge-blocker',   name:'Nudge Blocker (Disable AutoPlay nudges)', desc:'Disables AutoPlay notifications that pop up when inserting USB devices mid-game.', icon:'<i class="fa fa-circle-xmark"></i>' },
       { id:'sticky-keys-guard', name:'StickyKeys Guard (Disable accidentally)', desc:'Disables StickyKeys, FilterKeys and ToggleKeys hotkeys entirely. Prevents them from triggering mid-game when pressing Shift 5x or holding keys.', icon:'<i class="fa fa-keyboard"></i>' },
     ]},
-    { get title() { return tUI('genSecPrivacyExt') }, cards:[
+    { id:'privacy-ext', get title() { return tUI('genSecPrivacyExt') }, cards:[
       { id:'telemetry-zero',   name:'Telemetry Zero (AllowTelemetry=0)', desc:'Sets telemetry to Security level (0) — minimum data transmitted to Microsoft. More aggressive than the standard telemetry tweak.', icon:'<i class="fa fa-satellite-dish"></i>', danger:true, dangerLabel:'Confirm' },
       { id:'search-box-local', name:'Search Box Local Only', desc:'Forces Windows Search to only search locally — disables web results appearing in the Start Menu search box.', icon:'<i class="fa fa-magnifying-glass"></i>' },
       { id:'search-cloud-off', name:'Search Cloud Suggestions Off', desc:'Removes Bing suggestions and cloud content from the taskbar search box.', icon:'<i class="fa fa-cloud"></i>' },
@@ -10890,7 +11339,7 @@ function buildWindowsOpti(c) {
       { id:'sensor-suite-off', name:'Sensor Suite Off', desc:'Disables the Windows Sensor Monitoring Service and related location/proximity sensors. Removes background device polling.', icon:'<i class="fa fa-gauge"></i>' },
       { id:'rt-scan-trim',     name:'RT Scan Trim (Real-Time Scan optimisation)', desc:'Adds the game folder exclusions path pattern to Defender real-time scan. Reduces scan overhead during gameplay.', icon:'<i class="fa fa-shield-halved"></i>' },
     ]},
-    { get title() { return tUI('genSecSecurity') }, cards:[
+    { id:'security', get title() { return tUI('genSecSecurity') }, cards:[
       { id:'security-quiet',      name:'Security Center Quiet Mode', desc:'Suppresses Windows Security Center notifications and action center alerts. Notifications still log — just not displayed.', icon:'<i class="fa fa-bell-slash"></i>' },
       { id:'security-toast-off',  name:'Security Toast Notifications Off', desc:'Disables toast (pop-up) notifications from Windows Defender and Windows Security app entirely.', icon:'<i class="fa fa-comment-slash"></i>' },
       { id:'biometrics-off',      name:'Biometrics Off (Windows Hello)', desc:'Disables the Windows Biometric Service. No effect if you use Windows Hello fingerprint/face login — disable only if not used.', icon:'<i class="fa fa-fingerprint"></i>', warning:'Will disable Windows Hello fingerprint and face recognition.' },
@@ -10907,19 +11356,77 @@ function buildWindowsOpti(c) {
       { id:'usb-power-guard',     name:'USB Power Guard', desc:'Disables USB selective suspend at power plan level, USB service level, and per-device level. Prevents mouse ghosting after screen sleep and during multi-monitor window drags.', icon:'<i class="fa fa-usb fab"></i>', warning:'If you use Logitech G HUB, disable it from startup first — this tweak can cause it to register phantom keyboard devices, leading to mouse ghosting and audio beeping.' },
       { id:'capability-ruleset',  name:'Capability Ruleset (App Permissions Lock)', desc:'Restricts background app capabilities via AppPrivacy policy — location, camera, microphone access blocked for background processes.', icon:'<i class="fa fa-lock"></i>' },
     ]},
-    { get title() { return tUI('genSecCpuSched') }, cards:[
+    { id:'cpu-sched', get title() { return tUI('genSecCpuSched') }, cards:[
       { id:'cpu-focus-bias', name:'CPU Focus Bias', desc:'Sets ThreadDpcEnable and MMCSS scheduler biasing for foreground thread priority boost on multi-core CPUs.', icon:'<i class="fa fa-microchip"></i>' },
     ]},
   ]
 
+  // Quick Win strip — curated top section
+  const QUICK_WIN_IDS = ['game-dvr','disable-fso','disable-mouse-accel','mmcss','priority-sep','disable-background-apps']
+  const QUICK_WIN_META = {
+    'game-dvr':               { get benefit() { return tUI('qwBenefitGameDvr') } },
+    'disable-fso':            { get benefit() { return tUI('qwBenefitFso') } },
+    'disable-mouse-accel':    { get benefit() { return tUI('qwBenefitMouseAccel') } },
+    'mmcss':                  { get benefit() { return tUI('qwBenefitMmcss') } },
+    'priority-sep':           { get benefit() { return tUI('qwBenefitPriority') } },
+    'disable-background-apps':{ get benefit() { return tUI('qwBenefitBgApps') } },
+  }
+
+  const qwSection = document.createElement('div')
+  qwSection.className = 'section-card'
+  qwSection.id = 'qw-section'
+  qwSection.innerHTML = `
+    <div class="section-header">
+      <div class="section-accent"></div>
+      <div class="section-title"><i class="fa fa-bolt" style="color:var(--warning);margin-right:6px"></i>${tUI('genQuickWinTitle')}</div>
+      <button onclick="genApplyQuickWins()" id="qw-apply-btn" style="background:rgba(124,110,248,0.12);border:1px solid rgba(124,110,248,0.25);border-radius:6px;padding:4px 12px;color:var(--pink);font-size:11px;font-weight:700;cursor:pointer;transition:background .15s;flex-shrink:0"
+        onmouseenter="this.style.background='rgba(124,110,248,0.22)'" onmouseleave="this.style.background='rgba(124,110,248,0.12)'">${tUI('genQuickWinApplyAll')}</button>
+    </div>
+  `
+  const qwStrip = document.createElement('div')
+  qwStrip.className = 'qw-strip'
+  qwStrip.id = 'qw-strip'
+  QUICK_WIN_IDS.forEach(id => {
+    const meta = QUICK_WIN_META[id]
+    const allCards = SECTIONS.flatMap(s => s.cards)
+    const tw = allCards.find(c => c.id === id)
+    if (!tw) return
+    const applied = settings[`tweak_${id}`] === 'applied'
+    const div = document.createElement('div')
+    div.className = 'qw-card' + (applied ? ' qw-done' : '')
+    div.id = 'qwc-' + id
+    div.innerHTML = `
+      <div class="qw-icon">${tw.icon}</div>
+      <div class="qw-name">${tw.name.split('(')[0].split('→')[0].trim()}</div>
+      <div class="qw-benefit">${meta ? meta.benefit : ''}</div>
+      <span class="qw-badge${applied ? ' applied' : ''}" id="qws-badge-${id}">${applied ? `<i class="fa fa-check"></i> ${tUI('statusApplied')}` : tUI('statusDefault')}</span>
+    `
+    qwStrip.appendChild(div)
+  })
+  qwSection.appendChild(qwStrip)
+  c.appendChild(qwSection)
+
+  _genSections = SECTIONS
   SECTIONS.forEach(sec => {
-    const card = makeSection(sec.title)
+    const secId = sec.id || ''
+    const card = makeSection(sec.title, '', secId)
     const grid = document.createElement('div')
     grid.className = 'tweak-card-grid'
     sec.cards.forEach(tw => grid.appendChild(makeCard(tw)))
     card.appendChild(grid)
     c.appendChild(card)
+    // Restore collapsed state from previous session
+    if (secId) {
+      try {
+        if (localStorage.getItem('sec_col_' + secId) === '1') {
+          grid.classList.add('sec-collapsed')
+          const btn = document.getElementById('scb-' + secId)
+          if (btn) btn.classList.add('collapsed')
+        }
+      } catch {}
+    }
   })
+  genRefreshAllCounters()
 }
 
 function genFilterTweaks(query) {
@@ -10929,9 +11436,20 @@ function genFilterTweaks(query) {
   content.querySelectorAll('.tweak-card-grid .tweak-card').forEach(card => {
     card.style.display = (!q || card.textContent.toLowerCase().includes(q)) ? '' : 'none'
   })
-  content.querySelectorAll('.section-card').forEach(sec => {
+  content.querySelectorAll('.section-card[data-sec-id]').forEach(sec => {
+    const grid = sec.querySelector('.tweak-card-grid')
     const anyVisible = [...sec.querySelectorAll('.tweak-card')].some(c => c.style.display !== 'none')
     sec.style.display = anyVisible ? '' : 'none'
+    if (grid) {
+      if (q && anyVisible) {
+        grid.dataset.searchOpen = '1'
+        grid.classList.remove('sec-collapsed')
+      } else if (grid.dataset.searchOpen) {
+        delete grid.dataset.searchOpen
+        const secId = sec.dataset.secId
+        try { if (localStorage.getItem('sec_col_' + secId) === '1') grid.classList.add('sec-collapsed') } catch {}
+      }
+    }
   })
 }
 
@@ -10994,6 +11512,7 @@ async function applyTweakBatch(ids, action = 'apply') {
   if (count) count.textContent = `${applied} / ${ids.length}`
 
   await api.saveSettings(settings).catch(() => {})
+  genRefreshAllCounters()
 
   // Auto-dismiss after 800ms
   setTimeout(() => { if (modal) modal.style.display = 'none' }, 800)
@@ -11607,7 +12126,46 @@ function hwFilterTweaks(query) {
 // ─── Page: Network ────────────────────────────────────────────────────────────
 function buildNetwork(c) {
   const si = sysInfo
-  const wifiWarn = si.isWifi ? tUI('warnWifi') : ''
+  const wifiWarn = si.isWifi ? tUI('networkWifiTip').replace('{adapter}', si.wifiAdapter || 'wireless adapter') : ''
+
+  // ── Adapter Info Card ──────────────────────────────────────────────────────
+  const adCard = document.createElement('div')
+  adCard.style.cssText = 'background:linear-gradient(135deg,#080d18,#0d1020);border:1px solid #1a2a4a;border-radius:12px;padding:12px 16px;margin-bottom:10px;display:flex;align-items:center;gap:14px'
+  if (si.isWifi) {
+    const signalPct = parseInt((si.wifiSignal || '0').replace('%','').trim()) || 0
+    const signalColor = signalPct >= 70 ? 'var(--success,#4caf50)' : signalPct >= 40 ? 'var(--warning,#ff9800)' : 'var(--danger,#f44336)'
+    const barW = Math.max(2, Math.round(signalPct / 100 * 60))
+    adCard.innerHTML = `
+      <div style="width:36px;height:36px;border-radius:9px;background:#0d1a2e;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+        <i class="fa fa-wifi" style="color:#4a9eff;font-size:16px"></i>
+      </div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:12px;font-weight:600;color:#ccc;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${si.wifiSsid || si.wifiAdapter || 'Wi-Fi'}</div>
+        <div style="font-size:10px;color:#555;margin-top:2px">${tUI('nicCardBand')}: ${si.wifiBand || '—'}</div>
+      </div>
+      <div style="text-align:right;flex-shrink:0">
+        <div style="font-size:10px;color:#555;margin-bottom:3px">${tUI('nicCardSignal')}</div>
+        <div style="width:60px;height:6px;background:#1a1a2e;border-radius:3px;overflow:hidden">
+          <div style="width:${barW}px;height:100%;background:${signalColor};border-radius:3px;transition:width .3s"></div>
+        </div>
+        <div style="font-size:10px;color:${signalColor};margin-top:2px">${si.wifiSignal || '—'}</div>
+      </div>`
+  } else {
+    const speedGbps = si.nicSpeed ? (si.nicSpeed >= 1 ? `${si.nicSpeed} Gbps` : `${si.nicSpeed * 1000} Mbps`) : '—'
+    adCard.innerHTML = `
+      <div style="width:36px;height:36px;border-radius:9px;background:#0d1a2e;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+        <i class="fa fa-network-wired" style="color:#4a9eff;font-size:15px"></i>
+      </div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:12px;font-weight:600;color:#ccc;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${si.nicName || 'Ethernet Adapter'}</div>
+        <div style="font-size:10px;color:#555;margin-top:2px">${tUI('nicCardSpeed')}: ${speedGbps}</div>
+      </div>
+      <div style="text-align:right;flex-shrink:0">
+        <div style="font-size:10px;color:#555">${tUI('nicCardDriver')}</div>
+        <div style="font-size:10px;color:#888;margin-top:1px;font-family:monospace">${si.nicDriver || tUI('nicCardNoDriver')}</div>
+      </div>`
+  }
+  c.appendChild(adCard)
 
   c.appendChild(makeTip(tUI('netTipTitle'), 'info'))
 
@@ -11623,6 +12181,9 @@ function buildNetwork(c) {
         onfocus="this.style.borderColor='#333'" onblur="this.style.borderColor='#222'"
         oninput="netFilterTweaks(this.value)">
     </div>
+    <button class="btn btn-primary btn-sm" style="white-space:nowrap;gap:6px" onclick="netApplySafeDefaults(this)">
+      <i class="fa fa-bolt"></i> ${tUI('netApplySafe')}
+    </button>
   `
   c.appendChild(toolbar)
 
@@ -11643,6 +12204,9 @@ function buildNetwork(c) {
         { id:'flush-dns', name:'Flush DNS cache', desc:'Clears the local DNS resolver cache. Fixes stale DNS entries causing connection issues.', restore:false },
         { id:'dns-cloudflare', name:'Set DNS → Cloudflare 1.1.1.1 / 1.0.0.1', desc:'Fastest DNS for most EU/US users. Privacy-focused — does not log queries. Applied to all active adapters.' },
         { id:'dns-google', name:'Set DNS → Google 8.8.8.8 / 8.8.4.4', desc:'Highly reliable alternative public DNS. More logging than Cloudflare. Applied to all active adapters.' },
+        { id:'dns-quad9', name:'Set DNS → Quad9 9.9.9.9 / 149.112.112.112', desc:'Malware-blocking DNS with no query logging. Global anycast network — often fastest for Scandinavian and Eastern European users.' },
+        { id:'dns-adguard', name:'Set DNS → AdGuard 94.140.14.14 / 94.140.15.15', desc:'Blocks ads and trackers at the DNS level — reduces background network noise during gaming. EU-based, no logging.' },
+        { id:'dns-custom', name:'Set DNS → Custom (enter your own)', desc:'Set a custom primary and secondary DNS server. Useful for local game-server DNS resolvers, corporate resolvers, or privacy-focused alternatives.' },
         { id:'dns-doh', name:'Enable DNS over HTTPS (DoH)', desc:'Routes DNS queries over encrypted HTTPS instead of plain UDP. Prevents ISP DNS snooping. Applies Cloudflare DoH (1.1.1.1) via Windows 11 native DoH setting.', sinceVersion:'1.4.6' },
       ]
     },
@@ -11658,6 +12222,8 @@ function buildNetwork(c) {
         { id:'nic-interrupt-mod',  name:'Disable NIC Interrupt Moderation', desc:'Interrupt moderation batches incoming packets to reduce CPU interrupts — but this increases latency. Disabling it gives more consistent ping under load. Real measurable gain for competitive play.' },
         { id:'nic-flow-control',   name:'Disable NIC Flow Control', desc:'Flow control pauses transmission when buffers fill, adding jitter. Disabling both Rx and Tx flow control gives smoother packet delivery.' },
         { id:'nic-energy-efficient', name:'Disable Energy Efficient Ethernet (EEE)', desc:'Your NIC throttles itself to save power during low traffic. During online gaming it spikes latency as it ramps back up. Disabling it keeps the NIC at full speed at all times.' },
+        { id:'nic-rss-affinity',   name:'NIC RSS CPU Affinity (pin to core 2+)', desc:'Pins RSS queue processing to dedicated CPU cores away from core 0, where OS timer interrupts land. Prevents NIC DPC handling from preempting your game thread. Measurable benefit on 6+ core CPUs.' },
+        { id:'nic-ndis-poll',      name:'Enable NDIS Polling Mode (Intel/Realtek)', desc:'Replaces interrupt-driven packet delivery with polling — cuts worst-case DPC latency from ~500µs to ~50µs on supported NICs (Intel I225/I226, Realtek 8125). The same technique used in professional gaming infrastructure.' },
       ]
     },
     {
@@ -11677,7 +12243,372 @@ function buildNetwork(c) {
     c.appendChild(card)
   })
 
+  // Inject Configure button into dns-custom row
+  const dnsCustomRight = c.querySelector('[data-tweak-apply="dns-custom"]')?.closest('.tweak-right')
+  if (dnsCustomRight) {
+    const cfgBtn = document.createElement('button')
+    cfgBtn.className = 'btn btn-ghost btn-sm'
+    cfgBtn.style.cssText = 'order:-1'
+    cfgBtn.innerHTML = `<i class="fa fa-gear"></i> Configure`
+    cfgBtn.onclick = netConfigureCustomDns
+    dnsCustomRight.prepend(cfgBtn)
+  }
+
+  // Inject DNS Benchmarker panel at bottom of DNS section
+  const dnsSection = c.querySelector('[data-tweak-apply="dns-cloudflare"]')?.closest('.section-card')
+  if (dnsSection) {
+    const benchPanel = document.createElement('div')
+    benchPanel.style.cssText = 'padding:10px 16px 14px;border-top:1px solid #0d1020'
+    benchPanel.innerHTML = `
+      <div style="display:flex;align-items:center;gap:10px">
+        <button class="btn btn-ghost btn-sm" id="dns-bench-btn" onclick="runDnsBenchmark(this)" style="gap:6px">
+          <i class="fa fa-gauge-high"></i> ${tUI('dnsBenchRun')}
+        </button>
+        <span id="dns-bench-status" style="font-size:11px;color:#555"></span>
+      </div>
+      <div id="dns-bench-results" style="margin-top:10px;display:none"></div>
+    `
+    dnsSection.appendChild(benchPanel)
+  }
+
+  buildLiveMonitor(c)
+  buildNetHealthCheck(c)
   buildPingTest(c)
+
+  registerPageCleanup('network', () => {
+    if (_livePingActive) {
+      _livePingActive = false
+      api.stopLivePing().catch(() => {})
+    }
+  })
+}
+
+let _livePingActive = false
+let _livePingBuffer = []
+let _livePingUnlisten = null
+
+function buildLiveMonitor(c) {
+  const card = makeSection(tUI('liveMonTitle'), tUI('liveMonSub'), 'net-live-mon')
+  const grid = document.createElement('div')
+  grid.className = 'tweak-card-grid'
+  grid.style.cssText = 'padding:14px 16px'
+
+  grid.innerHTML = `
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px">
+      <button class="btn btn-primary btn-sm" id="live-mon-btn" onclick="toggleLiveMonitor(this)" style="gap:6px;min-width:130px">
+        <i class="fa fa-play"></i> ${tUI('liveMonStart')}
+      </button>
+      <div style="display:flex;align-items:center;gap:6px">
+        <span style="font-size:11px;color:#555">${tUI('liveMonHost')}:</span>
+        <select id="live-mon-host" style="background:#111;border:1px solid #222;border-radius:6px;color:#ccc;font-size:11px;padding:4px 8px" onchange="livePingHostChange(this.value)">
+          <option value="1.1.1.1">Cloudflare (1.1.1.1)</option>
+          <option value="8.8.8.8">Google (8.8.8.8)</option>
+          <option value="9.9.9.9">Quad9 (9.9.9.9)</option>
+          <option value="custom">Custom…</option>
+        </select>
+      </div>
+      <div id="live-mon-stats" style="display:none;gap:14px;display:flex">
+        <span style="font-size:11px;color:#555">${tUI('liveMonCurrent')}: <strong id="lm-cur" style="color:#4a9eff">—</strong></span>
+        <span style="font-size:11px;color:#555">${tUI('liveMonAvg')}: <strong id="lm-avg" style="color:#ccc">—</strong></span>
+        <span style="font-size:11px;color:#555">${tUI('liveMonMax')}: <strong id="lm-max" style="color:#ccc">—</strong></span>
+        <span style="font-size:11px;color:#555">${tUI('liveMonJitter')}: <strong id="lm-jitter" style="color:#ccc">—</strong></span>
+      </div>
+    </div>
+    <canvas id="live-mon-canvas" width="600" height="80" style="width:100%;height:80px;background:#06090f;border-radius:8px;display:block"></canvas>
+  `
+  card.appendChild(grid)
+  c.appendChild(card)
+}
+
+async function toggleLiveMonitor(btn) {
+  if (_livePingActive) {
+    _livePingActive = false
+    await api.stopLivePing().catch(() => {})
+    btn.innerHTML = `<i class="fa fa-play"></i> ${tUI('liveMonStart')}`
+    btn.classList.remove('btn-danger')
+    btn.classList.add('btn-primary')
+  } else {
+    const hostSel = document.getElementById('live-mon-host')
+    const host = hostSel?.value === 'custom' ? (settings._liveMonCustomHost || '1.1.1.1') : (hostSel?.value || '1.1.1.1')
+    _livePingBuffer = []
+    _livePingActive = true
+    document.getElementById('live-mon-stats').style.display = 'flex'
+    btn.innerHTML = `<i class="fa fa-stop"></i> ${tUI('liveMonStop')}`
+    btn.classList.remove('btn-primary')
+    btn.classList.add('btn-danger')
+
+    if (_livePingUnlisten) { _livePingUnlisten(); _livePingUnlisten = null }
+    api.onLivePingTick((tick) => {
+      if (!_livePingActive) return
+      _livePingBuffer.push(tick.rtt)
+      if (_livePingBuffer.length > 60) _livePingBuffer.shift()
+      livePingUpdateStats()
+      livePingDrawCanvas()
+    })
+    await api.startLivePing({ host }).catch(() => {})
+  }
+}
+
+async function livePingHostChange(val) {
+  if (val === 'custom') {
+    let customHost
+    try { customHost = await showPrompt({ title: 'Custom Ping Host', body: 'Enter IP or hostname to ping:', placeholder: '1.1.1.1' }) } catch { return }
+    settings._liveMonCustomHost = customHost.trim()
+    await api.saveSettings({ _liveMonCustomHost: customHost.trim() }).catch(() => {})
+    const sel = document.getElementById('live-mon-host')
+    const opt = document.createElement('option')
+    opt.value = customHost.trim(); opt.textContent = customHost.trim(); opt.selected = true
+    sel.insertBefore(opt, sel.lastElementChild)
+    sel.value = customHost.trim()
+  }
+  if (_livePingActive) {
+    const host = val === 'custom' ? (settings._liveMonCustomHost || '1.1.1.1') : val
+    _livePingBuffer = []
+    await api.stopLivePing().catch(() => {})
+    await api.startLivePing({ host }).catch(() => {})
+  }
+}
+
+function livePingUpdateStats() {
+  const good = _livePingBuffer.filter(v => v != null)
+  if (!good.length) return
+  const cur = good[good.length - 1]
+  const avg = Math.round(good.reduce((a, b) => a + b, 0) / good.length)
+  const max = Math.max(...good)
+  const jitter = good.length > 1 ? Math.round(Math.sqrt(good.map(v => (v - avg) ** 2).reduce((a, b) => a + b, 0) / good.length)) : 0
+  const curColor = cur < 30 ? '#4caf50' : cur < 80 ? '#ff9800' : '#f44336'
+  const el = (id) => document.getElementById(id)
+  if (el('lm-cur')) { el('lm-cur').textContent = cur + ' ms'; el('lm-cur').style.color = curColor }
+  if (el('lm-avg')) el('lm-avg').textContent = avg + ' ms'
+  if (el('lm-max')) el('lm-max').textContent = max + ' ms'
+  if (el('lm-jitter')) el('lm-jitter').textContent = jitter + ' ms'
+}
+
+function livePingDrawCanvas() {
+  const canvas = document.getElementById('live-mon-canvas')
+  if (!canvas) return
+  const ctx = canvas.getContext('2d')
+  const W = canvas.width, H = canvas.height
+  ctx.clearRect(0, 0, W, H)
+
+  const buf = _livePingBuffer
+  if (buf.length < 2) return
+
+  const good = buf.filter(v => v != null)
+  if (!good.length) return
+  const max = Math.max(...good, 100)
+
+  // Grid lines
+  ctx.strokeStyle = '#0d1020'
+  ctx.lineWidth = 1
+  for (const pct of [0.25, 0.5, 0.75]) {
+    const y = Math.round(H * pct)
+    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke()
+  }
+
+  // Ping line
+  const pts = buf.map((v, i) => ({ x: (i / (buf.length - 1)) * W, y: v == null ? null : H - Math.min(H * 0.95, (v / max) * H * 0.95) - 2 }))
+  ctx.lineWidth = 1.5
+  ctx.strokeStyle = '#4a9eff'
+  ctx.lineJoin = 'round'
+  ctx.beginPath()
+  let started = false
+  for (const p of pts) {
+    if (p.y == null) { started = false; continue }
+    if (!started) { ctx.moveTo(p.x, p.y); started = true } else { ctx.lineTo(p.x, p.y) }
+  }
+  ctx.stroke()
+
+  // Fill
+  ctx.fillStyle = 'rgba(74,158,255,0.06)'
+  ctx.beginPath()
+  let first = pts.find(p => p.y != null)
+  if (first) {
+    ctx.moveTo(first.x, H)
+    for (const p of pts) { if (p.y != null) ctx.lineTo(p.x, p.y) }
+    const last = [...pts].reverse().find(p => p.y != null)
+    if (last) ctx.lineTo(last.x, H)
+  }
+  ctx.closePath(); ctx.fill()
+}
+
+function buildNetHealthCheck(c) {
+  const card = makeSection(tUI('netHealthTitle'), tUI('netHealthSub'), 'net-health')
+  const grid = document.createElement('div')
+  grid.className = 'tweak-card-grid'
+  grid.style.cssText = 'padding:14px 16px'
+
+  const inner = document.createElement('div')
+  inner.id = 'net-health-inner'
+  inner.innerHTML = `
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:2px">
+      <button class="btn btn-primary btn-sm" id="net-health-btn" onclick="runNetHealthCheck(this)" style="gap:6px">
+        <i class="fa fa-heart-pulse"></i> ${tUI('netHealthRun')}
+      </button>
+      <span id="net-health-status" style="font-size:11px;color:#555"></span>
+    </div>
+    <div id="net-health-results" style="margin-top:10px;display:none"></div>
+  `
+  grid.appendChild(inner)
+  card.appendChild(grid)
+  c.appendChild(card)
+}
+
+async function runNetHealthCheck(btn) {
+  const statusEl = document.getElementById('net-health-status')
+  const resultsEl = document.getElementById('net-health-results')
+  if (!statusEl || !resultsEl) return
+  btn.disabled = true
+  btn.innerHTML = `<i class="fa fa-spinner fa-spin"></i> ${tUI('netHealthRunning')}`
+  statusEl.textContent = ''
+  resultsEl.style.display = 'none'
+  resultsEl.innerHTML = ''
+
+  let data
+  try {
+    const r = await api.runNetHealth()
+    data = r.results
+  } catch (e) {
+    btn.disabled = false
+    btn.innerHTML = `<i class="fa fa-heart-pulse"></i> ${tUI('netHealthRun')}`
+    statusEl.textContent = 'Diagnostic failed.'
+    return
+  }
+  btn.disabled = false
+  btn.innerHTML = `<i class="fa fa-heart-pulse"></i> ${tUI('netHealthRun')}`
+
+  const rows = []
+
+  // Gateway RTT
+  const gw = data.gateway || {}
+  if (gw.fail || gw.avg == null) {
+    rows.push({ icon:'fa-router', label:tUI('netHealthGateway'), value:tUI('netHealthFail'), color:'#555', note:'' })
+  } else {
+    const color = gw.avg < 5 ? 'var(--success,#4caf50)' : gw.avg < 15 ? 'var(--warning,#ff9800)' : 'var(--danger,#f44336)'
+    const note = gw.avg < 5 ? tUI('netHealthGwGood') : gw.avg < 15 ? tUI('netHealthGwWarn') : tUI('netHealthGwBad')
+    const jitterNote = gw.jitter > 3 ? ` · ${tUI('netHealthGwJitterWarn')}` : ''
+    rows.push({ icon:'fa-router', label:tUI('netHealthGateway'), value:`${gw.avg} ms avg · ${gw.jitter} ms jitter · ${gw.loss}% loss (${gw.ip || '?'})`, color, note: note + jitterNote })
+  }
+
+  // DNS resolution
+  const dns = data.dns || {}
+  if (dns.fail || dns.median == null) {
+    rows.push({ icon:'fa-globe', label:tUI('netHealthDns'), value:tUI('netHealthFail'), color:'#555', note:'' })
+  } else {
+    const color = dns.median < 30 ? 'var(--success,#4caf50)' : dns.median < 80 ? 'var(--warning,#ff9800)' : 'var(--danger,#f44336)'
+    const note = dns.median < 30 ? tUI('netHealthDnsGood') : dns.median < 80 ? tUI('netHealthDnsMed') : tUI('netHealthDnsBad')
+    rows.push({ icon:'fa-globe', label:tUI('netHealthDns'), value:`${dns.median} ms median (${dns.min}–${dns.max} ms)`, color, note })
+  }
+
+  // ISP hops
+  const hops = data.hops || []
+  const hopLines = hops.map((h, i) => h.avg === '*' ? `Hop ${i+1}: * (no response)` : `Hop ${i+1}: ${h.ip || '?'} — ${h.avg} ms`).join(' · ')
+  rows.push({ icon:'fa-route', label:tUI('netHealthHops'), value: hopLines || tUI('netHealthFail'), color:'#aaa', note:'' })
+
+  // Packet loss to Cloudflare
+  const cfLoss = data.cloudflare?.loss
+  if (cfLoss == null) {
+    rows.push({ icon:'fa-circle-exclamation', label:tUI('netHealthLoss'), value:tUI('netHealthFail'), color:'#555', note:'' })
+  } else {
+    const color = cfLoss === 0 ? 'var(--success,#4caf50)' : cfLoss < 5 ? 'var(--warning,#ff9800)' : 'var(--danger,#f44336)'
+    const note = cfLoss === 0 ? tUI('netHealthLossGood') : tUI('netHealthLossBad')
+    rows.push({ icon:'fa-circle-exclamation', label:tUI('netHealthLoss'), value:`${cfLoss}%`, color, note })
+  }
+
+  resultsEl.innerHTML = rows.map(r => `
+    <div style="display:flex;align-items:flex-start;gap:12px;padding:8px 0;border-bottom:1px solid #111">
+      <div style="width:28px;height:28px;border-radius:7px;background:#0d1a2e;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px">
+        <i class="fa ${r.icon}" style="color:${r.color};font-size:12px"></i>
+      </div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:11px;color:#555;margin-bottom:2px">${r.label}</div>
+        <div style="font-size:12px;font-weight:600;color:${r.color};word-break:break-all">${r.value}</div>
+        ${r.note ? `<div style="font-size:11px;color:#888;margin-top:2px">${r.note}</div>` : ''}
+      </div>
+    </div>
+  `).join('')
+  resultsEl.style.display = 'block'
+}
+
+async function netConfigureCustomDns() {
+  const cur = settings.customDnsPrimary || ''
+  const cur2 = settings.customDnsSecondary || ''
+  let primary, secondary
+  try {
+    primary = await showPrompt({ title: 'Custom DNS — Primary Server', body: 'Enter primary IPv4 DNS address (e.g. 8.8.8.8):', placeholder: '0.0.0.0', defaultValue: cur })
+  } catch { return }
+  if (!/^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(primary.trim())) { toast('Invalid IP', 'Enter a valid IPv4 address.', 'warn'); return }
+  try {
+    secondary = await showPrompt({ title: 'Custom DNS — Secondary Server', body: 'Enter secondary IPv4 DNS address (optional — leave blank to skip):', placeholder: '0.0.0.0', defaultValue: cur2 })
+  } catch { secondary = '' }
+  const sec2 = secondary.trim()
+  if (sec2 && !/^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(sec2)) { toast('Invalid IP', 'Secondary DNS must be a valid IPv4 address or empty.', 'warn'); return }
+  settings.customDnsPrimary = primary.trim()
+  settings.customDnsSecondary = sec2
+  await api.saveSettings({ customDnsPrimary: primary.trim(), customDnsSecondary: sec2 })
+  toast('Custom DNS configured', `Primary: ${primary.trim()}${sec2 ? ' · Secondary: ' + sec2 : ''}`, 'ok')
+}
+
+async function runDnsBenchmark(btn) {
+  const statusEl = document.getElementById('dns-bench-status')
+  const resultsEl = document.getElementById('dns-bench-results')
+  if (!statusEl || !resultsEl) return
+  btn.disabled = true
+  btn.innerHTML = `<i class="fa fa-spinner fa-spin"></i> ${tUI('dnsBenchRunning')}`
+  statusEl.textContent = ''
+  resultsEl.style.display = 'none'
+
+  let res
+  try {
+    const r = await api.benchmarkDns()
+    res = r.results
+  } catch (e) {
+    btn.disabled = false
+    btn.innerHTML = `<i class="fa fa-gauge-high"></i> ${tUI('dnsBenchRun')}`
+    statusEl.textContent = 'Benchmark failed.'
+    return
+  }
+  btn.disabled = false
+  btn.innerHTML = `<i class="fa fa-gauge-high"></i> ${tUI('dnsBenchRun')}`
+
+  const maxMs = Math.max(...res.filter(r => !r.fail).map(r => r.median), 1)
+  resultsEl.innerHTML = res.map((r, i) => {
+    const isFastest = i === 0 && !r.fail
+    const barPct = r.fail ? 0 : Math.round((r.median / maxMs) * 100)
+    const color = r.fail ? '#333' : isFastest ? 'var(--success,#4caf50)' : r.median < 50 ? '#4a9eff' : 'var(--warning,#ff9800)'
+    const valText = r.fail ? tUI('dnsBenchFail') : `${r.median} ${tUI('dnsBenchMs')} (${r.min}–${r.max})`
+    return `
+      <div style="display:flex;align-items:center;gap:10px;padding:5px 0">
+        <div style="width:72px;font-size:11px;font-weight:600;color:#ccc;flex-shrink:0">${r.name}</div>
+        <div style="flex:1;height:6px;background:#1a1a2e;border-radius:3px;overflow:hidden">
+          <div style="width:${barPct}%;height:100%;background:${color};border-radius:3px;transition:width .4s ease"></div>
+        </div>
+        <div style="width:130px;font-size:11px;color:${color};text-align:right;flex-shrink:0">
+          ${valText}
+          ${isFastest ? `<span style="margin-left:4px;background:#0d2e1a;color:#4caf50;border-radius:4px;padding:1px 5px;font-size:9px;font-weight:700">${tUI('dnsBenchFastest')}</span>` : ''}
+        </div>
+        ${!r.fail ? `<button class="btn btn-ghost btn-sm" style="font-size:10px;padding:3px 8px;flex-shrink:0" onclick="applyTweak('${r.tweak}')">${tUI('dnsBenchSet')}</button>` : '<div style="width:72px"></div>'}
+      </div>
+    `
+  }).join('')
+  resultsEl.style.display = 'block'
+}
+
+async function netApplySafeDefaults(btn) {
+  const NET_SAFE_DEFAULTS = [
+    'tcp-stack','tcp-buffers','tcp-keepalive','tcp-retransmit',
+    'qos-reserve','net-throttling',
+    'disable-netbios','disable-wpad','disable-autoproxy'
+  ]
+  try {
+    await showConfirm({ title: tUI('netApplySafe'), body: tUI('netApplySafeConfirm'), okText: 'Apply', okStyle: 'primary', icon: 'fa-bolt' })
+  } catch { return }
+  const toApply = NET_SAFE_DEFAULTS.filter(id => tweakState(id) !== 'applied')
+  if (btn) { btn.disabled = true; btn.innerHTML = `<i class="fa fa-spinner fa-spin"></i>` }
+  const { applied, failed } = await applyTweakBatch(toApply, 'apply')
+  if (btn) { btn.disabled = false; btn.innerHTML = `<i class="fa fa-bolt"></i> ${tUI('netApplySafe')}` }
+  const msg = tUI('netApplySafeDone').replace('{n}', applied) + (failed ? ` · ${failed} failed` : '')
+  toast(tUI('netApplySafe'), msg, applied > 0 ? 'ok' : 'warn')
 }
 
 function netFilterTweaks(query) {
@@ -11716,6 +12647,7 @@ function makeCard({ id, name, desc, icon = '<i class="fa fa-gear"></i>', danger 
   d.innerHTML = `
     ${hasConflict ? `<div class="tc-conflict-badge"><i class="fa fa-triangle-exclamation"></i> ${tUI('conflictBadgeLabel').replace('{id}', conflictWith)}</div>` : ''}
     ${preApplied ? `<div class="tc-preapplied-tag"><i class="fa fa-magnifying-glass"></i> PRE-APPLIED</div>` : ''}
+    ${GEN_TIP_DATA[id] ? `<button class="tc-info-btn" onclick="genTipOpen('${id}',event)" title="${tUI('genTipReg')}"><i class="fa fa-circle-question"></i></button>` : ''}
     <div class="tc-top">
       <div class="tc-icon">${icon}</div>
       <div class="tc-meta">
@@ -11813,6 +12745,8 @@ async function applyTweakCard(id, checked, isDanger = false) {
     // Clear stored impact when restoring
     if (settings.tweak_impacts) { delete settings.tweak_impacts[id]; await api.saveSettings(settings).catch(() => {}) }
   }
+
+  genRefreshAllCounters()
 
   // Refresh conflict badges for this tweak and any tweaks it conflicts with
   refreshConflictBadge(id)
@@ -12331,6 +13265,7 @@ function buildCleanup(c) {
         { id:'clean-errorlogs',  name:'Clear Crash Dumps & Error Reports',  icon:'<i class="fa fa-bug-slash"></i>',     desc:'Removes minidumps in C:\\Windows\\Minidump, WER ReportQueue, and LocalDumps. Recovers space after crashes.', restore:false },
         { id:'clean-thumbnails', name:'Thumbnail & Icon Cache',             icon:'<i class="fa fa-image"></i>',         desc:'Deletes thumbcache_*.db files and icon cache. Windows rebuilds them — fixes blank/stale thumbnails in Explorer.', restore:false },
         { id:'clean-fontcache',  name:'Font Cache',                         icon:'<i class="fa fa-font"></i>',          desc:'Clears Windows font cache database. Rebuilds on next boot — fixes font rendering glitches.', restore:false },
+        { id:'clean-recycle',    name:'Recycle Bin',                        icon:'<i class="fa fa-trash-can"></i>',     desc:'Empties the Recycle Bin to instantly free disk space. Deleted files are not recoverable after this.', danger:true, dangerLabel:tUI('cleanupRecycleBinConfirm'), restore:false },
       ]
     },
     {
@@ -12345,6 +13280,10 @@ function buildCleanup(c) {
         { id:'clean-nvidia',     name:'NVIDIA Shader Caches',               icon:'<i class="fa fa-microchip"></i>',     desc:'Removes DXCache, GLCache, ComputeCache, and D3DSCache. Forces shader recompile on next game launch — one-time stutter.', restore:false },
         { id:'clean-steam',      name:'Steam Download Cache & Depot',       icon:'<i class="fa fa-gamepad"></i>',       desc:'Clears Steam\'s HTTP cache and old download depot cache. Does not affect installed games or saves.', restore:false },
         { id:'clean-gameservices', name:'EA App, Epic & Battle.net Cache',  icon:'<i class="fa fa-store"></i>',         desc:'Clears cache folders for EA App, Epic Games Launcher, and Battle.net. Fixes launcher slowness and update errors.', restore:false },
+        { id:'clean-spotify',    name:'Spotify Cache',                      icon:'<i class="fa fa-music"></i>',         desc:'Clears Spotify\'s local storage cache. Fixes slow loading and frees disk space. Rebuilds on next launch.', restore:false },
+        { id:'clean-xbox',       name:'Xbox App Cache',                     icon:'<i class="fa fa-gamepad"></i>',       desc:'Clears the Xbox Gaming App local cache. Fixes update errors and slow loading in the Xbox launcher.', restore:false },
+        { id:'clean-msstore',    name:'Microsoft Store Cache',              icon:'<i class="fa fa-shop"></i>',          desc:'Clears Microsoft Store local cache folders. Fixes store errors, download failures, and stale update states.', restore:false },
+        { id:'clean-roblox',     name:'Roblox Cache',                       icon:'<i class="fa fa-cube"></i>',          desc:'Removes Roblox log files and temp cache. Fixes launch errors and frees space from accumulated game data.', restore:false },
       ]
     },
     {
@@ -12372,6 +13311,7 @@ function buildCleanup(c) {
     <div style="display:flex;gap:8px;align-items:center">
       <span id="cleanup-size-est" style="font-size:11px;color:#3498db;display:none"></span>
       <button class="btn btn-sm" style="background:rgba(52,152,219,0.12);color:#3498db;border:1px solid rgba(52,152,219,0.3)" onclick="doQuickClean()"><i class="fa fa-broom"></i> ${tUI('cleanupQuickCleanBtn')}</button>
+      <button class="btn btn-ghost btn-sm" id="cleanup-scan-sizes-btn" style="font-size:10px" onclick="scanCleanupSizes()"><i class="fa fa-ruler"></i> ${tUI('cleanupScanSizesBtn')}</button>
       <button class="btn btn-ghost btn-sm" style="font-size:10px" onclick="estimateCleanupSize()"><i class="fa fa-calculator"></i> ${tUI('cleanupEstimateBtn')}</button>
     </div>
   `
@@ -12379,7 +13319,29 @@ function buildCleanup(c) {
 
   sections.forEach(sec => {
     const card = makeSection(sec.title)
-    sec.rows.forEach(row => card.appendChild(makeRow(row)))
+    sec.rows.forEach(row => {
+      const el = makeRow(row)
+      // Inject size chip placeholder into the tweak-name span
+      const nameEl = el.querySelector('.tweak-name')
+      if (nameEl) {
+        const chip = document.createElement('span')
+        chip.id = `cleanup-size-chip-${row.id}`
+        chip.style.cssText = 'font-size:10px;font-weight:600;margin-left:7px;display:none;vertical-align:middle'
+        nameEl.appendChild(chip)
+        // Watch badge: when it gets class 'applied', mark chip as freed
+        const badge = el.querySelector(`#badge-${row.id}`)
+        if (badge) {
+          const obs = new MutationObserver(() => {
+            if (badge.classList.contains('applied')) {
+              _markCleanupFreed(row.id)
+              obs.disconnect()
+            }
+          })
+          obs.observe(badge, { attributes: true, attributeFilter: ['class'] })
+        }
+      }
+      card.appendChild(el)
+    })
     c.appendChild(card)
   })
 
@@ -12434,13 +13396,54 @@ async function loadDiskUsage(btn) {
 }
 
 async function doQuickClean() {
-  const safeIds = ['clean-temp','clean-browsers','clean-discord','clean-nvidia','clean-steam','clean-gameservices','clean-thumbnails','clean-fontcache','clean-errorlogs','clean-eventlogs']
-  let done = 0
+  const safeIds = ['clean-recycle','clean-temp','clean-browsers','clean-discord','clean-nvidia','clean-steam','clean-gameservices','clean-spotify','clean-xbox','clean-msstore','clean-roblox','clean-thumbnails','clean-fontcache','clean-errorlogs','clean-eventlogs']
+  const total = safeIds.length
+  let done = 0, failed = 0
+
+  // Build progress modal
+  const overlay = document.createElement('div')
+  overlay.id = 'quick-clean-overlay'
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:9999;display:flex;align-items:center;justify-content:center'
+  overlay.innerHTML = `
+    <div style="background:#0d1520;border:1px solid #1a2a3a;border-radius:14px;padding:24px 28px;width:420px;max-width:90vw">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+        <span style="font-size:20px;color:#3498db"><i class="fa fa-broom"></i></span>
+        <div style="font-size:14px;font-weight:700;color:var(--white)" id="qc-title">${tUI('cleanupProgressTitle')}</div>
+      </div>
+      <div style="height:6px;background:#1a2a3a;border-radius:4px;overflow:hidden;margin-bottom:14px">
+        <div id="qc-bar" style="height:100%;width:0%;background:linear-gradient(90deg,#3498db,#00D4FF);border-radius:4px;transition:width .3s"></div>
+      </div>
+      <div style="font-size:11px;color:#7a7a8a;margin-bottom:12px" id="qc-counter">0 / ${total}</div>
+      <div id="qc-log" style="max-height:180px;overflow-y:auto;font-size:11px;color:#aaa;line-height:1.7"></div>
+    </div>
+  `
+  document.body.appendChild(overlay)
+
+  const bar = document.getElementById('qc-bar')
+  const counter = document.getElementById('qc-counter')
+  const log = document.getElementById('qc-log')
+  const title = document.getElementById('qc-title')
+
   for (const id of safeIds) {
-    await applyTweak(id, 'apply').catch(() => {})
-    done++
+    const name = tName(id) || id
+    try {
+      await applyTweak(id, 'apply')
+      done++
+      log.innerHTML += `<div style="color:#4ade80"><i class="fa fa-check" style="margin-right:6px"></i>${name}</div>`
+    } catch {
+      failed++
+      log.innerHTML += `<div style="color:#f87171"><i class="fa fa-xmark" style="margin-right:6px"></i>${name}</div>`
+    }
+    log.scrollTop = log.scrollHeight
+    bar.style.width = `${Math.round(((done + failed) / total) * 100)}%`
+    counter.textContent = `${done + failed} / ${total}`
   }
-  toast(tUI('cleanupQuickCleanTitle'), `${done} cleanup jobs completed.`, 'ok')
+
+  const doneMsg = tUI('cleanupProgressDone').replace('{done}', done)
+  title.textContent = doneMsg
+  title.style.color = '#4ade80'
+  bar.style.width = '100%'
+  setTimeout(() => overlay.remove(), 2200)
 }
 
 async function estimateCleanupSize() {
@@ -12449,6 +13452,50 @@ async function estimateCleanupSize() {
   const r = await api.getTempSize().catch(() => null)
   if (btn && r) btn.textContent = `~${r.label} freeable`
   else if (btn) btn.style.display = 'none'
+}
+
+window._cleanupSizes = {}
+
+async function scanCleanupSizes() {
+  const scanBtn = document.getElementById('cleanup-scan-sizes-btn')
+  if (scanBtn) { scanBtn.disabled = true; scanBtn.innerHTML = `<i class="fa fa-spinner fa-spin"></i> ${tUI('cleanupScanning')}` }
+
+  const sizes = await api.getCleanupSizes().catch(() => ({}))
+  window._cleanupSizes = sizes || {}
+
+  const fmt = b => b >= 1073741824 ? `${(b/1073741824).toFixed(1)} GB` : b >= 1048576 ? `${Math.round(b/1048576)} MB` : b > 0 ? `${Math.round(b/1024)} KB` : null
+
+  for (const [id, bytes] of Object.entries(window._cleanupSizes)) {
+    const label = fmt(bytes)
+    const chip = document.getElementById(`cleanup-size-chip-${id}`)
+    if (chip) {
+      if (label) {
+        chip.textContent = `· ${label}`
+        chip.style.color = '#3498db'
+        chip.style.display = 'inline'
+      } else {
+        chip.style.display = 'none'
+      }
+    }
+  }
+
+  // Update estimate display with total
+  const total = Object.values(window._cleanupSizes).reduce((s, b) => s + b, 0)
+  const est = document.getElementById('cleanup-size-est')
+  if (est && total > 0) { est.style.display = 'inline'; est.textContent = `~${fmt(total)} freeable` }
+
+  if (scanBtn) { scanBtn.disabled = false; scanBtn.innerHTML = `<i class="fa fa-ruler"></i> ${tUI('cleanupScanSizesBtn')}` }
+}
+
+function _markCleanupFreed(id) {
+  const chip = document.getElementById(`cleanup-size-chip-${id}`)
+  const bytes = window._cleanupSizes?.[id]
+  if (!chip || !bytes) return
+  const fmt = b => b >= 1073741824 ? `${(b/1073741824).toFixed(1)} GB` : b >= 1048576 ? `${Math.round(b/1048576)} MB` : `${Math.round(b/1024)} KB`
+  chip.textContent = `· freed ~${fmt(bytes)}`
+  chip.style.color = '#4ade80'
+  chip.style.display = 'inline'
+  window._cleanupSizes[id] = 0
 }
 
 // ─── Page: Debloater ──────────────────────────────────────────────────────────
@@ -13303,16 +14350,45 @@ async function doRemoveDevices() {
 
 // ─── Page: Restore Points ─────────────────────────────────────────────────────
 function buildRestorePoints(c) {
+  // Admin banner (async, injected after check)
+  const adminBanner = document.createElement('div')
+  adminBanner.id = 'rp-admin-banner'
+  adminBanner.style.display = 'none'
+  adminBanner.className = 'rp-admin-banner'
+  adminBanner.innerHTML = `<i class="fa fa-shield-exclamation"></i><span>${tUI('rpAdminWarn')}</span><button class="btn btn-danger btn-sm" onclick="api.relaunchAdmin()">${tUI('rpRelaunchAdmin')}</button>`
+  c.appendChild(adminBanner)
+
+  // Stale snapshot warning banner
+  const staleBanner = document.createElement('div')
+  staleBanner.id = 'rp-stale-banner'
+  staleBanner.style.display = 'none'
+  staleBanner.className = 'rp-stale-banner'
+  staleBanner.innerHTML = `<i class="fa fa-clock-rotate-left"></i><span>${tUI('rpStaleWarn')}</span>`
+  c.appendChild(staleBanner)
+
+  // Hero card
   const hero = document.createElement('div')
   hero.className = 'rp-hero'
+  const autoSnapshotDays = settings.autoSnapshotDays || '0'
+  const lastAuto = settings.lastAutoSnapshot ? new Date(settings.lastAutoSnapshot).toLocaleString() : tUI('rpLastAutoNever')
   hero.innerHTML = `
     <div class="rp-hero-title"><i class="fa fa-shield-halved"></i> ${tUI('rpHeroTitle')}</div>
     <div class="rp-hero-desc">${tUI('rpHeroDesc')}</div>
     <div class="rp-create-row">
       <input type="text" class="rp-input" id="rp-desc" value="JylliTool_v1_Manual" placeholder="${tUI('rpDescPlaceholder')}">
       <button class="btn btn-primary" onclick="doCreateRP()"><i class="fa fa-shield-halved"></i> ${tUI('rpCreate')}</button>
-      <button class="btn btn-ghost" onclick="loadRPList()"><i class="fa fa-arrows-rotate"></i> ${tUI('rpEnableSR')}</button>
+      <button class="btn btn-ghost" onclick="rpEnableSR()"><i class="fa fa-power-off"></i> ${tUI('rpEnableSR')}</button>
       <span class="rp-status" id="rp-status">${tUI('rpNoSession')}</span>
+    </div>
+    <div class="rp-schedule-row">
+      <span class="rp-schedule-label"><i class="fa fa-calendar-clock"></i> ${tUI('rpScheduleLabel')}</span>
+      <select class="rp-schedule-select" id="rp-schedule" onchange="rpSetSchedule(this.value)">
+        <option value="0" ${autoSnapshotDays==='0'?'selected':''}>${tUI('rpScheduleOff')}</option>
+        <option value="1" ${autoSnapshotDays==='1'?'selected':''}>${tUI('rpScheduleDay')}</option>
+        <option value="3" ${autoSnapshotDays==='3'?'selected':''}>${tUI('rpSchedule3Days')}</option>
+        <option value="7" ${autoSnapshotDays==='7'?'selected':''}>${tUI('rpScheduleWeek')}</option>
+      </select>
+      <span class="rp-last-auto" id="rp-last-auto">${tUI('rpLastAuto')} ${lastAuto}</span>
     </div>
   `
   c.appendChild(hero)
@@ -13322,39 +14398,71 @@ function buildRestorePoints(c) {
   infoDiv.className = 'info-cards'
   const rpColors = ['var(--success)', 'var(--info)', 'var(--warning)']
   ;(LANG[currentLang]?.rpCards || LANG.en.rpCards).forEach(({ title, body }, i) => {
-    const color = rpColors[i]
     const card = document.createElement('div')
     card.className = 'info-card'
-    card.innerHTML = `<div class="info-card-title" style="color:${color}">${title}</div><div class="info-card-body">${body}</div>`
+    card.innerHTML = `<div class="info-card-title" style="color:${rpColors[i]}">${title}</div><div class="info-card-body">${body}</div>`
     infoDiv.appendChild(card)
   })
   c.appendChild(infoDiv)
 
-  // Restore points list
+  // Restore points list section
   const listCard = makeSection(`<i class="fa fa-arrows-rotate"></i> ${tUI('rpSectionTitle')}`, tUI('rpSectionSub'))
+
+  // Disk usage bar
+  const diskBarWrap = document.createElement('div')
+  diskBarWrap.className = 'rp-disk-bar-wrap'
+  diskBarWrap.id = 'rp-disk-bar-wrap'
+  diskBarWrap.innerHTML = `<div class="rp-disk-bar-label"><i class="fa fa-hard-drive"></i> ${tUI('rpDiskLabel')}</div><div class="rp-disk-bar-track"><div class="rp-disk-bar-fill low" id="rp-disk-fill" style="width:0%"></div></div><div class="rp-disk-bar-info" id="rp-disk-info">…</div>`
+  listCard.appendChild(diskBarWrap)
+
   const tableWrap = document.createElement('div')
   tableWrap.style.cssText = 'padding:0 18px 12px; overflow-x:auto'
   tableWrap.innerHTML = `
-    <div style="display:flex;gap:8px;margin-bottom:10px">
+    <div class="rp-toolbar">
       <button class="btn btn-ghost btn-sm" onclick="loadRPList()"><i class="fa fa-arrows-rotate"></i> ${tUI('rpRefresh')}</button>
       <button class="btn btn-ghost btn-sm" onclick="openRstrui()"><i class="fa fa-screwdriver-wrench"></i> ${tUI('rpOpenRstrui')}</button>
+      <button class="btn btn-ghost btn-sm" onclick="rpExportList()"><i class="fa fa-file-export"></i> ${tUI('rpExportList')}</button>
     </div>
     <table class="rp-table" id="rp-table">
-      <tr><th>${tUI('rpTableSeq')}</th><th>${tUI('rpTableDesc')}</th><th>${tUI('rpTableDate')}</th></tr>
-      <tr><td colspan="3" style="color:var(--muted);padding:16px 14px">${tUI('rpLoading')}</td></tr>
+      <thead><tr><th>${tUI('rpTableSeq')}</th><th>${tUI('rpTableDesc')}</th><th>${tUI('rpTableDate')}</th><th></th></tr></thead>
+      <tbody id="rp-tbody"><tr><td colspan="4" style="color:var(--muted);padding:16px 14px">${tUI('rpLoading')}</td></tr></tbody>
     </table>
-    <div class="rp-restore-row" style="margin-top:12px;border-radius:7px">
-      <span style="font-size:11px;color:var(--danger);font-weight:600"><i class="fa fa-triangle-exclamation"></i> ${tUI('rpRestoreLabel')}</span>
-      <input type="number" class="rp-seq-input" id="rp-seq" placeholder="${tUI('rpSeqPlaceholder')}" min="1">
-      <button class="btn btn-danger" onclick="doRestoreToPoint()"><i class="fa fa-triangle-exclamation"></i> ${tUI('rpRestoreBtn')}</button>
-      <span style="font-size:10px;color:var(--gray)">${tUI('rpRestoreWarn')}</span>
+    <div class="rp-restore-row" style="margin-top:12px;border-radius:7px;flex-direction:column;align-items:flex-start;gap:8px">
+      <div class="rp-selected-preview" id="rp-selected-preview">
+        <span class="rp-sp-seq" id="rp-sp-seq"></span>
+        <span class="rp-sp-desc" id="rp-sp-desc"></span>
+        <span class="rp-sp-date" id="rp-sp-date"></span>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+        <span style="font-size:11px;color:var(--danger);font-weight:600"><i class="fa fa-triangle-exclamation"></i> ${tUI('rpRestoreLabel')}</span>
+        <span style="font-size:11px;color:var(--muted)" id="rp-no-sel">${tUI('rpNoSelection')}</span>
+        <button class="btn btn-danger" id="rp-restore-btn" style="display:none" onclick="doRestoreToPoint()"><i class="fa fa-triangle-exclamation"></i> ${tUI('rpRestoreBtn')}</button>
+        <span style="font-size:10px;color:var(--gray)">${tUI('rpRestoreWarn')}</span>
+      </div>
     </div>
   `
   listCard.appendChild(tableWrap)
   c.appendChild(listCard)
 
+  // Check admin, load disk usage and restore points in parallel
+  api.checkIsAdmin().then(({ isAdmin }) => {
+    if (!isAdmin) document.getElementById('rp-admin-banner').style.display = 'flex'
+  }).catch(() => {})
+  loadRPDiskUsage()
   loadRPList()
+
+  // Listen for auto-snapshot completion from main process
+  api.onAutoSnapshotDone(({ ts }) => {
+    settings.lastAutoSnapshot = ts
+    const el = document.getElementById('rp-last-auto')
+    if (el) el.textContent = `${tUI('rpLastAuto')} ${new Date(ts).toLocaleString()}`
+    loadRPList()
+  })
 }
+
+// Tracks which restore point sequence number is currently selected in the table
+let _rpSelectedSeq = null
+let _rpSelectedData = null
 
 async function doCreateRP() {
   const desc = document.getElementById('rp-desc')?.value.trim() || 'JylliTool_v1_Manual'
@@ -13365,30 +14473,165 @@ async function doCreateRP() {
     status.textContent = r.ok ? tUI('rpCreated') : `${tUI('rpFailed')} ${r.error}`
     status.style.color = r.ok ? 'var(--success)' : 'var(--danger)'
   }
-  if (r.ok) loadRPList()
+  if (r.ok) { loadRPList(); loadRPDiskUsage() }
+}
+
+async function rpEnableSR() {
+  const status = document.getElementById('rp-status')
+  if (status) { status.innerHTML = `<i class="fa fa-spinner fa-spin"></i> Enabling SR…`; status.style.color = 'var(--warning)' }
+  await api.createRestorePoint('JylliTool_EnableSR_Check')
+  if (status) { status.textContent = tUI('rpSrEnabled'); status.style.color = 'var(--success)' }
+  loadRPList()
+}
+
+function _rpParseDate(wmiFmt) {
+  if (!wmiFmt) return null
+  // WMI format: 20250523143000.000000+000
+  const m = String(wmiFmt).match(/^(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})/)
+  if (!m) return null
+  return new Date(`${m[1]}-${m[2]}-${m[3]}T${m[4]}:${m[5]}:${m[6]}`)
+}
+
+function _rpTypeClass(desc) {
+  const d = (desc || '').toLowerCase()
+  if (d.includes('install')) return 'install'
+  if (d.includes('driver')) return 'driver'
+  if (d.includes('modify') || d.includes('settings') || d.includes('jyllit') || d.includes('manual')) return 'modify'
+  return 'other'
+}
+function _rpTypeLabel(typeClass) {
+  const map = { modify: tUI('rpTypeModify'), install: tUI('rpTypeInstall'), driver: tUI('rpTypeDriver'), other: tUI('rpTypeOther') }
+  return map[typeClass] || typeClass
+}
+
+function rpSelectRow(seq, desc, dateStr) {
+  _rpSelectedSeq = seq
+  _rpSelectedData = { seq, desc, dateStr }
+  // Highlight row
+  document.querySelectorAll('#rp-tbody tr').forEach(r => r.classList.toggle('rp-selected', r.dataset.seq == seq))
+  // Update preview card
+  const preview = document.getElementById('rp-selected-preview')
+  const noSel = document.getElementById('rp-no-sel')
+  const restoreBtn = document.getElementById('rp-restore-btn')
+  if (preview) {
+    preview.classList.add('visible')
+    document.getElementById('rp-sp-seq').textContent = `#${seq}`
+    document.getElementById('rp-sp-desc').textContent = desc
+    document.getElementById('rp-sp-date').textContent = dateStr
+  }
+  if (noSel) noSel.style.display = 'none'
+  if (restoreBtn) restoreBtn.style.display = ''
 }
 
 async function loadRPList() {
-  const table = document.getElementById('rp-table')
-  if (!table) return
+  const tbody = document.getElementById('rp-tbody')
+  if (!tbody) return
+  tbody.innerHTML = `<tr><td colspan="4" style="color:var(--muted);padding:16px 14px">${tUI('rpLoading')}</td></tr>`
   const points = await api.listRestorePoints()
-  if (!points.length) { table.innerHTML = `<tr><th>#</th><th>Description</th><th>Date / Time</th></tr><tr><td colspan="3" style="color:var(--muted);padding:16px 14px">${tUI('rpNotFound')}</td></tr>`; return }
-  table.innerHTML = `<tr><th>#</th><th>Description</th><th>Date / Time</th></tr>` + points.map(p => `<tr><td>${p.SequenceNumber}</td><td>${p.Description}</td><td>${p.CreationTime || ''}</td></tr>`).join('')
+
+  // Check for stale snapshots
+  const staleBanner = document.getElementById('rp-stale-banner')
+  if (staleBanner) {
+    const sevenDaysAgo = Date.now() - 7 * 86400000
+    const hasRecent = points.some(p => { const d = _rpParseDate(p.CreationTime); return d && d.getTime() > sevenDaysAgo })
+    staleBanner.style.display = hasRecent ? 'none' : 'flex'
+  }
+
+  if (!points.length) {
+    tbody.innerHTML = `<tr><td colspan="4"><div class="rp-empty"><i class="fa fa-shield-halved"></i><p>${tUI('rpNotFound')}</p><button class="btn btn-primary btn-sm" onclick="doCreateRP()"><i class="fa fa-plus"></i> ${tUI('rpCreate')}</button></div></td></tr>`
+    return
+  }
+
+  const now = Date.now()
+  const newestSeq = points[0]?.SequenceNumber
+  tbody.innerHTML = points.map((p, idx) => {
+    const seq = p.SequenceNumber
+    const desc = p.Description || ''
+    const dateObj = _rpParseDate(p.CreationTime)
+    const dateStr = dateObj ? dateObj.toLocaleString() : (p.CreationTime || '')
+    const ageMs = dateObj ? (now - dateObj.getTime()) : 0
+    const isNewest = seq === newestSeq
+    const isOld = ageMs > 30 * 86400000
+    const ageBadge = isNewest
+      ? `<span class="rp-badge latest"><i class="fa fa-star"></i> ${tUI('rpBadgeLatest')}</span>`
+      : (isOld ? `<span class="rp-badge old"><i class="fa fa-triangle-exclamation"></i> ${tUI('rpBadgeOld')}</span>` : '')
+    const typeClass = _rpTypeClass(desc)
+    const typePill = `<span class="rp-type ${typeClass}">${_rpTypeLabel(typeClass)}</span>`
+    return `<tr data-seq="${seq}" onclick="rpSelectRow(${seq}, ${JSON.stringify(desc)}, ${JSON.stringify(dateStr)})">
+      <td style="font-weight:700;color:var(--white)">${seq}</td>
+      <td>${desc}${ageBadge} ${typePill}</td>
+      <td>${dateStr}</td>
+      <td><button class="rp-del-btn" title="${tUI('rpDeleteTitle')}" onclick="event.stopPropagation();doDeleteRP(${seq})"><i class="fa fa-trash"></i></button></td>
+    </tr>`
+  }).join('')
+
+  // Re-apply selection highlight if user had one selected
+  if (_rpSelectedSeq != null) {
+    document.querySelectorAll('#rp-tbody tr').forEach(r => r.classList.toggle('rp-selected', r.dataset.seq == _rpSelectedSeq))
+  }
+}
+
+async function loadRPDiskUsage() {
+  const fill = document.getElementById('rp-disk-fill')
+  const info = document.getElementById('rp-disk-info')
+  if (!fill || !info) return
+  const d = await api.getSrDiskUsage().catch(() => ({ available: false }))
+  if (!d.available) { info.textContent = tUI('rpDiskUnavailable'); return }
+  const usedGB = (d.usedBytes / 1073741824).toFixed(2)
+  const maxGB  = (d.maxBytes  / 1073741824).toFixed(2)
+  const pct = d.maxBytes > 0 ? Math.min(100, Math.round(d.usedBytes / d.maxBytes * 100)) : 0
+  fill.style.width = pct + '%'
+  fill.className = `rp-disk-bar-fill ${pct < 60 ? 'low' : pct < 85 ? 'mid' : 'high'}`
+  info.textContent = `${tUI('rpDiskUsed')}: ${usedGB} GB  /  ${tUI('rpDiskMax')}: ${maxGB} GB  (${pct}%)`
 }
 
 async function doRestoreToPoint() {
-  const seq = parseInt(document.getElementById('rp-seq')?.value)
-  if (isNaN(seq)) { toast(tUI('rpInvalidSeqTitle'), tUI('rpInvalidSeq'), 'warn'); return }
+  const seq = _rpSelectedSeq
+  if (!seq) { toast(tUI('rpInvalidSeqTitle'), tUI('rpInvalidSeq'), 'warn'); return }
   try { await showConfirm({ title: `${tUI('restoreConfirmTitle')} #${seq}`, body: `<strong style="color:var(--pink)">${tUI('restoreConfirmBody')}</strong><br><br>Windows will restore to this point and <strong style="color:#e0e0e0">restart automatically</strong>.<br><br><span style="font-size:12px;color:var(--muted)">Tweak states will be reset to match the restored system.</span>`, okText: tUI('restoreConfirmOk'), okStyle: 'danger', icon: 'fa-triangle-exclamation' }) } catch { return }
-  // Clear all tweak states so the UI reflects real state after reboot
   const cleared = {}
-  for (const key of Object.keys(settings)) {
-    cleared[key] = 'not-applied'
-  }
+  for (const key of Object.keys(settings)) { cleared[key] = 'not-applied' }
   await api.saveSettings(cleared)
   localStorage.setItem('jt_settings', JSON.stringify(cleared))
   Object.assign(settings, cleared)
   await api.restoreToPoint(seq)
+}
+
+async function doDeleteRP(seq) {
+  try { await showConfirm({ title: tUI('rpDeleteConfirmTitle'), body: tUI('rpDeleteConfirmBody').replace('{{seq}}', seq), okText: tUI('rpDeleteOk'), okStyle: 'danger', icon: 'fa-trash' }) } catch { return }
+  const r = await api.deleteRestorePoint(seq)
+  if (r.ok) {
+    toast(tUI('rpDeleteTitle'), tUI('rpDeleted'), 'ok')
+    if (_rpSelectedSeq === seq) {
+      _rpSelectedSeq = null
+      const preview = document.getElementById('rp-selected-preview')
+      const noSel = document.getElementById('rp-no-sel')
+      const restoreBtn = document.getElementById('rp-restore-btn')
+      if (preview) preview.classList.remove('visible')
+      if (noSel) noSel.style.display = ''
+      if (restoreBtn) restoreBtn.style.display = 'none'
+    }
+    loadRPList()
+    loadRPDiskUsage()
+  } else {
+    toast(tUI('rpDeleteTitle'), `${tUI('rpDeleteFailed')} ${r.error || ''}`, 'err')
+  }
+}
+
+async function rpSetSchedule(days) {
+  settings.autoSnapshotDays = days
+  await api.saveSettings({ ...settings, autoSnapshotDays: days })
+}
+
+async function rpExportList() {
+  const points = await api.listRestorePoints()
+  if (!points.length) { toast(tUI('rpSectionTitle'), tUI('rpNotFound'), 'warn'); return }
+  const lines = points.map(p => {
+    const d = _rpParseDate(p.CreationTime)
+    return `#${p.SequenceNumber}  |  ${p.Description}  |  ${d ? d.toLocaleString() : p.CreationTime || ''}`
+  })
+  const content = `System Restore Points — ${new Date().toLocaleString()}\n${'─'.repeat(60)}\n${lines.join('\n')}\n`
+  await api.saveTextFile({ filename: 'restore-points.txt', content })
 }
 
 function openRstrui() { api.openExternal('rstrui.exe') }
@@ -13439,5 +14682,16 @@ document.addEventListener('mousemove', e => {
 }, { passive: true })
 </script>
 <script src="js/boot-logic.js"></script>
+
+<div id="reboot-queue-bar">
+  <i class="fa fa-rotate-right" style="color:var(--warning);font-size:13px"></i>
+  <span id="rqb-label"></span>
+  <button id="rqb-btn" onclick="genRebootNow()"></button>
+</div>
+
+<div id="gen-tip-pop">
+  <div id="gen-tip-pop-body"></div>
+</div>
+
 </body>
 </html>
