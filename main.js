@@ -1566,6 +1566,45 @@ ipcMain.handle('get-boot-time', async () => {
   } catch { return null }
 })
 
+ipcMain.handle('get-tweak-states', async () => {
+  const r = await runPS(`
+    $gp  = { param($p,$n) try { (Get-ItemProperty -Path $p -Name $n -EA Stop).$n } catch { $null } }
+    $bcd = try { bcdedit /enum | Out-String } catch { '' }
+    $mm  = 'HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Memory Management'
+    $netGuid = '{4d36e972-e325-11ce-bfc1-08002be10318}'
+    $msiFound = $false
+    $checked  = 0
+    Get-ChildItem 'HKLM:\\SYSTEM\\CurrentControlSet\\Enum\\PCI' -EA SilentlyContinue | ForEach-Object {
+      if ($checked -ge 5) { return }
+      Get-ChildItem $_.PSPath -EA SilentlyContinue | ForEach-Object {
+        if ($checked -ge 5) { return }
+        $props = Get-ItemProperty -Path $_.PSPath -EA SilentlyContinue
+        if ($props.ClassGUID -eq $netGuid) { return }
+        $msiPath = "$($_.PSPath)\\Device Parameters\\Interrupt Management\\MessageSignaledInterruptProperties"
+        if ((& $gp $msiPath 'MSISupported') -eq 1) { $msiFound = $true }
+        $checked++
+      }
+    }
+    @(
+      "hpet=$(if($bcd -match 'useplatformtick.*Yes'){'1'}else{'0'})"
+      "tsc-sync=$(if($bcd -match 'tscsyncpolicy.*enhanced'){'1'}else{'0'})"
+      "bcd-tweaks=$(if($bcd -match 'bootmenupolicy.*Standard'){'1'}else{'0'})"
+      "gpu-hwsch=$(if((& $gp 'HKLM:\\SYSTEM\\CurrentControlSet\\Control\\GraphicsDrivers' 'HwSchMode') -eq 2){'1'}else{'0'})"
+      "global-timer-resolution=$(if((& $gp 'HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Session Manager\\kernel' 'GlobalTimerResolutionRequests') -eq 1){'1'}else{'0'})"
+      "spectre-meltdown=$(if((& $gp $mm 'FeatureSettingsOverride') -eq 3){'1'}else{'0'})"
+      "cursor-max-rate=$(if((& $gp 'HKLM:\\SYSTEM\\CurrentControlSet\\Services\\mouclass\\Parameters' 'MouseDataQueueSize') -eq 20){'1'}else{'0'})"
+      "msi-mode=$(if($msiFound){'1'}else{'0'})"
+    )
+  `, 12000)
+  if (!r.ok) return null
+  const out = {}
+  for (const line of r.out.split(/\r?\n/)) {
+    const m = line.match(/^([a-z0-9-]+)=([01])$/)
+    if (m) out[m[1]] = m[2] === '1'
+  }
+  return out
+})
+
 ipcMain.handle('load-settings', () => { startupTrace('IPC load-settings handler called'); return loadSettings() })
 ipcMain.handle('save-settings', (_, data) => { saveSettings(data); return true })
 ipcMain.handle('set-startup', (_, enabled) => {
@@ -6902,7 +6941,7 @@ ipcMain.handle('run-preflight-scan', async () => {
     $r['mmcss']                  = (gp 'HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Multimedia\\SystemProfile\\Tasks\\Games' 'GPU Priority') -ge 8
     $r['sysmain']                = (svc 'SysMain') -eq 'Disabled'
     $r['power-throttling']       = (gp 'HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Power\\PowerThrottling' 'PowerThrottlingOff') -eq 1
-    $r['hpet']                   = $bcd -match 'useplatformclock.*No'
+    $r['hpet']                   = $bcd -match 'useplatformtick.*Yes'
     $r['tsc-sync']               = $bcd -match 'tscsyncpolicy.*enhanced'
     $r['bcd-tweaks']             = $bcd -match 'bootmenupolicy.*Standard'
     $r['gpu-hwsch']              = (gp 'HKLM:\\SYSTEM\\CurrentControlSet\\Control\\GraphicsDrivers' 'HwSchMode') -eq 2
@@ -7384,6 +7423,21 @@ ipcMain.handle('clean-power-plans', async () => {
 
 // What's New content
 const WHATS_NEW = [
+  { version: '1.4.9', date: 'May 2026', items: [
+    'General Tweaks — Finnish translations added for all info card "Expected Impact" descriptions; shown when app language is set to Finnish',
+    'Fix — tweaks (HPET, TSC Sync, MSI Mode, GPU Hardware Scheduling, Cursor Max Rate, Spectre/Meltdown, BCD Boot Tweaks, Global Timer Resolution) no longer show as disabled after reboot; app now re-checks actual system state on launch',
+    'Fix — reboot bar no longer appears after reboot for tweaks already verified as active; only shows for tweaks applied in the current session that still need a reboot',
+    'Fix — HPET detection now checks useplatformtick instead of a registry value the apply step deliberately deletes',
+    'Fix — bcdedit query no longer fails silently due to incorrect PowerShell quoting; BCD-based tweaks (HPET, TSC Sync, BCD tweaks) now correctly report their state after reboot',
+    'Fix — reboot bar no longer shows on every launch; verified-tweaks tracking Set now initialized correctly on all launch paths',
+  ], items_fi: [
+    'Yleiset säädöt — suomenkieliset käännökset lisätty kaikille tietokorttiein "Odotettu vaikutus" -kuvauksille; näytetään kun sovelluksen kieli on suomi',
+    'Korjaus — säädöt (HPET, TSC Sync, MSI Mode, GPU Hardware Scheduling, Cursor Max Rate, Spectre/Meltdown, BCD Boot Tweaks, Global Timer Resolution) eivät enää näy poistettuina uudelleenkäynnistyksen jälkeen; sovellus tarkistaa nyt järjestelmän todellisen tilan käynnistyessä',
+    'Korjaus — uudelleenkäynnistysrivi ei enää näy uudelleenkäynnistyksen jälkeen jo aktiivisille säädöille; näkyy vain nykyisessä istunnossa sovelletuille säädöille',
+    'Korjaus — HPET-tunnistus tarkistaa nyt useplatformtick-arvon, ei rekisteriavainta jonka aktivointi tahallisesti poistaa',
+    'Korjaus — bcdedit-kysely ei enää epäonnistu hiljaa väärän PowerShell-lainausmerkkikäytännön vuoksi; BCD-pohjaiset säädöt (HPET, TSC Sync, BCD-säädöt) raportoivat nyt tilan oikein uudelleenkäynnistyksen jälkeen',
+    'Korjaus — uudelleenkäynnistysrivi ei enää näy joka käynnistyksellä; seurantarakenne alustetaan nyt oikein kaikilla käynnistyspoluilla',
+  ]},
   { version: '1.4.8', date: 'May 2026', items: [
     'Installer — dark-themed installer matching the app look (#14141A bg, indigo accents); correct Jylli Tool branding and v1.4.8 on sidebar and header',
     'Cleanup tab — Recycle Bin row with live size reading and one-click empty',
