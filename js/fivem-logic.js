@@ -1,5 +1,7 @@
 'use strict'
 
+let _fivemHudOpen = false
+
 // ─── Page: FiveM ──────────────────────────────────────────────────────────────
 async function buildFiveM(c) {
   if (!settings.isPremium) { await buildPremiumBanner(c, 'fivem'); return }
@@ -11,21 +13,6 @@ async function buildFiveM(c) {
     nb.innerHTML = `<i class="fa fa-triangle-exclamation" style="color:#f39c12;flex-shrink:0"></i><span>${tUI('fivemNotDetected')}</span>`
     c.appendChild(nb)
   }
-
-  // ── Sticky progress header ─────────────────────────────────────────────────
-  const progHeader = document.createElement('div')
-  progHeader.className = 'fivem-progress-header'
-  progHeader.innerHTML = `
-    <span class="fivem-progress-label" id="fivem-prog-label">0 / 0</span>
-    <div class="fivem-progress-bar-track">
-      <div class="fivem-progress-bar-fill" id="fivem-prog-fill" style="width:0%"></div>
-    </div>
-    <span style="font-size:11px;font-weight:700;color:var(--pink);white-space:nowrap" id="fivem-fps-badge">Score: 0</span>
-    <button class="btn btn-primary" style="font-size:10px;padding:4px 12px;white-space:nowrap" onclick="genApplySafeDefaults()">
-      <i class="fa fa-bolt"></i> ${tUI('fivemApplyAllSafe')}
-    </button>
-  `
-  c.appendChild(progHeader)
 
   // ── Dismissible order banner ───────────────────────────────────────────────
   if (!localStorage.getItem('fivem_order_dismissed')) {
@@ -105,19 +92,9 @@ async function buildFiveM(c) {
       ]
     },
   ]
-  const totalTweaks = sections.reduce((n, s) => n + s.rows.length, 0)
-
   const hero = document.createElement('div')
   hero.className = 'fivem-hero'
   hero.innerHTML = `
-    <div class="fivem-hero-card fivem-hero-tweaks">
-      <div class="fhc-icon"><i class="fa fa-gears"></i></div>
-      <div class="fhc-body">
-        <div class="fhc-title">${tUI('fivemHeroTweaks')}</div>
-        <div class="fhc-desc">${tUI('fivemHeroTweaksDesc')}</div>
-        <div class="fhc-count"><i class="fa fa-bolt"></i> ${totalTweaks} ${tUI('fivemHeroTweaksCountLabel')}</div>
-      </div>
-    </div>
     <div class="fivem-hero-card fivem-hero-graphics" onclick="api.openFivemSettings()">
       <div class="fhc-icon"><i class="fa fa-sliders"></i></div>
       <div class="fhc-body">
@@ -134,16 +111,6 @@ async function buildFiveM(c) {
         <div class="fhc-open"><i class="fa fa-play"></i> ${tUI('fivemHeroHealthRun')}</div>
       </div>
     </div>
-    <div class="fivem-hero-card fhc-variant-pink" id="fivem-opt-score-card">
-      <div class="fhc-icon"><i class="fa fa-gauge-high"></i></div>
-      <div class="fhc-body" style="flex:1;min-width:0">
-        <div class="opt-tier-label opt-tier-unoptimized" id="fivem-opt-tier">${tUI('fivemOptTierUnoptimized')}</div>
-        <div class="fhc-title" id="fivem-fps-card-val" style="line-height:1">0<span style="font-size:13px;font-weight:500;color:var(--muted)" id="fivem-opt-max-label"></span></div>
-        <div class="opt-score-bar-track"><div class="opt-score-bar-fill" id="fivem-opt-bar"></div></div>
-        <canvas id="fivem-fps-sparkline" width="80" height="18" style="display:block;margin-bottom:4px"></canvas>
-        <div class="opt-cta" id="fivem-opt-cta"></div>
-      </div>
-    </div>
     <div class="fivem-hero-card fhc-variant-purple" onclick="fivemOpenSmartCache()">
       <div class="fhc-icon"><i class="fa fa-database"></i></div>
       <div class="fhc-body">
@@ -158,6 +125,29 @@ async function buildFiveM(c) {
         <div class="fhc-title">${tUI('fivemHeroIniEditor')}</div>
         <div class="fhc-desc">${tUI('fivemHeroIniEditorDesc')}</div>
         <div class="fhc-open" style="color:#2ecc71"><i class="fa fa-pen-to-square"></i> ${tUI('fivemHeroIniEditorOpen')}</div>
+      </div>
+    </div>
+    <div class="fivem-hero-card fhc-variant-blue" onclick="fivemOpenBookmarks()" style="border-color:rgba(52,152,219,0.3)">
+      <div class="fhc-icon" style="color:#3498db"><i class="fa fa-server"></i></div>
+      <div class="fhc-body">
+        <div class="fhc-title">${tUI('fivemHeroBookmarks')}</div>
+        <div class="fhc-desc">${tUI('fivemHeroBookmarksDesc')}</div>
+        <div class="fhc-open" style="color:#3498db"><i class="fa fa-bookmark"></i> ${tUI('fivemHeroBookmarksOpen')}</div>
+      </div>
+    </div>
+    <div class="fivem-hero-card fhc-variant-purple" onclick="fivemHudToggle()">
+      <div class="fhc-icon"><i class="fa fa-display"></i></div>
+      <div class="fhc-body">
+        <div class="fhc-title">${tUI('fivemHeroHud')}</div>
+        <div class="fhc-desc">${tUI('fivemHeroHudDesc')}</div>
+        <div class="fhc-open" id="fivem-hud-toggle-label"><i class="fa fa-circle-play"></i> ${tUI('fivemHeroHudOpen')}</div>
+        <div style="display:flex;align-items:center;gap:7px;margin-top:6px" onclick="event.stopPropagation()">
+          <label class="toggle-switch" style="flex-shrink:0">
+            <input type="checkbox" id="fivem-hud-auto" ${settings.fivemHudEnabled ? 'checked' : ''} onchange="fivemHudAutoToggle(this.checked)">
+            <span class="toggle-slider"></span>
+          </label>
+          <span style="font-size:9px;color:var(--muted);cursor:pointer" onclick="document.getElementById('fivem-hud-auto').click()">${tUI('fivemHudAutoLabel')}</span>
+        </div>
       </div>
     </div>
   `
@@ -218,6 +208,25 @@ async function buildFiveM(c) {
     </div>
   `
   c.appendChild(iniEditorPanel)
+
+  // ── Server Bookmarks panel (hidden until opened) ─────────────────────────
+  const bookmarksPanel = document.createElement('div')
+  bookmarksPanel.id = 'fivem-bookmarks-panel'
+  bookmarksPanel.style.cssText = 'display:none;margin-bottom:10px;border:1px solid rgba(52,152,219,0.25)'
+  bookmarksPanel.className = 'section-card'
+  bookmarksPanel.innerHTML = `
+    <div class="section-header" style="display:flex;align-items:center;justify-content:space-between">
+      <span style="display:flex;align-items:center;gap:8px"><span class="section-accent" style="background:#3498db"></span><span class="section-title" style="color:#3498db"><i class="fa fa-server"></i> ${tUI('fivemBookmarksTitle')}</span></span>
+      <button class="btn btn-ghost btn-sm" onclick="document.getElementById('fivem-bookmarks-panel').style.display='none';fivemBookmarksClearRefresh()" style="font-size:9px"><i class="fa fa-xmark"></i></button>
+    </div>
+    <div style="padding:0 18px 6px;font-size:9.5px;color:var(--muted)">${tUI('fivemBookmarksDesc')}</div>
+    <div style="padding:0 18px 10px;display:flex;gap:7px;align-items:center">
+      <input id="fivem-bm-input" type="text" placeholder="${tUI('fivemBookmarksAddPlaceholder')}" style="flex:1;padding:5px 10px;border-radius:6px;border:1px solid var(--border);background:var(--bg-card2,#1a1a1a);color:var(--fg);font-size:11px" onkeydown="if(event.key==='Enter')fivemBookmarkAdd()">
+      <button class="btn btn-primary btn-sm" onclick="fivemBookmarkAdd()" style="font-size:10px;white-space:nowrap"><i class="fa fa-plus"></i> ${tUI('fivemBookmarksAddBtn')}</button>
+    </div>
+    <div id="fivem-bookmarks-list" style="padding:0 18px 14px"></div>
+  `
+  c.appendChild(bookmarksPanel)
 
   // ── Search bar ────────────────────────────────────────────────────────────
   const searchWrap = document.createElement('div')
@@ -314,6 +323,46 @@ async function buildFiveM(c) {
   logCard.appendChild(logBody)
   c.appendChild(logCard)
 
+  // ── Session History ───────────────────────────────────────────────────────
+  const sessionHistCard = makeSection(`<i class="fa fa-clock-rotate-left"></i> ${tUI('fivemSessionHistoryTitle')}`)
+  const sessionHistBody = document.createElement('div')
+  sessionHistBody.id = 'fivem-sec-98-body'
+  sessionHistBody.style.display = 'none'
+  sessionHistBody.innerHTML = `
+    <div style="padding:0 18px 6px;font-size:9.5px;color:var(--muted)">${tUI('fivemSessionHistoryDesc')}</div>
+    <div id="fivem-session-hist-list" style="padding:0 18px 14px"></div>
+    <div style="padding:0 18px 10px">
+      <button class="btn btn-ghost btn-sm" style="font-size:9px;color:var(--danger)" onclick="fivemSessionHistClear()"><i class="fa fa-trash"></i> ${tUI('fivemSessionHistoryClear')}</button>
+    </div>
+  `
+  const sessionHistHdr = sessionHistCard.querySelector('.section-header')
+  if (sessionHistHdr) {
+    sessionHistHdr.style.cursor = 'pointer'
+    sessionHistHdr.style.userSelect = 'none'
+    const sessionChev = document.createElement('i')
+    sessionChev.className = 'fa fa-chevron-down'
+    sessionChev.id = 'fivem-sec-98-chevron'
+    sessionChev.style.cssText = 'margin-left:auto;font-size:10px;transition:transform 0.2s;color:var(--muted);transform:rotate(-90deg)'
+    sessionHistHdr.appendChild(sessionChev)
+    sessionHistHdr.onclick = () => toggleFivemSection(98)
+  }
+  sessionHistCard.appendChild(sessionHistBody)
+  c.appendChild(sessionHistCard)
+
+  // Render initial session history
+  fivemSessionHistRender()
+
+  // Listen for ARIA session summaries (fires when FiveM/GTA5 exits)
+  api.onAriaSessionSummary(summary => {
+    const game = (summary.game || '').toLowerCase()
+    if (!game.includes('fivem') && !game.includes('gta') && !game.includes('citizen')) return
+    fivemSessionHistRecord(summary)
+    // Refresh display if the session history section is visible
+    if (document.getElementById('fivem-sec-98-body')?.style.display !== 'none') {
+      fivemSessionHistRender()
+    }
+  })
+
   // ── Restore collapsed sections + initial progress ─────────────────────────
   const collapsed = JSON.parse(localStorage.getItem('fivem_sec_collapsed') || '[]')
   collapsed.forEach(idx => {
@@ -322,7 +371,6 @@ async function buildFiveM(c) {
     if (body) body.style.display = 'none'
     if (chev) chev.style.transform = 'rotate(-90deg)'
   })
-  refreshFivemProgress()
 }
 
 function fivemFilterTweaks(query) {
@@ -367,92 +415,6 @@ function toggleFivemSection(idx) {
     if (chev) chev.style.transform = 'rotate(-90deg)'
     localStorage.setItem('fivem_sec_collapsed', JSON.stringify([...collapsed, idx]))
   }
-}
-
-// FiveM-specific tweak IDs and their weights (mirrors TWEAK_OPT_WEIGHTS for fivem-* keys)
-const FIVEM_SCORE_IDS = [
-  'fivem-priority','fivem-io-priority','fivem-mmcss','fivem-fso','fivem-gamebar',
-  'fivem-gpu','fivem-network','fivem-vm','fivem-streaming-mem','fivem-commandline',
-  'fivem-worker-threads','fivem-disable-crash-reporter','fivem-disable-anticheat-upload',
-  'fivem-disable-update-checks','fivem-preload-ipl','fivem-reduce-draw-distance',
-  'fivem-defender','fivem-hang-fix','fivem-mouse-accel','fivem-power-plan',
-]
-const FIVEM_SCORE_WEIGHTS = {
-  'fivem-priority':1,'fivem-io-priority':1,'fivem-mmcss':1,'fivem-fso':1,'fivem-gamebar':1,
-  'fivem-gpu':2,'fivem-network':0,'fivem-vm':1,'fivem-streaming-mem':1,'fivem-commandline':1,
-  'fivem-worker-threads':1,'fivem-disable-crash-reporter':0,'fivem-disable-anticheat-upload':0,
-  'fivem-disable-update-checks':0,'fivem-preload-ipl':1,'fivem-reduce-draw-distance':1,
-  'fivem-defender':1,'fivem-hang-fix':0,'fivem-mouse-accel':0,'fivem-power-plan':1,
-}
-const FIVEM_SCORE_MAX = Object.values(FIVEM_SCORE_WEIGHTS).reduce((a, b) => a + b, 0)
-
-function calcFivemScore(s) {
-  return FIVEM_SCORE_IDS.reduce((sum, id) => {
-    return s[`tweak_${id}`] === 'applied' ? sum + (FIVEM_SCORE_WEIGHTS[id] || 0) : sum
-  }, 0)
-}
-
-function refreshFivemProgress() {
-  const allIds = FIVEM_SCORE_IDS
-  const s = settings || {}
-  const applied = allIds.filter(id => s[`tweak_${id}`] === 'applied').length
-  const total = allIds.length
-  const score = calcFivemScore(s)
-  const globalScore = calcOptScore(s)
-
-  const label = document.getElementById('fivem-prog-label')
-  const fill = document.getElementById('fivem-prog-fill')
-  const badge = document.getElementById('fivem-fps-badge')
-  const card = document.getElementById('fivem-fps-card-val')
-  if (label) label.textContent = `${applied} / ${total}`
-  if (fill) fill.style.width = `${Math.round(applied / total * 100)}%`
-  if (badge) badge.textContent = tUI('fivemProgFps').replace('{n}', globalScore)
-  if (card) {
-    // Update only the score number, leaving the max-label span intact
-    const maxLabel = document.getElementById('fivem-opt-max-label')
-    card.childNodes[0].textContent = `${score}`
-    if (maxLabel) maxLabel.textContent = ` / ${FIVEM_SCORE_MAX}`
-  }
-
-  // Score bar inside the card
-  const optBar = document.getElementById('fivem-opt-bar')
-  if (optBar) optBar.style.width = `${Math.round(score / FIVEM_SCORE_MAX * 100)}%`
-
-  // Tier label
-  const tierEl = document.getElementById('fivem-opt-tier')
-  if (tierEl) {
-    let tierClass, tierText
-    if (score <= 3)                      { tierClass = 'opt-tier-unoptimized'; tierText = tUI('fivemOptTierUnoptimized') }
-    else if (score <= 7)                 { tierClass = 'opt-tier-partial';     tierText = tUI('fivemOptTierPartial') }
-    else if (score < FIVEM_SCORE_MAX)    { tierClass = 'opt-tier-good';        tierText = tUI('fivemOptTierGood') }
-    else                                 { tierClass = 'opt-tier-full';         tierText = tUI('fivemOptTierFull') }
-    tierEl.className = `opt-tier-label ${tierClass}`
-    tierEl.textContent = tierText
-  }
-
-  // CTA nudge
-  const ctaEl = document.getElementById('fivem-opt-cta')
-  if (ctaEl) {
-    if (score < FIVEM_SCORE_MAX) {
-      const left = FIVEM_SCORE_MAX - score
-      ctaEl.innerHTML = `<i class="fa fa-bolt" style="color:var(--pink)"></i> ${tUI('fivemOptCtaBoost').replace('{n}', left)}`
-    } else {
-      ctaEl.innerHTML = `<i class="fa fa-file-pen" style="color:var(--cyan)"></i> <span style="cursor:pointer;color:var(--cyan);text-decoration:underline" onclick="fivemOpenIniEditor()">${tUI('fivemOptCtaFull')}</span>`
-    }
-  }
-
-  // Pulse ring on card when score is very low
-  const scoreCard = document.getElementById('fivem-opt-score-card')
-  if (scoreCard) {
-    if (score <= 3) scoreCard.classList.add('opt-pulse')
-    else scoreCard.classList.remove('opt-pulse')
-  }
-
-  const hist = JSON.parse(localStorage.getItem('fivem_opt_history') || '[]')
-  hist.push(score)
-  if (hist.length > 20) hist.shift()
-  localStorage.setItem('fivem_opt_history', JSON.stringify(hist))
-  drawSparkline('fivem-fps-sparkline', hist, pinkHex(), pinkHex())
 }
 
 function copyFivemReport() {
@@ -603,6 +565,299 @@ async function doFivemClearCache(btn) {
     return
   }
   btn.innerHTML = r.ok ? `<i class="fa fa-check"></i> ${tUI('fivemCacheCleared')}` : `<i class="fa fa-xmark"></i> ${tUI('fivemCacheError')}`
+}
+
+// ── HUD open/close toggle ─────────────────────────────────────────────────────
+function fivemHudToggle() {
+  if (_fivemHudOpen) {
+    api.closeFivemHud()
+    _fivemHudOpen = false
+  } else {
+    api.openFivemHud()
+    _fivemHudOpen = true
+  }
+  const lbl = document.getElementById('fivem-hud-toggle-label')
+  if (lbl) lbl.innerHTML = _fivemHudOpen
+    ? `<i class="fa fa-circle-stop"></i> ${tUI('fivemHeroHudClose')}`
+    : `<i class="fa fa-circle-play"></i> ${tUI('fivemHeroHudOpen')}`
+}
+
+// ── HUD auto-show toggle ──────────────────────────────────────────────────────
+async function fivemHudAutoToggle(enabled) {
+  settings.fivemHudEnabled = enabled
+  await api.saveSettings(settings).catch(() => {})
+}
+
+// ── 2i: Session History ───────────────────────────────────────────────────────
+function fivemSessionHistLoad() {
+  try { return JSON.parse(localStorage.getItem('fivem_session_history') || '[]') } catch { return [] }
+}
+function fivemSessionHistSave(sessions) {
+  localStorage.setItem('fivem_session_history', JSON.stringify(sessions.slice(-10)))
+}
+
+function fivemSessionHistRecord(summary) {
+  const sessions = fivemSessionHistLoad()
+  sessions.push({
+    ts: Date.now(),
+    game: summary.game || 'FiveM',
+    durationMs: summary.durationMs || 0,
+    peaks: summary.peaks || {},
+    anomalyCount: Object.values(summary.anomalyCounts || {}).reduce((a, b) => a + b, 0),
+  })
+  fivemSessionHistSave(sessions)
+}
+
+function fivemSessionHistClear() {
+  localStorage.removeItem('fivem_session_history')
+  fivemSessionHistRender()
+}
+
+function fivemSessionHistRender() {
+  const list = document.getElementById('fivem-session-hist-list')
+  if (!list) return
+  const sessions = fivemSessionHistLoad()
+  if (!sessions.length) {
+    list.innerHTML = `<div style="font-size:10.5px;color:var(--muted);padding:4px 0">${tUI('fivemSessionHistoryEmpty')}</div>`
+    return
+  }
+  const fmt = ms => `${Math.round(ms / 60000)} ${tUI('fivemSessionHistoryMin')}`
+  const date = ts => new Date(ts).toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+
+  list.innerHTML = [...sessions].reverse().map((s, i) => {
+    const p = s.peaks || {}
+    const peakItems = [
+      p.cpu  != null ? `CPU ${p.cpu}%`  : null,
+      p.gpu  != null ? `GPU ${p.gpu}%`  : null,
+      p.ram  != null ? `RAM ${p.ram}%`  : null,
+    ].filter(Boolean).join(' · ')
+    const anomalyBadge = s.anomalyCount > 0
+      ? `<span style="font-size:9px;padding:1px 6px;border-radius:3px;background:rgba(243,156,18,0.15);color:#f39c12">${s.anomalyCount} ${tUI('fivemSessionHistoryAnomalies')}</span>`
+      : `<span style="font-size:9px;color:#2ecc71"><i class="fa fa-circle-check"></i> Clean</span>`
+    return `
+      <div style="padding:8px 0;border-bottom:1px solid #111;display:flex;align-items:center;gap:10px">
+        <div style="width:32px;height:32px;border-radius:6px;background:rgba(255,46,99,0.1);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+          <i class="fa fa-gamepad" style="color:var(--pink);font-size:13px"></i>
+        </div>
+        <div style="flex:1;min-width:0">
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:2px">
+            <span style="font-size:10.5px;font-weight:700;color:#c0c0c0">${s.game}</span>
+            ${anomalyBadge}
+          </div>
+          <div style="font-size:9.5px;color:var(--muted)">${date(s.ts)} · ${fmt(s.durationMs)}${peakItems ? ` · ${tUI('fivemSessionHistoryPeaks')}: ${peakItems}` : ''}</div>
+        </div>
+      </div>`
+  }).join('')
+}
+
+// ── 2g: Share My Setup — Export / Import .jyt packs ──────────────────────────
+async function fivemExportPack(btn) {
+  btn.disabled = true
+  btn.innerHTML = `<i class="fa fa-spinner fa-spin"></i> ${tUI('fivemShareExporting')}`
+  const r = await api.fivemExportPack().catch(() => null)
+  btn.disabled = false
+  btn.innerHTML = `<i class="fa fa-upload"></i> ${tUI('fivemHeroShareExport')}`
+  if (!r || r.canceled) return
+  if (!r.ok) { toast('', tUI('fivemShareExportFail'), 'error'); return }
+  toast('', tUI('fivemShareExportOk'), 'success', 4000)
+}
+
+async function fivemImportPack(btn) {
+  btn.disabled = true
+  btn.innerHTML = `<i class="fa fa-spinner fa-spin"></i> ${tUI('fivemShareImporting')}`
+  const r = await api.fivemImportPack().catch(() => null)
+  btn.disabled = false
+  btn.innerHTML = `<i class="fa fa-download"></i> ${tUI('fivemHeroShareImport')}`
+  if (!r || r.canceled) return
+  if (!r.ok) {
+    const msg = r.error === 'invalid_schema' ? tUI('fivemShareImportBadSchema') : tUI('fivemShareImportFail')
+    toast('', msg, 'error')
+    return
+  }
+  const n = r.results?.tweaks?.length ?? 0
+  toast('', tUI('fivemShareImportOk').replace('{n}', n), 'success', 4000)
+  settings = await api.loadSettings().catch(() => settings)
+}
+
+// ── 2f: Server Bookmarks & Quick-Connect ─────────────────────────────────────
+let _bmRefreshInterval = null
+
+function fivemBookmarksClearRefresh() {
+  clearInterval(_bmRefreshInterval)
+  _bmRefreshInterval = null
+}
+
+async function fivemOpenBookmarks() {
+  const panel = document.getElementById('fivem-bookmarks-panel')
+  if (!panel) return
+  panel.style.display = ''
+  panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+  fivemBookmarksRender()
+  fivemBookmarksRefreshAll()
+  fivemBookmarksClearRefresh()
+  _bmRefreshInterval = setInterval(() => {
+    if (document.getElementById('fivem-bookmarks-panel')?.style.display === 'none') {
+      fivemBookmarksClearRefresh(); return
+    }
+    fivemBookmarksRefreshAll()
+  }, 60000)
+}
+
+function fivemBookmarksLoad() {
+  try { return JSON.parse(localStorage.getItem('fivem_bookmarks') || '[]') } catch { return [] }
+}
+function fivemBookmarksSave(bms) {
+  localStorage.setItem('fivem_bookmarks', JSON.stringify(bms))
+}
+
+async function fivemBookmarksRender() {
+  const list = document.getElementById('fivem-bookmarks-list')
+  if (!list) return
+  const bms = fivemBookmarksLoad()
+  if (!bms.length) {
+    list.innerHTML = `<div style="font-size:10.5px;color:var(--muted);padding:4px 0">${tUI('fivemBookmarksEmpty')}</div>`
+    return
+  }
+  // Load available game bundles for link dropdown
+  const bundles = await api.listGameBundles().catch(() => ({}))
+  const bundleNames = Object.keys(bundles).filter(k => bundles[k]?.type === 'gameBundle')
+
+  list.innerHTML = bms.map((bm, i) => {
+    const statusDot = bm.online === false
+      ? `<span style="width:8px;height:8px;border-radius:50%;background:#e74c3c;display:inline-block;flex-shrink:0"></span>`
+      : bm.online === true
+      ? `<span style="width:8px;height:8px;border-radius:50%;background:#2ecc71;display:inline-block;flex-shrink:0"></span>`
+      : `<span style="width:8px;height:8px;border-radius:50%;background:#888;display:inline-block;flex-shrink:0"></span>`
+    const nameStr  = bm.name  || `${bm.host}:${bm.port}`
+    const countStr = bm.online === true
+      ? `${bm.players}/${bm.maxClients} ${tUI('fivemBookmarksPlayers')} · ${bm.pingMs}ms`
+      : bm.online === false ? tUI('fivemBookmarksOffline') : tUI('fivemBookmarksPinging')
+    const mapStr   = bm.mapName ? `<span style="font-size:9px;color:var(--muted)"> · ${bm.mapName}</span>` : ''
+    const linkedStr = bm.linkedBundle
+      ? `<span style="font-size:9px;color:#9b59b6"><i class="fa fa-layer-group"></i> ${tUI('fivemBookmarksLinked')} ${bm.linkedBundle}</span>`
+      : ''
+    const bundleOpts = bundleNames.length
+      ? `<option value="">${tUI('fivemBookmarksLinkProfile')}</option>` + bundleNames.map(n => `<option value="${n}" ${bm.linkedBundle === n ? 'selected' : ''}>${n}</option>`).join('')
+      : `<option value="">${tUI('fivemBookmarksNoProfiles')}</option>`
+    return `
+      <div style="padding:8px 0;border-bottom:1px solid #111" id="fivem-bm-row-${i}">
+        <div style="display:flex;align-items:center;gap:10px">
+          ${statusDot}
+          <div style="flex:1;min-width:0">
+            <div style="font-size:10.5px;font-weight:700;color:#c0c0c0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${nameStr}${mapStr}</div>
+            <div style="font-size:9.5px;color:var(--muted)">${bm.host}:${bm.port} · ${countStr}</div>
+            ${linkedStr}
+          </div>
+          <button class="btn btn-primary btn-sm" style="font-size:9px;padding:3px 10px" id="fivem-bm-connect-${i}" onclick="fivemBookmarkConnect(${i}, this)"><i class="fa fa-play"></i> ${tUI('fivemBookmarksConnect')}</button>
+          <button class="btn btn-ghost btn-sm" style="font-size:9px;color:var(--danger)" onclick="fivemBookmarkRemove(${i})"><i class="fa fa-trash"></i></button>
+        </div>
+        <div style="margin-top:5px;padding-left:18px">
+          <select style="font-size:9px;padding:2px 6px;border-radius:4px;border:1px solid var(--border);background:var(--bg-card2,#1a1a1a);color:var(--muted)" onchange="fivemBookmarkSetBundle(${i},this.value)">
+            ${bundleOpts}
+          </select>
+        </div>
+      </div>`
+  }).join('')
+}
+
+async function fivemBookmarksRefreshAll() {
+  const bms = fivemBookmarksLoad()
+  if (!bms.length) return
+  await Promise.all(bms.map(async (bm, i) => {
+    let r = null
+    if (bm.cfxCode) {
+      r = await api.fivemCfxServerInfo(bm.cfxCode).catch(() => null)
+    }
+    if (!r?.ok) {
+      r = await api.fivemServerPing({ host: bm.host, port: bm.port }).catch(() => null)
+    }
+    if (r?.ok) {
+      bm.online = true
+      bm.name = r.name; bm.mapName = r.mapName
+      bm.players = r.players; bm.maxClients = r.maxClients
+      if (r.pingMs != null) bm.pingMs = r.pingMs
+    } else {
+      bm.online = false
+    }
+    bms[i] = bm
+  }))
+  fivemBookmarksSave(bms)
+  fivemBookmarksRender()
+}
+
+async function fivemBookmarkConnect(idx, btn) {
+  const bms = fivemBookmarksLoad()
+  const bm = bms[idx]
+  if (!bm) return
+  // Apply linked bundle profile before connecting
+  if (bm.linkedBundle) {
+    if (btn) { btn.disabled = true; btn.innerHTML = `<i class="fa fa-spinner fa-spin"></i> ${tUI('fivemBookmarksApplyingProfile')}` }
+    await api.loadGameBundle(bm.linkedBundle).catch(() => null)
+    toast('', tUI('fivemBookmarksProfileApplied'), 'ok', 2500)
+    if (btn) { btn.disabled = false; btn.innerHTML = `<i class="fa fa-play"></i> ${tUI('fivemBookmarksConnect')}` }
+  }
+  api.openExternal(`fivem://connect/${bm.host}:${bm.port}`)
+}
+
+function fivemBookmarkSetBundle(idx, bundleName) {
+  const bms = fivemBookmarksLoad()
+  if (!bms[idx]) return
+  bms[idx].linkedBundle = bundleName || null
+  fivemBookmarksSave(bms)
+}
+
+function fivemBookmarkRemove(idx) {
+  const bms = fivemBookmarksLoad()
+  bms.splice(idx, 1)
+  fivemBookmarksSave(bms)
+  fivemBookmarksRender()
+}
+
+async function fivemBookmarkAdd() {
+  const input = document.getElementById('fivem-bm-input')
+  if (!input) return
+  let raw = input.value.trim()
+
+  // Resolve cfx.re shortlinks → fetch IP:port + server info from FiveM servers API
+  let cfxMeta = null
+  const cfxMatch = raw.match(/cfx\.re\/join\/([A-Za-z0-9]+)/i)
+  if (cfxMatch) {
+    const addBtn = document.querySelector('#fivem-bookmarks-panel .btn-primary')
+    const origHtml = addBtn?.innerHTML
+    if (addBtn) { addBtn.disabled = true; addBtn.innerHTML = `<i class="fa fa-spinner fa-spin"></i>` }
+    const r = await api.fivemResolveShortlink(cfxMatch[1]).catch(() => null)
+    if (addBtn) { addBtn.disabled = false; addBtn.innerHTML = origHtml }
+    if (!r?.ok) {
+      toast('', tUI('fivemBookmarksShortlinkFail'), 'error', 3500)
+      shakeInput(input)
+      return
+    }
+    raw = `${r.host}:${r.port}`
+    cfxMeta = { cfxCode: cfxMatch[1], name: r.name, mapName: r.mapName, players: r.players, maxClients: r.maxClients }
+  }
+
+  const portMatch = raw.match(/^([A-Za-z0-9.\-]+):(\d+)$/)
+  if (!portMatch) { toast('', tUI('fivemBookmarksInvalid'), 'warn', 3000); shakeInput(input); return }
+  const [, host, port] = portMatch
+
+  const bms = fivemBookmarksLoad()
+  if (bms.length >= 5) { toast('', tUI('fivemBookmarksMaxServers'), 'warn', 3000); return }
+  if (bms.some(b => b.host === host && b.port === port)) { toast('', tUI('fivemBookmarksDupe'), 'warn', 3000); return }
+
+  bms.push({
+    host, port,
+    online:     cfxMeta ? true : null,
+    name:       cfxMeta?.name       ?? null,
+    mapName:    cfxMeta?.mapName    ?? null,
+    players:    cfxMeta?.players    ?? 0,
+    maxClients: cfxMeta?.maxClients ?? 0,
+    pingMs:     null,
+    cfxCode:    cfxMeta?.cfxCode    ?? null,
+  })
+  fivemBookmarksSave(bms)
+  input.value = ''
+  fivemBookmarksRender()
+  fivemBookmarksRefreshAll()
 }
 
 // ── 2a: CFX Server Health ────────────────────────────────────────────────────

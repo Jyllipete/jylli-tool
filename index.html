@@ -817,6 +817,52 @@ const LANG = {
       fivemIniCatStab:'Stability',
       fivemIniCatVisual:'Visual',
       fivemIniCatAdv:'Advanced',
+      fivemHeroHud:'Session HUD',
+      fivemHeroHudDesc:'Floating overlay showing live FPS, CPU, GPU, RAM, and CFX ping while FiveM is running.',
+      fivemHeroHudOpen:'Open HUD',
+      fivemHeroHudClose:'Close HUD',
+      fivemHudAutoLabel:'Auto-show HUD when FiveM launches',
+      fivemBookmarksLinkProfile:'Link Profile',
+      fivemBookmarksLinked:'Profile:',
+      fivemBookmarksNoProfiles:'No game bundles saved yet.',
+      fivemBookmarksApplyingProfile:'Applying profile…',
+      fivemBookmarksProfileApplied:'Profile applied — launching server.',
+      fivemSessionHistoryTitle:'Session History',
+      fivemSessionHistoryDesc:'Post-session analytics for your last 10 FiveM sessions — peak CPU/GPU/RAM and anomaly count recorded automatically.',
+      fivemSessionHistoryEmpty:'No sessions recorded yet — play a FiveM session with ARIA enabled to start tracking.',
+      fivemSessionHistoryDuration:'Duration',
+      fivemSessionHistoryPeaks:'Peaks',
+      fivemSessionHistoryAnomalies:'anomalies',
+      fivemSessionHistoryClear:'Clear history',
+      fivemSessionHistoryMin:'min',
+      fivemHeroShare:'Share My Setup',
+      fivemHeroShareDesc:'Export your tweaks, CitizenFX.ini, and GTA V settings into a single .jyt file. Import your friend\'s setup in one click.',
+      fivemHeroShareExport:'Export .jyt',
+      fivemHeroShareImport:'Import .jyt',
+      fivemShareExporting:'Exporting…',
+      fivemShareExportOk:'Setup exported! File saved to your Desktop.',
+      fivemShareExportFail:'Export failed.',
+      fivemShareImporting:'Importing…',
+      fivemShareImportOk:'Setup imported! Applied {n} tweaks.',
+      fivemShareImportFail:'Import failed — make sure the file is a valid .jyt pack.',
+      fivemShareImportBadSchema:'Invalid file — not a Jylli FiveM pack.',
+      fivemHeroBookmarks:'Server Bookmarks',
+      fivemHeroBookmarksDesc:'Bookmark your favourite FiveM servers — see live player counts and ping at a glance, connect in one click.',
+      fivemHeroBookmarksOpen:'Manage servers',
+      fivemBookmarksTitle:'Server Bookmarks & Quick-Connect',
+      fivemBookmarksDesc:'Add up to 5 FiveM servers (IP:port). Live status auto-refreshes every 60s. Click Connect to launch FiveM directly.',
+      fivemBookmarksAddPlaceholder:'IP:port or cfx.re/join/XXXXX',
+      fivemBookmarksAddBtn:'Add Server',
+      fivemBookmarksConnect:'Connect',
+      fivemBookmarksRemove:'Remove',
+      fivemBookmarksEmpty:'No servers bookmarked yet — paste an IP:port above and click Add Server.',
+      fivemBookmarksOffline:'Offline',
+      fivemBookmarksPlayers:'players',
+      fivemBookmarksPinging:'Checking…',
+      fivemBookmarksMaxServers:'Maximum 5 bookmarks reached.',
+      fivemBookmarksDupe:'That server is already bookmarked.',
+      fivemBookmarksInvalid:'Enter a valid IP:port or cfx.re/join/XXXX link.',
+      fivemBookmarksShortlinkFail:'Could not resolve cfx.re link — server may be offline or the code is invalid.',
       fivemHealthTitle:'CFX Server Health Monitor',
       fivemHealthDesc:'Sends 5 pings to each CFX endpoint and measures min/avg/max latency, jitter, and packet loss.',
       fivemHealthRunBtn:'Run 5-ping test',
@@ -1021,6 +1067,11 @@ const LANG = {
       ariaRamSpike:'RAM spike',
       ariaTempSpike:'CPU temp spike',
       ariaBaseline:'baseline',
+      ariaAvgFps:'AVG FPS',
+      ariaLow1Fps:'1% Low',
+      ariaFpsStab:'Stability',
+      ariaFpsHud:'FPS Overlay',
+      ariaFpsHudDesc:'Always-on-top FPS counter while gaming',
       batchTitle:'Applying tweaks…',
       batchSub:'Please wait — do not close the app',
       batchDone:'{applied} tweaks applied',
@@ -1221,6 +1272,10 @@ const LANG = {
       conflictPowerPlan:'This power plan may not apply correctly — your CPU brand does not match the selected plan.',
       conflictNicWifi:'NIC tweaks are for Ethernet adapters. On Wi-Fi they may cause packet loss or disconnect the adapter.',
       conflictDohNeedsCloudflare:'DNS over HTTPS works best when Cloudflare DNS (1.1.1.1) is also set as your DNS server. Apply the Cloudflare DNS tweak first for full DoH routing.',
+      conflictFivemStreamingMem:'StreamingMemory=1024 MB on less than 12 GB RAM can cause page file thrashing and make FiveM slower. Recommended only on 12 GB+ systems.',
+      conflictFivemWorkerThreads:'Setting WorkerThreads to your core count is only beneficial on 4+ core CPUs.',
+      conflictFivemGpuNvidiaOnly:'The NVIDIA GPU tweaks (PowerMizer, D3PCLatency, HwSchMode) require an NVIDIA GPU. No NVIDIA GPU detected — this tweak will have no effect.',
+      conflictFivemVmLowRam:'Keeping the kernel in RAM (DisablePagingExecutive) on less than 8 GB RAM may cause instability. Not recommended on this system.',
       // Advanced/Hardware — warning banner + section group titles + button
       hwWarnText:'Create a System Restore Point before tweaking hardware or registry!',
       hwCreateRP:'Create Restore Point',
@@ -2187,6 +2242,52 @@ const LANG = {
       fivemIniCatStab:'Vakaus',
       fivemIniCatVisual:'Visuaalisuus',
       fivemIniCatAdv:'Lisäasetukset',
+      fivemHeroHud:'Istunto-HUD',
+      fivemHeroHudDesc:'Kelluva näyttö, joka näyttää reaaliaikaisen CPU:n, GPU:n, RAM:n ja CFX-pingin FiveM:n ollessa käynnissä.',
+      fivemHeroHudOpen:'Avaa HUD',
+      fivemHeroHudClose:'Sulje HUD',
+      fivemHudAutoLabel:'Näytä HUD automaattisesti FiveM:n käynnistyessä',
+      fivemBookmarksLinkProfile:'Linkitä profiili',
+      fivemBookmarksLinked:'Profiili:',
+      fivemBookmarksNoProfiles:'Ei tallennettuja pelipaketteja.',
+      fivemBookmarksApplyingProfile:'Käytetään profiilia…',
+      fivemBookmarksProfileApplied:'Profiili käytetty — käynnistetään palvelin.',
+      fivemSessionHistoryTitle:'Istuntohistoria',
+      fivemSessionHistoryDesc:'Istuntoanalytiikka 10 viimeisimmälle FiveM-istunnollesi — huippuarvot ja poikkeavuudet kirjataan automaattisesti.',
+      fivemSessionHistoryEmpty:'Ei istuntoja kirjattu vielä — pelaa FiveM-istunto ARIA käytössä aloittaaksesi seurannan.',
+      fivemSessionHistoryDuration:'Kesto',
+      fivemSessionHistoryPeaks:'Huiput',
+      fivemSessionHistoryAnomalies:'poikkeavuutta',
+      fivemSessionHistoryClear:'Tyhjennä historia',
+      fivemSessionHistoryMin:'min',
+      fivemHeroShare:'Jaa asetukseni',
+      fivemHeroShareDesc:'Vie tweakisi, CitizenFX.ini:si ja GTA V -asetuksesi yhdeksi .jyt-tiedostoksi. Tuo ystäväsi asetukset yhdellä klikkauksella.',
+      fivemHeroShareExport:'Vie .jyt',
+      fivemHeroShareImport:'Tuo .jyt',
+      fivemShareExporting:'Viedään…',
+      fivemShareExportOk:'Asetukset viety! Tiedosto tallennettu Työpöydälle.',
+      fivemShareExportFail:'Vienti epäonnistui.',
+      fivemShareImporting:'Tuodaan…',
+      fivemShareImportOk:'Asetukset tuotu! Käytettiin {n} tweakia.',
+      fivemShareImportFail:'Tuonti epäonnistui — varmista että tiedosto on kelvollinen .jyt-paketti.',
+      fivemShareImportBadSchema:'Virheellinen tiedosto — ei Jylli FiveM -paketti.',
+      fivemHeroBookmarks:'Palvelinkirjanmerkit',
+      fivemHeroBookmarksDesc:'Lisää suosikkipalvelimesi kirjanmerkkeihin — näe reaaliaikaiset pelaajamäärät ja ping yhdellä silmäyksellä.',
+      fivemHeroBookmarksOpen:'Hallitse palvelimia',
+      fivemBookmarksTitle:'Palvelinkirjanmerkit ja pikayhteys',
+      fivemBookmarksDesc:'Lisää enintään 5 FiveM-palvelinta (IP:portti). Tila päivittyy automaattisesti 60s välein. Napsauta Yhdistä käynnistääksesi FiveM:n suoraan.',
+      fivemBookmarksAddPlaceholder:'IP:portti tai cfx.re/join/XXXXX',
+      fivemBookmarksAddBtn:'Lisää palvelin',
+      fivemBookmarksConnect:'Yhdistä',
+      fivemBookmarksRemove:'Poista',
+      fivemBookmarksEmpty:'Ei kirjanmerkkattuja palvelimia — liitä IP:portti yllä ja napsauta Lisää palvelin.',
+      fivemBookmarksOffline:'Offline',
+      fivemBookmarksPlayers:'pelaajaa',
+      fivemBookmarksPinging:'Tarkistetaan…',
+      fivemBookmarksMaxServers:'Enintään 5 kirjanmerkkiä on saavutettu.',
+      fivemBookmarksDupe:'Kyseinen palvelin on jo kirjanmerkattuna.',
+      fivemBookmarksInvalid:'Syötä kelvollinen IP:portti tai cfx.re/join/XXXX-linkki.',
+      fivemBookmarksShortlinkFail:'cfx.re-linkin ratkaisu epäonnistui — palvelin voi olla offline tai koodi on virheellinen.',
       fivemHealthTitle:'CFX-palvelimen terveysmonitori',
       fivemHealthDesc:'Lähettää 5 pingiä jokaiselle CFX-päätepisteelle ja mittaa min/ka/max-viiveen, jitterin ja pakettihäviön.',
       fivemHealthRunBtn:'Suorita 5 pingiä',
@@ -2391,6 +2492,11 @@ const LANG = {
       ariaRamSpike:'RAM-piikki',
       ariaTempSpike:'CPU-lämpötilapiikki',
       ariaBaseline:'perustaso',
+      ariaAvgFps:'KA FPS',
+      ariaLow1Fps:'1% Alin',
+      ariaFpsStab:'Vakaus',
+      ariaFpsHud:'FPS-peittoruutu',
+      ariaFpsHudDesc:'Aina päällimmäinen FPS-laskuri pelatessa',
       batchTitle:'Käytetään säätöjä…',
       batchSub:'Odota — älä sulje sovellusta',
       batchDone:'{applied} säätöä käytetty',
@@ -2615,6 +2721,10 @@ const LANG = {
       conflictPowerPlan:'Tämä virrankäyttöprofiili ei välttämättä toimi oikein — prosessorisi merkki ei vastaa valittua profiilia.',
       conflictNicWifi:'NIC-säädöt on tarkoitettu Ethernet-sovittimille. Wi-Fi-yhteydellä ne voivat aiheuttaa pakettihäviötä tai katkaista yhteyden.',
       conflictDohNeedsCloudflare:'DNS over HTTPS toimii parhaiten, kun Cloudflare DNS (1.1.1.1) on myös asetettu DNS-palvelimeksesi. Käytä ensin Cloudflare DNS -säätö täydelle DoH-reititykselle.',
+      conflictFivemStreamingMem:'StreamingMemory=1024 MB alle 12 GB:n muistilla voi aiheuttaa sivutiedoston ylikuormitusta ja hidastaa FiveM:ää. Suositellaan vain 12 GB+ järjestelmille.',
+      conflictFivemWorkerThreads:'WorkerThreads:n asettaminen ytimien määrään hyödyttää vain 4+ ytimen prosessoreilla.',
+      conflictFivemGpuNvidiaOnly:'NVIDIA GPU -säädöt (PowerMizer, D3PCLatency, HwSchMode) vaativat NVIDIA-näytönohjaimen. NVIDIA-näytönohjainta ei havaittu — tällä säädöllä ei ole vaikutusta.',
+      conflictFivemVmLowRam:'Ytimen pitäminen muistissa (DisablePagingExecutive) alle 8 GB:n muistilla voi aiheuttaa epävakautta. Ei suositella tällä järjestelmällä.',
       // Advanced/Hardware
       hwWarnText:'Luo järjestelmän palautuspiste ennen laitteisto- tai rekisterisäätöjä!',
       hwCreateRP:'Luo palautuspiste',
@@ -3492,17 +3602,38 @@ let _flickerNudgeSent = false
 async function init(isPremium = false) {
   api.startupTrace?.('init() entered')
   settings = await api.loadSettings() || {}
-  // Detect reboot: if boot time advanced since last run, clear stale 'applied' tweak states
+  window._verifiedThisBoot = new Set()
+  // Detect reboot: if boot time advanced since last run, re-verify tweak states from system
   try {
     const currentBootMs = await api.getBootTime().catch(() => null)
     if (currentBootMs) {
       const prevBootMs = settings.lastBootTimeMs || 0
+      const REBOOT_IDS = ['hpet','tsc-sync','msi-mode','gpu-hwsch','cursor-max-rate',
+                          'spectre-meltdown','bcd-tweaks','global-timer-resolution']
+      // Same boot as last session — restore verified set from disk so bar stays hidden
+      if (settings.rebootVerifiedMs === currentBootMs && Array.isArray(settings.verifiedRebootIds)) {
+        for (const id of settings.verifiedRebootIds) window._verifiedThisBoot.add(id)
+      }
       if (prevBootMs > 0 && currentBootMs > prevBootMs) {
-        const REBOOT_IDS = ['hpet','tsc-sync','msi-mode','gpu-hwsch','cursor-max-rate',
-                            'spectre-meltdown','bcd-tweaks','global-timer-resolution']
+        const states = await api.getTweakStates().catch(() => null)
+        const verifiedIds = []
         for (const id of REBOOT_IDS) {
-          if (settings[`tweak_${id}`] === 'applied') settings[`tweak_${id}`] = 'default'
+          if (settings[`tweak_${id}`] === 'applied') {
+            if (states) {
+              if (states[id]) {
+                window._verifiedThisBoot.add(id)
+                verifiedIds.push(id)
+              } else {
+                settings[`tweak_${id}`] = 'default'
+              }
+            } else {
+              // getTweakStates failed — clear pending state so bar doesn't stick forever
+              settings[`tweak_${id}`] = 'default'
+            }
+          }
         }
+        settings.rebootVerifiedMs = currentBootMs
+        settings.verifiedRebootIds = verifiedIds
       }
       settings.lastBootTimeMs = currentBootMs
       await api.saveSettings(settings).catch(() => {})
@@ -3918,6 +4049,11 @@ async function init(isPremium = false) {
   })
   api.onGameExited?.(d => {
     toast(tUI('gameExitedMsg'), d.name || d.exe, 'info', 4000)
+    if (typeof _fivemHudOpen !== 'undefined') {
+      _fivemHudOpen = false
+      const lbl = document.getElementById('fivem-hud-toggle-label')
+      if (lbl) lbl.innerHTML = `<i class="fa fa-circle-play"></i> ${tUI('fivemHeroHudOpen')}`
+    }
   })
 
   // Show onboarding on first launch
@@ -4491,6 +4627,16 @@ function buildSettings(c) {
           <span class="pill-slider"></span>
         </label>
       </div>
+      <div class="startup-row" style="justify-content:space-between">
+        <div>
+          <div class="startup-name" style="color:#2ecc71"><i class="fa fa-tv" style="margin-right:5px"></i>${tUI('ariaFpsHud')}</div>
+          <div class="startup-cmd">${tUI('ariaFpsHudDesc')}</div>
+        </div>
+        <label class="toggle-pill">
+          <input type="checkbox" id="settings-fps-hud-check" onchange="settingsToggleFpsHud(this.checked)">
+          <span class="pill-slider"></span>
+        </label>
+      </div>
 ` : ''}
     </div>
 
@@ -4648,6 +4794,8 @@ function buildSettings(c) {
   if (soundsCheck) soundsCheck.checked = !!settings.uiSounds
   const ariaCheck = document.getElementById('settings-aria-check')
   if (ariaCheck) ariaCheck.checked = settings.ariaEnabled === true
+  const fpsHudCheck = document.getElementById('settings-fps-hud-check')
+  if (fpsHudCheck) fpsHudCheck.checked = !!settings.ariaFpsHudEnabled
 
 
   // System toggles — set initial state
@@ -4791,6 +4939,13 @@ function settingsToggleAria(on) {
   }
   // Refresh dashboard panel visibility if on dashboard
   if (currentPage === 'dashboard') ariaInitPanel()
+}
+
+function settingsToggleFpsHud(on) {
+  settings.ariaFpsHudEnabled = on
+  api.saveSettings(settings)
+  api.toggleFpsHud().catch(() => {})
+  toast(tUI('ariaFpsHud') + (on ? ' enabled' : ' disabled'), '', on ? 'ok' : 'info')
 }
 
 
@@ -8589,7 +8744,6 @@ async function applyTweak(id, action = 'apply') {
     settings[`tweak_${id}`] = action === 'apply' ? 'applied' : 'restored'
     await api.saveSettings(settings)
     updateDiscordScore()
-    if (id.startsWith('fivem-') && document.getElementById('fivem-prog-fill')) refreshFivemProgress()
     if (action === 'apply') {
       api.analyticsTweakApplied().catch(() => {})
       const tweakName = SEARCH_INDEX.find(r => r.id === id)?.label || id
@@ -8638,6 +8792,11 @@ const TWEAK_CONFLICTS = {
   'dns-adguard':         { conflictsWith: ['dns-cloudflare','dns-google','dns-quad9','dns-custom'] },
   'dns-custom':          { conflictsWith: ['dns-cloudflare','dns-google','dns-quad9','dns-adguard'] },
   'dns-doh':             { warnIf: () => tweakState('dns-cloudflare') !== 'applied', warnMsg: 'conflictDohNeedsCloudflare' },
+  // FiveM-specific conflict rules
+  'fivem-streaming-mem': { warnIf: si => si.ramGB > 0 && si.ramGB < 12, warnMsg: 'conflictFivemStreamingMem' },
+  'fivem-worker-threads': { warnIf: si => si.cpuCores > 0 && si.cpuCores < 4, warnMsg: 'conflictFivemWorkerThreads' },
+  'fivem-gpu':           { warnIf: si => { const g = (si.gpu||'').toLowerCase(); return !(/nvidia|geforce|rtx|gtx/.test(g)) }, warnMsg: 'conflictFivemGpuNvidiaOnly' },
+  'fivem-vm':            { warnIf: si => si.ramGB > 0 && si.ramGB < 8, warnMsg: 'conflictFivemVmLowRam' },
 }
 
 function getConflictInfo(id) {
@@ -8696,6 +8855,7 @@ function makeRow({ id, name, desc, danger = false, dangerLabel = 'I understand t
       ${desc ? `<div class="tweak-desc">${desc}</div>` : ''}
       ${reboot ? `<span class="reboot-badge"><i class="fa fa-arrow-rotate-right"></i> ${tUI('genRebootBadge')}</span>` : ''}
       ${preApplied ? `<div class="pf-row-tag"><i class="fa fa-magnifying-glass"></i> Already active on your system — detected by Pre-Flight scan</div>` : ''}
+      ${(() => { const ci = getConflictInfo(id); return ci.warnMsg ? `<div class="tweak-conflict-hint"><i class="fa fa-triangle-exclamation" style="color:var(--warning)"></i> ${ci.warnMsg}</div>` : '' })()}
     </div>
     <div class="tweak-right">
       <span class="tweak-badge ${bClass}" id="badge-${id}">${bText}</span>
@@ -8750,7 +8910,9 @@ function genUpdateRebootBar() {
   const label = document.getElementById('rqb-label')
   const btn = document.getElementById('rqb-btn')
   if (!bar) return
-  const pending = [...REBOOT_TWEAK_IDS].filter(id => settings[`tweak_${id}`] === 'applied')
+  const pending = [...REBOOT_TWEAK_IDS].filter(id =>
+    settings[`tweak_${id}`] === 'applied' && !(window._verifiedThisBoot?.has(id))
+  )
   if (pending.length === 0) {
     bar.classList.remove('visible')
     document.body.style.paddingBottom = ''
@@ -8800,29 +8962,29 @@ async function genApplyQuickWins() {
 
 // ─── Tweak Info Popover ────────────────────────────────────────────────────────
 const GEN_TIP_DATA = {
-  'game-dvr':         { reg:'HKCU\\System\\GameConfigStore: GameDVR_Enabled=0', impact:'Removes 3–8% CPU/GPU overhead; frees recording buffer memory' },
-  'disable-fso':      { reg:'HKCU\\System\\GameConfigStore: GameDVR_FSEBehaviorMode=2', impact:'Reduces input latency by ~1–3ms in exclusive fullscreen' },
-  'visual-effects':   { reg:'HKCU\\Control Panel\\Desktop\\WindowMetrics + SystemParametersInfo SPI_SETANIMATION', impact:'Frees GPU/CPU from rendering shadows, animations, transparency effects' },
-  'mmcss':            { reg:'HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Multimedia\\SystemProfile: SystemResponsiveness=10, NetworkThrottlingIndex=0xffffffff', impact:'Games receive higher CPU time slices; reduces frame time variance' },
-  'priority-sep':     { reg:'HKLM\\SYSTEM\\CurrentControlSet\\Control\\PriorityControl: Win32PrioritySeparation=38', impact:'Active window gets ~75% more CPU quantum than background apps' },
-  'disable-mouse-accel': { reg:'HKCU\\Control Panel\\Mouse: MouseSpeed=0, MouseThreshold1=0, MouseThreshold2=0', impact:'1:1 physical/virtual mouse movement; eliminates Windows pointer curve' },
-  'usb-suspend':      { reg:'HKLM\\SYSTEM\\CurrentControlSet\\Services\\USB: DisableSelectiveSuspend=1 + powercfg per-device', impact:'Eliminates mouse ghosting after screen sleep; fixes 8000Hz polling drops' },
-  'cursor-max-rate':  { reg:'HKLM\\SYSTEM\\CurrentControlSet\\Services\\mouclass\\Parameters: MouseDataQueueSize=100; HIDDeviceInputProcessingMode=0', impact:'Unlocks 8000Hz mice; fixes click loss when dragging across monitors' },
-  'hpet':             { reg:'bcdedit /deletevalue useplatformclock', impact:'On most CPUs improves FPS consistency by 2–5%; requires reboot' },
-  'msi-mode':         { reg:'HKLM\\SYSTEM\\CurrentControlSet\\Enum\\PCI\\...\\Interrupt Management\\MessageSignaledInterruptProperties: MSISupported=1', impact:'Reduces interrupt latency for GPU/NIC; eliminates legacy line-based interrupts' },
-  'gpu-hwsch':        { reg:'HKLM\\SYSTEM\\CurrentControlSet\\Control\\GraphicsDrivers: HwSchMode=2', impact:'Offloads GPU command queue from CPU thread; lowers frame latency 1–3ms' },
-  'tdr-delay':        { reg:'HKLM\\SYSTEM\\CurrentControlSet\\Control\\GraphicsDrivers: TdrDelay=10', impact:'Prevents "Display driver stopped responding" crashes under heavy DXR/mod load' },
-  'ntfs':             { reg:'fsutil behavior set disable8dot3 1; fsutil behavior set disableLastAccess 1', impact:'Reduces metadata writes on every file read; measurable on busy NVMe SSDs' },
-  'sysmain':          { reg:'HKLM\\SYSTEM\\CurrentControlSet\\Services\\SysMain: Start=4', impact:'Stops RAM pre-loading; best on 16 GB+ where games fit without prefetch' },
-  'global-timer-resolution': { reg:'HKLM\\SYSTEM\\CurrentControlSet\\Control\\Session Manager\\kernel: GlobalTimerResolutionRequests=1', impact:'Forces 0.5ms system timer on Win11; fixes silent FPS caps in games that skip timeBeginPeriod()' },
-  'power-throttling': { reg:'HKLM\\SYSTEM\\CurrentControlSet\\Control\\Power\\PowerThrottling: PowerThrottlingOff=1', impact:'Prevents Windows throttling background process clocks; keeps GPU busy' },
-  'raw-aim-curve':    { reg:'HKCU\\Control Panel\\Mouse: MouseSensitivity (flat 1:1 curve array)', impact:'Removes any hidden pointer curve; every mouse count maps exactly to 1 pixel' },
-  'disable-background-apps': { reg:'HKLM\\SOFTWARE\\Policies\\Microsoft\\Windows\\AppPrivacy: LetAppsRunInBackground=2', impact:'Stops UWP apps (Xbox, News, Weather) consuming CPU/RAM while gaming' },
-  'telemetry':        { reg:'HKLM\\SOFTWARE\\Policies\\Microsoft\\Windows\\DataCollection: AllowTelemetry=1 + DiagTrack service disabled', impact:'Eliminates background telemetry uploads; frees ~2–4% CPU on budget hardware' },
-  'disable-delivery-opt': { reg:'HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\DeliveryOptimization\\Config: DODownloadMode=100', impact:'Stops Windows uploading updates to peers on your connection' },
-  'memory-compression': { reg:'Disable-MMAgent -mc (PowerShell)', impact:'Removes CPU overhead of compressing RAM; may increase pagefile use if RAM is tight' },
-  'sticky-keys-guard': { reg:'HKCU\\Control Panel\\Accessibility\\StickyKeys: Flags=506', impact:'Prevents StickyKeys dialog interrupting gameplay when Shift is pressed 5× in a row' },
-  'nudge-blocker':    { reg:'HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\Explorer: NoDriveTypeAutoRun=255', impact:'Stops AutoPlay notifications from USB device inserts during gaming' },
+  'game-dvr':         { reg:'HKCU\\System\\GameConfigStore: GameDVR_Enabled=0', impact:{ en:'Removes 3–8% CPU/GPU overhead; frees recording buffer memory', fi:'Poistaa 3–8 % CPU/GPU-ylikuorman; vapauttaa nauhoituspuskurin muistin' } },
+  'disable-fso':      { reg:'HKCU\\System\\GameConfigStore: GameDVR_FSEBehaviorMode=2', impact:{ en:'Reduces input latency by ~1–3ms in exclusive fullscreen', fi:'Vähentää syötteen viivettä ~1–3 ms yksinomaisessa koko­ruutu­tilassa' } },
+  'visual-effects':   { reg:'HKCU\\Control Panel\\Desktop\\WindowMetrics + SystemParametersInfo SPI_SETANIMATION', impact:{ en:'Frees GPU/CPU from rendering shadows, animations, transparency effects', fi:'Vapauttaa GPU:n/CPU:n varjojen, animaatioiden ja läpinäkyvyysefektien renderöinnistä' } },
+  'mmcss':            { reg:'HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Multimedia\\SystemProfile: SystemResponsiveness=10, NetworkThrottlingIndex=0xffffffff', impact:{ en:'Games receive higher CPU time slices; reduces frame time variance', fi:'Pelit saavat suurempia CPU-aikaviipaleita; vähentää kehysajan vaihtelua' } },
+  'priority-sep':     { reg:'HKLM\\SYSTEM\\CurrentControlSet\\Control\\PriorityControl: Win32PrioritySeparation=38', impact:{ en:'Active window gets ~75% more CPU quantum than background apps', fi:'Aktiivinen ikkuna saa ~75 % enemmän CPU-kvanttia kuin taustasovellukset' } },
+  'disable-mouse-accel': { reg:'HKCU\\Control Panel\\Mouse: MouseSpeed=0, MouseThreshold1=0, MouseThreshold2=0', impact:{ en:'1:1 physical/virtual mouse movement; eliminates Windows pointer curve', fi:'1:1-fyysinen/virtuaalinen hiiren liike; poistaa Windowsin osoitinkäyrän' } },
+  'usb-suspend':      { reg:'HKLM\\SYSTEM\\CurrentControlSet\\Services\\USB: DisableSelectiveSuspend=1 + powercfg per-device', impact:{ en:'Eliminates mouse ghosting after screen sleep; fixes 8000Hz polling drops', fi:'Poistaa hiiren katoamisen näytön nukkumisen jälkeen; korjaa 8000 Hz:n kyselynopeuden katkokset' } },
+  'cursor-max-rate':  { reg:'HKLM\\SYSTEM\\CurrentControlSet\\Services\\mouclass\\Parameters: MouseDataQueueSize=100; HIDDeviceInputProcessingMode=0', impact:{ en:'Unlocks 8000Hz mice; fixes click loss when dragging across monitors', fi:'Avaa 8000 Hz:n hiiret; korjaa klikkausten katoamisen vedettäessä monitorien välillä' } },
+  'hpet':             { reg:'bcdedit /deletevalue useplatformclock', impact:{ en:'On most CPUs improves FPS consistency by 2–5%; requires reboot', fi:'Parantaa FPS-johdonmukaisuutta useimmilla suorittimilla 2–5 %; vaatii uudelleenkäynnistyksen' } },
+  'msi-mode':         { reg:'HKLM\\SYSTEM\\CurrentControlSet\\Enum\\PCI\\...\\Interrupt Management\\MessageSignaledInterruptProperties: MSISupported=1', impact:{ en:'Reduces interrupt latency for GPU/NIC; eliminates legacy line-based interrupts', fi:'Vähentää keskeytysviivettä GPU:lle/NIC:lle; poistaa vanhat linjaperusteistet keskeytykset' } },
+  'gpu-hwsch':        { reg:'HKLM\\SYSTEM\\CurrentControlSet\\Control\\GraphicsDrivers: HwSchMode=2', impact:{ en:'Offloads GPU command queue from CPU thread; lowers frame latency 1–3ms', fi:'Siirtää GPU-komentojonon CPU-säikeeltä; laskee kehysviivettä 1–3 ms' } },
+  'tdr-delay':        { reg:'HKLM\\SYSTEM\\CurrentControlSet\\Control\\GraphicsDrivers: TdrDelay=10', impact:{ en:'Prevents "Display driver stopped responding" crashes under heavy DXR/mod load', fi:'Estää "Näyttöohjain lakkasi vastaamasta" -kaatumisia raskaan DXR/mod-kuorman alla' } },
+  'ntfs':             { reg:'fsutil behavior set disable8dot3 1; fsutil behavior set disableLastAccess 1', impact:{ en:'Reduces metadata writes on every file read; measurable on busy NVMe SSDs', fi:'Vähentää metatietokirjoituksia jokaisella tiedoston luvulla; mitattava hyöty kiireisillä NVMe-asemilla' } },
+  'sysmain':          { reg:'HKLM\\SYSTEM\\CurrentControlSet\\Services\\SysMain: Start=4', impact:{ en:'Stops RAM pre-loading; best on 16 GB+ where games fit without prefetch', fi:'Lopettaa RAM:n esilatauksen; paras 16 Gt+:lla, jossa pelit mahtuvat ilman esihakua' } },
+  'global-timer-resolution': { reg:'HKLM\\SYSTEM\\CurrentControlSet\\Control\\Session Manager\\kernel: GlobalTimerResolutionRequests=1', impact:{ en:'Forces 0.5ms system timer on Win11; fixes silent FPS caps in games that skip timeBeginPeriod()', fi:'Pakottaa 0,5 ms järjestelmäajastimen Win11:ssä; korjaa pelikohtaiset hiljaiset FPS-rajoitukset' } },
+  'power-throttling': { reg:'HKLM\\SYSTEM\\CurrentControlSet\\Control\\Power\\PowerThrottling: PowerThrottlingOff=1', impact:{ en:'Prevents Windows throttling background process clocks; keeps GPU busy', fi:'Estää Windowsia hidastamasta taustaprosessien kelloja; pitää GPU:n kiireisenä' } },
+  'raw-aim-curve':    { reg:'HKCU\\Control Panel\\Mouse: MouseSensitivity (flat 1:1 curve array)', impact:{ en:'Removes any hidden pointer curve; every mouse count maps exactly to 1 pixel', fi:'Poistaa piilotetun osoitinkäyrän; jokainen hiirilaskenta vastaa tarkasti 1 pikseliä' } },
+  'disable-background-apps': { reg:'HKLM\\SOFTWARE\\Policies\\Microsoft\\Windows\\AppPrivacy: LetAppsRunInBackground=2', impact:{ en:'Stops UWP apps (Xbox, News, Weather) consuming CPU/RAM while gaming', fi:'Estää UWP-sovelluksia (Xbox, Uutiset, Sää) kuluttamasta CPU/RAM:ia pelin aikana' } },
+  'telemetry':        { reg:'HKLM\\SOFTWARE\\Policies\\Microsoft\\Windows\\DataCollection: AllowTelemetry=1 + DiagTrack service disabled', impact:{ en:'Eliminates background telemetry uploads; frees ~2–4% CPU on budget hardware', fi:'Poistaa taustan telemetrialähetykset; vapauttaa ~2–4 % CPU:ta halvemmalla laitteistolla' } },
+  'disable-delivery-opt': { reg:'HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\DeliveryOptimization\\Config: DODownloadMode=100', impact:{ en:'Stops Windows uploading updates to peers on your connection', fi:'Estää Windowsia lähettämästä päivityksiä vertaisille yhteydellesi' } },
+  'memory-compression': { reg:'Disable-MMAgent -mc (PowerShell)', impact:{ en:'Removes CPU overhead of compressing RAM; may increase pagefile use if RAM is tight', fi:'Poistaa RAM:n pakkauksen CPU-ylikuorman; voi lisätä sivutustiedoston käyttöä jos RAM on vähissä' } },
+  'sticky-keys-guard': { reg:'HKCU\\Control Panel\\Accessibility\\StickyKeys: Flags=506', impact:{ en:'Prevents StickyKeys dialog interrupting gameplay when Shift is pressed 5× in a row', fi:'Estää StickyKeys-valintaikkunan keskeyttämästä peliä kun Shift painetaan 5× peräkkäin' } },
+  'nudge-blocker':    { reg:'HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\Explorer: NoDriveTypeAutoRun=255', impact:{ en:'Stops AutoPlay notifications from USB device inserts during gaming', fi:'Estää AutoPlay-ilmoitukset USB-laitteiden kytkemisestä pelin aikana' } },
 }
 
 let _genTipActiveId = null
@@ -8839,7 +9001,7 @@ function genTipOpen(id, event) {
     <div style="font-size:12px;font-weight:700;color:var(--white);margin-bottom:10px">${tUI('genTipReg')}</div>
     <div style="font-size:10px;color:#8080a8;font-family:monospace;word-break:break-all;background:rgba(0,0,0,0.3);padding:6px 8px;border-radius:6px;margin-bottom:10px">${tip.reg}</div>
     <div style="font-size:12px;font-weight:700;color:var(--white);margin-bottom:6px">${tUI('genTipImpact')}</div>
-    <div style="font-size:11px;color:var(--gray);line-height:1.5">${tip.impact}</div>
+    <div style="font-size:11px;color:var(--gray);line-height:1.5">${typeof tip.impact === 'object' ? (tip.impact[currentLang] ?? tip.impact.en) : tip.impact}</div>
   `
   const btn = event.currentTarget
   const rect = btn.getBoundingClientRect()
@@ -9779,6 +9941,23 @@ function buildDashboard(c) {
         <div style="font-size:9px;color:var(--muted)">${tUI('ariaSubtitle')}</div>
       </div>
     </div>
+    <div id="aria-fps-counter" style="display:none;flex-direction:column;gap:6px;margin-bottom:8px">
+      <div style="display:flex;gap:10px">
+        <div style="flex:1;background:rgba(46,204,113,0.08);border:1px solid rgba(46,204,113,0.2);border-radius:7px;padding:6px 10px;text-align:center">
+          <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin-bottom:2px">${tUI('ariaAvgFps')}</div>
+          <div id="aria-fps-avg" style="font-size:18px;font-weight:800;color:#2ecc71;line-height:1">—</div>
+        </div>
+        <div style="flex:1;background:rgba(243,156,18,0.08);border:1px solid rgba(243,156,18,0.2);border-radius:7px;padding:6px 10px;text-align:center">
+          <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin-bottom:2px">${tUI('ariaLow1Fps')}</div>
+          <div id="aria-fps-low1" style="font-size:18px;font-weight:800;color:#f39c12;line-height:1">—</div>
+        </div>
+        <div style="flex:1;background:rgba(52,152,219,0.08);border:1px solid rgba(52,152,219,0.2);border-radius:7px;padding:6px 10px;text-align:center">
+          <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin-bottom:2px">${tUI('ariaFpsStab')}</div>
+          <div id="aria-fps-stab" style="font-size:18px;font-weight:800;color:#3498db;line-height:1">—</div>
+        </div>
+      </div>
+      <canvas id="aria-fps-sparkline" width="300" height="28" style="width:100%;height:28px;border-radius:5px;background:rgba(255,255,255,0.03)"></canvas>
+    </div>
     <div id="aria-anomaly-feed" style="max-height:120px;overflow-y:auto;margin-bottom:8px"></div>
     <!-- Session Summary Card — revealed after game exits -->
     <div id="aria-session-summary" style="display:none;background:rgba(155,89,182,0.07);border:1px solid rgba(155,89,182,0.2);border-radius:8px;padding:10px 12px;margin-bottom:10px">
@@ -9853,6 +10032,7 @@ function ariaInitPanel() {
   if (!window._ariaListenerAttached) {
     window._ariaListenerAttached = true
     api.onAriaTick(ariaOnTick)
+    api.onAriaFpsTick(ariaOnFpsTick)
     api.ariaStart().catch(() => {})
   }
   // Register page cleanup: stop anomaly listener animation on navigate away
@@ -9967,6 +10147,8 @@ function showAriaSessionSummary(data) {
     pill(tUI('ariaSessionSummaryInsights'), data.insightsApplied || 0, '#9b59b6') +
     (data.peaks?.cpuTemp > 0 ? pill('Peak CPU Temp', `${Math.round(data.peaks.cpuTemp)}°C`, data.peaks.cpuTemp > 90 ? '#e74c3c' : data.peaks.cpuTemp > 75 ? '#f39c12' : '#2ecc71') : '') +
     (data.peaks?.cpu > 0 ? pill('Peak CPU', `${Math.round(data.peaks.cpu)}%`, data.peaks.cpu > 90 ? '#e74c3c' : '#c0c0c0') : '') +
+    (data.fps?.avgFps ? pill(tUI('ariaAvgFps'), `${data.fps.avgFps}`, '#2ecc71') : '') +
+    (data.fps?.low1Fps ? pill(tUI('ariaLow1Fps'), `${data.fps.low1Fps}`, data.fps.low1Fps >= 60 ? '#2ecc71' : data.fps.low1Fps >= 30 ? '#f39c12' : '#e74c3c') : '') +
     `<span style="font-size:8.5px;color:var(--muted);align-self:center;margin-left:4px">${gameName}</span>`
 
   panel.style.display = ''
@@ -9989,6 +10171,69 @@ function ariaOnTick(evt) {
     const val   = evt.value != null ? ` — ${Math.round(evt.value)}${unit}` : ''
     toast(`ARIA: ${label}`, `${tUI('ariaAnomalyToastMsg') || 'Abnormal reading detected'}${val}`, 'warn', 5000)
   }
+}
+
+const _ariaFpsHistory = []
+
+function ariaOnFpsTick({ avgFps, low1Fps }) {
+  const ctr    = document.getElementById('aria-fps-counter')
+  const avgEl  = document.getElementById('aria-fps-avg')
+  const low1El = document.getElementById('aria-fps-low1')
+  const stabEl = document.getElementById('aria-fps-stab')
+  if (!ctr) return
+  if (avgFps == null) {
+    ctr.style.display = 'none'
+    _ariaFpsHistory.length = 0
+    ariaFpsSparklineClear()
+    return
+  }
+  _ariaFpsHistory.push({ avgFps, low1Fps })
+  if (_ariaFpsHistory.length > 18) _ariaFpsHistory.shift()
+  ctr.style.display = 'flex'
+  if (avgEl) avgEl.textContent = avgFps
+  if (low1El) {
+    low1El.textContent = low1Fps
+    low1El.style.color = low1Fps >= 60 ? '#2ecc71' : low1Fps >= 30 ? '#f39c12' : '#e74c3c'
+  }
+  if (stabEl && avgFps > 0) {
+    const stab = Math.max(0, Math.round(100 - ((avgFps - low1Fps) / avgFps * 100)))
+    stabEl.textContent = `${stab}%`
+    stabEl.style.color = stab >= 80 ? '#2ecc71' : stab >= 50 ? '#f39c12' : '#e74c3c'
+  }
+  if (low1Fps < 30) {
+    const now = Date.now()
+    if (!window._ariaFpsAlertTs || now - window._ariaFpsAlertTs > 30000) {
+      window._ariaFpsAlertTs = now
+      toast('ARIA: FPS Drop', `1% Low fell to ${low1Fps} FPS`, 'warn', 5000)
+    }
+  }
+  ariaFpsSparklineDraw()
+}
+
+function ariaFpsSparklineDraw() {
+  const canvas = document.getElementById('aria-fps-sparkline')
+  if (!canvas || _ariaFpsHistory.length < 2) return
+  const ctx = canvas.getContext('2d')
+  const W = canvas.width, H = canvas.height
+  ctx.clearRect(0, 0, W, H)
+  const vals = _ariaFpsHistory.map(e => e.low1Fps)
+  const max = Math.max(...vals, 1), min = Math.min(...vals, 0)
+  const range = max - min || 1
+  ctx.beginPath()
+  ctx.strokeStyle = '#f39c12'
+  ctx.lineWidth = 1.5
+  vals.forEach((v, i) => {
+    const x = (i / (vals.length - 1)) * W
+    const y = H - ((v - min) / range) * (H - 4) - 2
+    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y)
+  })
+  ctx.stroke()
+}
+
+function ariaFpsSparklineClear() {
+  const canvas = document.getElementById('aria-fps-sparkline')
+  if (!canvas) return
+  canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height)
 }
 
 const ARIA_METRIC_LABEL = {
@@ -10059,6 +10304,16 @@ async function ariaRefreshInsights() {
           <span>${tUI('ariaInsightFrameP01')}: ${fmtMs(ft.before?.p01Low)} → ${fmtMs(ft.after?.p01Low)}${fmtDelta(ft.p01Delta)}</span>
         </div>`
       }
+      let fpsRow = ''
+      if (ins.fpsDelta) {
+        const fd = ins.fpsDelta
+        const fmtFps = (n) => { const sign = n >= 0 ? '+' : ''; const col = n > 0 ? '#2ecc71' : n < 0 ? '#e74c3c' : 'var(--muted)'; return `<span style="color:${col};font-weight:700">${sign}${n} FPS</span>` }
+        fpsRow = `<div style="margin-top:4px;font-size:9px;color:var(--muted)">
+          <span style="font-weight:700;color:#2ecc71;margin-right:6px"><i class="fa fa-tachometer-alt" style="font-size:8px"></i> FPS</span>
+          <span style="margin-right:8px">${tUI('ariaAvgFps')}: ${fd.avgBefore} → ${fd.avgAfter} (${fmtFps(fd.avgAfter - fd.avgBefore)})</span>
+          <span>${tUI('ariaLow1Fps')}: ${fd.low1Before} → ${fd.low1After} (${fmtFps(fd.low1After - fd.low1Before)})</span>
+        </div>`
+      }
       return `
         <div class="aria-insight-card">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
@@ -10067,6 +10322,7 @@ async function ariaRefreshInsights() {
           </div>
           ${pills || `<div style="color:var(--muted)">${tUI('ariaInsightNoDelta')}</div>`}
           ${frameRow}
+          ${fpsRow}
         </div>`
     }).join('')
   } catch { el.innerHTML = '' }

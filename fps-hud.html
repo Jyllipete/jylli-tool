@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline';">
+<title>FPS HUD</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body {
+  width: 160px;
+  height: 72px;
+  overflow: hidden;
+  background: transparent;
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  user-select: none;
+}
+.hud {
+  background: rgba(8,8,14,0.60);
+  border-radius: 10px;
+  padding: 8px 10px 7px;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  width: 160px;
+  transition: opacity 0.4s ease;
+}
+.hud.faded { opacity: 0.25; }
+.hud-title {
+  font-size: 7.5px;
+  font-weight: 700;
+  color: rgba(46,204,113,0.55);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  margin-bottom: 6px;
+}
+.fps-row {
+  display: flex;
+  gap: 8px;
+}
+.fps-tile {
+  flex: 1;
+  text-align: center;
+}
+.fps-label {
+  font-size: 7.5px;
+  color: rgba(255,255,255,0.3);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 1px;
+}
+.fps-val {
+  font-size: 20px;
+  font-weight: 800;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+#val-avg  { color: #2ecc71; }
+#val-low1 { color: #f39c12; }
+</style>
+</head>
+<body>
+<div class="hud" id="hud">
+  <div class="hud-title">FPS · ARIA</div>
+  <div class="fps-row">
+    <div class="fps-tile">
+      <div class="fps-label">AVG</div>
+      <div class="fps-val" id="val-avg">—</div>
+    </div>
+    <div class="fps-tile">
+      <div class="fps-label">1% Low</div>
+      <div class="fps-val" id="val-low1">—</div>
+    </div>
+  </div>
+</div>
+<script>
+let _fadeTimer = null
+
+function resetFadeTimer() {
+  clearTimeout(_fadeTimer)
+  document.getElementById('hud').classList.remove('faded')
+  _fadeTimer = setTimeout(() => {
+    document.getElementById('hud').classList.add('faded')
+  }, 6000)
+}
+
+api.onAriaFpsTick(({ avgFps, low1Fps }) => {
+  const avg  = document.getElementById('val-avg')
+  const low1 = document.getElementById('val-low1')
+  if (avgFps == null) {
+    if (avg)  avg.textContent  = '—'
+    if (low1) low1.textContent = '—'
+    return
+  }
+  if (avg)  avg.textContent  = avgFps
+  if (low1) {
+    low1.textContent = low1Fps
+    low1.style.color = low1Fps >= 60 ? '#2ecc71' : low1Fps >= 30 ? '#f39c12' : '#e74c3c'
+  }
+  resetFadeTimer()
+})
+</script>
+</body>
+</html>

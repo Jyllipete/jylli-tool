@@ -37,6 +37,7 @@ let LOG_PATH = null
 let mainWindow = null
 let pulseWindow = null
 let fivemSettingsWindow = null
+let fivemHudWindow = null
 let tray = null
 
 // ─── Discord Rich Presence ────────────────────────────────────────────────────
@@ -198,8 +199,15 @@ async function _updateSystemContext() {
       if (!wasRunning && _systemContext.gameRunning) {
         mainWindow?.webContents.send('game-detected', { name: _systemContext.gameName, genre: _systemContext.gameGenre })
         if (settings.gameAutoOptimize) _triggerGameAutoOptimize()
+        // Auto-open FiveM HUD if the detected game is FiveM/GTA5 and setting is enabled
+        const gName = (_systemContext.gameName || '').toLowerCase()
+        if (settings.fivemHudEnabled && (gName.includes('fivem') || gName.includes('gta') || gName.includes('citizen'))) {
+          openFivemHud()
+        }
       } else if (wasRunning && !_systemContext.gameRunning) {
         mainWindow?.webContents.send('game-exited', { name: _systemContext.gameName })
+        // Auto-close FiveM HUD on game exit
+        if (fivemHudWindow && !fivemHudWindow.isDestroyed()) closeFivemHud()
       }
     }
 
@@ -969,6 +977,7 @@ powerMonitor.on('resume', async () => {
 })
 app.on('will-quit', (e) => {
   e.preventDefault()
+  clearInterval(_metricsInterval)
   stopLhm()
   const duration = Date.now() - sessionStartTime
   const sessionEndPromise = duration > 10000
@@ -1781,13 +1790,21 @@ ipcMain.handle('load-game-bundle', async (_, name) => {
   return { ok: true, bundle, results }
 })
 
-const ALLOWED_EXTERNAL_PROTOCOLS = new Set(['https:', 'http:', 'discord:', 'steam:'])
+const ALLOWED_EXTERNAL_PROTOCOLS = new Set(['https:', 'http:', 'discord:', 'steam:', 'fivem:'])
 ipcMain.handle('open-external', (_, url) => {
   // rstrui.exe is passed as a special token by the restore-to-point handler fallback.
   if (url === 'rstrui.exe') { shell.openPath('rstrui.exe'); return }
   try {
     const u = new URL(url)
-    if (ALLOWED_EXTERNAL_PROTOCOLS.has(u.protocol)) return shell.openExternal(url)
+    if (ALLOWED_EXTERNAL_PROTOCOLS.has(u.protocol)) {
+      // fivem:// rejects elevated privileges — route through explorer.exe which always runs at user-level token
+      if (u.protocol === 'fivem:') {
+        const { execFile } = require('child_process')
+        execFile('explorer.exe', [url], { windowsHide: true })
+        return
+      }
+      return shell.openExternal(url)
+    }
   } catch {}
   console.warn('[open-external] blocked URL with disallowed protocol:', url)
 })
@@ -1858,19 +1875,22 @@ ipcMain.handle('run-tweak', async (_, { id, action }) => {
 // ─── Real-time metrics ────────────────────────────────────────────────────────
 let _netPrevBytes = null
 let _lastMetrics = null
-ipcMain.handle('get-metrics', async () => {
-  // Don't spawn PowerShell while a game is running — return last known values instead
-  if (activeGameProfile && _lastMetrics) return _lastMetrics
+let _metricsInterval = null
+let _metricsCollecting = false
 
-  const metrics = {
-    cpu: 0, ram: 0, ramUsed: 0, ramTotal: 0,
-    disk: 0, diskUsed: 0, diskTotal: 0,
-    gpu: 0, netDown: 0, netUp: 0,
-    uptime: 0, processes: 0,
-    cpuTemp: 0, gpuTemp: 0
-  }
+async function collectMetrics() {
+  if (_metricsCollecting) return   // skip if previous collection still running
+  _metricsCollecting = true
+  try {
+    const metrics = {
+      cpu: 0, ram: 0, ramUsed: 0, ramTotal: 0,
+      disk: 0, diskUsed: 0, diskTotal: 0,
+      gpu: 0, netDown: 0, netUp: 0,
+      uptime: 0, processes: 0,
+      cpuTemp: 0, gpuTemp: 0
+    }
 
-  const cpuTempScript = `
+    const cpuTempScript = `
 $cpu_temp = -1
 # LibreHardwareMonitor WMI (most accurate, if running)
 try {
@@ -1903,8 +1923,8 @@ if ($cpu_temp -eq -1) {
 }
 Write-Output "CPU_TEMP=$cpu_temp"`
 
-  // Use tagged key=value output to avoid any line-count fragility
-  const script = `
+    // Use tagged key=value output to avoid any line-count fragility
+    const script = `
 $cpu = (Get-CimInstance Win32_Processor | Measure-Object -Property LoadPercentage -Average).Average
 $os  = Get-CimInstance Win32_OperatingSystem
 $ram_total = $os.TotalVisibleMemorySize * 1024
@@ -1928,8 +1948,8 @@ Write-Output "PROCS=$procs"
 Write-Output "NET_RB=$net_rb"
 Write-Output "NET_SB=$net_sb"
 `
-  // Run main metrics, GPU load, and GPU temp all in parallel
-  const gpuLoadScript = `
+    // Run main metrics, GPU load, and GPU temp all in parallel
+    const gpuLoadScript = `
 $g = 0
 try {
   $g = [math]::Round((Get-Counter "\\GPU Engine(*engtype_3D)\\Utilization Percentage" -EA Stop).CounterSamples |
@@ -1943,7 +1963,7 @@ try {
 }
 Write-Output "GPU_LOAD=$([int][math]::Min(100,[math]::Max(0,$g)))"
 `
-  const gpuTempScript = `
+    const gpuTempScript = `
 $t = 0
 try {
   $nv = & nvidia-smi --query-gpu=temperature.gpu,utilization.gpu --format=csv,noheader,nounits 2>$null
@@ -1958,56 +1978,68 @@ try {
 Write-Output "GPU_TEMP=0"
 `
 
-  const [r, gpuR, gpuTmpR] = await Promise.all([
-    runPS(script + '\n' + cpuTempScript),
-    runPS(gpuLoadScript).catch(() => ({ ok: false, out: '' })),
-    runPS(gpuTempScript).catch(() => ({ ok: false, out: '' })),
-  ])
+    const [r, gpuR, gpuTmpR] = await Promise.all([
+      runPS(script + '\n' + cpuTempScript),
+      runPS(gpuLoadScript).catch(() => ({ ok: false, out: '' })),
+      runPS(gpuTempScript).catch(() => ({ ok: false, out: '' })),
+    ])
 
-  const kv = {}
-  for (const line of r.out.split('\n')) {
-    const eq = line.indexOf('=')
-    if (eq > 0) kv[line.slice(0, eq).trim()] = line.slice(eq + 1).trim()
+    const kv = {}
+    for (const line of r.out.split('\n')) {
+      const eq = line.indexOf('=')
+      if (eq > 0) kv[line.slice(0, eq).trim()] = line.slice(eq + 1).trim()
+    }
+    const kn = (k) => parseFloat(kv[k]) || 0
+
+    metrics.cpu       = Math.round(kn('CPU'))
+    const ramTotal    = kn('RAM_TOTAL'), ramUsed = kn('RAM_USED')
+    metrics.ramTotal  = Math.round(ramTotal / (1024**3))
+    metrics.ramUsed   = Math.round(ramUsed  / (1024**3))
+    metrics.ram       = ramTotal > 0 ? Math.round((ramUsed / ramTotal) * 100) : 0
+    const diskUsed    = kn('DISK_USED'), diskTotal = kn('DISK_TOTAL')
+    metrics.diskUsed  = Math.round(diskUsed  / (1024**3))
+    metrics.diskTotal = Math.round(diskTotal / (1024**3))
+    metrics.disk      = diskTotal > 0 ? Math.round((diskUsed / diskTotal) * 100) : 0
+    metrics.uptime    = Math.round(kn('UPTIME'))
+    metrics.processes = Math.round(kn('PROCS'))
+    const rawCpuTemp = parseFloat(kv['CPU_TEMP'])
+    metrics.cpuTemp = (rawCpuTemp > 0) ? rawCpuTemp : 0
+    const netRb = kn('NET_RB'), netSb = kn('NET_SB')
+    if (_netPrevBytes && netRb > 0) {
+      metrics.netDown = Math.max(0, Math.round((netRb - _netPrevBytes.rb) / 3))
+      metrics.netUp   = Math.max(0, Math.round((netSb - _netPrevBytes.sb) / 3))
+    }
+    _netPrevBytes = { rb: netRb, sb: netSb }
+
+    // Parse GPU load result
+    const gMatch = gpuR.out.match(/GPU_LOAD=(\d+)/)
+    if (gMatch) metrics.gpu = parseInt(gMatch[1])
+
+    // Parse GPU temp result (nvidia-smi or OHM)
+    const nvLine = gpuTmpR.out.match(/NV=(.+)/)
+    if (nvLine) {
+      const parts = nvLine[1].trim().split(',').map(s => parseFloat(s.trim()))
+      if (!isNaN(parts[0]) && parts[0] > 0) metrics.gpuTemp = parts[0]
+      if (!isNaN(parts[1]) && metrics.gpu === 0) metrics.gpu = Math.round(parts[1])
+    } else {
+      const ohmLine = gpuTmpR.out.match(/OHM=(.+)/)
+      if (ohmLine) { const t = parseFloat(ohmLine[1].trim()); if (t > 0) metrics.gpuTemp = t }
+    }
+
+    _lastMetrics = metrics
+  } catch (e) {
+    console.error('[collectMetrics]', e.message)
+  } finally {
+    _metricsCollecting = false
   }
-  const kn = (k) => parseFloat(kv[k]) || 0
+}
 
-  metrics.cpu       = Math.round(kn('CPU'))
-  const ramTotal    = kn('RAM_TOTAL'), ramUsed = kn('RAM_USED')
-  metrics.ramTotal  = Math.round(ramTotal / (1024**3))
-  metrics.ramUsed   = Math.round(ramUsed  / (1024**3))
-  metrics.ram       = ramTotal > 0 ? Math.round((ramUsed / ramTotal) * 100) : 0
-  const diskUsed    = kn('DISK_USED'), diskTotal = kn('DISK_TOTAL')
-  metrics.diskUsed  = Math.round(diskUsed  / (1024**3))
-  metrics.diskTotal = Math.round(diskTotal / (1024**3))
-  metrics.disk      = diskTotal > 0 ? Math.round((diskUsed / diskTotal) * 100) : 0
-  metrics.uptime    = Math.round(kn('UPTIME'))
-  metrics.processes = Math.round(kn('PROCS'))
-  const rawCpuTemp = parseFloat(kv['CPU_TEMP'])
-  metrics.cpuTemp = (rawCpuTemp > 0) ? rawCpuTemp : 0
-  const netRb = kn('NET_RB'), netSb = kn('NET_SB')
-  if (_netPrevBytes && netRb > 0) {
-    metrics.netDown = Math.max(0, Math.round((netRb - _netPrevBytes.rb) / 3))
-    metrics.netUp   = Math.max(0, Math.round((netSb - _netPrevBytes.sb) / 3))
+ipcMain.handle('get-metrics', async () => {
+  if (!_lastMetrics) await collectMetrics()
+  if (!_metricsInterval) {
+    _metricsInterval = setInterval(collectMetrics, 3000)
   }
-  _netPrevBytes = { rb: netRb, sb: netSb }
-
-  // Parse GPU load result
-  const gMatch = gpuR.out.match(/GPU_LOAD=(\d+)/)
-  if (gMatch) metrics.gpu = parseInt(gMatch[1])
-
-  // Parse GPU temp result (nvidia-smi or OHM)
-  const nvLine = gpuTmpR.out.match(/NV=(.+)/)
-  if (nvLine) {
-    const parts = nvLine[1].trim().split(',').map(s => parseFloat(s.trim()))
-    if (!isNaN(parts[0]) && parts[0] > 0) metrics.gpuTemp = parts[0]
-    if (!isNaN(parts[1]) && metrics.gpu === 0) metrics.gpu = Math.round(parts[1])
-  } else {
-    const ohmLine = gpuTmpR.out.match(/OHM=(.+)/)
-    if (ohmLine) { const t = parseFloat(ohmLine[1].trim()); if (t > 0) metrics.gpuTemp = t }
-  }
-
-  _lastMetrics = metrics
-  return metrics
+  return _lastMetrics ?? {}
 })
 
 // ─── Restore Points ───────────────────────────────────────────────────────────
@@ -2819,6 +2851,211 @@ ipcMain.handle('fivem-cache-info', async () => {
     }
   }
   return { ok: true, info }
+})
+
+// IPC: export current FiveM tweaks + CitizenFX.ini + gta5_settings.xml as .jyt pack
+ipcMain.handle('fivem-export-pack', async () => {
+  if (!requiresPremium('fivem-export-pack')) return { ok: false, reason: 'premium_required' }
+  try {
+    const s = loadSettings()
+    const appliedTweaks = Object.keys(s).filter(k => k.startsWith('tweak_fivem-') && s[k] === 'applied').map(k => k.slice(6))
+
+    // Read CitizenFX.ini
+    const iniPath = path.join(process.env.LOCALAPPDATA || '', 'FiveM', 'FiveM.app', 'CitizenFX.ini')
+    let iniRaw = ''
+    try { iniRaw = fs.readFileSync(iniPath, 'utf8') } catch {}
+
+    // Read gta5_settings.xml
+    const xmlPath = path.join(process.env.APPDATA || '', 'CitizenFX', 'gta5_settings.xml')
+    let xmlRaw = ''
+    try { xmlRaw = fs.readFileSync(xmlPath, 'utf8') } catch {}
+
+    const pack = {
+      schema: 'jylli-fivem-pack-v1',
+      exportedAt: new Date().toISOString(),
+      appliedTweaks,
+      citizenFxIni: iniRaw,
+      gta5SettingsXml: xmlRaw,
+    }
+
+    const { filePath, canceled } = await dialog.showSaveDialog({
+      title: 'Export FiveM Setup Pack',
+      defaultPath: path.join(os.homedir(), 'Desktop', 'MyFiveMSetup.jyt'),
+      filters: [{ name: 'Jylli FiveM Pack', extensions: ['jyt'] }],
+    })
+    if (canceled || !filePath) return { ok: false, canceled: true }
+    fs.writeFileSync(filePath, JSON.stringify(pack, null, 2), 'utf8')
+    shell.showItemInFolder(filePath)
+    return { ok: true, path: filePath }
+  } catch (e) {
+    return { ok: false, error: e.message }
+  }
+})
+
+// IPC: import a .jyt FiveM pack — apply tweaks, write ini and settings xml
+ipcMain.handle('fivem-import-pack', async () => {
+  if (!requiresPremium('fivem-import-pack')) return { ok: false, reason: 'premium_required' }
+  try {
+    const { filePaths, canceled } = await dialog.showOpenDialog({
+      title: 'Import FiveM Setup Pack',
+      filters: [{ name: 'Jylli FiveM Pack', extensions: ['jyt'] }],
+      properties: ['openFile'],
+    })
+    if (canceled || !filePaths.length) return { ok: false, canceled: true }
+    const pack = JSON.parse(fs.readFileSync(filePaths[0], 'utf8'))
+    if (pack.schema !== 'jylli-fivem-pack-v1') return { ok: false, error: 'invalid_schema' }
+
+    const results = { tweaks: [], ini: false, xml: false }
+
+    // Apply tweaks
+    for (const id of (pack.appliedTweaks || [])) {
+      if (!TWEAKS[id]) continue
+      try {
+        const msgs = []
+        const ps = (script, timeout) => runPS(script, timeout)
+        await TWEAKS[id].apply(m => msgs.push(m), ps)
+        const s = loadSettings(); s[`tweak_${id}`] = 'applied'; saveSettings(s)
+        results.tweaks.push(id)
+      } catch {}
+    }
+
+    // Write CitizenFX.ini
+    if (pack.citizenFxIni) {
+      try {
+        const iniPath = path.join(process.env.LOCALAPPDATA || '', 'FiveM', 'FiveM.app', 'CitizenFX.ini')
+        fs.mkdirSync(path.dirname(iniPath), { recursive: true })
+        fs.writeFileSync(iniPath, pack.citizenFxIni, 'utf8')
+        results.ini = true
+      } catch {}
+    }
+
+    // Write gta5_settings.xml
+    if (pack.gta5SettingsXml) {
+      try {
+        const xmlPath = path.join(process.env.APPDATA || '', 'CitizenFX', 'gta5_settings.xml')
+        fs.mkdirSync(path.dirname(xmlPath), { recursive: true })
+        fs.writeFileSync(xmlPath, pack.gta5SettingsXml, 'utf8')
+        results.xml = true
+      } catch {}
+    }
+
+    return { ok: true, results }
+  } catch (e) {
+    return { ok: false, error: e.message }
+  }
+})
+
+// IPC: ping a FiveM server's public /info.json + /players.json endpoints
+ipcMain.handle('fivem-server-ping', async (_, { host, port }) => {
+  const http  = require('http')
+  const https = require('https')
+  const makeFetch = (mod, extra = {}) => (path) => new Promise(resolve => {
+    const start = Date.now()
+    const req = mod.get({ hostname: host, port: parseInt(port, 10), path, timeout: 4000, ...extra }, res => {
+      let raw = ''
+      res.on('data', d => { raw += d })
+      res.on('end', () => {
+        try { resolve({ ok: true, data: JSON.parse(raw), ms: Date.now() - start }) }
+        catch { resolve({ ok: false }) }
+      })
+    })
+    req.on('error', () => resolve({ ok: false }))
+    req.on('timeout', () => { req.destroy(); resolve({ ok: false }) })
+  })
+
+  const fetchJson      = makeFetch(http)
+  const fetchJsonHttps = makeFetch(https, { rejectUnauthorized: false })
+
+  let [infoRes, playersRes] = await Promise.all([fetchJson('/info.json'), fetchJson('/players.json')])
+  if (!infoRes.ok) {
+    ;[infoRes, playersRes] = await Promise.all([fetchJsonHttps('/info.json'), fetchJsonHttps('/players.json')])
+  }
+
+  if (!infoRes.ok) return { ok: false }
+
+  const info    = infoRes.data
+  const players = playersRes.ok && Array.isArray(playersRes.data) ? playersRes.data : []
+  const maxClients = parseInt(info.sv_maxClients, 10) || 0
+  const name   = info.vars?.sv_projectName || info.hostname || `${host}:${port}`
+  const mapName = info.vars?.mapname || ''
+
+  return { ok: true, name, mapName, players: players.length, maxClients, pingMs: infoRes.ms }
+})
+
+// IPC: resolve a cfx.re shortlink to a direct IP:port via FiveM's servers API
+ipcMain.handle('fivem-resolve-shortlink', async (_, shortcode) => {
+  if (!requiresPremium()) return { ok: false, error: 'premium' }
+  const https = require('https')
+  return new Promise(resolve => {
+    const req = https.get(
+      `https://servers-frontend.fivem.net/api/servers/single/${encodeURIComponent(shortcode)}`,
+      { timeout: 6000, headers: { 'User-Agent': 'JylliTool/1.0' } },
+      res => {
+        let raw = ''
+        res.on('data', d => { raw += d })
+        res.on('end', () => {
+          try {
+            const json = JSON.parse(raw)
+            const endpoints = json?.Data?.connectEndPoints
+            if (!Array.isArray(endpoints) || !endpoints.length) return resolve({ ok: false, error: 'no_endpoints' })
+            const ep = endpoints[0]
+            let host, port
+            if (ep.startsWith('http://') || ep.startsWith('https://')) {
+              // Full URL format used by EVO-filter / proxied servers
+              const u = new URL(ep)
+              host = u.hostname
+              port = u.port || '30120'
+            } else {
+              const lastColon = ep.lastIndexOf(':')
+              if (lastColon < 1) return resolve({ ok: false, error: 'bad_endpoint' })
+              host = ep.slice(0, lastColon)
+              port = ep.slice(lastColon + 1)
+            }
+            const d = json.Data
+            const name       = d?.vars?.sv_projectName || d?.hostname || null
+            const mapName    = d?.mapname || d?.vars?.mapname || ''
+            const players    = typeof d?.clients === 'number' ? d.clients : 0
+            const maxClients = d?.svMaxclients || d?.sv_maxclients || 0
+            resolve({ ok: true, host, port, name, mapName, players, maxClients, cfxCode: shortcode })
+          } catch { resolve({ ok: false, error: 'parse' }) }
+        })
+      }
+    )
+    req.on('error', () => resolve({ ok: false, error: 'network' }))
+    req.on('timeout', () => { req.destroy(); resolve({ ok: false, error: 'timeout' }) })
+  })
+})
+
+// IPC: fetch live server info from CFX API by shortcode (for EVO-filter / proxied servers)
+ipcMain.handle('fivem-cfx-server-info', async (_, shortcode) => {
+  if (!requiresPremium()) return { ok: false }
+  const https = require('https')
+  return new Promise(resolve => {
+    const req = https.get(
+      `https://servers-frontend.fivem.net/api/servers/single/${encodeURIComponent(shortcode)}`,
+      { timeout: 6000, headers: { 'User-Agent': 'JylliTool/1.0' } },
+      res => {
+        let raw = ''
+        res.on('data', d => { raw += d })
+        res.on('end', () => {
+          try {
+            const json = JSON.parse(raw)
+            const d = json?.Data
+            if (!d) return resolve({ ok: false })
+            resolve({
+              ok: true,
+              name:       d.vars?.sv_projectName || d.hostname || null,
+              mapName:    d.mapname || d.vars?.mapname || '',
+              players:    typeof d.clients === 'number' ? d.clients : 0,
+              maxClients: d.svMaxclients || d.sv_maxclients || 0,
+            })
+          } catch { resolve({ ok: false }) }
+        })
+      }
+    )
+    req.on('error', () => resolve({ ok: false }))
+    req.on('timeout', () => { req.destroy(); resolve({ ok: false }) })
+  })
 })
 
 // ─── Auto-Optimization ────────────────────────────────────────────────────────
@@ -7423,6 +7660,27 @@ ipcMain.handle('clean-power-plans', async () => {
 
 // What's New content
 const WHATS_NEW = [
+  { version: '1.5.0', date: 'May 2026', items: [
+    'Server Bookmarks & Quick-Connect — Save up to 5 servers (IP:port). Shows live player count, map and ping. Auto-refreshes every 60s. One-click connect via fivem:// protocol.',
+    'Live Session HUD — Compact transparent overlay showing CPU/GPU/RAM bars and CFX ping. Auto-opens when FiveM is detected. Click-through so it never interferes while gaming.',
+    'Session Timeline — Records duration, peak CPU/GPU/RAM and anomalies to local storage. Shows last 10 sessions with timestamps in the FiveM tab.',
+    'Per-Server Optimization Profiles — Link a Game Bundle profile to each bookmark. Jylli auto-applies the bundle before launching FiveM when you connect.',
+    'Smart Tweak Conflict Detector — FiveM-specific warnings before applying tweaks incompatible with your hardware (RAM, GPU brand, CPU core count).',
+    'FiveM Tab — Removed clutter cards. Hero cards now use standard CSS variant classes. Session HUD card uses a toggle switch; clicking opens/closes the HUD. HUD background opacity reduced to 55% (frosted glass style). Fixed frozen metrics while FiveM runs. Added CPU trend sparkline to HUD.',
+    'Bookmark & Connect Fixes — FiveM now launches without admin elevation via explorer.exe routing. cfx.re shortlinks now support hostname endpoints. EVO-filtered servers use the CFX API for live info. Ping tries HTTP first, then HTTPS for proxied servers.',
+    'ARIA Advisor — Live FPS Benchmarking — AVG FPS, 1% Low and Stability % shown in the ARIA panel during a game session. PresentMon targets only the detected game\'s process. 90-second 1% Low sparkline. Alert if 1% Low drops below 30 FPS. Post-session summary includes FPS chips. Per-tweak FPS delta shown before/after each tweak. FPS overlay window (bottom-right, 160×72) showing AVG + 1% Low; auto-fades to 25% after 6s.',
+    'FPS Overlay — Bug Fixes — Overlay now auto-opens on game detection (independent of PresentMon). Fixed blank window on open using ready-to-show pattern. alwaysOnTop now pierces fullscreen games (screen-saver level). Bundled PresentMon.exe and wired to assetPath(). Fixed overlay appearing on wrong monitor — now always uses primary display.',
+  ], items_fi: [
+    'Palvelimen kirjanmerkit & Pikayhdistäminen — Tallenna enintään 5 palvelinta (IP:portti). Live-pelaajamäärä, kartta ja ping. Automaattipäivitys 60s välein. Yhdistä yhdellä klikkauksella.',
+    'Live Session HUD — Läpinäkyvä peittokuva CPU/GPU/RAM-palkeilla ja CFX-pingillä. Avautuu automaattisesti FiveM-tunnistuksen yhteydessä. Hiiren läpäisy käytössä — ei häiritse pelaamista.',
+    'Istuntoaikajana — Tallentaa keston, huippuarvot ja poikkeamat. Näyttää viimeiset 10 istuntoa FiveM-välilehdellä.',
+    'Palvelinkohtaiset optimointiprofiilit — Yhdistä Game Bundle -profiili kirjanmerkkiin. Profiili otetaan käyttöön automaattisesti ennen FiveM-käynnistystä.',
+    'Älykkäät säätövaroitukset — Varoittaa ennen yhteensopimattomia säätöjä laitteistollesi (RAM, GPU-merkki, ytimet).',
+    'FiveM-välilehden parannukset — Poistettu turhat kortit. Hero-kortit käyttävät vakioväriluokkia. HUD-kortti käyttää toggle-kytkintä, klikkaus avaa/sulkee HUD:n. Taustan läpinäkyvyys 55%. Korjattu jäätyneet mittarilukemat. Lisätty CPU-kipinäkaavio.',
+    'Kirjanmerkki- ja yhteydenotto-korjaukset — FiveM käynnistyy ilman järjestelmänvalvojan oikeuksia. cfx.re-lyhytlinkit tukevat hostname-päätepisteitä. EVO-filterin palvelimet käyttävät CFX API:a. Ping yrittää HTTP ensin, sitten HTTPS.',
+    'ARIA — Live FPS -mittaus — AVG FPS, 1% Low ja vakausprosentti ARIA-paneelissa pelin aikana. PresentMon kohdistaa vain havaitun pelin prosessiin. 90s kipinäkaavio. Varoitus alle 30 FPS. Istunnon jälkeen FPS-yhteenveto. Säätökohtainen FPS-muutos. FPS-peittokuva oikeassa alakulmassa (160×72), häivyttää 25%:iin 6s jälkeen.',
+    'FPS-peittokuva — Korjaukset — Avautuu automaattisesti pelin tunnistuksessa. Korjattu tyhjä ikkuna. AlwaysOnTop toimii nyt koko näytön pelien päällä. PresentMon.exe lisätty ja yhdistetty assetPath()-apuohjelmaan. Peittokuva näkyy aina ensisijaisessa näytössä.',
+  ]},
   { version: '1.4.9', date: 'May 2026', items: [
     'General Tweaks — Finnish translations added for all info card "Expected Impact" descriptions; shown when app language is set to Finnish',
     'Fix — tweaks (HPET, TSC Sync, MSI Mode, GPU Hardware Scheduling, Cursor Max Rate, Spectre/Meltdown, BCD Boot Tweaks, Global Timer Resolution) no longer show as disabled after reboot; app now re-checks actual system state on launch',
@@ -8412,6 +8670,60 @@ ipcMain.handle('close-pulse-window', () => {
   if (pulseWindow && !pulseWindow.isDestroyed()) pulseWindow.close()
   pulseWindow = null
 })
+
+// ─── FiveM HUD Window ────────────────────────────────────────────────────────
+let _hudPingInterval = null
+
+function openFivemHud() {
+  if (!requiresPremium('open-fivem-hud')) return
+  if (fivemHudWindow && !fivemHudWindow.isDestroyed()) return
+  const { screen } = require('electron')
+  const { width } = screen.getPrimaryDisplay().workAreaSize
+  fivemHudWindow = new BrowserWindow({
+    width: 180, height: 160,
+    x: width - 200, y: 20,
+    frame: false,
+    transparent: true,
+    alwaysOnTop: true,
+    skipTaskbar: true,
+    resizable: false,
+    focusable: false,
+    show: false,
+    webPreferences: {
+      preload: path.join(__dirname, 'preload.js'),
+      nodeIntegration: false,
+      contextIsolation: true,
+      sandbox: false
+    }
+  })
+  fivemHudWindow.loadFile('fivem-hud.html')
+  fivemHudWindow.setAlwaysOnTop(true, 'screen-saver')
+  fivemHudWindow.once('ready-to-show', () => {
+    fivemHudWindow?.show()
+    fivemHudWindow?.setIgnoreMouseEvents(true, { forward: true })
+  })
+  fivemHudWindow.on('closed', () => { fivemHudWindow = null; clearInterval(_hudPingInterval); _hudPingInterval = null })
+
+  // Ping runtime.fivem.net every 3s and send result to the HUD window
+  clearInterval(_hudPingInterval)
+  _hudPingInterval = setInterval(async () => {
+    if (!fivemHudWindow || fivemHudWindow.isDestroyed()) { clearInterval(_hudPingInterval); _hudPingInterval = null; return }
+    try {
+      const r = await runPS(`try { $p = New-Object System.Net.NetworkInformation.Ping; $r = $p.Send('runtime.fivem.net', 2000); if ($r.Status -eq 'Success') { Write-Output $r.RoundtripTime } else { Write-Output 'timeout' } } catch { Write-Output 'timeout' }`, 5000)
+      const ms = r.out.trim() === 'timeout' ? null : parseInt(r.out.trim())
+      fivemHudWindow?.webContents.send('live-ping-tick', { ms, ts: Date.now() })
+    } catch {}
+  }, 3000)
+}
+
+function closeFivemHud() {
+  clearInterval(_hudPingInterval); _hudPingInterval = null
+  if (fivemHudWindow && !fivemHudWindow.isDestroyed()) fivemHudWindow.close()
+  fivemHudWindow = null
+}
+
+ipcMain.handle('open-fivem-hud', () => { openFivemHud() })
+ipcMain.handle('close-fivem-hud', () => { closeFivemHud() })
 
 // ─── FiveM Graphics Settings Window ──────────────────────────────────────────
 ipcMain.handle('open-fivem-settings', () => {
@@ -9744,16 +10056,32 @@ ipcMain.handle('start-game-watcher', async () => {
       _ariaSessionAnomalies = []
       _ariaSessionPeaks = { cpu: 0, gpu: 0, ram: 0, cpuTemp: 0 }
       _ariaSessionStart = Date.now()
+      if (_ariaEnabled) createFpsHud()
 
-      // PresentMon: start session-level frame time capture
+      // PresentMon: start session-level frame time capture (resolve real game PID for accurate per-process capture)
       if (presentMonAvailable()) {
         stopPresentMon(_pmSessionProc); _pmSessionProc = null
-        const sessionFile = path.join(require('os').tmpdir(), `jylli_pm_session_${detectedGame}_${Date.now()}.csv`)
-        _pmSessionProc = spawnPresentMon(sessionFile, null)
+        let gamePid = null
+        try {
+          const exeName = (PULSE_PRESETS[detectedGame]?.exe || '').replace(/\*$/, '').replace(/\.exe$/i, '')
+          if (exeName) {
+            const r = require('child_process').execSync(`powershell -NoProfile -Command "(Get-Process -Name '${exeName}' -ErrorAction SilentlyContinue | Select-Object -First 1).Id"`, { timeout: 3000 }).toString().trim()
+            const n = parseInt(r, 10); if (!isNaN(n) && n > 0) gamePid = n
+          }
+        } catch {}
+        _pmSessionProc = spawnPresentMon(null, gamePid)
         if (_pmSessionProc) {
-          _pmSessionFile = sessionFile
-          mainWindow?.webContents.send('log', { msg: `◆ PresentMon session started → ${sessionFile}`, level: 'info', ts: new Date().toLocaleTimeString() })
+          _pmSessionFile = null
+          _pmSessionProc.once('exit', (code) => {
+            if (code !== 0 && code !== null) mainWindow?.webContents.send('log', { msg: `⚠ PresentMon exited early (code ${code}) — FPS data unavailable`, level: 'warn', ts: new Date().toLocaleTimeString() })
+          })
+          if (_ariaEnabled) ariaFpsStart()
+          mainWindow?.webContents.send('log', { msg: `◆ PresentMon session started${gamePid ? ` (PID ${gamePid})` : ' (all processes)'}`, level: 'info', ts: new Date().toLocaleTimeString() })
+        } else {
+          mainWindow?.webContents.send('log', { msg: '⚠ PresentMon failed to spawn — FPS tracking disabled', level: 'warn', ts: new Date().toLocaleTimeString() })
         }
+      } else {
+        mainWindow?.webContents.send('log', { msg: '⚠ PresentMon unavailable — FPS tracking disabled', level: 'warn', ts: new Date().toLocaleTimeString() })
       }
 
       // Auto-Pulse: activate if enabled (preset already matched — use it directly)
@@ -9775,17 +10103,21 @@ ipcMain.handle('start-game-watcher', async () => {
       mainWindow?.webContents.send('game-watcher-event', { event: 'game-closed', gameId: prev })
       mainWindow?.webContents.send('log', { msg: `Game closed: ${prev} — restoring defaults…`, level: 'info', ts: new Date().toLocaleTimeString() })
 
+      // Stop rolling FPS counter and hide display before PresentMon shuts down
+      ariaFpsStop()
+
       // PresentMon: stop session capture, parse, send histogram to renderer
-      if (_pmSessionProc && _pmSessionFile) {
+      let _sessionFps = null
+      if (_pmSessionProc) {
         stopPresentMon(_pmSessionProc); _pmSessionProc = null
         await new Promise(r => setTimeout(r, 400))
-        const sessionStats = parsePresentMonCsv(_pmSessionFile)
+        const sessionStats = parsePresentMonCsvFromBuffer(_pmFrameBuffer)
         if (sessionStats) {
+          _sessionFps = { avgFps: Math.round(1000 / sessionStats.mean), low1Fps: Math.round(1000 / sessionStats.p1Low) }
           mainWindow?.webContents.send('game-frame-session', { game: prev, stats: sessionStats })
-          mainWindow?.webContents.send('log', { msg: `◆ Frame session — mean: ${sessionStats.mean.toFixed(1)}ms  1%Low: ${sessionStats.p1Low.toFixed(1)}ms  0.1%Low: ${sessionStats.p01Low.toFixed(1)}ms`, level: 'ok', ts: new Date().toLocaleTimeString() })
+          mainWindow?.webContents.send('log', { msg: `◆ Frame session — avg: ${Math.round(1000 / sessionStats.mean)} FPS  1%Low: ${Math.round(1000 / sessionStats.p1Low)} FPS  0.1%Low: ${Math.round(1000 / sessionStats.p01Low)} FPS`, level: 'ok', ts: new Date().toLocaleTimeString() })
         }
-        try { require('fs').unlinkSync(_pmSessionFile) } catch {}
-        _pmSessionFile = null
+        _pmFrameBuffer = []
       }
 
       // ARIA: build session summary and fire to renderer
@@ -9799,6 +10131,7 @@ ipcMain.handle('start-game-watcher', async () => {
           anomalyCounts,
           peaks: { ..._ariaSessionPeaks },
           insightsApplied: _ariaInsights.filter(i => i.game === prev).length,
+          fps: _sessionFps,
         }
         mainWindow?.webContents.send('aria-session-summary', sessionSummary)
         mainWindow?.webContents.send('log', { msg: `◆ ARIA session summary: ${Object.keys(anomalyCounts).length} metrics anomalous over ${Math.round(durationMs/60000)} min`, level: 'info', ts: new Date().toLocaleTimeString() })
@@ -10582,17 +10915,19 @@ let _ariaTweakSnapshot  = null // before-fingerprint during active tweak measure
 let _ariaSessionAnomalies = [] // anomalies accumulated during the current game session
 let _ariaSessionStart     = null // timestamp when current game session began
 let _ariaSessionPeaks     = { cpu: 0, gpu: 0, ram: 0, cpuTemp: 0 } // peak metric values seen this session
+let _ariaFpsTimer          = null
+const ARIA_FPS_INTERVAL_MS = 5000
+const ARIA_FPS_TAIL_LINES  = 400  // ~5-7s of frames at 60fps
 
 // ─── PresentMon frame time tracking ─────────────────────────────────────────
 let _pmSessionProc      = null  // persistent PresentMon process during a game session
 let _pmSessionFile      = null  // CSV output path for the current session
+let _pmFrameBuffer      = []    // rolling CSV rows from stdout; [0] = header, [1..N] = data rows
+const PM_FRAME_BUF_MAX  = 100000  // ~11 min at 150fps; full session in memory
 let _pmTweakProc        = null  // per-tweak PresentMon process (started on aria-before-tweak)
 let _pmTweakFile        = null  // CSV output path for the current tweak measurement
 
-const PRESENTMON_EXE = path.join(
-  process.resourcesPath || path.join(__dirname, 'resources'),
-  'app.asar.unpacked', 'assets', 'presentmon', 'PresentMon.exe'
-)
+const PRESENTMON_EXE = assetPath('assets', 'presentmon', 'PresentMon.exe')
 
 function presentMonAvailable() {
   try { return fs.existsSync(PRESENTMON_EXE) } catch { return false }
@@ -10619,19 +10954,77 @@ function parsePresentMonCsv(csvPath) {
   } catch { return null }
 }
 
+function parsePresentMonCsvFromBuffer(buf) {
+  try {
+    if (!buf || buf.length < 3) return null
+    const header = buf[0].split(',').map(h => h.trim())
+    const msIdx = header.findIndex(h => /MsBetweenPresents|msFrameTime|msBetweenPresents/i.test(h))
+    if (msIdx === -1) return null
+    const frameTimes = buf.slice(1)
+      .map(l => parseFloat(l.split(',')[msIdx]))
+      .filter(v => !isNaN(v) && v > 0 && v < 1000)
+    if (frameTimes.length < 10) return null
+    frameTimes.sort((a, b) => a - b)
+    const n = frameTimes.length
+    const mean = frameTimes.reduce((s, v) => s + v, 0) / n
+    const p1Slice  = frameTimes.slice(Math.floor(n * 0.99))
+    const p1Low    = p1Slice.reduce((s, v) => s + v, 0) / p1Slice.length
+    const p01Slice = frameTimes.slice(Math.floor(n * 0.999))
+    const p01Low   = p01Slice.reduce((s, v) => s + v, 0) / p01Slice.length
+    return { mean: Math.round(mean * 100) / 100, p1Low: Math.round(p1Low * 100) / 100, p01Low: Math.round(p01Low * 100) / 100, samples: n }
+  } catch { return null }
+}
+
+function parsePresentMonBuffer(buf, maxLines) {
+  try {
+    if (!buf || buf.length < 3) return null
+    const header = buf[0].split(',').map(h => h.trim())
+    const msIdx = header.findIndex(h => /MsBetweenPresents|msFrameTime|msBetweenPresents/i.test(h))
+    if (msIdx === -1) return null
+    const dataRows = buf.slice(1)
+    const tail = dataRows.length > maxLines ? dataRows.slice(dataRows.length - maxLines) : dataRows
+    const frameTimes = tail
+      .map(l => parseFloat(l.split(',')[msIdx]))
+      .filter(v => !isNaN(v) && v > 0 && v < 1000)
+    if (frameTimes.length < 10) return null
+    const n = frameTimes.length
+    const mean = frameTimes.reduce((s, v) => s + v, 0) / n
+    const sorted = frameTimes.slice().sort((a, b) => a - b)
+    const p1Start = Math.floor(n * 0.99)
+    const worst1pct = sorted.slice(p1Start)
+    const p1Low = worst1pct.reduce((s, v) => s + v, 0) / worst1pct.length
+    return { avgFps: Math.round(1000 / mean), low1Fps: Math.round(1000 / p1Low) }
+  } catch { return null }
+}
+
 function spawnPresentMon(outputFile, gamePid) {
   if (!presentMonAvailable()) return null
-  const args = ['--output-file', outputFile, '--no-console-stats']
-  if (gamePid) args.push('--process-id', String(gamePid))
+  const args = ['--output_stdout', '--no_console_stats', '--v1_metrics', '--stop_existing_session']
+  if (gamePid) args.push('--process_id', String(gamePid), '--terminate_on_proc_exit')
   try {
-    return require('child_process').spawn(PRESENTMON_EXE, args, { windowsHide: true, stdio: 'ignore', detached: false })
+    const proc = require('child_process').spawn(PRESENTMON_EXE, args, { windowsHide: true, stdio: ['ignore', 'pipe', 'ignore'], detached: false })
+    _pmFrameBuffer = []
+    let _pmHeader = null
+    let _linePartial = ''
+    proc.stdout.on('data', chunk => {
+      const text = _linePartial + chunk.toString('utf8')
+      const parts = text.split('\n')
+      _linePartial = parts.pop()
+      for (const line of parts) {
+        const t = line.trim()
+        if (!t) continue
+        if (!_pmHeader) { _pmHeader = t; _pmFrameBuffer.push(t); continue }
+        _pmFrameBuffer.push(t)
+        if (_pmFrameBuffer.length > PM_FRAME_BUF_MAX + 1) _pmFrameBuffer.splice(1, 1)
+      }
+    })
+    return proc
   } catch { return null }
 }
 
 function stopPresentMon(proc) {
-  if (!proc) return
-  try { proc.kill('SIGTERM') } catch {}
-  try { proc.kill() } catch {}
+  try { proc?.kill() } catch {}
+  try { require('child_process').execFileSync('taskkill', ['/F', '/IM', 'PresentMon.exe'], { windowsHide: true, timeout: 3000 }) } catch {}
 }
 
 // Load persisted insights from settings
@@ -10720,10 +11113,73 @@ function ariaStart() {
   if (_ariaTimer) return
   ariaLoadInsights()
   _ariaTimer = setInterval(ariaTick, ARIA_SAMPLE_MS)
+  if (activeGameProfile) {
+    createFpsHud()
+    if (_pmSessionFile) ariaFpsStart()
+  }
 }
 function ariaStop() {
   if (_ariaTimer) { clearInterval(_ariaTimer); _ariaTimer = null }
+  ariaFpsStop()
 }
+
+let _fpsHudWindow = null
+
+function ariaFpsTick() {
+  if (!_ariaEnabled || !activeGameProfile) return
+  const result = parsePresentMonBuffer(_pmFrameBuffer, ARIA_FPS_TAIL_LINES)
+  if (result) {
+    mainWindow?.webContents.send('aria-fps-tick', result)
+    _fpsHudWindow?.webContents.send('aria-fps-tick', result)
+  }
+}
+function ariaFpsStart() {
+  if (_ariaFpsTimer) return
+  _ariaFpsTimer = setInterval(ariaFpsTick, ARIA_FPS_INTERVAL_MS)
+}
+function ariaFpsStop() {
+  if (_ariaFpsTimer) { clearInterval(_ariaFpsTimer); _ariaFpsTimer = null }
+  mainWindow?.webContents.send('aria-fps-tick', { avgFps: null, low1Fps: null })
+  _fpsHudWindow?.webContents.send('aria-fps-tick', { avgFps: null, low1Fps: null })
+  destroyFpsHud()
+}
+
+function createFpsHud() {
+  if (_fpsHudWindow) return
+  const settings = loadSettings()
+  if (!settings.ariaFpsHudEnabled) return
+  const { screen } = require('electron')
+  const { width: dw, height: dh } = screen.getPrimaryDisplay().workAreaSize
+  _fpsHudWindow = new BrowserWindow({
+    width: 160, height: 72,
+    x: dw - 176, y: dh - 88,
+    frame: false, transparent: true, alwaysOnTop: true, skipTaskbar: true, resizable: false,
+    show: false,
+    webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, nodeIntegration: false },
+  })
+  _fpsHudWindow.loadFile(path.join(__dirname, 'fps-hud.html'))
+  _fpsHudWindow.setAlwaysOnTop(true, 'screen-saver')
+  _fpsHudWindow.once('ready-to-show', () => {
+    _fpsHudWindow?.show()
+    _fpsHudWindow?.setIgnoreMouseEvents(true, { forward: true })
+  })
+  _fpsHudWindow.on('closed', () => { _fpsHudWindow = null })
+}
+function destroyFpsHud() {
+  if (_fpsHudWindow) { try { _fpsHudWindow.close() } catch {} _fpsHudWindow = null }
+}
+
+ipcMain.handle('toggle-fps-hud', () => {
+  const settings = loadSettings()
+  settings.ariaFpsHudEnabled = !settings.ariaFpsHudEnabled
+  saveSettings(settings)
+  if (settings.ariaFpsHudEnabled && activeGameProfile && _pmSessionFile && _ariaEnabled) {
+    createFpsHud()
+  } else {
+    destroyFpsHud()
+  }
+  return { ok: true, enabled: settings.ariaFpsHudEnabled }
+})
 
 ipcMain.handle('aria-start', () => {
   if (!requiresPremium('aria-start')) return { ok: false, reason: 'premium_required' }
@@ -10804,6 +11260,13 @@ ipcMain.handle('aria-after-tweak', async (_, { tweakId, action }) => {
     p01Delta:   Math.round((frameTimeAfter.p01Low - frameTimeBefore.p01Low) * 100) / 100,
   } : null
 
+  const fpsDelta = (frameTimeBefore && frameTimeAfter) ? {
+    avgBefore:  Math.round(1000 / frameTimeBefore.mean),
+    avgAfter:   Math.round(1000 / frameTimeAfter.mean),
+    low1Before: Math.round(1000 / frameTimeBefore.p1Low),
+    low1After:  Math.round(1000 / frameTimeAfter.p1Low),
+  } : null
+
   const insight = {
     tweakId,
     action,
@@ -10811,6 +11274,7 @@ ipcMain.handle('aria-after-tweak', async (_, { tweakId, action }) => {
     after,
     delta,
     frameTime: frameDelta,
+    fpsDelta,
     ts:   Date.now(),
     game: activeGameProfile || null,
   }

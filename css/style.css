@@ -1581,6 +1581,14 @@ canvas.radar-canvas { width: 180px; height: 180px; }
 .fhc-variant-purple:hover { border-color: rgba(155,89,182,0.5) !important; background: rgba(155,89,182,0.04); }
 .fhc-variant-purple .fhc-icon { background: rgba(155,89,182,0.12); color: #9b59b6; }
 .fhc-variant-purple .fhc-open { color: #9b59b6; }
+.fhc-variant-gold { border-color: rgba(241,196,15,0.25) !important; cursor: pointer; }
+.fhc-variant-gold:hover { border-color: rgba(241,196,15,0.5) !important; background: rgba(241,196,15,0.04); }
+.fhc-variant-gold .fhc-icon { background: rgba(241,196,15,0.1); color: #f1c40f; }
+.fhc-variant-gold .fhc-open { color: #f1c40f; }
+.fhc-variant-red { border-color: rgba(231,76,60,0.25) !important; cursor: pointer; }
+.fhc-variant-red:hover { border-color: rgba(231,76,60,0.5) !important; background: rgba(231,76,60,0.04); }
+.fhc-variant-red .fhc-icon { background: rgba(231,76,60,0.1); color: #e74c3c; }
+.fhc-variant-red .fhc-open { color: #e74c3c; }
 .fhc-health-btn { font-size: 9px; color: #3498db; border-color: rgba(52,152,219,0.3); }
 .fhc-health-btn:hover { color: #3498db; border-color: rgba(52,152,219,0.6); background: rgba(52,152,219,0.08); }
 
@@ -1978,6 +1986,7 @@ select.styled-select:focus { border-color: var(--c-accent); box-shadow: 0 0 0 3p
 .reboot-badge { display:inline-flex;align-items:center;gap:4px;font-size:9px;color:#f39c12;background:rgba(243,156,18,0.08);border:1px solid rgba(243,156,18,0.22);border-radius:4px;padding:2px 6px;margin-top:4px; }
 .new-badge { display:inline-block;font-size:8px;font-weight:800;letter-spacing:0.06em;color:#fff;background:linear-gradient(135deg,#7c3aed,#a855f7);border-radius:4px;padding:1px 5px;vertical-align:middle;margin-left:5px;animation:badgePop .3s cubic-bezier(.22,1,.36,1) both;text-transform:uppercase; }
 .pf-row-tag { font-size:9px; color:var(--info); margin-top:3px; }
+.tweak-conflict-hint { font-size:9.5px; color:var(--warning); margin-top:4px; display:flex; align-items:flex-start; gap:5px; line-height:1.4; }
 .tweak-row.pf-preapplied { border-left:2px solid rgba(52,152,219,0.35); }
 .tweak-row.row-applied { border-left:2px solid rgba(46,204,113,0.38); background:rgba(46,204,113,0.018) !important; }
 @keyframes rowSuccessFlash {
