@@ -1445,6 +1445,122 @@ const LANG = {
       biosWarnFastBoot:'If Fast Boot is on and you need BIOS access, hold Shift while clicking Restart in Windows.',
       biosWarnCsm:'Old GPUs (pre-2012) that don\'t support UEFI GOP may show no display output if CSM is disabled.',
       biosWarnPsu:'Setting this incorrectly for your PSU can cause system crashes under load.',
+      // BIOS Profile System
+      biosProfileTitle:'BIOS Profiles',
+      biosProfileSub:'Save, load, and share complete BIOS configurations as .jbios files.',
+      biosProfileSave:'Save Profile',
+      biosProfileLoad:'Load Profile',
+      biosProfileExport:'Export .jbios',
+      biosProfileImport:'Import .jbios',
+      biosProfileName:'Enter a name for this profile (e.g. "Gaming OC")',
+      biosProfileSaved:'Profile saved: {name}',
+      biosProfileLoaded:'Profile loaded: {name}',
+      biosProfileEmpty:'— Select a profile —',
+      biosProfileConfirmLoad:'Load profile "{name}"?',
+      biosProfileWriting:'Writing…',
+      biosProfileDone:'{written} settings written, {failed} failed.',
+      biosProfileBoardMismatch:'Board mismatch — this profile was saved on a different motherboard. Import anyway is not supported.',
+      biosProfileExportSuccess:'Profile exported as .jbios file.',
+      biosProfileImportSuccess:'Profile imported successfully.',
+      // RyzenAdj extended
+      ryzenStapm:'STAPM Limit',
+      ryzenStapmDesc:'Sustained average power cap (W). Lower = cooler long-term. Eco ≈45W, Desktop ≈65–88W',
+      ryzenTctl:'Tctl Temp Cap',
+      ryzenTctlDesc:'Maximum junction temperature target (°C). Default is 95°C on Ryzen.',
+      ryzenFclk:'Fclk Min (MHz)',
+      ryzenFclkDesc:'CPU–GPU fabric clock minimum. Match to your RAM effective MHz ÷ 2 for best latency.',
+      ryzenCurveAll:'Curve Optimizer (all cores)',
+      ryzenCurveAllDesc:'Per-core voltage offset. Negative = undervolt / efficiency. Positive = overclock. Range: -30 to +30.',
+      ryzenCurveWarn:'Curve Optimizer changes voltage curve. Negative values are safe (undervolting). Positive values may cause instability.',
+      ryzenSavePreset:'Save Preset',
+      ryzenLoadPreset:'Load Preset',
+      ryzenPresetName:'Preset name…',
+      ryzenPresetSaved:'Preset Saved',
+      ryzenPresetLoaded:'Preset Loaded',
+      // BIOS Tuner — change log
+      biosChangeLogTitle:'BIOS Change History',
+      biosChangeLogSub:'Every SCEWIN write is logged here. Click Revert to undo a specific setting change.',
+      biosChangeLogEmpty:'No changes recorded yet. Apply a BIOS setting above to start logging.',
+      biosChangeLogRevert:'Revert',
+      biosChangeLogClear:'Clear Log',
+      biosChangeLogReverted:'Reverted',
+      // BIOS Tuner — RAM stress test
+      biosRamTestBtn:'RAM Stability Quick Test',
+      biosRamTestNote:'Allocates 256MB and verifies memory integrity. Not a replacement for MemTest86 — useful for quick XMP stability checks.',
+      biosRamTestQuick:'Quick (30s)',
+      biosRamTestThorough:'Thorough (5 min)',
+      biosRamTestRunning:'Testing for {s}s — do not close the app…',
+      biosRamTestPassed:'Memory Stable',
+      biosRamTestFailed:'Memory Errors Detected',
+      // BIOS Tuner — LHM sensor dashboard
+      biosFanSensorTitle:'Fan Control & Live Sensors',
+      biosFanRpm:'Fan RPM',
+      biosFanPowerDraw:'Power Draw',
+      biosFanVcore:'VCore',
+      biosFanGpuPower:'GPU Power',
+      biosFanLhmRequired:'LibreHardwareMonitor not running — start it via the Hardware tab to see live fan RPMs, power draw and voltages.',
+      // BIOS Tuner — Intel boost mode
+      biosIntelBoostTitle:'Intel CPU Boost Mode',
+      biosIntelBoostSub:'Control Intel Turbo Boost aggressiveness via Windows powercfg. No XTU required. Changes reset on power plan switch.',
+      biosIntelBoostDisabled:'Boost Disabled',
+      biosIntelBoostEfficient:'Efficient Boost',
+      biosIntelBoostAggressive:'Aggressive Boost',
+      biosIntelBoostApplied:'Boost mode: {mode}',
+      biosIntelBoostNote:'Reading current boost mode…',
+      // BIOS Tuner — thermal monitor
+      biosThermalTitle:'Live Thermal Monitor',
+      biosThermalSub:'Real-time CPU and GPU temperatures. Apply RyzenAdj or C-State changes and watch the effect instantly.',
+      biosThermalCpu:'CPU TEMP',
+      biosThermalGpu:'GPU TEMP',
+      biosThermalPeak:'Peak this session',
+      biosThermalLhmRequired:'LibreHardwareMonitor not running — start it via the Hardware tab to enable live temperatures.',
+      // BIOS Tuner — optimization score
+      biosScore:'BIOS Optimization Score',
+      biosScoreSub:'Calculated from your scanned settings. Run BIOS Scan + SCEWIN Scan to get a full score.',
+      biosScoreTierUnoptimized:'Unoptimized',
+      biosScoreTierPartial:'Partially Tuned',
+      biosScoreTierOptimized:'Optimized',
+      biosScoreTierMaster:'BIOS Master',
+      biosScoreUpdated:'Score updated.',
+      biosScorePoints:'pts',
+      biosScoreNoData:'Run BIOS Scan to calculate score.',
+      // BIOS Tuner — age alert
+      biosBiosAge:'BIOS Age',
+      biosBiosAgeCurrent:'Up to date',
+      biosBiosAgeWarn:'outdated — consider updating',
+      biosBiosAgeOld:'very old — update recommended',
+      biosBiosUpdateBtn:'Check for Update',
+      biosBiosAgeUnit:'days old',
+      // BIOS Tuner — recommendations card
+      biosRecTitle:'RECOMMENDED FOR YOUR SYSTEM',
+      biosRecXmpOff:'Enable XMP / DOCP / EXPO — RAM running at {actual} MHz but rated for {rated} MHz',
+      biosRecXmpOn:'RAM running at rated speed ({actual} MHz)',
+      biosRecReBar:'Enable Resizable BAR + Above 4G Decoding — your chipset supports it and it improves GPU performance',
+      biosRecLegacyBios:'Legacy BIOS mode detected — consider enabling UEFI mode for better compatibility and security',
+      biosRecSecureBoot:'Secure Boot is off — enabling it improves boot security with no performance cost',
+      biosRecNoTpm:'No TPM detected — Windows 11 requires TPM 2.0. Enable fTPM (AMD) or PTT (Intel) in BIOS',
+      biosRecHyperV:'Hyper-V is active — disabling it reduces CPU virtualization overhead for gaming if you don\'t use WSL2/Docker/VMs',
+      biosRecLaptop:'Laptop detected — do NOT disable C-States (severe battery drain and heat risk)',
+      biosRecDesktop:'Desktop detected — disabling C-States in BIOS can reduce CPU wake-up latency for competitive gaming',
+      biosRecAmd:'AMD CPU — ensure Core Performance Boost is enabled in BIOS for automatic boost clocks',
+      biosRecIntel:'Intel CPU — ensure Turbo Boost is enabled in BIOS for automatic boost clocks',
+      // BIOS Tuner — anti-cheat readiness
+      biosAntiCheatTitle:'Anti-Cheat Readiness',
+      biosGuideHowToFix:'How to Fix',
+      biosGuideTitle:'Fix',
+      biosGuideMissing:'Missing for {ac}: {items}',
+      biosGuideUefi:'UEFI mode',
+      biosGuideFooter:'If Secure Boot fails to enable, disable CSM first (Compatibility Support Module). After saving, Windows may prompt for your BitLocker recovery key — have it ready.',
+      biosGuideAsus:'<b>ASUS:</b> Del/F2 → <b>Advanced</b> → <b>AMD fTPM configuration</b> → <i>TPM Device Selection</i> = <b>Firmware TPM</b> → <b>Boot</b> → <b>Secure Boot</b> → <i>OS Type</i> = <b>Windows UEFI mode</b> → F10 Save &amp; Exit',
+      biosGuideMsi:'<b>MSI:</b> Del → <b>Settings</b> → <b>Security</b> → <b>Trusted Computing</b> → <i>Security Device Support</i> = <b>Enable</b> → <b>Boot</b> → <b>Secure Boot</b> = <b>Enable</b> → F10 Save &amp; Exit',
+      biosGuideGigabyte:'<b>Gigabyte/AORUS:</b> Del/F2 → <b>Settings</b> → <b>Miscellaneous</b> → <i>AMD CPU fTPM</i> = <b>Enabled</b> → <b>Boot</b> → <b>Secure Boot</b> = <b>Enabled</b> → F10 Save &amp; Exit',
+      biosGuideAsrock:'<b>ASRock:</b> F2 → <b>Security</b> → <i>AMD fTPM</i> or <i>Intel PTT</i> = <b>Enable</b> → <b>Boot</b> → <b>Secure Boot</b> = <b>Enable</b> → F10 Save &amp; Exit',
+      biosGuideGeneric:'Enter BIOS (usually <b>Del</b> or <b>F2</b> at startup) → find <b>fTPM</b> (AMD) or <b>PTT</b> (Intel) under Security or Advanced → Enable → find <b>Secure Boot</b> under Boot → Enable → Save &amp; Exit',
+      // BIOS Tuner — dependency checker
+      biosDepBlockTitle:'Dependency Required',
+      biosDepReBarNeedsAbove4g:'Enable "Above 4G Decoding" first — ReBAR cannot function without it.',
+      biosDepSecureBootNeedsCsm:'Disable CSM before enabling Secure Boot.',
+      biosDepCsmWarnGpu:'Warning: disabling CSM may cause no display on GPUs older than ~2012 that lack UEFI GOP. Proceed anyway?',
       // Toast messages
       tipTrayTitle:'Tip: hide to tray while gaming', tipTrayBody:'Press the tray icon to hide Jylli Tool — stops background activity and prevents fullscreen interference',
       bugReportSent:'Bug Report Sent', bugReportThanks:'Thanks — we\'ll look into it.',
@@ -2786,6 +2902,31 @@ const LANG = {
       biosRamTimingsNote:'RAM-ajoituksia (CAS, tRCD, tRP, tRAS) ei voi muuttaa Windowsista. Ne tallennetaan vain BIOS:iin. Käytä XMP / DOCP / EXPO:ta yllä olevissa BIOS-asetuksissa optimaalisia nopeusprofiileja varten.',
       biosCpuTitle:'CPU-teho­säätäjä',
       biosCpuSub:'Säädä CPU-tehorajoituksia (PPT/TDC/EDC) väliaikaisesti. Vain AMD Ryzen. Muutokset nollautuvat uudelleenkäynnistyksessä.',
+      // BIOS Tuner — recommendations card
+      biosRecTitle:'SUOSITUKSET JÄRJESTELMÄLLESI',
+      biosRecXmpOff:'Ota XMP / DOCP / EXPO käyttöön — RAM pyörii {actual} MHz mutta on luokiteltu {rated} MHz',
+      biosRecXmpOn:'RAM pyörii luokitusnopeudella ({actual} MHz)',
+      biosRecReBar:'Ota käyttöön Resizable BAR + Above 4G Decoding — piirisarjasi tukee sitä ja se parantaa GPU-suorituskykyä',
+      biosRecLegacyBios:'Legacy BIOS -tila havaittu — harkitse UEFI-tilan ottamista käyttöön paremman yhteensopivuuden ja tietoturvan vuoksi',
+      biosRecSecureBoot:'Secure Boot on pois päältä — sen ottaminen käyttöön parantaa käynnistysturvallisuutta ilman suorituskykyvaikutusta',
+      biosRecNoTpm:'TPM:ää ei havaittu — Windows 11 vaatii TPM 2.0:n. Ota fTPM (AMD) tai PTT (Intel) käyttöön BIOS:ssa',
+      biosRecHyperV:'Hyper-V on aktiivinen — sen poistaminen käytöstä vähentää CPU-virtualisointikuormaa pelaamisessa, jos et käytä WSL2/Docker/VM-ympäristöjä',
+      biosRecLaptop:'Kannettava havaittu — ÄLÄ poista C-States käytöstä (vakava akkutyhjennys- ja lämpöriski)',
+      biosRecDesktop:'Pöytäkone havaittu — C-States-poistaminen BIOS:ssa voi lyhentää CPU:n heräämisviivettä kilpailupelaamisessa',
+      biosRecAmd:'AMD CPU — varmista, että Core Performance Boost on käytössä BIOS:ssa automaattisia tehotaajuuksia varten',
+      biosRecIntel:'Intel CPU — varmista, että Turbo Boost on käytössä BIOS:ssa automaattisia tehotaajuuksia varten',
+      // BIOS Tuner — anti-cheat readiness
+      biosAntiCheatTitle:'Huijausuojaustarkistus',
+      biosGuideHowToFix:'Miten korjata',
+      biosGuideTitle:'Korjaa',
+      biosGuideMissing:'Puuttuu {ac}:lta: {items}',
+      biosGuideUefi:'UEFI-tila',
+      biosGuideFooter:'Jos Secure Boot ei aktivoidu, poista ensin CSM (Compatibility Support Module) käytöstä. Tallennuksen jälkeen Windows saattaa pyytää BitLocker-palautusavainta — pidä se valmiina.',
+      biosGuideAsus:'<b>ASUS:</b> Del/F2 → <b>Advanced</b> → <b>AMD fTPM configuration</b> → <i>TPM Device Selection</i> = <b>Firmware TPM</b> → <b>Boot</b> → <b>Secure Boot</b> → <i>OS Type</i> = <b>Windows UEFI mode</b> → F10 Tallenna &amp; Poistu',
+      biosGuideMsi:'<b>MSI:</b> Del → <b>Settings</b> → <b>Security</b> → <b>Trusted Computing</b> → <i>Security Device Support</i> = <b>Enable</b> → <b>Boot</b> → <b>Secure Boot</b> = <b>Enable</b> → F10 Tallenna &amp; Poistu',
+      biosGuideGigabyte:'<b>Gigabyte/AORUS:</b> Del/F2 → <b>Settings</b> → <b>Miscellaneous</b> → <i>AMD CPU fTPM</i> = <b>Enabled</b> → <b>Boot</b> → <b>Secure Boot</b> = <b>Enabled</b> → F10 Tallenna &amp; Poistu',
+      biosGuideAsrock:'<b>ASRock:</b> F2 → <b>Security</b> → <i>AMD fTPM</i> tai <i>Intel PTT</i> = <b>Enable</b> → <b>Boot</b> → <b>Secure Boot</b> = <b>Enable</b> → F10 Tallenna &amp; Poistu',
+      biosGuideGeneric:'Siirry BIOS:iin (yleensä <b>Del</b> tai <b>F2</b> käynnistyksessä) → etsi <b>fTPM</b> (AMD) tai <b>PTT</b> (Intel) Suojaus- tai Lisäasetuksista → Ota käyttöön → etsi <b>Secure Boot</b> Käynnistys-välilehdeltä → Ota käyttöön → Tallenna &amp; Poistu',
       // Networking section titles
       netSecTcpStack:'TCP-pino',
       netSecDns:'DNS',
@@ -2888,6 +3029,97 @@ const LANG = {
       biosWarnFastBoot:'Jos Fast Boot on päällä ja tarvitset BIOS-pääsyn, pidä Shift alhaalla napsauttaessasi Käynnistä uudelleen Windowsissa.',
       biosWarnCsm:'Vanhat GPU:t (ennen 2012), jotka eivät tue UEFI GOP:ta, voivat menettää näyttösignaalin CSM:n poistamisen jälkeen.',
       biosWarnPsu:'Väärä arvo virtalähteellesi voi aiheuttaa järjestelmän kaatumisia kuormituksessa.',
+      // BIOS Profile System
+      biosProfileTitle:'BIOS-profiilit',
+      biosProfileSub:'Tallenna, lataa ja jaa täydellisiä BIOS-konfiguraatioita .jbios-tiedostoina.',
+      biosProfileSave:'Tallenna profiili',
+      biosProfileLoad:'Lataa profiili',
+      biosProfileExport:'Vie .jbios',
+      biosProfileImport:'Tuo .jbios',
+      biosProfileName:'Anna profiilille nimi (esim. "Gaming OC")',
+      biosProfileSaved:'Profiili tallennettu: {name}',
+      biosProfileLoaded:'Profiili ladattu: {name}',
+      biosProfileEmpty:'— Valitse profiili —',
+      biosProfileConfirmLoad:'Ladataanko profiili "{name}"?',
+      biosProfileWriting:'Kirjoitetaan…',
+      biosProfileDone:'{written} asetus kirjoitettu, {failed} epäonnistui.',
+      biosProfileBoardMismatch:'Emolevy ei täsmää — tämä profiili on tallennettu eri emolevyllä. Tuonti ei ole tuettu.',
+      biosProfileExportSuccess:'Profiili viety .jbios-tiedostona.',
+      biosProfileImportSuccess:'Profiili tuotu onnistuneesti.',
+      // RyzenAdj extended
+      ryzenStapm:'STAPM-raja',
+      ryzenStapmDesc:'Pysyvä keskitehoraja (W). Alempi = viileämpi pitkällä tähtäimellä. Eko ≈45W, Pöytäkone ≈65–88W',
+      ryzenTctl:'Tctl-lämpöraja',
+      ryzenTctlDesc:'Maksimiliitoslämpötilatavoite (°C). Oletus on 95°C Ryzen-prosessoreilla.',
+      ryzenFclk:'Fclk Min (MHz)',
+      ryzenFclkDesc:'CPU–GPU-sillataaajuuden minimi. Vastaa RAM:n efektiivistä MHz ÷ 2 parhaaseen viiveeseen.',
+      ryzenCurveAll:'Käyrän optimoija (kaikki ytimet)',
+      ryzenCurveAllDesc:'Ytimen jännitesiirtymä. Negatiivinen = alijännite / tehokkuus. Positiivinen = ylikellotus. Alue: -30–+30.',
+      ryzenCurveWarn:'Käyrän optimoija muuttaa jänniteprofiilin. Negatiiviset arvot ovat turvallisia (alijännite). Positiiviset arvot voivat aiheuttaa epävakautta.',
+      ryzenSavePreset:'Tallenna esiasetus',
+      ryzenLoadPreset:'Lataa esiasetus',
+      ryzenPresetName:'Esiasetuksen nimi…',
+      ryzenPresetSaved:'Esiasetus tallennettu',
+      ryzenPresetLoaded:'Esiasetus ladattu',
+      // BIOS Tuner — change log
+      biosChangeLogTitle:'BIOS-muutoshistoria',
+      biosChangeLogSub:'Jokainen SCEWIN-kirjoitus kirjataan tähän. Klikkaa Palauta peruaksesi tietyn asetuksen muutoksen.',
+      biosChangeLogEmpty:'Muutoksia ei ole vielä kirjattu. Käytä BIOS-asetusta yllä aloittaaksesi kirjaamisen.',
+      biosChangeLogRevert:'Palauta',
+      biosChangeLogClear:'Tyhjennä loki',
+      biosChangeLogReverted:'Palautettu',
+      // BIOS Tuner — RAM stress test
+      biosRamTestBtn:'RAM-vakaustesti',
+      biosRamTestNote:'Varaa 256MB ja tarkistaa muistin eheyden. Ei korvaa MemTest86:ta — hyödyllinen XMP-vakauuden pikatestaukseen.',
+      biosRamTestQuick:'Pikamittaus (30s)',
+      biosRamTestThorough:'Perusteellinen (5 min)',
+      biosRamTestRunning:'Testataan {s}s — älä sulje sovellusta…',
+      biosRamTestPassed:'Muisti vakaa',
+      biosRamTestFailed:'Muistivirheitä havaittu',
+      // BIOS Tuner — LHM sensor dashboard
+      biosFanSensorTitle:'Tuulettimien hallinta ja live-sensorit',
+      biosFanRpm:'Tuulettimen RPM',
+      biosFanPowerDraw:'Tehonkulutus',
+      biosFanVcore:'VCore',
+      biosFanGpuPower:'GPU-teho',
+      biosFanLhmRequired:'LibreHardwareMonitor ei ole käynnissä — käynnistä se Laitteisto-välilehdeltä nähdäksesi live-RPM:t, tehonkulutuksen ja jännitteet.',
+      // BIOS Tuner — Intel boost mode
+      biosIntelBoostTitle:'Intel CPU -tehotila',
+      biosIntelBoostSub:'Hallitse Intel Turbo Boost -aggressiivisuutta Windowsin powercfg:n kautta. XTU:ta ei tarvita. Muutokset nollautuvat virrankäyttösuunnitelman vaihtuessa.',
+      biosIntelBoostDisabled:'Tehostus pois',
+      biosIntelBoostEfficient:'Tehokas tehostus',
+      biosIntelBoostAggressive:'Aggressiivinen tehostus',
+      biosIntelBoostApplied:'Tehotila: {mode}',
+      biosIntelBoostNote:'Luetaan nykyistä tehotilaa…',
+      // BIOS Tuner — thermal monitor
+      biosThermalTitle:'Live-lämpötilamonitori',
+      biosThermalSub:'Reaaliaikaiset suorittimen ja näytönohjaimen lämpötilat. Kokeile RyzenAdj- tai C-State-muutoksia ja näe vaikutus välittömästi.',
+      biosThermalCpu:'CPU-LÄMPÖ',
+      biosThermalGpu:'GPU-LÄMPÖ',
+      biosThermalPeak:'Huippu tässä istunnossa',
+      biosThermalLhmRequired:'LibreHardwareMonitor ei ole käynnissä — käynnistä se Laitteisto-välilehdeltä live-lämpötilojen saamiseksi.',
+      // BIOS Tuner — optimization score
+      biosScore:'BIOS-optimointipistemäärä',
+      biosScoreSub:'Lasketaan skannatuista asetuksistasi. Suorita BIOS-skannaus + SCEWIN-skannaus saadaksesi täyden pistemäärän.',
+      biosScoreTierUnoptimized:'Optimoimaton',
+      biosScoreTierPartial:'Osittain viritetty',
+      biosScoreTierOptimized:'Optimoitu',
+      biosScoreTierMaster:'BIOS-mestari',
+      biosScoreUpdated:'Pistemäärä päivitetty.',
+      biosScorePoints:'pts',
+      biosScoreNoData:'Suorita BIOS-skannaus laskeaksesi pistemäärän.',
+      // BIOS Tuner — age alert
+      biosBiosAge:'BIOS:n ikä',
+      biosBiosAgeCurrent:'Ajan tasalla',
+      biosBiosAgeWarn:'vanhentunut — harkitse päivittämistä',
+      biosBiosAgeOld:'hyvin vanha — päivitys suositeltava',
+      biosBiosUpdateBtn:'Tarkista päivitys',
+      biosBiosAgeUnit:'päivää vanha',
+      // BIOS Tuner — dependency checker
+      biosDepBlockTitle:'Riippuvuus puuttuu',
+      biosDepReBarNeedsAbove4g:'Ota ensin käyttöön "Above 4G Decoding" — ReBAR ei toimi ilman sitä.',
+      biosDepSecureBootNeedsCsm:'Poista CSM käytöstä ennen Secure Bootin ottamista käyttöön.',
+      biosDepCsmWarnGpu:'Varoitus: CSM:n poistaminen voi aiheuttaa ei-näyttöä ennen ~2012 valmistettuja GPU:ita, joilla ei ole UEFI GOP. Jatketaanko?',
       // Toast messages
       tipTrayTitle:'Vinkki: piilota telakkaan pelatessa', tipTrayBody:'Paina telakkapalkin kuvaketta piilottaaksesi Jylli Tool — lopettaa taustatoiminnot ja estää kokonäytön häiriöt',
       bugReportSent:'Virheraportti lähetetty', bugReportThanks:'Kiitos — tutustumme asiaan.',
@@ -3137,6 +3369,8 @@ const LANG = {
       'tcp-keepalive': 'Asettaa KeepAliveTime=30s (aiemmin 2h) ja KeepAliveInterval=1s. Katkaisee vanhentuneet yhteydet nopeammin — vähentää haamuyhteyksiä moninpeleissä.',
       'dns-doh': 'Reitittää DNS-kyselyt salatun HTTPS:n kautta tavallisen UDP:n sijaan. Estää internetpalveluntarjoajan DNS-urkintaa. Ottaa käyttöön Cloudflare DoH:n (1.1.1.1) Windows 11:n natiivilla DoH-asetuksella.',
       'disable-autoproxy': 'Estää Windowsia tunnistamasta välityspalvelinasetuksia automaattisesti jokaisella yhteydellä. Poistaa yhteysviiveen ja DNS-tason latenssipiikkien lähteen.',
+      'nic-ndis-poll': 'Korvaa keskeytysvetoisen pakettien toimituksen kyselytilalla — leikkaa pahimman tapauksen DPC-viiveen noin 500 µs:sta noin 50 µs:iin tuetuilla verkkokorteilla (Intel I225/I226, Realtek 8125). Sama tekniikka kuin ammattilaispelaajien infrastruktuurissa.',
+      'nic-rss-affinity': 'Kiinnittää RSS-jonojen käsittelyn omistettuihin CPU-ytimiin pois ytimeltä 0, johon käyttöjärjestelmän ajastinkeskeytykset kohdistuvat. Estää verkkokortin DPC-käsittelyn keskeyttämästä pelisäiettäsi. Mitattava hyöty 6+ ytimen suorittimilla.',
       // FiveM
       'fivem-clear-cache-btn': 'Pyyhkii kaikki FiveM:n data-välimuisti-, server-cache-, shader-cache- ja NVIDIA DXCache-kansiot. FiveM rakentaa ne uudelleen seuraavalla käynnistyksellä.',
       'fivem-priority': 'Kirjoittaa CpuPriorityClass=3 FiveM.exe-, GTA5.exe- ja CitizenFX.exe-prosesseille. Korkeampi CPU-aikataulutuksen prioriteetti.',
@@ -3172,6 +3406,10 @@ const LANG = {
       'clean-nvidia': 'Poistaa DXCache-, GLCache-, ComputeCache- ja D3DSCache-kansiot. Pakottaa varjostimien uudelleenkompilointiin seuraavassa pelin käynnistyksessä — kerran tapahtuva stutter.',
       'clean-steam': 'Tyhjentää Steamin HTTP-välimuistin ja vanhan latausvarasto­välimuistin. Ei vaikuta asennettuihin peleihin tai tallennuksiin.',
       'clean-gameservices': 'Tyhjentää EA Appin, Epic Games Launcherin ja Battle.netin välimuistikansiot. Korjaa käynnistimen hitauden ja päivitysvirheet.',
+      'clean-spotify': 'Tyhjentää Spotifyn paikallisen tallennuksen välimuistin. Korjaa hitaan latauksen ja vapauttaa levytilaa. Rakentuu uudelleen seuraavalla käynnistyksellä.',
+      'clean-xbox': 'Tyhjentää Xbox-sovelluksen paikallisen välimuistin. Korjaa päivitysvirheet ja hitaan latauksen Xbox-käynnistimessä.',
+      'clean-msstore': 'Tyhjentää Microsoft Storen paikalliset välimuistikansiot. Korjaa kaupan virheet, latausepäonnistumiset ja vanhentuneet päivitystilat.',
+      'clean-roblox': 'Poistaa Robloxin lokitiedostot ja väliaikaisvälimuistin. Korjaa käynnistysvirheet ja vapauttaa tilaa kertyneen pelidatan jälkeen.',
       'fivem-clear-cache': 'Tyhjentää FiveM:n data\\cache- ja server-cache-kansiot. Korjaa resurssien latausvirheet ja pakottaa palvelinresurssien tuoreeseen lataamiseen.',
       'clean-old-windows': 'Poistaa Windows.old-kansion, joka jää OS-päivityksen jälkeen. Voi palauttaa 10–30 Gt. Ei voi peruuttaa — menetät päivityksen palautusmahdollisuuden.',
       'clean-vs-temp': 'Tyhjentää VS:n obj/bin-lähtökansiot, NuGet-paketti­välimuistin ja node_modules-välimuistit yleisistä kehittäjäpoluista käyttäjäprofiilissa.',
@@ -4367,6 +4605,7 @@ function showPage(page) {
   if (metricsInterval && page !== 'dashboard' && page !== 'process-manager') { clearInterval(metricsInterval); metricsInterval = null }
   if (page === 'dashboard' || page === 'process-manager') startMetrics()
   if (page !== 'latency-monitor') stopLatencyPolling()
+  if (page !== 'bios-tuner') { stopBiosThermalPolling(); stopBiosLhmPolling() }
   api.discordSetPage(page).catch(() => {})
   api.analyticsPageVisit(page).catch(() => {})
 
@@ -7626,8 +7865,221 @@ const BIOS_CURATED = [
 let _biosDumpPath = null
 let _biosXmpGap = false
 
+// ── Thermal graph state ──────────────────────────────────────────────────────
+let _biosThermInterval = null
+const _biosThermCpu = []  // rolling 60-point array
+const _biosThermGpu = []
+let _biosThermPeakCpu = 0
+let _biosThermPeakGpu = 0
+
+function drawBiosThermalGraph() {
+  const canvas = document.getElementById('bios-therm-canvas')
+  if (!canvas) return
+  const dpr = window.devicePixelRatio || 1
+  const w = canvas.clientWidth, h = canvas.clientHeight
+  if (canvas.width !== w * dpr) { canvas.width = w * dpr; canvas.height = h * dpr }
+  const ctx = canvas.getContext('2d')
+  ctx.scale(dpr, dpr)
+  ctx.clearRect(0, 0, w, h)
+
+  const drawLine = (data, color) => {
+    if (data.length < 2) return
+    ctx.beginPath()
+    ctx.strokeStyle = color
+    ctx.lineWidth = 1.5
+    ctx.shadowColor = color
+    ctx.shadowBlur = 4
+    const step = w / 59
+    data.forEach((v, i) => {
+      const x = i * step
+      const y = h - Math.max(0, Math.min(1, v / 110)) * (h - 6) - 3
+      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y)
+    })
+    ctx.stroke()
+    ctx.shadowBlur = 0
+  }
+
+  // Threshold zones
+  const y80 = h - (80 / 110) * (h - 6) - 3
+  const y95 = h - (95 / 110) * (h - 6) - 3
+  ctx.strokeStyle = 'rgba(230,126,34,0.3)'; ctx.lineWidth = 1; ctx.setLineDash([3,3])
+  ctx.beginPath(); ctx.moveTo(0, y80); ctx.lineTo(w, y80); ctx.stroke()
+  ctx.strokeStyle = 'rgba(231,76,60,0.4)'
+  ctx.beginPath(); ctx.moveTo(0, y95); ctx.lineTo(w, y95); ctx.stroke()
+  ctx.setLineDash([])
+
+  drawLine(_biosThermGpu, '#3ab8b8')
+  drawLine(_biosThermCpu, 'var(--pink)')
+}
+
+function startBiosThermalPolling() {
+  if (_biosThermInterval) return
+  _biosThermInterval = setInterval(async () => {
+    if (currentPage !== 'bios-tuner') { stopBiosThermalPolling(); return }
+    const t = await api.getTemps().catch(() => null)
+    const lhmWarn = document.getElementById('bios-therm-lhm-warn')
+    if (!t || t.error === 'LHM_UNAVAILABLE' || !t.cpuTemp) {
+      if (lhmWarn) lhmWarn.style.display = ''
+      return
+    }
+    if (lhmWarn) lhmWarn.style.display = 'none'
+    const cpu = parseFloat(t.cpuTemp) || 0
+    const gpu = parseFloat(t.gpuTemp) || 0
+    _biosThermCpu.push(cpu); if (_biosThermCpu.length > 60) _biosThermCpu.shift()
+    _biosThermGpu.push(gpu); if (_biosThermGpu.length > 60) _biosThermGpu.shift()
+    if (cpu > _biosThermPeakCpu) _biosThermPeakCpu = cpu
+    if (gpu > _biosThermPeakGpu) _biosThermPeakGpu = gpu
+
+    const cpuVal = document.getElementById('bios-therm-cpu-val')
+    const gpuVal = document.getElementById('bios-therm-gpu-val')
+    const peak   = document.getElementById('bios-therm-peak')
+    if (cpuVal) { cpuVal.textContent = cpu.toFixed(0); cpuVal.style.color = cpu >= 95 ? '#e74c3c' : cpu >= 80 ? '#e67e22' : 'var(--pink)' }
+    if (gpuVal) { gpuVal.textContent = gpu.toFixed(0); gpuVal.style.color = gpu >= 95 ? '#e74c3c' : gpu >= 80 ? '#e67e22' : '#3ab8b8' }
+    if (peak) peak.textContent = `CPU ${_biosThermPeakCpu.toFixed(0)}°C / GPU ${_biosThermPeakGpu.toFixed(0)}°C`
+    drawBiosThermalGraph()
+  }, 2000)
+}
+
+function stopBiosThermalPolling() {
+  if (_biosThermInterval) { clearInterval(_biosThermInterval); _biosThermInterval = null }
+}
+
+// ── Feature 6: LHM Sensor Dashboard ─────────────────────────────────────────
+let _biosLhmInterval = null
+
+function _renderLhmSensorBadge(name, value, unit, color) {
+  return `<div style="background:#111;border:1px solid var(--border2);border-radius:7px;padding:7px 10px">
+    <div style="font-size:9px;color:#666;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${name}</div>
+    <div style="font-size:16px;font-weight:800;color:${color}">${value ? Number(value).toFixed(0) : '—'}<span style="font-size:9px;font-weight:400;color:#555;margin-left:2px">${unit}</span></div>
+  </div>`
+}
+
+async function startBiosLhmPolling() {
+  if (_biosLhmInterval) return
+  const doTick = async () => {
+    if (currentPage !== 'bios-tuner') { stopBiosLhmPolling(); return }
+    const r = await api.biosLhmSensors().catch(() => null)
+    const grid   = document.getElementById('bios-lhm-grid')
+    const warn   = document.getElementById('bios-lhm-sensor-warn')
+    const fansEl  = document.getElementById('bios-lhm-fans')
+    const pwrEl   = document.getElementById('bios-lhm-powers')
+    const voltEl  = document.getElementById('bios-lhm-volts')
+    const tsEl    = document.getElementById('bios-lhm-refresh-ts')
+    if (!r?.ok || (!r.fans?.length && !r.powers?.length && !r.volts?.length)) {
+      if (warn) warn.style.display = ''
+      if (grid) grid.style.display = 'none'
+      return
+    }
+    if (warn) warn.style.display = 'none'
+    if (grid) grid.style.display = ''
+    if (tsEl) tsEl.textContent = new Date().toLocaleTimeString()
+    if (fansEl) fansEl.innerHTML = r.fans.map(f => _renderLhmSensorBadge(f.name, f.value, 'RPM', '#3ab8b8')).join('')
+    if (pwrEl) pwrEl.innerHTML = r.powers.map(p => _renderLhmSensorBadge(p.name, p.value, 'W', '#e67e22')).join('')
+    if (voltEl) voltEl.innerHTML = r.volts.map(v => _renderLhmSensorBadge(v.name, parseFloat(v.value).toFixed(3) !== 'NaN' ? parseFloat(v.value).toFixed(3) : v.value, 'V', '#9b59b6')).join('')
+  }
+  await doTick()
+  _biosLhmInterval = setInterval(doTick, 3000)
+}
+
+function stopBiosLhmPolling() {
+  if (_biosLhmInterval) { clearInterval(_biosLhmInterval); _biosLhmInterval = null }
+}
+
+// ── BIOS score state (populated by doBiosScan + doBiosScewinScan) ──────────
+let _biosScoreInfo = null     // from get-bios-info
+let _biosScoreEntries = null  // from bios-scewin-read
+let _biosCurrentValues = {}   // token → current value string (for dependency checker)
+
+function computeBiosScore(biosInfo, scewinEntries) {
+  let score = 0
+  const reasons = []
+  if (!biosInfo && !scewinEntries) return { score: 0, reasons: [], noData: true }
+
+  if (biosInfo) {
+    if (biosInfo.uefi) { score += 7; reasons.push({ label: 'UEFI mode', pts: 7 }) }
+    if (biosInfo.tpmVersion === '2.0' || biosInfo.tpmPresent) { score += 7; reasons.push({ label: 'TPM present', pts: 7 }) }
+    if (biosInfo.hyperV === false || biosInfo.hyperV === 'off') { score += 8; reasons.push({ label: 'Hyper-V disabled', pts: 8 }) }
+    if (biosInfo.secureBoot) { score += 8; reasons.push({ label: 'Secure Boot on', pts: 8 }) }
+    if (biosInfo.biosDate) {
+      const ageDays = Math.floor((Date.now() - new Date(biosInfo.biosDate)) / 86400000)
+      if (ageDays < 365) { score += 15; reasons.push({ label: 'BIOS up to date', pts: 15 }) }
+    }
+  }
+
+  if (scewinEntries && scewinEntries.length) {
+    const find = (keys) => scewinEntries.find(e => keys.some(k => e.name && e.name.toLowerCase().includes(k.toLowerCase())))
+    const isEnabled = (e) => {
+      if (!e) return false
+      const cur = (e.options || []).find(o => o.current)
+      if (!cur) return false
+      return cur.label && /enable|enabled|on|yes|auto/i.test(cur.label)
+    }
+    const isDisabled = (e) => {
+      if (!e) return false
+      const cur = (e.options || []).find(o => o.current)
+      if (!cur) return false
+      return cur.label && /disable|disabled|off|no/i.test(cur.label)
+    }
+
+    const xmpE = find(['XMP','DOCP','EXPO'])
+    if (isEnabled(xmpE)) { score += 20; reasons.push({ label: 'XMP/DOCP/EXPO enabled', pts: 20 }) }
+
+    const rebarE = find(['Resizable BAR','ReBAR'])
+    if (isEnabled(rebarE)) { score += 15; reasons.push({ label: 'Resizable BAR enabled', pts: 15 }) }
+
+    const above4gE = find(['Above 4G'])
+    if (isEnabled(above4gE)) { score += 10; reasons.push({ label: 'Above 4G Decoding enabled', pts: 10 }) }
+
+    const cstateE = find(['C-State','C-state','Global C-state'])
+    if (isDisabled(cstateE)) { score += 10; reasons.push({ label: 'C-States disabled', pts: 10 }) }
+  }
+
+  score = Math.min(score, 100)
+  return { score, reasons, noData: false }
+}
+
+function renderBiosScore() {
+  const el = document.getElementById('bios-score-card')
+  if (!el) return
+  const { score, reasons, noData } = computeBiosScore(_biosScoreInfo, _biosScoreEntries)
+  if (noData) {
+    el.innerHTML = `<div style="font-size:11px;color:#666;padding:4px 0"><i class="fa fa-circle-info"></i> ${tUI('biosScoreNoData')}</div>`
+    return
+  }
+  let tier, color, pulse = false
+  if (score >= 85) { tier = tUI('biosScoreTierMaster'); color = '#d63bbf'; pulse = true }
+  else if (score >= 65) { tier = tUI('biosScoreTierOptimized'); color = '#27ae60' }
+  else if (score >= 40) { tier = tUI('biosScoreTierPartial'); color = '#e67e22' }
+  else { tier = tUI('biosScoreTierUnoptimized'); color = '#e74c3c' }
+
+  const barW = score + '%'
+  el.innerHTML = `
+    <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+      <div style="flex:1;min-width:160px">
+        <div style="font-size:11px;font-weight:700;color:#c0c0c0;margin-bottom:6px;letter-spacing:0.3px">${tUI('biosScore')}</div>
+        <div style="background:#111;border-radius:6px;height:10px;overflow:hidden;margin-bottom:6px">
+          <div style="height:100%;width:${barW};background:${color};border-radius:6px;transition:width 0.6s"></div>
+        </div>
+        <div style="font-size:10px;color:#777">${tUI('biosScoreSub')}</div>
+      </div>
+      <div style="text-align:center;min-width:90px">
+        <div style="font-size:28px;font-weight:900;color:${color};line-height:1${pulse ? ';animation:pulse 1.6s infinite' : ''}">${score}</div>
+        <div style="font-size:10px;color:#888;margin-top:1px">${tUI('biosScorePoints')} / 100</div>
+        <div style="font-size:11px;font-weight:700;color:${color};margin-top:3px">${tier}</div>
+      </div>
+    </div>
+    ${reasons.length ? `<div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:5px">${reasons.map(r => `<span style="font-size:10px;background:#0e2a0e;border:1px solid #1e4a1e;color:#4caf50;border-radius:4px;padding:2px 7px"><i class="fa fa-check" style="font-size:9px"></i> ${r.label} <span style="color:#6a6;font-size:9px">+${r.pts}</span></span>`).join('')}</div>` : ''}`
+}
+
 async function buildBiosTuner(c) {
   if (!settings.isPremium) { await buildPremiumBanner(c, 'bios-tuner'); return }
+
+  // ── Optimization Score Hero Card ──────────────────────────────────────────
+  const scoreCard = document.createElement('div')
+  scoreCard.style.cssText = 'background:#0a1020;border:1.5px solid #1a2a50;border-radius:10px;padding:14px 18px;margin-bottom:16px'
+  scoreCard.innerHTML = `<div id="bios-score-card"><div style="font-size:11px;color:#666;padding:4px 0"><i class="fa fa-circle-info"></i> ${tUI('biosScoreNoData')}</div></div>`
+  c.appendChild(scoreCard)
+
   // ── Permanent danger banner ───────────────────────────────────────────────
   const banner = document.createElement('div')
   banner.style.cssText = 'background:#1a0408;border:1.5px solid #c0152a;border-radius:10px;padding:14px 18px;margin-bottom:16px;display:flex;gap:12px;align-items:flex-start'
@@ -7744,10 +8196,23 @@ async function buildBiosTuner(c) {
   const sceScanRow = document.createElement('div')
   sceScanRow.style.cssText = 'padding:10px 18px 4px'
   sceScanRow.innerHTML = `
-    <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap">
       <button class="btn btn-primary btn-sm" id="scewin-scan-btn" onclick="doBiosScewinScan()"><i class="fa fa-bolt"></i> ${tUI('biosScewinScanBtn')}</button>
       <button class="btn btn-ghost btn-sm" id="scewin-export-btn" onclick="doBiosDumpExport()" style="display:none"><i class="fa fa-file-export"></i> ${tUI('biosScewinExportBtn')}</button>
       <span id="scewin-scan-status" style="font-size:11px;color:var(--gray)">${tUI('biosScewinStatus')}</span>
+    </div>
+    <div style="background:#0a1020;border:1px solid #1a2a50;border-radius:8px;padding:9px 13px;margin-bottom:10px">
+      <div style="font-size:10px;font-weight:700;color:#5a9fd4;margin-bottom:7px"><i class="fa fa-bookmark"></i> ${tUI('biosProfileTitle')}</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        <select id="bios-profile-select" class="styled-select" style="font-size:10.5px;padding:3px 8px;min-width:120px">
+          <option value="">${tUI('biosProfileEmpty')}</option>
+        </select>
+        <button class="btn btn-ghost btn-sm" style="font-size:10px" onclick="doBiosProfileLoad()">${tUI('biosProfileLoad')}</button>
+        <button class="btn btn-ghost btn-sm" style="font-size:10px" onclick="doBiosProfileSave()">${tUI('biosProfileSave')}</button>
+        <button class="btn btn-ghost btn-sm" style="font-size:10px" onclick="doBiosProfileExport()">${tUI('biosProfileExport')}</button>
+        <button class="btn btn-ghost btn-sm" style="font-size:10px" onclick="doBiosProfileImport()">${tUI('biosProfileImport')}</button>
+      </div>
+      <div id="bios-profile-status" style="font-size:10px;color:#888;margin-top:5px"></div>
     </div>`
   sceCard.appendChild(sceScanRow)
   const sceResults = document.createElement('div')
@@ -7755,6 +8220,7 @@ async function buildBiosTuner(c) {
   sceCard.appendChild(sceResults)
   sceCard.id = 'bios-scewin-section'
   c.appendChild(sceCard)
+  _biosProfilePopulateSelect()
 
   // ── Section D: RAM Diagnostics ────────────────────────────────────────────
   const ramCard = makeSection(`<i class="fa fa-memory"></i> ${tUI('biosRamTitle')}`, tUI('biosRamSub'))
@@ -7772,6 +8238,24 @@ async function buildBiosTuner(c) {
   const ramResults = document.createElement('div')
   ramResults.id = 'ram-diag-results'
   ramCard.appendChild(ramResults)
+
+  // RAM stress test panel
+  const ramStressRow = document.createElement('div')
+  ramStressRow.style.cssText = 'padding:4px 18px 14px'
+  ramStressRow.innerHTML = `
+    <div style="border-top:1px solid var(--border2);padding-top:12px;margin-top:4px">
+      <div style="font-size:11px;font-weight:700;color:var(--white);margin-bottom:4px"><i class="fa fa-flask" style="color:#9b59b6"></i> ${tUI('biosRamTestBtn')}</div>
+      <div style="font-size:10.5px;color:#888;margin-bottom:8px">${tUI('biosRamTestNote')}</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px">
+        <button class="btn btn-ghost btn-sm" id="ram-stress-quick" onclick="doRamStressTest(30)"><i class="fa fa-stopwatch"></i> ${tUI('biosRamTestQuick')}</button>
+        <button class="btn btn-ghost btn-sm" id="ram-stress-thorough" onclick="doRamStressTest(300)"><i class="fa fa-hourglass-half"></i> ${tUI('biosRamTestThorough')}</button>
+        <span id="ram-stress-status" style="font-size:10.5px;color:var(--gray)"></span>
+      </div>
+      <div class="tweak-progress" id="prog-ram-stress" style="display:none"><div class="tweak-progress-bar indeterminate" id="prog-bar-ram-stress"></div></div>
+      <div id="ram-stress-result" style="display:none;margin-top:8px;font-size:11px;padding:8px 12px;border-radius:7px"></div>
+    </div>`
+  ramCard.appendChild(ramStressRow)
+
   c.appendChild(ramCard)
 
   // ── Section E: CPU Power Tuner ────────────────────────────────────────────
@@ -7784,11 +8268,20 @@ async function buildBiosTuner(c) {
 
   if (!isAmd) {
     cpuContent.innerHTML = `
-      <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:#111;border-radius:8px;font-size:11px;color:var(--gray)">
-        <i class="fa fa-circle-info" style="color:#3498db;font-size:15px"></i>
-        <div><strong style="color:var(--white)">Intel CPU detected.</strong> CPU power tuning from Windows requires Intel XTU (third-party install, K-series only). This tool supports AMD Ryzen only.
-        <br><span style="font-size:10px">Your CPU: ${sysInfo?.cpu || 'Unknown'}</span></div>
+      <div style="background:#0a1020;border:1.5px solid #1a3060;border-radius:9px;padding:12px 16px;margin-bottom:12px">
+        <div style="font-size:11.5px;font-weight:800;color:#5a9fd4;margin-bottom:4px"><i class="fa fa-bolt"></i> ${tUI('biosIntelBoostTitle')}</div>
+        <div style="font-size:10.5px;color:#888;margin-bottom:10px">${tUI('biosIntelBoostSub')}<br><span style="font-size:10px;color:#555">CPU: ${sysInfo?.cpu || 'Unknown'}</span></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
+          <button class="btn btn-ghost btn-sm" id="intel-boost-disabled" onclick="doIntelBoost('disabled')" style="font-size:11px"><i class="fa fa-pause"></i> ${tUI('biosIntelBoostDisabled')}</button>
+          <button class="btn btn-ghost btn-sm" id="intel-boost-efficient" onclick="doIntelBoost('efficient')" style="font-size:11px"><i class="fa fa-leaf"></i> ${tUI('biosIntelBoostEfficient')}</button>
+          <button class="btn btn-primary btn-sm" id="intel-boost-aggressive" onclick="doIntelBoost('aggressive')" style="font-size:11px"><i class="fa fa-bolt"></i> ${tUI('biosIntelBoostAggressive')}</button>
+        </div>
+        <div id="intel-boost-status" style="font-size:10.5px;color:var(--gray)">
+          <span id="intel-boost-status-text">${tUI('biosIntelBoostNote')}</span>
+        </div>
       </div>`
+    // Read current boost state
+    doIntelBoostRead()
   } else {
     cpuContent.innerHTML = `
       <div style="background:#1a0d00;border:1.5px solid #c07000;border-radius:9px;padding:11px 15px;margin-bottom:14px;font-size:11px;color:#d4a040;display:flex;gap:10px;align-items:flex-start">
@@ -7832,12 +8325,55 @@ async function buildBiosTuner(c) {
           <input type="range" id="ryzen-edc" min="30" max="220" value="120" oninput="document.getElementById('ryzen-edc-val').textContent=this.value+'A'" style="flex:1;accent-color:var(--pink)">
           <span id="ryzen-edc-val" style="width:44px;text-align:right;font-size:12px;font-weight:700;color:var(--white)">120A</span>
         </div>
+        <div style="display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--border2)">
+          <div style="width:180px;flex-shrink:0">
+            <div style="font-size:11px;font-weight:700;color:var(--white)">${tUI('ryzenStapm')}</div>
+            <div style="font-size:10px;color:var(--gray)">${tUI('ryzenStapmDesc')}</div>
+          </div>
+          <input type="range" id="ryzen-stapm" min="10" max="230" value="65" oninput="document.getElementById('ryzen-stapm-val').textContent=this.value+'W'" style="flex:1;accent-color:#9b59b6">
+          <span id="ryzen-stapm-val" style="width:44px;text-align:right;font-size:12px;font-weight:700;color:var(--white)">65W</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--border2)">
+          <div style="width:180px;flex-shrink:0">
+            <div style="font-size:11px;font-weight:700;color:var(--white)">${tUI('ryzenTctl')}</div>
+            <div style="font-size:10px;color:var(--gray)">${tUI('ryzenTctlDesc')}</div>
+          </div>
+          <input type="range" id="ryzen-tctl" min="60" max="105" value="95" oninput="document.getElementById('ryzen-tctl-val').textContent=this.value+'°C';this.style.accentColor=this.value>=95?'#e74c3c':this.value>=85?'#e67e22':'#27ae60'" style="flex:1;accent-color:#27ae60">
+          <span id="ryzen-tctl-val" style="width:48px;text-align:right;font-size:12px;font-weight:700;color:var(--white)">95°C</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--border2)">
+          <div style="width:180px;flex-shrink:0">
+            <div style="font-size:11px;font-weight:700;color:var(--white)">${tUI('ryzenFclk')}</div>
+            <div style="font-size:10px;color:var(--gray)">${tUI('ryzenFclkDesc')}</div>
+          </div>
+          <input type="range" id="ryzen-fclk" min="400" max="2000" step="100" value="1800" oninput="document.getElementById('ryzen-fclk-val').textContent=this.value+' MHz'" style="flex:1;accent-color:#3ab8b8">
+          <span id="ryzen-fclk-val" style="width:60px;text-align:right;font-size:12px;font-weight:700;color:var(--white)">1800 MHz</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;padding:6px 0">
+          <div style="width:180px;flex-shrink:0">
+            <div style="font-size:11px;font-weight:700;color:var(--white)">${tUI('ryzenCurveAll')}</div>
+            <div style="font-size:10px;color:var(--gray)">${tUI('ryzenCurveAllDesc')}</div>
+          </div>
+          <input type="range" id="ryzen-curve" min="-30" max="30" value="0" oninput="const v=this.value;document.getElementById('ryzen-curve-val').textContent=(v>0?'+':'')+v;document.getElementById('ryzen-curve-val').style.color=v<0?'#27ae60':v>0?'#e67e22':'var(--gray)'" style="flex:1;accent-color:var(--pink)">
+          <span id="ryzen-curve-val" style="width:44px;text-align:right;font-size:12px;font-weight:700;color:var(--gray)">0</span>
+        </div>
+        <div style="background:#1a0d00;border:1px solid #7a4400;border-radius:6px;padding:7px 12px;font-size:10px;color:#d4a040;margin-top:6px">
+          <i class="fa fa-triangle-exclamation"></i> ${tUI('ryzenCurveWarn')}
+        </div>
       </div>
-      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px">
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">
         <span style="font-size:10px;color:var(--gray);align-self:center;margin-right:4px">${tUI('ryzenPresets')}</span>
-        <button class="btn btn-ghost btn-sm" onclick="ryzenPreset(45,35,50)" style="font-size:10px;padding:3px 10px">${tUI('ryzenEcoMode')}</button>
-        <button class="btn btn-ghost btn-sm" onclick="ryzenPreset(88,75,120)" style="font-size:10px;padding:3px 10px">${tUI('ryzenBalanced')}</button>
-        <button class="btn btn-ghost btn-sm" onclick="ryzenPreset(142,110,160)" style="font-size:10px;padding:3px 10px">${tUI('ryzenPerformance')}</button>
+        <button class="btn btn-ghost btn-sm" onclick="ryzenPreset(45,35,50,45,95,1600,0)" style="font-size:10px;padding:3px 10px">${tUI('ryzenEcoMode')}</button>
+        <button class="btn btn-ghost btn-sm" onclick="ryzenPreset(88,75,120,65,95,1800,0)" style="font-size:10px;padding:3px 10px">${tUI('ryzenBalanced')}</button>
+        <button class="btn btn-ghost btn-sm" onclick="ryzenPreset(142,110,160,142,95,2000,0)" style="font-size:10px;padding:3px 10px">${tUI('ryzenPerformance')}</button>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px;flex-wrap:wrap;background:#0a1020;border:1px solid #1a2a50;border-radius:7px;padding:8px 12px">
+        <span style="font-size:10px;color:#888;margin-right:4px"><i class="fa fa-floppy-disk"></i> ${tUI('ryzenSavePreset')}</span>
+        <input id="ryzen-preset-name" type="text" placeholder="${tUI('ryzenPresetName')}" style="flex:1;min-width:100px;background:#111;border:1px solid var(--border2);border-radius:5px;color:var(--white);font-size:10.5px;padding:4px 8px">
+        <button class="btn btn-ghost btn-sm" style="font-size:10px" onclick="doRyzenSavePreset()"><i class="fa fa-floppy-disk"></i> ${tUI('ryzenSavePreset')}</button>
+        <select id="ryzen-preset-select" class="styled-select" style="font-size:10.5px;padding:3px 8px;min-width:100px" onchange="doRyzenLoadPresetFromSelect(this.value)">
+          <option value="">${tUI('ryzenLoadPreset')}…</option>
+        </select>
       </div>
       <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
         <label class="danger-toggle" style="margin:0"><span><i class="fa fa-triangle-exclamation"></i> ${tUI('ryzenUnderstand')}</span><label class="toggle-switch"><input type="checkbox" id="tog-ryzenadj"><span class="toggle-slider"></span></label></label>
@@ -7847,12 +8383,52 @@ async function buildBiosTuner(c) {
   }
   cpuCard.appendChild(cpuContent)
   c.appendChild(cpuCard)
+  if (isAmd) doRyzenPopulatePresetSelect()
 
-  // ── Section F: Fan Control ─────────────────────────────────────────────────
-  const fanCard = makeSection('<i class="fa fa-fan"></i> Fan Control', 'Control system fan speeds using FanControl (bundled). Open the UI to configure fan curves, or run silently in the background.')
+  // ── Section G: Live Thermal Monitor ──────────────────────────────────────
+  const thermCard = makeSection(`<i class="fa fa-temperature-half"></i> ${tUI('biosThermalTitle')}`, tUI('biosThermalSub'))
+  const thermContent = document.createElement('div')
+  thermContent.style.padding = '10px 18px 14px'
+  thermContent.innerHTML = `
+    <div style="display:flex;gap:16px;align-items:center;margin-bottom:10px;flex-wrap:wrap">
+      <div id="bios-therm-cpu" style="background:#111;border:1px solid var(--border2);border-radius:8px;padding:8px 16px;text-align:center;min-width:80px">
+        <div style="font-size:9px;color:var(--gray);letter-spacing:0.5px;margin-bottom:2px">${tUI('biosThermalCpu')}</div>
+        <div id="bios-therm-cpu-val" style="font-size:22px;font-weight:900;color:var(--pink)">—</div>
+        <div style="font-size:9px;color:var(--gray)">°C</div>
+      </div>
+      <div id="bios-therm-gpu" style="background:#111;border:1px solid var(--border2);border-radius:8px;padding:8px 16px;text-align:center;min-width:80px">
+        <div style="font-size:9px;color:var(--gray);letter-spacing:0.5px;margin-bottom:2px">${tUI('biosThermalGpu')}</div>
+        <div id="bios-therm-gpu-val" style="font-size:22px;font-weight:900;color:#3ab8b8">—</div>
+        <div style="font-size:9px;color:var(--gray)">°C</div>
+      </div>
+      <div style="flex:1;min-width:180px">
+        <div style="font-size:9px;color:var(--gray);margin-bottom:4px">${tUI('biosThermalPeak')}: <span id="bios-therm-peak">—</span></div>
+        <canvas id="bios-therm-canvas" width="360" height="80" style="width:100%;height:80px;border-radius:6px;background:#0a0a0a;display:block"></canvas>
+      </div>
+    </div>
+    <div id="bios-therm-lhm-warn" style="display:none;font-size:10.5px;color:#888;background:#111;border:1px solid var(--border2);border-radius:6px;padding:7px 12px">
+      <i class="fa fa-circle-info"></i> ${tUI('biosThermalLhmRequired')}
+    </div>`
+  thermCard.appendChild(thermContent)
+  c.appendChild(thermCard)
+
+  // Start polling when page is entered, stop on leave (handled in showPage routing)
+  startBiosThermalPolling()
+
+  // ── Section F: Fan Control + LHM Sensor Dashboard ─────────────────────────
+  const fanCard = makeSection(`<i class="fa fa-fan"></i> ${tUI('biosFanSensorTitle')}`, 'Live fan RPMs, power draw, and voltages via LibreHardwareMonitor. Control fan speeds with FanControl.')
   const fanContent = document.createElement('div')
   fanContent.style.padding = '10px 18px 14px'
   fanContent.innerHTML = `
+    <div id="bios-lhm-grid" style="display:none;margin-bottom:14px">
+      <div style="font-size:10px;font-weight:700;color:#3ab8b8;letter-spacing:0.5px;margin-bottom:8px"><i class="fa fa-gauge-high"></i> LIVE SENSORS — <span id="bios-lhm-refresh-ts" style="font-weight:400;color:#555"></span></div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:6px;margin-bottom:8px" id="bios-lhm-fans"></div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:6px;margin-bottom:8px" id="bios-lhm-powers"></div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:6px" id="bios-lhm-volts"></div>
+    </div>
+    <div id="bios-lhm-sensor-warn" style="font-size:10.5px;color:#666;background:#0e0e0e;border:1px solid var(--border2);border-radius:6px;padding:7px 12px;margin-bottom:12px">
+      <i class="fa fa-circle-info"></i> ${tUI('biosFanLhmRequired')}
+    </div>
     <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:10px">
       <button class="btn btn-primary btn-sm" onclick="doFanControlOpen()"><i class="fa fa-up-right-from-square"></i> Open FanControl UI</button>
       <button class="btn btn-ghost btn-sm" onclick="doFanControlBackground()"><i class="fa fa-fan"></i> Run in Background</button>
@@ -7867,6 +8443,78 @@ async function buildBiosTuner(c) {
     const el = document.getElementById('fancontrol-status')
     if (el) { el.textContent = s.running ? '● Running' : '○ Not running'; el.style.color = s.running ? '#2ecc71' : 'var(--gray)' }
   })()
+  startBiosLhmPolling()
+
+  // ── Section H: Change History (collapsible) ───────────────────────────────
+  const changeLogCard = document.createElement('div')
+  changeLogCard.style.cssText = 'background:#081414;border:1.5px solid #1a4040;border-radius:10px;margin-bottom:16px;overflow:hidden'
+  changeLogCard.innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 16px;cursor:pointer;user-select:none"
+         onclick="this.parentElement.querySelector('.bios-changelog-body').style.display = this.parentElement.querySelector('.bios-changelog-body').style.display==='none' ? '' : 'none'; this.querySelector('.cl-chevron').style.transform = this.parentElement.querySelector('.bios-changelog-body').style.display==='' ? 'rotate(180deg)' : ''">
+      <div style="display:flex;align-items:center;gap:10px">
+        <i class="fa fa-clock-rotate-left" style="color:#3ab8b8;font-size:14px"></i>
+        <span style="font-size:12px;font-weight:700;color:#3ab8b8">${tUI('biosChangeLogTitle')} <span id="bios-changelog-count" style="font-size:10px;color:#555;margin-left:4px"></span></span>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <button class="btn btn-ghost btn-sm" style="font-size:10px;padding:2px 8px" onclick="event.stopPropagation();doBiosClearChangeLog()">${tUI('biosChangeLogClear')}</button>
+        <i class="fa fa-chevron-down cl-chevron" style="color:#3ab8b8;font-size:11px;transition:transform 0.2s"></i>
+      </div>
+    </div>
+    <div class="bios-changelog-body" style="display:none;border-top:1px solid #1a4040;padding:10px 16px 14px">
+      <div style="font-size:10.5px;color:#888;margin-bottom:8px">${tUI('biosChangeLogSub')}</div>
+      <div id="bios-changelog-list"></div>
+    </div>`
+  c.appendChild(changeLogCard)
+  loadBiosChangeLog()
+}
+
+// ── Feature 3: Change Log functions ──────────────────────────────────────────
+async function loadBiosChangeLog() {
+  const r = await api.biosGetChangeLog().catch(() => null)
+  const list    = document.getElementById('bios-changelog-list')
+  const counter = document.getElementById('bios-changelog-count')
+  if (!r || !r.ok || !list) return
+  if (counter) counter.textContent = r.entries.length ? `(${r.entries.length})` : ''
+  if (!r.entries.length) {
+    list.innerHTML = `<div style="font-size:10.5px;color:#555">${tUI('biosChangeLogEmpty')}</div>`
+    return
+  }
+  list.innerHTML = r.entries.map(e => {
+    const dt = new Date(e.ts).toLocaleString()
+    return `<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--border2);flex-wrap:wrap">
+      <span style="font-size:9px;color:#555;min-width:110px">${dt}</span>
+      <span style="font-size:10.5px;color:var(--white);font-weight:600;flex:1">${escHtml(e.settingName || e.token)}</span>
+      <span style="font-size:10px;color:#e74c3c">${escHtml(String(e.oldValue))}</span>
+      <i class="fa fa-arrow-right" style="font-size:9px;color:#555"></i>
+      <span style="font-size:10px;color:#2ecc71">${escHtml(String(e.newValue))}</span>
+      <button class="btn btn-ghost btn-sm" style="font-size:9px;padding:2px 7px" onclick="doBiosScewinApplyFromLog('${e.token}','${escHtml(String(e.oldValue))}','${escHtml(e.settingName||e.token)}')">${tUI('biosChangeLogRevert')}</button>
+    </div>`
+  }).join('')
+}
+
+async function doBiosClearChangeLog() {
+  await api.biosClearChangeLog()
+  loadBiosChangeLog()
+}
+
+async function doBiosScewinApplyFromLog(token, oldValueLabel, settingName) {
+  if (!_biosDumpPath) { toast('Scan Required', 'Run SCEWIN Scan first to revert a setting.', 'warn'); return }
+  if (!_biosScoreEntries) { toast('Scan Required', 'Run SCEWIN Scan first to identify the token.', 'warn'); return }
+  const entry = _biosScoreEntries.find(e => e.token === token)
+  if (!entry) { toast('Setting Not Found', `Token ${token} not in current BIOS dump.`, 'error'); return }
+  const opt = (entry.options || []).find(o => o.label === oldValueLabel || o.value === oldValueLabel)
+  if (!opt) { toast('Option Not Found', `Could not find option "${oldValueLabel}" in current dump.`, 'error'); return }
+  const curOpt = (entry.options || []).find(o => o.current)
+  const r = await api.biosScewinWrite({ token, value: opt.value, dumpPath: _biosDumpPath, settingName, oldValue: curOpt?.label || curOpt?.value || '?' })
+  if (r.ok) {
+    entry.options.forEach(o => { o.current = (o.value === opt.value) })
+    _biosCurrentValues[token] = opt.value
+    renderBiosScore()
+    loadBiosChangeLog()
+    toast('Reverted', `${settingName} → ${oldValueLabel}`, 'ok')
+  } else {
+    toast('Revert Failed', r.error || 'Could not write to BIOS.', 'error')
+  }
 }
 
 async function doFanControlOpen() {
@@ -7888,6 +8536,36 @@ async function doFanControlStop() {
   toast(tUI('fanStopped'), '', 'info')
   const el = document.getElementById('fancontrol-status')
   if (el) { el.textContent = '○ Not running'; el.style.color = 'var(--gray)' }
+}
+
+// ── Feature 9: Intel Boost Mode ──────────────────────────────────────────────
+const _intelBoostModes = { 0: 'disabled', 1: 'efficient', 2: 'aggressive' }
+function _setIntelBoostActiveBtn(mode) {
+  ['disabled','efficient','aggressive'].forEach(m => {
+    const btn = document.getElementById(`intel-boost-${m}`)
+    if (!btn) return
+    btn.className = 'btn btn-sm ' + (m === mode ? 'btn-primary' : 'btn-ghost')
+  })
+}
+async function doIntelBoostRead() {
+  const r = await api.biosIntelPower('read').catch(() => null)
+  if (!r?.ok) return
+  const mode = _intelBoostModes[r.mode] || 'aggressive'
+  _setIntelBoostActiveBtn(mode)
+  const st = document.getElementById('intel-boost-status-text')
+  if (st) st.textContent = tUI('biosIntelBoostApplied').replace('{mode}', mode)
+}
+async function doIntelBoost(mode) {
+  const st = document.getElementById('intel-boost-status-text')
+  if (st) st.textContent = '⏳ Applying…'
+  const r = await api.biosIntelPower(mode)
+  if (r?.ok) {
+    _setIntelBoostActiveBtn(mode)
+    if (st) st.textContent = tUI('biosIntelBoostApplied').replace('{mode}', mode)
+    toast(tUI('biosIntelBoostTitle'), tUI('biosIntelBoostApplied').replace('{mode}', mode), 'ok')
+  } else {
+    if (st) st.textContent = '✗ Failed: ' + (r?.error || 'Unknown error')
+  }
 }
 
 async function doBiosScan() {
@@ -7925,6 +8603,8 @@ async function doBiosScan() {
       ${row('fa-memory',        'RAM Speed',    ramLabel, !xmpGap)}
       ${row('fa-layer-group',   'Hyper-V',      info.hyperV ? 'Active (impacts game scheduler)' : 'Off', !info.hyperV)}
       ${info.chipset ? row('fa-microchip', 'Chipset', info.chipset, null) : ''}
+      <div id="bios-age-alert-row" style="display:none"></div>
+      <div id="bios-anticheat-row" style="display:none"></div>
     </div>`
 
   // Update SCEWIN compat note based on detected BIOS vendor
@@ -7957,35 +8637,41 @@ async function doBiosScan() {
   const chipsetLower = (info.chipset || '').toLowerCase()
   const hasModernPcie = /x570|b550|x670|b650|z490|z590|z690|z790|b760|h670|b760/i.test(chipsetLower)
   if (info.ramActual > 0 && info.ramRated > 0 && info.ramActual < info.ramRated * 0.95)
-    recs.push({ icon: 'fa-bolt', color: '#f39c12', text: `Enable XMP / DOCP / EXPO — RAM running at ${info.ramActual} MHz but rated for ${info.ramRated} MHz` })
+    recs.push({ icon: 'fa-bolt', color: '#f39c12', text: tUI('biosRecXmpOff').replace('{actual}', info.ramActual).replace('{rated}', info.ramRated) })
   else if (info.ramActual > 0)
-    recs.push({ icon: 'fa-check', color: '#2ecc71', text: `RAM running at rated speed (${info.ramActual} MHz)` })
+    recs.push({ icon: 'fa-check', color: '#2ecc71', text: tUI('biosRecXmpOn').replace('{actual}', info.ramActual) })
   if (hasModernPcie)
-    recs.push({ icon: 'fa-bolt', color: '#f39c12', text: 'Enable Resizable BAR + Above 4G Decoding — your chipset supports it and it improves GPU performance' })
+    recs.push({ icon: 'fa-bolt', color: '#f39c12', text: tUI('biosRecReBar') })
   if (!info.uefi)
-    recs.push({ icon: 'fa-triangle-exclamation', color: '#e74c3c', text: 'Legacy BIOS mode detected — consider enabling UEFI mode for better compatibility and security' })
+    recs.push({ icon: 'fa-triangle-exclamation', color: '#e74c3c', text: tUI('biosRecLegacyBios') })
   if (info.uefi && !info.secureBoot)
-    recs.push({ icon: 'fa-circle-info', color: '#3498db', text: 'Secure Boot is off — enabling it improves boot security with no performance cost' })
+    recs.push({ icon: 'fa-circle-info', color: '#3498db', text: tUI('biosRecSecureBoot') })
   if (!info.tpmPresent)
-    recs.push({ icon: 'fa-triangle-exclamation', color: '#e74c3c', text: 'No TPM detected — Windows 11 requires TPM 2.0. Enable fTPM (AMD) or PTT (Intel) in BIOS' })
+    recs.push({ icon: 'fa-triangle-exclamation', color: '#e74c3c', text: tUI('biosRecNoTpm') })
   if (info.hyperV)
-    recs.push({ icon: 'fa-circle-info', color: '#9b59b6', text: 'Hyper-V is active — disabling it reduces CPU virtualization overhead for gaming if you don\'t use WSL2/Docker/VMs' })
+    recs.push({ icon: 'fa-circle-info', color: '#9b59b6', text: tUI('biosRecHyperV') })
   if (sysInfo?.isLaptop)
-    recs.push({ icon: 'fa-triangle-exclamation', color: '#e67e22', text: 'Laptop detected — do NOT disable C-States (severe battery drain and heat risk)' })
+    recs.push({ icon: 'fa-triangle-exclamation', color: '#e67e22', text: tUI('biosRecLaptop') })
   else
-    recs.push({ icon: 'fa-circle-info', color: '#3498db', text: 'Desktop detected — disabling C-States in BIOS can reduce CPU wake-up latency for competitive gaming' })
+    recs.push({ icon: 'fa-circle-info', color: '#3498db', text: tUI('biosRecDesktop') })
   if (cpuLower.includes('amd') || cpuLower.includes('ryzen'))
-    recs.push({ icon: 'fa-check', color: '#2ecc71', text: 'AMD CPU — ensure Core Performance Boost is enabled in BIOS for automatic boost clocks' })
+    recs.push({ icon: 'fa-check', color: '#2ecc71', text: tUI('biosRecAmd') })
   else if (cpuLower.includes('intel'))
-    recs.push({ icon: 'fa-check', color: '#2ecc71', text: 'Intel CPU — ensure Turbo Boost is enabled in BIOS for automatic boost clocks' })
+    recs.push({ icon: 'fa-check', color: '#2ecc71', text: tUI('biosRecIntel') })
 
   if (recs.length) {
     const recDiv = document.createElement('div')
     recDiv.style.cssText = 'margin-top:14px;background:#0a1a0a;border:1px solid #1e3a1e;border-radius:8px;padding:12px 14px'
-    recDiv.innerHTML = `<div style="font-size:11px;font-weight:700;color:#2ecc71;margin-bottom:8px;letter-spacing:0.5px"><i class="fa fa-wand-magic-sparkles"></i> RECOMMENDED FOR YOUR SYSTEM</div>` +
+    recDiv.innerHTML = `<div style="font-size:11px;font-weight:700;color:#2ecc71;margin-bottom:8px;letter-spacing:0.5px"><i class="fa fa-wand-magic-sparkles"></i> ${tUI('biosRecTitle')}</div>` +
       recs.map(r => `<div style="display:flex;gap:8px;align-items:flex-start;padding:4px 0;font-size:11px;color:var(--gray)"><i class="fa ${r.icon}" style="color:${r.color};margin-top:1px;width:14px;flex-shrink:0"></i><span>${r.text}</span></div>`).join('')
     results.appendChild(recDiv)
   }
+
+  // Update score and age alert
+  _biosScoreInfo = info
+  renderBiosScore()
+  renderBiosAgeAlert(info)
+  renderAntiCheatCard(info)
 }
 
 async function doBiosOsControl(id, action) {
@@ -8008,6 +8694,11 @@ async function doBiosOsControl(id, action) {
     settings[id] = applied ? 'applied' : 'not-applied'
     await api.saveSettings(settings)
     if (id === 'bios-hyper-v') toast('Hyper-V ' + (applied ? 'Disabled' : 'Re-enabled'), 'Reboot required for this change to take effect.', 'info')
+    // Patch in-memory biosScoreInfo so score reflects OS-level state immediately
+    if (_biosScoreInfo) {
+      if (id === 'bios-hyper-v') _biosScoreInfo.hyperV = !applied
+    }
+    renderBiosScore()
   } else {
     if (badge) { badge.innerHTML = '<i class="fa fa-xmark"></i> ERROR'; badge.className = 'tweak-badge' }
     toast('Failed', r.error || 'Operation failed.', 'error')
@@ -8043,6 +8734,14 @@ async function doBiosScewinScan() {
   const exportBtn = document.getElementById('scewin-export-btn')
   if (exportBtn) exportBtn.style.display = ''
   status.textContent = `${r.entries.length} settings found. Showing known settings below.`
+
+  // Build current-values map for dependency checker
+  _biosCurrentValues = {}
+  for (const e of r.entries) {
+    const cur = (e.options || []).find(o => o.current)
+    if (cur) _biosCurrentValues[e.token] = cur.value
+  }
+
   // Filter to curated list only — match by substring of Setup Question name
   const matched = []
   for (const def of BIOS_CURATED) {
@@ -8056,6 +8755,10 @@ async function doBiosScewinScan() {
   for (const { def, entry } of matched) {
     out.appendChild(buildScewinSettingCard(def, entry))
   }
+
+  // Update optimization score with SCEWIN data
+  _biosScoreEntries = r.entries
+  renderBiosScore()
 }
 
 function buildScewinSettingCard(def, entry) {
@@ -8066,7 +8769,7 @@ function buildScewinSettingCard(def, entry) {
   const optionBtns = entry.options.map(opt => `
     <button class="btn btn-sm ${opt.current ? 'btn-primary' : 'btn-ghost'}"
       id="scewin-opt-${entry.token}-${opt.value}"
-      onclick="doBiosScewinApply('${entry.token}','${opt.value}','${entry.token}',${def.danger},${!!def.reboot})"
+      onclick="doBiosScewinApply('${entry.token}','${opt.value}','${entry.token}',${def.danger},${!!def.reboot},'${def.key.replace(/'/g,'')}','${opt.label.replace(/'/g,'')}')"
       style="font-size:10px;padding:3px 10px">
       ${opt.label}
     </button>`).join('')
@@ -8088,29 +8791,262 @@ function buildScewinSettingCard(def, entry) {
   return wrap
 }
 
-async function doBiosScewinApply(token, value, uiToken, isDanger, needsReboot) {
+// ── Feature 8: BIOS Age Alert ────────────────────────────────────────────────
+function renderBiosAgeAlert(info) {
+  const el = document.getElementById('bios-age-alert-row')
+  if (!el || !info?.biosDate) return
+  const ageDays = Math.floor((Date.now() - new Date(info.biosDate)) / 86400000)
+  let color = '#2ecc71', icon = 'fa-check', label = tUI('biosBiosAgeCurrent')
+  if (ageDays > 545) { color = '#e74c3c'; icon = 'fa-triangle-exclamation'; label = tUI('biosBiosAgeOld') }
+  else if (ageDays > 365) { color = '#e67e22'; icon = 'fa-triangle-exclamation'; label = tUI('biosBiosAgeWarn') }
+
+  // Manufacturer update URL
+  let updateUrl = null
+  const mfr = (info.biosMfr || '') + (info.board || '')
+  if (/asus/i.test(mfr)) updateUrl = 'https://www.asus.com/support/'
+  else if (/msi/i.test(mfr)) updateUrl = 'https://www.msi.com/support/'
+  else if (/gigabyte/i.test(mfr)) updateUrl = 'https://www.gigabyte.com/Support'
+  else if (/asrock/i.test(mfr)) updateUrl = 'https://www.asrock.com/support/'
+
+  el.style.display = ''
+  el.innerHTML = `
+    <div style="display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--border2)">
+      <div style="width:26px;text-align:center;color:${color};font-size:13px"><i class="fa ${icon}"></i></div>
+      <div style="font-size:11px;color:var(--gray);width:160px;flex-shrink:0">${tUI('biosBiosAge')}</div>
+      <div style="font-size:11px;color:${color};font-weight:600">${ageDays} ${tUI('biosBiosAgeUnit')} — ${label}${updateUrl ? ` <a href="#" onclick="event.preventDefault();api.openExternal('${updateUrl}')" style="color:#3ab8b8;margin-left:8px;font-size:10px"><i class="fa fa-arrow-up-right-from-square"></i> ${tUI('biosBiosUpdateBtn')}</a>` : ''}</div>
+    </div>`
+}
+
+// ── Anti-Cheat Readiness Card ─────────────────────────────────────────────────
+function renderAntiCheatCard(info) {
+  const el = document.getElementById('bios-anticheat-row')
+  if (!el) return
+  const tpm2 = info.tpmPresent && (info.tpmVersion || '').startsWith('2')
+  const sb   = !!info.secureBoot
+  const uefi = !!info.uefi
+
+  const acs = [
+    { name: 'FaceIT',    ok: tpm2 && sb && uefi, needs: [!tpm2 && 'TPM 2.0', !sb && 'Secure Boot', !uefi && 'UEFI mode'].filter(Boolean) },
+    { name: 'Vanguard',  ok: tpm2 && sb && uefi, needs: [!tpm2 && 'TPM 2.0', !sb && 'Secure Boot', !uefi && 'UEFI mode'].filter(Boolean) },
+    { name: 'EAC',       ok: sb,                 needs: [!sb && 'Secure Boot'].filter(Boolean) },
+    { name: 'VAC / CS2', ok: true,               needs: [] },
+  ]
+
+  const dot = ok => ok
+    ? `<span style="color:#2ecc71;font-size:13px">&#9679;</span>`
+    : `<span style="color:#e74c3c;font-size:13px">&#9679;</span>`
+
+  const rows = acs.map(ac => `
+    <div style="display:flex;align-items:center;gap:10px;padding:5px 0;border-bottom:1px solid #1a2a50">
+      ${dot(ac.ok)}
+      <span style="font-size:11.5px;font-weight:700;color:var(--white);min-width:90px">${ac.name}</span>
+      <span style="font-size:11px;color:${ac.ok ? '#2ecc71' : '#e74c3c'};flex:1">${ac.ok ? 'Ready' : 'Missing: ' + ac.needs.join(', ')}</span>
+      ${!ac.ok ? `<button class="btn btn-ghost btn-sm" style="font-size:10px;padding:2px 8px" onclick="showAntiCheatGuide('${ac.name}')"><i class="fa fa-circle-question"></i> ${tUI('biosGuideHowToFix')}</button>` : ''}
+    </div>`).join('')
+
+  el.style.display = ''
+  el.innerHTML = `
+    <div style="margin-top:10px;background:#080f1e;border:1.5px solid #1a2a50;border-radius:9px;padding:12px 16px">
+      <div style="font-size:11px;font-weight:800;color:#5a9fd4;margin-bottom:8px;letter-spacing:0.5px">
+        <i class="fa fa-shield-halved"></i> ${tUI('biosAntiCheatTitle')}
+      </div>
+      ${rows}
+    </div>`
+}
+
+function showAntiCheatGuide(acName) {
+  const info  = _biosScoreInfo
+  const board = (info?.board || '').toLowerCase()
+  const tpm2  = info?.tpmPresent && (info?.tpmVersion || '').startsWith('2')
+  const sb    = !!info?.secureBoot
+  const uefi  = !!info?.uefi
+
+  const missing = [!tpm2 && 'TPM 2.0', !sb && 'Secure Boot', !uefi && tUI('biosGuideUefi')].filter(Boolean)
+
+  let steps
+  if (board.includes('asus'))
+    steps = tUI('biosGuideAsus')
+  else if (board.includes('msi'))
+    steps = tUI('biosGuideMsi')
+  else if (board.includes('gigabyte') || board.includes('aorus'))
+    steps = tUI('biosGuideGigabyte')
+  else if (board.includes('asrock'))
+    steps = tUI('biosGuideAsrock')
+  else
+    steps = tUI('biosGuideGeneric')
+
+  const body = `<div style="font-size:11.5px;line-height:1.8;color:var(--gray)">
+    <div style="margin-bottom:10px;color:#e74c3c;font-weight:700">${tUI('biosGuideMissing').replace('{ac}', acName).replace('{items}', missing.join(', '))}</div>
+    <div style="margin-bottom:10px">${steps}</div>
+    <div style="font-size:10.5px;color:#888;border-top:1px solid #1a2a50;padding-top:8px;margin-top:4px">
+      <i class="fa fa-triangle-exclamation" style="color:#f39c12"></i>
+      ${tUI('biosGuideFooter')}
+    </div>
+  </div>`
+
+  showConfirm({ title: `${tUI('biosGuideTitle')} ${acName}`, body, okText: tUI('btnGotIt'), okStyle: 'info', icon: 'fa-shield-halved' }).catch(() => {})
+}
+
+// ── Feature 10: Pre-Apply Dependency Checker ─────────────────────────────────
+const BIOS_DEPS = [
+  {
+    triggerKey: 'Resizable BAR',
+    enablePattern: /enable|enabled|on/i,
+    requiresKey: 'Above 4G',
+    requiresEnabled: true,
+    message: () => tUI('biosDepReBarNeedsAbove4g')
+  },
+  {
+    triggerKey: 'Secure Boot',
+    enablePattern: /enable|enabled|on/i,
+    requiresKey: 'CSM',
+    requiresEnabled: false,
+    message: () => tUI('biosDepSecureBootNeedsCsm')
+  },
+]
+
+function checkBiosDependencies(token, value, defKey, valueLabel) {
+  if (!_biosScoreEntries) return true
+  for (const dep of BIOS_DEPS) {
+    if (!defKey || !defKey.toLowerCase().includes(dep.triggerKey.toLowerCase())) continue
+    if (!dep.enablePattern.test(valueLabel || value)) continue
+    // Find the required setting's current state
+    const reqEntry = _biosScoreEntries.find(e => e.name.toLowerCase().includes(dep.requiresKey.toLowerCase()))
+    if (!reqEntry) continue
+    const curOpt = (reqEntry.options || []).find(o => o.current)
+    const isEnabled = curOpt && /enable|enabled|on|yes/i.test(curOpt.label || '')
+    const satisfied = dep.requiresEnabled ? isEnabled : !isEnabled
+    if (!satisfied) {
+      toast(tUI('biosDepBlockTitle'), dep.message(), 'error')
+      return false
+    }
+  }
+  return true
+}
+
+async function doBiosScewinApply(token, value, uiToken, isDanger, needsReboot, defKey, valueLabel) {
   if (isDanger) {
     const tog = document.getElementById(`scewin-tog-${uiToken}`)
     if (!tog?.checked) { toast(tUI('safetyRequired'), tUI('biosSafetyToggleBody'), 'warn'); return }
   }
+  if (!checkBiosDependencies(token, value, defKey, valueLabel)) return
+
   const statusEl = document.getElementById(`scewin-status-${uiToken}`)
   if (statusEl) statusEl.textContent = tUI('biosWriting')
   document.querySelectorAll(`[id^="scewin-opt-${uiToken}-"]`).forEach(btn => btn.className = btn.className.replace('btn-primary','btn-ghost'))
   const activeBtn = document.getElementById(`scewin-opt-${uiToken}-${value}`)
   if (activeBtn) activeBtn.className = activeBtn.className.replace('btn-ghost','btn-primary')
-  const r = await api.biosScewinWrite({ token, value, dumpPath: _biosDumpPath })
+  // Find old value label for change log
+  let oldValueLabel = '?'
+  if (_biosScoreEntries) {
+    const entry = _biosScoreEntries.find(e => e.token === token)
+    if (entry) {
+      const curOpt = (entry.options || []).find(o => o.current)
+      if (curOpt) oldValueLabel = curOpt.label || curOpt.value
+    }
+  }
+  const r = await api.biosScewinWrite({ token, value, dumpPath: _biosDumpPath, settingName: defKey || token, oldValue: oldValueLabel })
   if (statusEl) statusEl.textContent = r.ok ? tUI('biosWritten') : `✗ ${r.error}`
   if (!r.ok) {
     document.querySelectorAll(`[id^="scewin-opt-${uiToken}-"]`).forEach(btn => btn.className = btn.className.replace('btn-primary','btn-ghost'))
     if (activeBtn) activeBtn.className = activeBtn.className.replace('btn-ghost','btn-primary')
     toast('BIOS Write Failed', r.restored ? (r.error || 'Write failed — previous dump restored automatically.') : (r.error || 'Could not write to BIOS.'), 'error')
-  } else if (needsReboot) {
-    toast('BIOS Setting Applied', 'This setting requires a reboot to take effect. Save your work and restart.', 'info')
+  } else {
+    // Update dependency-checker state and refresh score
+    _biosCurrentValues[token] = value
+    if (_biosScoreEntries) {
+      const entry = _biosScoreEntries.find(e => e.token === token)
+      if (entry) {
+        entry.options.forEach(o => { o.current = (o.value === value) })
+      }
+    }
+    renderBiosScore()
+    loadBiosChangeLog()
+    if (needsReboot) {
+      toast('BIOS Setting Applied', 'This setting requires a reboot to take effect. Save your work and restart.', 'info')
+    }
   }
 }
 
 async function doBiosDumpExport() {
   if (_biosDumpPath) await api.openExternal(_biosDumpPath)
+}
+
+// ── Feature 5: BIOS Profile System ───────────────────────────────────────────
+async function _biosProfilePopulateSelect() {
+  const sel = document.getElementById('bios-profile-select')
+  if (!sel) return
+  const r = await api.biosListProfiles().catch(() => null)
+  const profiles = r?.profiles || []
+  sel.innerHTML = `<option value="">${tUI('biosProfileEmpty')}</option>` +
+    profiles.map(p => `<option value="${escHtml(p.name)}">${escHtml(p.name)} <span style="color:#555"> — ${p.board || '?'}</span></option>`).join('')
+}
+
+async function doBiosProfileSave() {
+  const name = await showPrompt({ title: tUI('biosProfileSave'), body: tUI('biosProfileName'), placeholder: 'e.g. Gaming OC', okText: tUI('biosProfileSave'), icon: 'fa-bookmark' }).catch(() => null)
+  if (!name) return
+  const st = document.getElementById('bios-profile-status')
+  if (!_biosDumpPath || !_biosScoreEntries) { toast('Scan Required', 'Run SCEWIN Scan first before saving a profile.', 'warn'); return }
+  if (st) st.textContent = tUI('biosProfileWriting')
+  // Extract curated settings from current SCEWIN state
+  const entries = (_biosScoreEntries || [])
+    .map(e => { const cur = (e.options || []).find(o => o.current); return cur ? { token: e.token, value: cur.value, label: e.name } : null })
+    .filter(Boolean)
+  const r = await api.biosSaveProfile(name, _biosDumpPath, entries)
+  if (r?.ok) {
+    if (st) st.textContent = tUI('biosProfileSaved').replace('{name}', name)
+    toast(tUI('biosProfileTitle'), tUI('biosProfileSaved').replace('{name}', name), 'ok')
+    _biosProfilePopulateSelect()
+  } else {
+    if (st) st.textContent = '✗ ' + (r?.error || 'Failed')
+  }
+}
+
+async function doBiosProfileLoad() {
+  const sel = document.getElementById('bios-profile-select')
+  const name = sel?.value
+  if (!name) { toast('Select Profile', 'Choose a profile from the dropdown first.', 'warn'); return }
+  const confirmed = await showConfirm({
+    title: tUI('biosProfileConfirmLoad').replace('{name}', name),
+    body: 'This will write multiple BIOS settings in sequence. Your board must support SCEWIN writes.',
+    okText: tUI('biosProfileLoad'), okStyle: 'warning', icon: 'fa-bookmark'
+  }).catch(() => false)
+  if (!confirmed) return
+  const st = document.getElementById('bios-profile-status')
+  if (st) st.textContent = tUI('biosProfileWriting')
+  const r = await api.biosLoadProfile(name, _biosDumpPath)
+  if (r?.ok) {
+    if (st) st.textContent = tUI('biosProfileDone').replace('{written}', r.written).replace('{failed}', r.failed)
+    toast(tUI('biosProfileTitle'), tUI('biosProfileLoaded').replace('{name}', name), 'ok')
+    // Refresh SCEWIN results after profile load
+    await doBiosScewinScan()
+  } else {
+    if (st) st.textContent = '✗ ' + (r?.error || 'Failed')
+    toast('Profile Load Failed', r?.error || 'Could not apply profile.', 'error')
+  }
+}
+
+async function doBiosProfileExport() {
+  const sel = document.getElementById('bios-profile-select')
+  const name = sel?.value
+  if (!name) { toast('Select Profile', 'Choose a profile from the dropdown first.', 'warn'); return }
+  const r = await api.biosExportProfile(name)
+  if (r?.ok) toast(tUI('biosProfileTitle'), tUI('biosProfileExportSuccess'), 'ok')
+  else toast('Export Failed', r?.error || 'Could not export profile.', 'error')
+}
+
+async function doBiosProfileImport() {
+  const r = await api.biosImportProfile()
+  if (r?.ok) {
+    toast(tUI('biosProfileTitle'), tUI('biosProfileImportSuccess'), 'ok')
+    _biosProfilePopulateSelect()
+  } else if (r?.error === 'board_mismatch') {
+    toast('Board Mismatch', tUI('biosProfileBoardMismatch'), 'warn')
+  } else if (r?.error === 'cancelled') {
+    // user cancelled — no toast
+  } else {
+    toast('Import Failed', r?.error || 'Could not import profile.', 'error')
+  }
 }
 
 async function doRamDiagScan() {
@@ -8162,14 +9098,96 @@ async function doRamDiagScan() {
   out.appendChild(timingsDiv)
 }
 
-function ryzenPreset(ppt, tdc, edc) {
-  const pptEl = document.getElementById('ryzen-ppt')
-  const tdcEl = document.getElementById('ryzen-tdc')
-  const edcEl = document.getElementById('ryzen-edc')
-  if (!pptEl) return
-  pptEl.value = ppt; document.getElementById('ryzen-ppt-val').textContent = ppt + 'W'
-  tdcEl.value = tdc; document.getElementById('ryzen-tdc-val').textContent = tdc + 'A'
-  edcEl.value = edc; document.getElementById('ryzen-edc-val').textContent = edc + 'A'
+// ── Feature 7: RAM Stability Quick Test ──────────────────────────────────────
+async function doRamStressTest(durationSec) {
+  const quickBtn     = document.getElementById('ram-stress-quick')
+  const thoroughBtn  = document.getElementById('ram-stress-thorough')
+  const status       = document.getElementById('ram-stress-status')
+  const prog         = document.getElementById('prog-ram-stress')
+  const result       = document.getElementById('ram-stress-result')
+  if (!quickBtn) return
+
+  quickBtn.disabled = thoroughBtn.disabled = true
+  if (prog) { prog.style.display = ''; }
+  if (result) result.style.display = 'none'
+  if (status) status.textContent = tUI('biosRamTestRunning').replace('{s}', durationSec)
+
+  const r = await api.biosRamStress(durationSec)
+
+  quickBtn.disabled = thoroughBtn.disabled = false
+  if (prog) prog.style.display = 'none'
+
+  if (!r) { if (status) status.textContent = '✗ Test failed'; return }
+
+  if (r.passed) {
+    if (status) status.textContent = ''
+    if (result) {
+      result.style.display = ''
+      result.style.cssText += ';background:#0a1f0a;border:1px solid #1e4a1e;color:#4caf50'
+      result.innerHTML = `<i class="fa fa-check-circle"></i> <strong>${tUI('biosRamTestPassed')}</strong> — ${durationSec}s test completed without memory errors.`
+    }
+  } else {
+    if (status) status.textContent = ''
+    if (result) {
+      result.style.display = ''
+      result.style.cssText += ';background:#1f0a0a;border:1px solid #4a1e1e;color:#e74c3c'
+      result.innerHTML = `<i class="fa fa-triangle-exclamation"></i> <strong>${tUI('biosRamTestFailed')}</strong> — Memory corruption detected. Disable XMP or lower frequency in BIOS.`
+    }
+  }
+}
+
+function ryzenPreset(ppt, tdc, edc, stapm, tctl, fclk, curve) {
+  const s = (id, v, suffix) => { const el = document.getElementById(id); if (el) el.value = v; const vEl = document.getElementById(id+'-val'); if (vEl) vEl.textContent = v + suffix }
+  s('ryzen-ppt', ppt, 'W')
+  s('ryzen-tdc', tdc, 'A')
+  s('ryzen-edc', edc, 'A')
+  if (stapm !== undefined) s('ryzen-stapm', stapm, 'W')
+  if (tctl !== undefined)  s('ryzen-tctl', tctl, '°C')
+  if (fclk !== undefined)  s('ryzen-fclk', fclk, ' MHz')
+  if (curve !== undefined) {
+    const el = document.getElementById('ryzen-curve'); if (el) el.value = curve
+    const vEl = document.getElementById('ryzen-curve-val')
+    if (vEl) { vEl.textContent = (curve > 0 ? '+' : '') + curve; vEl.style.color = curve < 0 ? '#27ae60' : curve > 0 ? '#e67e22' : 'var(--gray)' }
+  }
+}
+
+async function doRyzenSavePreset() {
+  const name = (document.getElementById('ryzen-preset-name')?.value || '').trim()
+  if (!name) { toast('Name Required', 'Enter a preset name before saving.', 'warn'); return }
+  const preset = {
+    ppt:   parseInt(document.getElementById('ryzen-ppt')?.value)   || 88,
+    tdc:   parseInt(document.getElementById('ryzen-tdc')?.value)   || 75,
+    edc:   parseInt(document.getElementById('ryzen-edc')?.value)   || 120,
+    stapm: parseInt(document.getElementById('ryzen-stapm')?.value) || 65,
+    tctl:  parseInt(document.getElementById('ryzen-tctl')?.value)  || 95,
+    fclk:  parseInt(document.getElementById('ryzen-fclk')?.value)  || 1800,
+    curve: parseInt(document.getElementById('ryzen-curve')?.value) || 0,
+  }
+  const s = await api.getSettings()
+  const presets = s.ryzenPresets || {}
+  presets[name] = preset
+  await api.saveSettings({ ...s, ryzenPresets: presets })
+  toast(tUI('ryzenPresetSaved'), name, 'ok')
+  doRyzenPopulatePresetSelect()
+}
+
+async function doRyzenPopulatePresetSelect() {
+  const sel = document.getElementById('ryzen-preset-select')
+  if (!sel) return
+  const s = await api.getSettings()
+  const presets = s.ryzenPresets || {}
+  const names = Object.keys(presets)
+  sel.innerHTML = `<option value="">${tUI('ryzenLoadPreset')}…</option>` +
+    names.map(n => `<option value="${escHtml(n)}">${escHtml(n)}</option>`).join('')
+}
+
+async function doRyzenLoadPresetFromSelect(name) {
+  if (!name) return
+  const s = await api.getSettings()
+  const p = (s.ryzenPresets || {})[name]
+  if (!p) return
+  ryzenPreset(p.ppt, p.tdc, p.edc, p.stapm, p.tctl, p.fclk, p.curve)
+  toast(tUI('ryzenPresetLoaded'), name, 'ok')
 }
 
 async function doRyzenAdjRead() {
@@ -8194,12 +9212,16 @@ async function doRyzenAdjRead() {
 async function doRyzenAdjApply() {
   const tog = document.getElementById('tog-ryzenadj')
   if (!tog?.checked) { toast(tUI('safetyRequired'), tUI('ryzenSafetyBody'), 'warn'); return }
-  const ppt = parseInt(document.getElementById('ryzen-ppt').value)
-  const tdc = parseInt(document.getElementById('ryzen-tdc').value)
-  const edc = parseInt(document.getElementById('ryzen-edc').value)
+  const ppt   = parseInt(document.getElementById('ryzen-ppt')?.value)   || 88
+  const tdc   = parseInt(document.getElementById('ryzen-tdc')?.value)   || 75
+  const edc   = parseInt(document.getElementById('ryzen-edc')?.value)   || 120
+  const stapm = parseInt(document.getElementById('ryzen-stapm')?.value) || 0
+  const tctl  = parseInt(document.getElementById('ryzen-tctl')?.value)  || 0
+  const fclk  = parseInt(document.getElementById('ryzen-fclk')?.value)  || 0
+  const curve = parseInt(document.getElementById('ryzen-curve')?.value) || 0
   const status = document.getElementById('ryzen-apply-status')
   if (status) status.textContent = tUI('ryzenApplying')
-  const r = await api.applyRyzenAdj({ ppt, tdc, edc })
+  const r = await api.applyRyzenAdj({ ppt, tdc, edc, stapm, tctl, fclk, curve })
   if (r.ok) {
     const applied = tUI('ryzenAppliedStatus').replace('{ppt}',ppt).replace('{tdc}',tdc).replace('{edc}',edc)
     if (status) status.textContent = applied
@@ -10573,11 +11595,13 @@ let _aomRunning = false
 
 let _aomRunMode = 'smart'
 
-function runAutoOpti() {
+async function runAutoOpti() {
   if (!sysInfo.isAdmin) { toast('Administrator Required', 'Auto-Optimize needs Admin privileges. Relaunch as Administrator.', 'err'); return }
   if (_aomRunning) { toast('Already Running', 'Auto-Optimization is already in progress.', 'warn'); return }
   _aomRunMode = 'smart'
   aomAnswers = {}
+  const lghubCheck = await api.checkLghub?.().catch(() => ({ present: false }))
+  aomAnswers.useLghub = lghubCheck?.present ?? false
   aomStep = 1
   aomRunComplete = false
   document.getElementById('auto-opti-modal').style.display = 'flex'
@@ -11157,7 +12181,7 @@ function aomBuildTweakList() {
     { id:'do-solo-mode',    icon:'fa-network-wired',  cat:'Privacy',    label:'Delivery Optimization LAN-only mode',         safe:true },
     { id:'cpu-focus-bias',  icon:'fa-microchip',      cat:'CPU',        label:'CPU focus bias (DPC + MMCSS foreground)',      safe:true },
     { id:'tdr-delay',       icon:'fa-shield-halved',  cat:'GPU',        label:'Extend GPU TDR timeout to 10s',                safe:true },
-    { id:'usb-power-guard', icon:'fa-usb fab',        cat:'Hardware',   label:'Disable USB hub power-cycling',               safe:true },
+    { id:'usb-power-guard', icon:'fa-usb fab',        cat:'Hardware',   label:'Disable USB hub power-cycling',               safe:true, skip: a.useLghub, skipReason:'Skipped — Logitech G HUB detected' },
     { id:'nudge-blocker',   icon:'fa-circle-xmark',   cat:'UI',         label:'Disable AutoPlay USB nudge notifications',    safe:true },
     // Conditional on answers
     { id:'cortana',         icon:'fa-microphone-slash',cat:'Privacy',   label:'Disable Cortana + WSearch indexer',           safe:true, skip: a.useCortana,   skipReason:'Skipped — you use Windows Search' },
@@ -11174,7 +12198,7 @@ function aomBuildTweakList() {
     // Conditional on specs
     { id:'intel-power-plan', icon:'fa-bolt',           cat:'Power',      label:'Intel Max Performance power plan',           safe: !si.isLaptop && (si.cpu||'').toLowerCase().includes('intel'), skipReason: si.isLaptop ? 'Skipped — laptop detected' : 'Skipped — AMD CPU detected' },
     { id:'amd-power-plan',  icon:'fa-bolt',           cat:'Power',      label:'AMD Max Performance power plan',             safe: !si.isLaptop && (si.cpu||'').toLowerCase().includes('amd'),   skipReason: si.isLaptop ? 'Skipped — laptop detected' : 'Skipped — Intel CPU detected' },
-    { id:'usb-suspend',     icon:'fa-usb fab',        cat:'Hardware',   label:'Disable USB Selective Suspend',               safe: !si.isLaptop, skipReason:'Skipped — laptop detected' },
+    { id:'usb-suspend',     icon:'fa-usb fab',        cat:'Hardware',   label:'Disable USB Selective Suspend',               safe: !si.isLaptop, skip: a.useLghub, skipReason: a.useLghub ? 'Skipped — Logitech G HUB detected' : 'Skipped — laptop detected' },
     { id:'pcie-power',      icon:'fa-plug-circle-bolt',cat:'Power',     label:'Disable PCIe Link State power management',    safe: !si.isLaptop, skipReason:'Skipped — laptop detected' },
     { id:'sysmain',         icon:'fa-brain',          cat:'Memory',     label:'Disable SysMain (SuperFetch)',                safe: si.ramGB >= 16, skipReason:`Skipped — ${si.ramGB}GB RAM (<16GB)` },
     { id:'nvme-latency',    icon:'fa-hard-drive',     cat:'Storage',    label:'NVMe StorPort latency tweak',                 safe: !!si.nvme, skipReason:'Skipped — no NVMe SSD detected' },

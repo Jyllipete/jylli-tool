@@ -765,6 +765,7 @@ function createWindow() {
   mainWindow.on('minimize', (e) => {
     e.preventDefault()
     mainWindow.hide()
+    pauseBackgroundPolling()
     updateTrayMenu()
     if (discordReady) discordRPC.clearActivity().catch(() => {})
   })
@@ -874,8 +875,8 @@ function updateTrayMenu() {
     {
       label: shown ? 'Hide window' : 'Show window',
       click: () => {
-        if (shown) { mainWindow.hide(); if (discordReady) discordRPC.clearActivity().catch(() => {}) }
-        else { mainWindow.show(); mainWindow.focus(); updateDiscordPresence() }
+        if (shown) { mainWindow.hide(); pauseBackgroundPolling(); if (discordReady) discordRPC.clearActivity().catch(() => {}) }
+        else { mainWindow.show(); mainWindow.focus(); resumeBackgroundPolling(); updateDiscordPresence() }
         updateTrayMenu()
       },
     },
@@ -901,7 +902,7 @@ function createTray() {
   tray.on('click', () => {
     if (mainWindow) {
       if (mainWindow.isVisible()) { mainWindow.focus() }
-      else { mainWindow.show(); mainWindow.focus(); updateDiscordPresence() }
+      else { mainWindow.show(); mainWindow.focus(); resumeBackgroundPolling(); updateDiscordPresence() }
     }
     updateTrayMenu()
   })
@@ -917,17 +918,19 @@ let sessionTweaksCount = 0
 app.whenReady().then(() => {
   startupTrace('whenReady#2 (main startup) entered')
   const userData = app.getPath('userData')
-  SETTINGS_PATH  = path.join(userData, 'jt_settings.json')
-  LOG_PATH       = path.join(userData, 'jt_log.txt')
-  ANALYTICS_PATH = path.join(userData, 'jt_analytics.json')
-  PROFILES_PATH  = path.join(userData, 'jt_profiles.json')
-  CHANGELOG_PATH = path.join(userData, 'jt_changelog.json')
+  SETTINGS_PATH       = path.join(userData, 'jt_settings.json')
+  LOG_PATH            = path.join(userData, 'jt_log.txt')
+  ANALYTICS_PATH      = path.join(userData, 'jt_analytics.json')
+  PROFILES_PATH       = path.join(userData, 'jt_profiles.json')
+  CHANGELOG_PATH      = path.join(userData, 'jt_changelog.json')
+  BIOS_CHANGE_LOG_PATH = path.join(userData, 'bios_change_log.json')
+  BIOS_PROFILES_PATH   = path.join(userData, 'bios_profiles.json')
   APP_VERSION    = app.getVersion()
   startupTrace('createWindow starting')
   createWindow(); createTray()
   startupTrace('createWindow done')
   if (loadSettings().discordRpcEnabled !== false) initDiscordRPC()
-  try { app.setLoginItemSettings({ openAtLogin: !!loadSettings().startAtLogin }) } catch (_e) {}
+  setStartupTask(!!loadSettings().startAtLogin).catch(() => {})
   startLhm()
   startContextDetector()
   // Auto-snapshot on launch if overdue
@@ -1072,6 +1075,20 @@ function regAdd(hive, path_, name, type, value) {
 }
 function regDelete(hive, path_, name) {
   return runCmd(`reg delete "${hive}\\${path_}" /v "${name}" /f`)
+}
+
+const STARTUP_TASK_NAME = 'Jylli Tool Startup'
+async function setStartupTask(enabled) {
+  if (!IS_WIN) return
+  if (enabled) {
+    if (!app.isPackaged) return
+    const exe = process.execPath.replace(/"/g, '\\"')
+    await runCmd(`schtasks /create /tn "${STARTUP_TASK_NAME}" /tr "\\"${exe}\\"" /sc ONLOGON /rl HIGHEST /f`)
+  } else {
+    const r = await runCmd(`schtasks /delete /tn "${STARTUP_TASK_NAME}" /f`)
+    if (!r.ok && !r.out.includes('cannot find') && !r.err.includes('cannot find'))
+      startupTrace(`setStartupTask(false) err: ${r.err}`)
+  }
 }
 
 // ─── IPC input sanitization helpers ─────────────────────────────────────────
@@ -1617,7 +1634,7 @@ ipcMain.handle('get-tweak-states', async () => {
 ipcMain.handle('load-settings', () => { startupTrace('IPC load-settings handler called'); return loadSettings() })
 ipcMain.handle('save-settings', (_, data) => { saveSettings(data); return true })
 ipcMain.handle('set-startup', (_, enabled) => {
-  try { app.setLoginItemSettings({ openAtLogin: !!enabled }) } catch (_e) {}
+  return setStartupTask(!!enabled)
 })
 
 // ─── Tweak Profiles ───────────────────────────────────────────────────────────
@@ -2041,6 +2058,16 @@ ipcMain.handle('get-metrics', async () => {
   }
   return _lastMetrics ?? {}
 })
+
+function pauseBackgroundPolling() {
+  if (_metricsInterval) { clearInterval(_metricsInterval); _metricsInterval = null }
+  stopContextDetector()
+}
+
+function resumeBackgroundPolling() {
+  if (!_metricsInterval) _metricsInterval = setInterval(collectMetrics, 3000)
+  if (!_contextDetectorTimer) startContextDetector()
+}
 
 // ─── Restore Points ───────────────────────────────────────────────────────────
 ipcMain.handle('create-restore-point', async (_, desc) => {
@@ -3249,17 +3276,29 @@ ipcMain.handle('run-auto-opti', async (_, sysInfo) => {
 })
 
 async function createRestorePointInternal(send) {
-  // Enable System Restore on C: and remove the 24-hour cooldown throttle
-  await runPS("Enable-ComputerRestore -Drive 'C:\\' -ErrorAction SilentlyContinue")
+  // Force-enable System Restore: clear policy keys that block Enable-ComputerRestore, then enable via cmdlet
+  send('Enabling System Restore on C:\\…', 'info')
+  await runPS(`
+    Remove-ItemProperty -Path 'HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows NT\\SystemRestore' -Name 'DisableSR' -ErrorAction SilentlyContinue
+    Remove-ItemProperty -Path 'HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows NT\\SystemRestore' -Name 'DisableConfig' -ErrorAction SilentlyContinue
+    Set-ItemProperty -Path 'HKLM:\\SYSTEM\\CurrentControlSet\\Services\\VSS' -Name 'Start' -Value 2 -Type DWord -ErrorAction SilentlyContinue
+    Enable-ComputerRestore -Drive 'C:\\' -ErrorAction SilentlyContinue
+  `)
   await regAdd('HKLM', 'SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\SystemRestore', 'SystemRestorePointCreationFrequency', 'REG_DWORD', '0')
 
-  // Attempt to create the restore point — treat any error as a hard failure
+  // Attempt to create the restore point with WMI fallback
   const r = await runPS(`
     try {
       Checkpoint-Computer -Description "JylliTool_AutoOpti" -RestorePointType MODIFY_SETTINGS -ErrorAction Stop
       Write-Output "RP_OK"
     } catch {
-      Write-Output "RP_FAIL:$($_.Exception.Message)"
+      try {
+        $wmi = Get-WmiObject -Class SystemRestore -Namespace root\\default
+        $wmi.CreateRestorePoint("JylliTool_AutoOpti", 12, 100) | Out-Null
+        Write-Output "RP_OK"
+      } catch {
+        Write-Output "RP_FAIL:$($_.Exception.Message)"
+      }
     }
   `)
   const out = r.out?.trim() || ''
@@ -3783,8 +3822,12 @@ const TWEAKS = {
     category: 'memory',
     safetyTier: 2,
     gamerImpact: 'medium',
-    apply: async (s, ps) => { const r = await ps('Disable-MMAgent -MemoryCompression'); s(r.ok ? 'Memory compression disabled.' : `Error: ${r.err}`, r.ok ? 'ok' : 'err') },
-    restore: async (s, ps) => { await ps('Enable-MMAgent -MemoryCompression'); s('Memory compression re-enabled.', 'ok') }
+    apply: async (s, ps) => {
+      const r = await ps('Disable-MMAgent -MemoryCompression -ErrorAction SilentlyContinue; if ((Get-MMAgent -EA SilentlyContinue).MemoryCompression -eq $false) { "ok" } else { "fail" }');
+      const ok = r.out && r.out.trim() === 'ok';
+      s(ok ? 'Memory compression disabled.' : `Error: ${r.err || 'Could not disable memory compression'}`, ok ? 'ok' : 'err');
+    },
+    restore: async (s, ps) => { await ps('Enable-MMAgent -MemoryCompression -ErrorAction SilentlyContinue'); s('Memory compression re-enabled.', 'ok') }
   },
   'bcd-tweaks': {
     name: 'BCD Boot Tweaks',
@@ -7660,6 +7703,35 @@ ipcMain.handle('clean-power-plans', async () => {
 
 // What's New content
 const WHATS_NEW = [
+  { version: '1.5.1', date: 'May 2026', items: [
+    'BIOS Optimization Score (0–100) with animated tier badge (Unoptimized → BIOS Master) — updates live after every scan and setting change',
+    'Live CPU + GPU thermal graph in BIOS tab — real-time canvas showing temps as you apply RyzenAdj/C-State changes',
+    'BIOS Change Log with per-setting one-click revert — every SCEWIN write is timestamped and individually undoable',
+    'RyzenAdj Extended Controls — STAPM, Tctl, Fclk, and Curve Optimizer sliders with named preset save/load',
+    'BIOS Profile System — save, load, export, and import full BIOS configs as shareable .jbios files',
+    'LHM Sensor Dashboard in Fan Control — live fan RPMs, CPU/GPU power draw (W), and VCore voltage refreshing every 3s',
+    'RAM Stability Quick Test — 30s or 5-minute in-app stress test for XMP stability without MemTest86',
+    'Intel Boost Mode controls via powercfg — Disabled/Efficient/Aggressive presets for Intel CPUs',
+    'BIOS Age Alert — color-coded indicator with direct links to manufacturer update pages (ASUS/MSI/Gigabyte/ASRock)',
+    'Pre-Apply Dependency Checker — blocks dangerous setting combinations before any BIOS write (e.g. ReBAR without Above 4G)',
+    'Fix — Background polling pauses when app is minimized to tray — reduces FPS drops in games',
+    'Fix — "Start at Windows Startup" now works correctly — switched to Task Scheduler (required for admin apps)',
+    'Translations: Added missing Finnish strings',
+  ], items_fi: [
+    'BIOS-optimointipisteet (0–100) animoidulla tasonmerkillä (Optimoimaton → BIOS Master) — päivittyy reaaliajassa skannausten ja muutosten jälkeen',
+    'Reaaliaikainen CPU + GPU lämpötilagraafi BIOS-välilehdellä — näyttää lämpötilat RyzenAdj/C-State-muutosten aikana',
+    'BIOS-muutosloki yksittäisellä palautusnäppäimellä — jokainen kirjoitus on aikaleimattu ja kumottavissa erikseen',
+    'RyzenAdj-laajennetut säädöt — STAPM, Tctl, Fclk ja Curve Optimizer -liukusäätimet esiasetuksien tallennuksella',
+    'BIOS-profiilisysteemi — tallenna, lataa, vie ja tuo koko BIOS-konfiguraatiot jaettavina .jbios-tiedostoina',
+    'LHM-sensorikojelauta tuuletinosiossa — reaaliaikaiset tuulettimen RPM:t, CPU/GPU-teho (W) ja VCore-jännite 3s välein',
+    'RAM-vakautustesti — 30 sekunnin tai 5 minuutin sisäinen rasitustesti XMP-vakauden tarkistamiseen ilman MemTest86:ta',
+    'Intel Boost -tilavalitsin powercfg:n kautta — Poistettu/Tehokas/Aggressiivinen-esiasetukset Intel-prosessoreille',
+    'BIOS-ikähälytys — värillinen ikäindikaattori linkeillä valmistajan päivityssivuille (ASUS/MSI/Gigabyte/ASRock)',
+    'Esisovellusriippuvuustarkistaja — estää vaaralliset asetusyhdistelmät ennen BIOS-kirjoitusta (esim. ReBAR ilman Above 4G)',
+    'Korjattu — taustakysely pysähtyy kun sovellus on minimoitu kelkkaan — vähentää FPS-pudotuksia peleissä',
+    'Korjattu — "Käynnistä Windowsin käynnistyksessä" toimii nyt oikein — vaihdettu Task Scheduleriin (vaaditaan järjestelmänvalvojan oikeuksilla toimivissa sovelluksissa)',
+    'Käännökset: Lisätty puuttuvat suomenkieliset merkkijonot',
+  ]},
   { version: '1.5.0', date: 'May 2026', items: [
     'Server Bookmarks & Quick-Connect — Save up to 5 servers (IP:port). Shows live player count, map and ping. Auto-refreshes every 60s. One-click connect via fivem:// protocol.',
     'Live Session HUD — Compact transparent overlay showing CPU/GPU/RAM bars and CFX ping. Auto-opens when FiveM is detected. Click-through so it never interferes while gaming.',
@@ -10191,6 +10263,10 @@ ipcMain.handle('stop-game-watcher', async () => {
 
 ipcMain.handle('get-game-watcher-status', () => ({ running: !!gameWatcherInterval, activeGame: activeGameProfile }))
 
+// ─── BIOS Change Log & Profile paths ─────────────────────────────────────────
+let BIOS_CHANGE_LOG_PATH = null
+let BIOS_PROFILES_PATH   = null
+
 // ─── Tweak Changelog ──────────────────────────────────────────────────────────
 let CHANGELOG_PATH = null
 
@@ -10630,7 +10706,7 @@ ipcMain.handle('bios-scewin-read', async () => {
   return { ok: true, entries, dumpPath }
 })
 
-ipcMain.handle('bios-scewin-write', async (_, { token, value, dumpPath }) => {
+ipcMain.handle('bios-scewin-write', async (_, { token, value, dumpPath, settingName, oldValue }) => {
   const scewin     = assetPath('assets', 'scewin', 'SCEWIN_64.exe')
   const backupPath = dumpPath.replace('bios_dump.txt', 'bios_dump_backup.txt')
   if (!fs.existsSync(scewin))   return { ok: false, error: 'SCEWIN not found' }
@@ -10655,6 +10731,120 @@ ipcMain.handle('bios-scewin-write', async (_, { token, value, dumpPath }) => {
     try { fs.copyFileSync(backupPath, dumpPath) } catch {}
     return { ok: false, restored: true, error: 'SCEWIN write failed — your board may not support runtime BIOS writes. Previous dump restored.' }
   }
+  // Append to BIOS change log
+  if (BIOS_CHANGE_LOG_PATH && settingName) {
+    try {
+      let log = []
+      if (fs.existsSync(BIOS_CHANGE_LOG_PATH)) {
+        try { log = JSON.parse(fs.readFileSync(BIOS_CHANGE_LOG_PATH, 'utf8')) } catch {}
+      }
+      log.unshift({ ts: Date.now(), settingName, token, oldValue: oldValue || '?', newValue: value })
+      if (log.length > 200) log = log.slice(0, 200)
+      fs.writeFileSync(BIOS_CHANGE_LOG_PATH, JSON.stringify(log), 'utf8')
+    } catch {}
+  }
+  return { ok: true }
+})
+
+ipcMain.handle('bios-get-change-log', async () => {
+  if (!BIOS_CHANGE_LOG_PATH) return { ok: true, entries: [] }
+  try {
+    if (!fs.existsSync(BIOS_CHANGE_LOG_PATH)) return { ok: true, entries: [] }
+    return { ok: true, entries: JSON.parse(fs.readFileSync(BIOS_CHANGE_LOG_PATH, 'utf8')) }
+  } catch { return { ok: true, entries: [] } }
+})
+
+ipcMain.handle('bios-clear-change-log', async () => {
+  if (BIOS_CHANGE_LOG_PATH) try { fs.writeFileSync(BIOS_CHANGE_LOG_PATH, '[]', 'utf8') } catch {}
+  return { ok: true }
+})
+
+// ── BIOS Profile System ───────────────────────────────────────────────────────
+function loadBiosProfiles() {
+  try { if (BIOS_PROFILES_PATH && fs.existsSync(BIOS_PROFILES_PATH)) return JSON.parse(fs.readFileSync(BIOS_PROFILES_PATH, 'utf8')) } catch {}
+  return []
+}
+function saveBiosProfiles(profiles) {
+  try { if (BIOS_PROFILES_PATH) fs.writeFileSync(BIOS_PROFILES_PATH, JSON.stringify(profiles), 'utf8') } catch {}
+}
+
+ipcMain.handle('bios-list-profiles', async () => {
+  const p = loadBiosProfiles()
+  return { ok: true, profiles: p.map(({ name, ts, board }) => ({ name, ts, board })) }
+})
+
+ipcMain.handle('bios-save-profile', async (_, { name, dumpPath, entries }) => {
+  if (!name) return { ok: false, error: 'Name required' }
+  let board = 'Unknown'
+  try {
+    const r = await runPS(`(Get-CimInstance Win32_ComputerSystem).Model`, 4000)
+    board = r.out.trim() || 'Unknown'
+  } catch {}
+  const profiles = loadBiosProfiles().filter(p => p.name !== name)
+  profiles.unshift({ name, ts: Date.now(), board, settings: entries || [] })
+  if (profiles.length > 10) profiles.splice(10)
+  saveBiosProfiles(profiles)
+  return { ok: true }
+})
+
+ipcMain.handle('bios-load-profile', async (_, { name, dumpPath }) => {
+  const scewin = assetPath('assets', 'scewin', 'SCEWIN_64.exe')
+  if (!fs.existsSync(scewin)) return { ok: false, error: 'SCEWIN not found' }
+  if (!dumpPath || !fs.existsSync(dumpPath)) return { ok: false, error: 'No BIOS dump — run SCEWIN scan first' }
+  const profiles = loadBiosProfiles()
+  const profile = profiles.find(p => p.name === name)
+  if (!profile) return { ok: false, error: 'Profile not found' }
+  let written = 0, failed = 0
+  for (const { token, value } of (profile.settings || [])) {
+    try {
+      const backupPath = dumpPath.replace('bios_dump.txt', 'bios_dump_backup.txt')
+      fs.copyFileSync(dumpPath, backupPath)
+      let raw = fs.readFileSync(dumpPath, 'utf8')
+      const tokenEsc = token.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+      const valueEsc = value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+      raw = raw.replace(
+        new RegExp(`(Setup Question[^\\n]*\\n(?:(?!Setup Question)[^\\n]*\\n)*Token\\s+=\\s+${tokenEsc}[\\s\\S]*?)(?=\\r?\\n\\r?\\n|$)`, 'g'),
+        (block) => {
+          let b = block.replace(/^(\s+)\*/gm, '$1 ')
+          b = b.replace(new RegExp(`([ \\t]+) (${valueEsc}[ \\t])`), '$1*$2')
+          return b
+        }
+      )
+      fs.writeFileSync(dumpPath, raw, 'utf8')
+      const r = await runCmd(`"${scewin}" /i /s "${dumpPath}"`)
+      if (r.ok) written++; else failed++
+    } catch { failed++ }
+  }
+  return { ok: true, written, failed }
+})
+
+ipcMain.handle('bios-export-profile', async (_, { name }) => {
+  const profiles = loadBiosProfiles()
+  const profile = profiles.find(p => p.name === name)
+  if (!profile) return { ok: false, error: 'Profile not found' }
+  const { dialog } = require('electron')
+  const res = await dialog.showSaveDialog({ title: 'Export BIOS Profile', defaultPath: `${name}.jbios`, filters: [{ name: 'BIOS Profile', extensions: ['jbios'] }] })
+  if (res.canceled || !res.filePath) return { ok: false, error: 'cancelled' }
+  fs.writeFileSync(res.filePath, JSON.stringify(profile, null, 2), 'utf8')
+  return { ok: true }
+})
+
+ipcMain.handle('bios-import-profile', async () => {
+  const { dialog } = require('electron')
+  const res = await dialog.showOpenDialog({ title: 'Import BIOS Profile', filters: [{ name: 'BIOS Profile', extensions: ['jbios'] }], properties: ['openFile'] })
+  if (res.canceled || !res.filePaths?.[0]) return { ok: false, error: 'cancelled' }
+  let profile
+  try { profile = JSON.parse(fs.readFileSync(res.filePaths[0], 'utf8')) } catch { return { ok: false, error: 'Invalid .jbios file' } }
+  if (!profile.name || !Array.isArray(profile.settings)) return { ok: false, error: 'Invalid profile format' }
+  // Check board compatibility
+  const curBoard = (await runPS(`(Get-CimInstance Win32_ComputerSystem).Model`, 4000)).out.trim()
+  if (profile.board && curBoard && profile.board !== curBoard && !curBoard.includes(profile.board) && !profile.board.includes(curBoard)) {
+    return { ok: false, error: 'board_mismatch', profileBoard: profile.board, currentBoard: curBoard }
+  }
+  const profiles = loadBiosProfiles().filter(p => p.name !== profile.name)
+  profiles.unshift(profile)
+  if (profiles.length > 10) profiles.splice(10)
+  saveBiosProfiles(profiles)
   return { ok: true }
 })
 
@@ -10709,13 +10899,17 @@ ipcMain.handle('ryzenadj-read', async () => {
   }
 })
 
-ipcMain.handle('ryzenadj-apply', async (_, { ppt, tdc, edc }) => {
+ipcMain.handle('ryzenadj-apply', async (_, { ppt, tdc, edc, stapm, tctl, fclk, curve }) => {
   const ryzenadj = assetPath('assets', 'ryzenadj', 'ryzenadj.exe')
   if (!fs.existsSync(ryzenadj)) return { ok: false, error: 'not_found' }
   const args = []
-  if (ppt > 0) args.push(`--ppt-limit-fast=${ppt * 1000}`)
-  if (tdc > 0) args.push(`--tdc-limit-slow=${tdc * 1000}`)
-  if (edc > 0) args.push(`--edc-limit-slow=${edc * 1000}`)
+  if (ppt   > 0)  args.push(`--ppt-limit-fast=${ppt * 1000}`)
+  if (tdc   > 0)  args.push(`--tdc-limit-slow=${tdc * 1000}`)
+  if (edc   > 0)  args.push(`--edc-limit-slow=${edc * 1000}`)
+  if (stapm > 0)  args.push(`--stapm-limit=${stapm * 1000}`)
+  if (tctl  > 0)  args.push(`--tctl-temp=${tctl}`)
+  if (fclk  > 0)  args.push(`--min-fclk-frequency=${fclk}`)
+  if (curve !== 0 && curve !== undefined) args.push(`--set-coall=${curve}`)
   if (!args.length) return { ok: false, error: 'No values provided' }
   const r = await runCmd(`"${ryzenadj}" ${args.join(' ')}`)
   return { ok: r.ok, error: r.ok ? null : (r.err || r.out || 'RyzenAdj failed') }
@@ -10759,6 +10953,75 @@ ipcMain.handle('cpuz-read-timings', async () => {
     const getField = (label) => txt.match(new RegExp(label + '\\s*[:\\-]\\s*(.+)'))?.[1]?.trim() ?? ''
     return { ok: true, cl: getField('CAS# Latency'), trcd: getField('RAS# to CAS#'), trp: getField('RAS# Precharge'), tras: getField('Cycle Time'), cr: getField('Command Rate'), freq: getField('DRAM Frequency') }
   } catch (e) { return { ok: false, error: e.message } }
+})
+
+ipcMain.handle('bios-intel-power', async (_, mode) => {
+  const modeMap = { disabled: 0, efficient: 1, aggressive: 2 }
+  if (mode === 'read') {
+    const r = await runPS(`
+try {
+  $val = (Get-ItemProperty -Path 'HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Power\\PowerSettings\\54533251-82be-4824-96c1-47b60b740d00\\be337238-0d82-4146-a960-4f3749d470c7' -Name 'ACSettingIndex' -EA Stop).ACSettingIndex
+  Write-Output "MODE=$val"
+} catch { Write-Output "MODE=2" }
+    `, 6000)
+    const m = r.out.match(/MODE=(\d)/)
+    return { ok: true, mode: m ? parseInt(m[1]) : 2 }
+  }
+  const val = modeMap[mode]
+  if (val === undefined) return { ok: false, error: 'Unknown mode' }
+  const r = await runPS(`
+$guid = '54533251-82be-4824-96c1-47b60b740d00'
+$sub  = 'be337238-0d82-4146-a960-4f3749d470c7'
+powercfg /setacvalueindex SCHEME_CURRENT $guid $sub ${val}
+powercfg /setdcvalueindex SCHEME_CURRENT $guid $sub ${val}
+powercfg /setactive SCHEME_CURRENT
+  `, 8000)
+  return { ok: r.code === 0, error: r.err || undefined }
+})
+
+ipcMain.handle('bios-ram-stress', async (_, durationSec) => {
+  const dur = Math.min(Math.max(parseInt(durationSec) || 30, 10), 360)
+  const timeout = (dur + 30) * 1000
+  const r = await runPS(`
+try {
+  $size = 256MB
+  $arr  = New-Object byte[] $size
+  $rng  = [System.Security.Cryptography.RandomNumberGenerator]::Create()
+  $rng.GetBytes($arr)
+  $md5  = [System.Security.Cryptography.MD5]::Create()
+  $h1   = $md5.ComputeHash($arr)
+  Start-Sleep -Seconds ${dur}
+  $h2   = $md5.ComputeHash($arr)
+  $ok   = [System.Linq.Enumerable]::SequenceEqual($h1, $h2)
+  Write-Output "PASSED=$ok"
+} catch { Write-Output "PASSED=ERROR" }
+  `, timeout)
+  const m = r.out.match(/PASSED=(True|False|ERROR)/i)
+  if (!m || m[1].toLowerCase() === 'error') return { ok: false, passed: false }
+  return { ok: true, passed: m[1].toLowerCase() === 'true' }
+})
+
+ipcMain.handle('bios-lhm-sensors', async () => {
+  const r = await runPS(`
+try {
+  $ns  = 'root\\LibreHardwareMonitor'
+  $all = Get-WmiObject -Namespace $ns -Class Sensor -ErrorAction Stop
+  $fans   = $all | Where-Object { $_.SensorType -eq 'Fan' } | Select-Object Name,Value
+  $powers = $all | Where-Object { $_.SensorType -eq 'Power' -and $_.Name -match 'CPU Package|GPU Power|Package|Total' } | Select-Object Name,Value
+  $volts  = $all | Where-Object { $_.SensorType -eq 'Voltage' -and $_.Name -match 'VCore|CPU Core|GPU Core|12V|5V' } | Select-Object Name,Value
+  @{ fans=$fans; powers=$powers; volts=$volts } | ConvertTo-Json -Depth 3 -Compress
+} catch { Write-Output "LHM_UNAVAILABLE" }
+  `, 8000)
+  if (!r.out || r.out.trim() === 'LHM_UNAVAILABLE') return { ok: false, fans: [], powers: [], volts: [] }
+  try {
+    const d = JSON.parse(r.out.trim())
+    const toArr = (x) => {
+      if (!x) return []
+      if (Array.isArray(x)) return x.map(i => ({ name: i.Name, value: i.Value }))
+      return [{ name: x.Name, value: x.Value }]
+    }
+    return { ok: true, fans: toArr(d.fans), powers: toArr(d.powers), volts: toArr(d.volts) }
+  } catch { return { ok: false, fans: [], powers: [], volts: [] } }
 })
 
 ipcMain.handle('get-driver-info', async () => {
