@@ -4070,6 +4070,17 @@ const TWEAKS = {
           Remove-ItemProperty -Path $dev.PSPath -Name EnhancedPowerManagementEnabled -EA SilentlyContinue
         }
       `)
+      await ps(`
+        $svc = Get-Service -Name LGHUBUpdaterService -EA SilentlyContinue
+        if ($svc -and $svc.StartType -eq 'Disabled') {
+          Set-Service -Name LGHUBUpdaterService -StartupType Automatic -EA SilentlyContinue
+          Start-Service -Name LGHUBUpdaterService -EA SilentlyContinue
+        }
+        $lghubExe = "$env:LOCALAPPDATA\\LGHUB\\lghub.exe"
+        if (Test-Path $lghubExe) {
+          Set-ItemProperty -Path 'HKCU:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run' -Name 'LGHUB' -Value "$lghubExe" -Force -EA SilentlyContinue
+        }
+      `).catch(() => {})
       s('USB Selective Suspend restored.', 'ok')
     }
   },
@@ -4598,11 +4609,16 @@ const TWEAKS = {
         Get-NetAdapter | Where-Object {
           $_.Status -eq 'Up' -and
           $_.PhysicalMediaType -ne 'Native 802.11' -and
+          $_.PhysicalMediaType -ne 'Wireless LAN' -and
           $_.InterfaceDescription -notlike '*Wireless*' -and
-          $_.InterfaceDescription -notlike '*Wi-Fi*'
+          $_.InterfaceDescription -notlike '*Wi-Fi*' -and
+          $_.InterfaceDescription -notlike '*802.11*' -and
+          $_.InterfaceDescription -notlike '*Virtual*' -and
+          $_.InterfaceDescription -notlike '*Loopback*'
         } | ForEach-Object {
           Enable-NetAdapterChecksumOffload -Name $_.Name -EA SilentlyContinue
           Enable-NetAdapterLso -Name $_.Name -EA SilentlyContinue
+          Enable-NetAdapterRsc -Name $_.Name -EA SilentlyContinue
         }
       `)
       s('NIC offloads restored.', 'ok')
@@ -6145,7 +6161,18 @@ const TWEAKS = {
     },
     restore: async (s, ps) => {
       await ps(`Unregister-ScheduledTask -TaskName 'JylliTool_PhantomHIDCleanup' -Confirm:$false -EA SilentlyContinue`)
-      s('This fix is a restore — boot cleanup task removed.', 'info')
+      await ps(`
+        $svc = Get-Service -Name LGHUBUpdaterService -EA SilentlyContinue
+        if ($svc -and $svc.StartType -eq 'Disabled') {
+          Set-Service -Name LGHUBUpdaterService -StartupType Automatic -EA SilentlyContinue
+          Start-Service -Name LGHUBUpdaterService -EA SilentlyContinue
+        }
+        $lghubExe = "$env:LOCALAPPDATA\\LGHUB\\lghub.exe"
+        if (Test-Path $lghubExe) {
+          Set-ItemProperty -Path 'HKCU:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run' -Name 'LGHUB' -Value "$lghubExe" -Force -EA SilentlyContinue
+        }
+      `).catch(() => {})
+      s('Boot cleanup task removed and G HUB service restored.', 'info')
     }
   },
   'fix-phantom-hid': {
@@ -6235,6 +6262,38 @@ if ($r.Count -eq 0) { Write-Output "NONE_FOUND" } else { foreach ($x in $r) { Wr
       if (failed > 0) s(`${failed} device(s) could not be removed (may require Safe Mode).`, 'warn')
     },
     restore: async (s) => s('Phantom device removal cannot be undone — reinstall the relevant software to restore devices.', 'info')
+  },
+  'fix-lghub-restore': {
+    name: 'Restore Logitech G HUB',
+    category: 'input',
+    safetyTier: 1,
+    gamerImpact: 'low',
+    apply: async (s, ps) => {
+      s('Re-enabling Logitech G HUB service…', 'info')
+      const r = await ps(`
+        $svc = Get-Service -Name LGHUBUpdaterService -EA SilentlyContinue
+        if ($svc) {
+          Set-Service -Name LGHUBUpdaterService -StartupType Automatic -EA SilentlyContinue
+          Start-Service -Name LGHUBUpdaterService -EA SilentlyContinue
+          Write-Output "SVC_RESTORED"
+        } else {
+          Write-Output "SVC_NOT_FOUND"
+        }
+      `)
+      if (r.out.includes('SVC_NOT_FOUND')) {
+        s('LGHUBUpdaterService not found — G HUB may not be installed.', 'warn')
+      }
+      await ps(`
+        $lghubExe = "$env:LOCALAPPDATA\\LGHUB\\lghub.exe"
+        if (Test-Path $lghubExe) {
+          Set-ItemProperty -Path 'HKCU:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run' -Name 'LGHUB' -Value "$lghubExe" -Force -EA SilentlyContinue
+          Write-Output "AUTOSTART_RESTORED"
+        }
+      `).catch(() => {})
+      await ps(`Unregister-ScheduledTask -TaskName 'JylliTool_PhantomHIDCleanup' -Confirm:$false -EA SilentlyContinue`).catch(() => {})
+      s('Logitech G HUB service restored. Reboot to confirm G HUB launches at startup.', 'ok')
+    },
+    restore: async (s) => s('Nothing to undo.', 'info')
   },
   'fix-fivem-fullscreen': {
     name: 'Fix FiveM Fullscreen Mode',
@@ -6518,6 +6577,17 @@ if ($r.Count -eq 0) { Write-Output "NONE_FOUND" } else { foreach ($x in $r) { Wr
           Remove-ItemProperty -Path $dev.PSPath -Name EnhancedPowerManagementEnabled -EA SilentlyContinue
         }
       `)
+      await ps(`
+        $svc = Get-Service -Name LGHUBUpdaterService -EA SilentlyContinue
+        if ($svc -and $svc.StartType -eq 'Disabled') {
+          Set-Service -Name LGHUBUpdaterService -StartupType Automatic -EA SilentlyContinue
+          Start-Service -Name LGHUBUpdaterService -EA SilentlyContinue
+        }
+        $lghubExe = "$env:LOCALAPPDATA\\LGHUB\\lghub.exe"
+        if (Test-Path $lghubExe) {
+          Set-ItemProperty -Path 'HKCU:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run' -Name 'LGHUB' -Value "$lghubExe" -Force -EA SilentlyContinue
+        }
+      `).catch(() => {})
       s('USB power management restored.', 'ok')
     }
   },
@@ -6755,7 +6825,10 @@ if ($r.Count -eq 0) { Write-Output "NONE_FOUND" } else { foreach ($x in $r) { Wr
     restore: async (s, ps) => {
       const base = 'HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Memory Management'
       await ps(`Set-ItemProperty -Path "${base}" -Name DisablePagingExecutive -Value 0 -Force`)
-      s('Memory Management restored.', 'ok')
+      await ps(`Set-ItemProperty -Path "${base}" -Name PagingFiles -Value "C:\\pagefile.sys" -Force -EA SilentlyContinue`)
+      await ps(`Remove-ItemProperty -Path "${base}" -Name LargeSystemCache -EA SilentlyContinue`)
+      await ps(`Remove-ItemProperty -Path "${base}" -Name ClearPageFileAtShutdown -EA SilentlyContinue`)
+      s('Memory Management restored. Reboot required.', 'ok')
     }
   },
   'nvidia-pstate-lock': {
@@ -6793,6 +6866,8 @@ if ($r.Count -eq 0) { Write-Output "NONE_FOUND" } else { foreach ($x in $r) { Wr
       await ps(`
         Remove-ItemProperty -Path 'HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Memory Management' -Name FeatureSettingsOverride -EA SilentlyContinue
         Remove-ItemProperty -Path 'HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Memory Management' -Name FeatureSettingsOverrideMask -EA SilentlyContinue
+        Set-ProcessMitigation -System -Enable CFG -ErrorAction SilentlyContinue
+        Set-ProcessMitigation -System -Enable SEHOP -ErrorAction SilentlyContinue
       `)
       s('CPU mitigations restored. Reboot required.', 'ok')
     }
@@ -7703,6 +7778,23 @@ ipcMain.handle('clean-power-plans', async () => {
 
 // What's New content
 const WHATS_NEW = [
+  { version: '1.5.2', date: 'May 2026', items: [
+    'Fix — USB Selective Suspend / Power Guard restore no longer permanently disables Logitech G HUB service',
+    'Fix — Mouse Ghosting fix restore now also re-enables G HUB service',
+    'New Fix — "Restore Logitech G HUB" re-enables G HUB service, startup entry, and removes phantom cleanup task for users affected by previous versions',
+    'Fix — JS syntax error corrected (app crashed on startup)',
+    'Fix — NIC hardware offloads restore now also re-enables RSC (missing restore was throttling network speed)',
+    'Fix — Memory Guard Tune restore now fully undoes all 4 changes — pagefile, LargeSystemCache and ClearPageFileAtShutdown were not being restored (pagefile 0 0 capped network throughput)',
+    'Fix — Full Mitigation Wipe restore now re-enables CFG and SEHOP via Set-ProcessMitigation (previously only removed registry keys)',
+  ], items_fi: [
+    'Korjaus — USB Selective Suspend / Power Guard palautus ei enää sammuta Logitech G HUB -palvelua pysyvästi',
+    'Korjaus — Hiirispokkaus-korjauksen palautus palauttaa nyt myös G HUB -palvelun',
+    'Uusi korjaus — "Palauta Logitech G HUB" käynnistää G HUB -palvelun ja siivoustehtävän uudelleen käyttäjille, joita aiemmat versiot haittasivat',
+    'Korjaus — JS-syntaksivirhe korjattu (sovellus kaatui käynnistyksessä)',
+    'Korjaus — NIC-laitteiston purku palauttaa nyt myös RSC:n (puuttuva palautus hidasti nettinopeutta)',
+    'Korjaus — Memory Guard Tune palautus korjaa nyt kaikki 4 muutosta — pagefile, LargeSystemCache ja ClearPageFileAtShutdown jäivät palauttamatta (pagefile 0 0 rajoitti verkon läpimenoa)',
+    'Korjaus — Full Mitigation Wipe palautus ottaa nyt CFG:n ja SEHOP:n uudelleen käyttöön Set-ProcessMitigationilla (aiemmin poistettiin vain rekisteriavaimet)',
+  ]},
   { version: '1.5.1', date: 'May 2026', items: [
     'BIOS Optimization Score (0–100) with animated tier badge (Unoptimized → BIOS Master) — updates live after every scan and setting change',
     'Live CPU + GPU thermal graph in BIOS tab — real-time canvas showing temps as you apply RyzenAdj/C-State changes',

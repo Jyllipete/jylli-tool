@@ -1,14 +1,9 @@
-## v1.5.1
-- New: BIOS Optimization Score (0–100) with animated tier badge — updates live after scans and changes
-- New: Live CPU + GPU thermal graph in BIOS tab — real-time temps while applying RyzenAdj/C-State changes
-- New: BIOS Change Log with per-setting one-click revert — every write is timestamped and undoable
-- New: RyzenAdj Extended Controls — STAPM, Tctl, Fclk, and Curve Optimizer sliders with preset save/load
-- New: BIOS Profile System — save, load, export, and import full configs as .jbios files
-- New: LHM Sensor Dashboard in Fan Control — live fan RPMs, CPU/GPU power draw, and VCore voltage
-- New: RAM Stability Quick Test — 30s or 5-min in-app stress test for XMP stability
-- New: Intel Boost Mode controls — Disabled/Efficient/Aggressive presets via powercfg
-- New: BIOS Age Alert — color-coded indicator with links to manufacturer update pages
-- New: Pre-Apply Dependency Checker — blocks dangerous setting combos before any BIOS write
-- Fixed: Background polling pauses when app is minimized to tray — reduces FPS drops in games
-- Fixed: "Start at Windows Startup" now works correctly — switched to Task Scheduler (required for admin apps)
-- Translations: Added missing Finnish strings
+## v1.5.2
+- Fix: USB Selective Suspend / Power Guard palautus ei enää sammuta Logitech G HUB -palvelua pysyvästi
+- Fix: Hiirispokkaus-korjauksen palautus palauttaa nyt myös G HUB -palvelun
+- New Fix: "Palauta Logitech G HUB" — käynnistää G HUB -palvelun ja siivoustehtävän uudelleen käyttäjille, joita aiemmat versiot haittasivat
+- Fix: JS-syntaksivirhe korjattu (sovellus kaatui käynnistyksessä)
+- Fix: NIC-laitteiston purku palauttaa nyt myös RSC:n (puuttuva palautus hidasti nettinopeutta)
+- Fix: Memory Guard Tune palautus korjaa nyt kaikki 4 muutosta — pagefile, LargeSystemCache ja ClearPageFileAtShutdown jäivät palauttamatta (pagefile 0 0 rajoitti verkon läpimenoa)
+- Fix: Full Mitigation Wipe palautus ottaa nyt CFG:n ja SEHOP:n uudelleen käyttöön Set-ProcessMitigationilla (aiemmin poistettiin vain rekisteriavaimet)
+
