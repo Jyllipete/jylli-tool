@@ -33,6 +33,7 @@ function assetPath(...parts) {
 }
 let SETTINGS_PATH = null
 let LOG_PATH = null
+let PULSE_HISTORY_PATH = null
 
 let mainWindow = null
 let pulseWindow = null
@@ -234,8 +235,17 @@ async function _updateSystemContext() {
       _systemContext.cpuSustainedHigh = cpuPct > 75
       if (cpuPct < 20 && !_systemContext.gameRunning) {
         if (!_systemContext.idleSince) _systemContext.idleSince = Date.now()
+        // Idle auto-optimize: trigger silent run after 15 min of idle if enabled and not already running
+        const IDLE_THRESHOLD_MS = 15 * 60 * 1000
+        if (settings.idleAutoOptimize && !_aomRunning && _systemContext.idleSince &&
+            (Date.now() - _systemContext.idleSince) >= IDLE_THRESHOLD_MS &&
+            !_systemContext._idleAomFiredAt) {
+          _systemContext._idleAomFiredAt = Date.now()
+          _triggerIdleAutoOptimize()
+        }
       } else {
         _systemContext.idleSince = null
+        _systemContext._idleAomFiredAt = null
       }
     } catch {}
 
@@ -258,6 +268,32 @@ function _triggerGameAutoOptimize() {
     .filter(([, t]) => t.safetyTier === 1 && (t.gamerImpact === 'high') && ['gaming','latency','input','gpu','cpu'].includes(t.category))
     .map(([id]) => id)
   ipcMain.emit('run-auto-opti-silent', gamingIds)
+}
+
+let _aomRunning = false  // track running state here so both trigger functions can check it
+function _triggerIdleAutoOptimize() {
+  if (_aomRunning) return
+  _aomRunning = true
+  const silentIds = buildRunPlan('silent', _systemContext, {})
+  const runPS = (script, timeout) => new Promise(res => require('child_process').exec(`powershell -NoProfile -NonInteractive -Command "${script}"`, { timeout: timeout || 10000, windowsHide: true }, (e, out) => res({ ok: !e, out: out || '' })))
+  const runCmd = (cmd, timeout) => new Promise(res => require('child_process').exec(cmd, { timeout: timeout || 10000, windowsHide: true }, (e, out) => res({ ok: !e, out: out || '' })))
+  const regAdd = (k, v, t, d) => runCmd(`reg add "${k}" /v "${v}" /t ${t} /d "${d}" /f`)
+  const regDelete = (k, v) => runCmd(`reg delete "${k}" /v "${v}" /f 2>nul`)
+  const noop = () => {}
+  let applied = 0
+  Promise.all(silentIds.map(async id => {
+    const tweak = TWEAKS[id]; if (!tweak?.apply) return
+    try { await tweak.apply(noop, runPS, runCmd, regAdd, regDelete, {}); applied++ } catch {}
+  })).then(() => {
+    _aomRunning = false
+    mainWindow?.webContents.send('aom-silent-complete', { appliedCount: applied })
+    try {
+      const cl = loadChangelog()
+      cl.unshift({ type: 'aom-run', ts: new Date().toISOString(), appliedIds: [], skippedIds: [], failedIds: [], tweakCount: applied, restorePointName: null, trigger: 'idle' })
+      if (cl.length > 200) cl.splice(200)
+      saveChangelog(cl)
+    } catch {}
+  }).catch(() => { _aomRunning = false })
 }
 
 // Override state for active operations (null = idle, use page-based presence)
@@ -436,7 +472,7 @@ async function destroyDiscordRPC() {
         // Give Discord time to propagate the clear before the socket tears down
         await new Promise(r => setTimeout(r, 800))
       }
-      discordRPC.destroy()
+      await discordRPC.destroy().catch(() => {})
     } catch (_) {}
     discordRPC = null
     discordReady = false
@@ -575,7 +611,7 @@ function webhookLaunch() {
 function webhookSessionEnd(durationMs, pageVisits, tweaksThisSession) {
   try {
     const analytics = loadAnalytics()
-    if (!analytics.userId) return
+    if (!analytics.userId) return Promise.resolve()
 
     const mins = Math.floor(durationMs / 60000)
     const secs = Math.floor((durationMs % 60000) / 1000)
@@ -659,11 +695,14 @@ let _lhmPermFixed = false
 function startLhm() {
   const lhmExe = assetPath('assets', 'lhm', 'LibreHardwareMonitor.exe')
   if (!fs.existsSync(lhmExe)) return
-  // Suppress WER crash dialogs for LHM — its TreeViewAdv has a known race
-  // condition on startup that triggers an unhandled .NET exception dialog
-  // even when the window is hidden. DontShowUI silences it system-wide for
-  // this exe; --no-gui eliminates the WinForms tree entirely at the source.
-  regAdd('HKLM', 'SOFTWARE\\Microsoft\\Windows\\Windows Error Reporting\\LocalDumps\\LibreHardwareMonitor.exe', 'DontShowUI', 'REG_DWORD', '1')
+  // Kill any stale LHM process from a previous session — a leftover instance
+  // launched without --no-gui would still show the crash dialog
+  try { require('child_process').execSync('taskkill /f /im LibreHardwareMonitor.exe', { stdio: 'ignore' }) } catch {}
+  // Suppress WER crash dialogs via HKCU (no elevation required).
+  // HKLM writes silently fail without admin rights; HKCU achieves the same effect.
+  // DontShowUI on the global WER key silences all crash dialogs for this user.
+  regAdd('HKCU', 'Software\\Microsoft\\Windows\\Windows Error Reporting', 'DontShowUI', 'REG_DWORD', '1')
+  regAdd('HKCU', 'Software\\Microsoft\\Windows\\Windows Error Reporting\\LocalDumps\\LibreHardwareMonitor.exe', 'DontShowUI', 'REG_DWORD', '1')
   try {
     _lhmProcess = spawn(lhmExe, ['--no-pawnio', '--no-gui'], {
       cwd: assetPath('assets', 'lhm'),
@@ -680,6 +719,10 @@ function startLhm() {
           startLhm()
         } catch {}
       }
+    })
+    _lhmProcess.on('exit', () => {
+      _lhmProcess = null
+      if (!app.isQuitting) setTimeout(() => { if (!_lhmProcess) startLhm() }, 3000)
     })
     _lhmProcess.unref()
   } catch {}
@@ -876,7 +919,7 @@ function updateTrayMenu() {
       label: shown ? 'Hide window' : 'Show window',
       click: () => {
         if (shown) { mainWindow.hide(); pauseBackgroundPolling(); if (discordReady) discordRPC.clearActivity().catch(() => {}) }
-        else { mainWindow.show(); mainWindow.focus(); resumeBackgroundPolling(); updateDiscordPresence() }
+        else if (mainWindow) { mainWindow.show(); mainWindow.focus(); resumeBackgroundPolling(); updateDiscordPresence() }
         updateTrayMenu()
       },
     },
@@ -911,6 +954,19 @@ function createTray() {
 }
 
 
+// ─── Single-instance lock ─────────────────────────────────────────────────────
+// Reject second instances immediately; focus the existing window instead.
+if (!app.requestSingleInstanceLock()) {
+  app.quit()
+  process.exit(0)
+}
+app.on('second-instance', () => {
+  if (mainWindow) {
+    if (mainWindow.isMinimized() || !mainWindow.isVisible()) mainWindow.show()
+    mainWindow.focus()
+  }
+})
+
 // Session-level tracking (populated by renderer via IPC)
 let sessionPageVisits  = {}
 let sessionTweaksCount = 0
@@ -918,7 +974,8 @@ let sessionTweaksCount = 0
 app.whenReady().then(() => {
   startupTrace('whenReady#2 (main startup) entered')
   const userData = app.getPath('userData')
-  SETTINGS_PATH       = path.join(userData, 'jt_settings.json')
+  SETTINGS_PATH        = path.join(userData, 'jt_settings.json')
+  PULSE_HISTORY_PATH   = path.join(userData, 'jt_pulse_history.json')
   LOG_PATH            = path.join(userData, 'jt_log.txt')
   ANALYTICS_PATH      = path.join(userData, 'jt_analytics.json')
   PROFILES_PATH       = path.join(userData, 'jt_profiles.json')
@@ -980,14 +1037,18 @@ powerMonitor.on('resume', async () => {
 })
 app.on('will-quit', (e) => {
   e.preventDefault()
+  // Destroy tray first so it doesn't keep the process referenced
+  if (tray) { tray.destroy(); tray = null }
   clearInterval(_metricsInterval)
   stopLhm()
   const duration = Date.now() - sessionStartTime
   const sessionEndPromise = duration > 10000
-    ? webhookSessionEnd(duration, sessionPageVisits, sessionTweaksCount)
+    ? Promise.race([
+        webhookSessionEnd(duration, sessionPageVisits, sessionTweaksCount),
+        new Promise(r => setTimeout(r, 3000))  // 3s hard cap — never block exit
+      ])
     : Promise.resolve()
-  // Wait for session_end to reach the bot before exiting, then clear Discord RPC
-  sessionEndPromise.finally(() => destroyDiscordRPC().finally(() => app.exit(0)))
+  sessionEndPromise.finally(() => destroyDiscordRPC().catch(() => {}).finally(() => app.exit(0)))
 })
 
 // ── Session tracking IPC ─────────────────────────────────────────────────────
@@ -1108,7 +1169,8 @@ function assertPositiveInt(val, name) {
 }
 
 // ─── Admin detection ─────────────────────────────────────────────────────────
-let _adminDebugRaw = '(not yet run)'
+let _adminDebugRaw  = '(not yet run)'
+let _cachedIsAdmin  = null  // set during detectSystemInfo; avoids PS semaphore race in wizard
 
 async function checkAdmin() {
   if (!IS_WIN) return process.getuid?.() === 0
@@ -1500,6 +1562,7 @@ Write-Output "DISK_SIZE_GB=$([math]::Round($disk.Size / 1GB, 0))"
 
     emitSpecProgress('Checking admin rights…', '')
     info.isAdmin = await checkAdmin()
+    _cachedIsAdmin = info.isAdmin
     try {
       fs.writeFileSync('C:\\Users\\Pete\\admin-debug.txt',
         `Timestamp: ${new Date().toISOString()}\n` +
@@ -1513,9 +1576,38 @@ Write-Output "DISK_SIZE_GB=$([math]::Round($disk.Size / 1GB, 0))"
     await new Promise(r => setTimeout(r, 50))
   }
 
-  info.fivemInstalled = fs.existsSync(path.join(process.env.LOCALAPPDATA || '', 'FiveM', 'FiveM.app'))
+  // Multi-path detection: check standard locations + registry uninstall key
+  const _fivemCandidates = [
+    path.join(process.env.LOCALAPPDATA || '', 'FiveM', 'FiveM.app'),
+    path.join(process.env.ProgramFiles || 'C:\\Program Files', 'FiveM', 'FiveM.app'),
+    path.join(process.env['ProgramFiles(x86)'] || 'C:\\Program Files (x86)', 'FiveM', 'FiveM.app'),
+  ]
+  let _fivemDetectedPath = _fivemCandidates.find(p => fs.existsSync(p)) || null
+  if (!_fivemDetectedPath) {
+    // Fallback: read install location from Windows Uninstall registry key
+    try {
+      const { execSync } = require('child_process')
+      const regOut = execSync(
+        'reg query "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\FiveM" /v InstallLocation 2>nul',
+        { timeout: 3000, stdio: ['ignore','pipe','ignore'] }
+      ).toString()
+      const m = regOut.match(/InstallLocation\s+REG_SZ\s+(.+)/i)
+      if (m) {
+        const candidate = path.join(m[1].trim(), 'FiveM.app')
+        if (fs.existsSync(candidate)) _fivemDetectedPath = candidate
+        else if (fs.existsSync(m[1].trim())) _fivemDetectedPath = m[1].trim()
+      }
+    } catch {}
+  }
+  info.fivemInstalled = !!_fivemDetectedPath
+  info.fivemPath = _fivemDetectedPath || path.join(process.env.LOCALAPPDATA || '', 'FiveM', 'FiveM.app')
 
-  startupTrace(`detectSystemInfo complete: cpu="${info.cpu}" gpu="${info.gpu}" vramMB=${info.vramMB} isAdmin=${info.isAdmin}`)
+  info.vramGB = Math.round(info.vramMB / 1024)
+  info.gpuVendor = /nvidia/i.test(info.gpu) ? 'nvidia'
+                 : /amd|radeon/i.test(info.gpu) ? 'amd'
+                 : /intel/i.test(info.gpu) ? 'intel'
+                 : 'unknown'
+  startupTrace(`detectSystemInfo complete: cpu="${info.cpu}" gpu="${info.gpu}" vramMB=${info.vramMB} vramGB=${info.vramGB} gpuVendor=${info.gpuVendor} isAdmin=${info.isAdmin}`)
   return info
 }
 
@@ -1550,7 +1642,12 @@ ipcMain.handle('get-system-info', async () => {
   return info
 })
 
-ipcMain.handle('is-admin', () => checkAdmin())  // async — returns Promise<boolean>
+ipcMain.handle('is-admin', async () => {
+  if (_cachedIsAdmin !== null) return _cachedIsAdmin
+  const result = await checkAdmin()
+  _cachedIsAdmin = result
+  return result
+})
 
 ipcMain.handle('admin-debug-append', (_, data) => {
   try {
@@ -2053,11 +2150,16 @@ Write-Output "GPU_TEMP=0"
 
 ipcMain.handle('get-metrics', async () => {
   if (!_lastMetrics) await collectMetrics()
-  if (!_metricsInterval) {
-    _metricsInterval = setInterval(collectMetrics, 3000)
-  }
+  if (!_metricsInterval) restartMetricsInterval()
   return _lastMetrics ?? {}
 })
+
+function restartMetricsInterval() {
+  if (_metricsInterval) { clearInterval(_metricsInterval); _metricsInterval = null }
+  // Use a longer interval while a game is running to reduce CPU/I/O contention
+  const ms = activeGameProfile ? 15000 : 3000
+  _metricsInterval = setInterval(collectMetrics, ms)
+}
 
 function pauseBackgroundPolling() {
   if (_metricsInterval) { clearInterval(_metricsInterval); _metricsInterval = null }
@@ -2065,7 +2167,7 @@ function pauseBackgroundPolling() {
 }
 
 function resumeBackgroundPolling() {
-  if (!_metricsInterval) _metricsInterval = setInterval(collectMetrics, 3000)
+  if (!_metricsInterval) restartMetricsInterval()
   if (!_contextDetectorTimer) startContextDetector()
 }
 
@@ -2114,8 +2216,11 @@ ipcMain.handle('restore-to-point', async (_, seq) => {
 
 // ─── Restore Points: extended ─────────────────────────────────────────────────
 ipcMain.handle('check-is-admin', async () => {
+  if (_cachedIsAdmin !== null) return { isAdmin: _cachedIsAdmin }
   const r = await runPS('([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)')
-  return { isAdmin: r.ok && r.out.trim().toLowerCase() === 'true' }
+  const isAdmin = r.ok && r.out.trim().toLowerCase() === 'true'
+  _cachedIsAdmin = isAdmin
+  return { isAdmin }
 })
 
 ipcMain.handle('delete-restore-point', async (_, seq) => {
@@ -2185,16 +2290,255 @@ ipcMain.handle('remove-uwp-apps', async (_, packages) => {
   const send = (msg, level) => mainWindow?.webContents.send('log', { msg, level, ts: new Date().toLocaleTimeString() })
   const results = []
   send(`Removing ${packages.length} UWP app(s)…`, 'head')
+
+  // Fetch provisioned packages once upfront so we can do a targeted remove per package
+  const provResult = await runPS('Get-AppxProvisionedPackage -Online | Select-Object -ExpandProperty DisplayName | ConvertTo-Json -Compress')
+  let provisionedNames = []
+  try { provisionedNames = JSON.parse(provResult.out || '[]') } catch { provisionedNames = [] }
+  if (!Array.isArray(provisionedNames)) provisionedNames = [provisionedNames]
+  const provSet = new Set(provisionedNames.map(n => String(n).toLowerCase()))
+
   for (let i = 0; i < packages.length; i++) {
     const pkg = packages[i]
     mainWindow?.webContents.send('debloat-progress', { current: i + 1, total: packages.length, pkg })
     const safePkg = escapePSSingleQuote(String(pkg))
+
+    // Remove from all existing user accounts
     const r = await runPS(`Get-AppxPackage -Name '${safePkg}' -AllUsers | Remove-AppxPackage -AllUsers -ErrorAction SilentlyContinue`)
     send(`  [${i+1}/${packages.length}] ${pkg}: ${r.ok ? 'removed' : 'not found/skipped'}`, r.ok ? 'ok' : 'info')
+
+    // Also remove provisioned package so it won't reinstall for new users or after Windows updates
+    const isProvisioned = [...provSet].some(n => n.includes(pkg.toLowerCase()) || pkg.toLowerCase().includes(n))
+    if (isProvisioned) {
+      const rp = await runPS(`Get-AppxProvisionedPackage -Online | Where-Object { $_.DisplayName -like '*${safePkg}*' } | Remove-AppxProvisionedPackage -Online -ErrorAction SilentlyContinue`)
+      send(`    ↳ provisioned package removed (update-proof)`, rp.ok ? 'ok' : 'info')
+    }
+
     results.push({ pkg, ok: r.ok })
   }
   send('UWP removal complete.', 'ok')
   return results
+})
+
+ipcMain.handle('scan-provisioned-uwp', async () => {
+  const r = await runPS('Get-AppxProvisionedPackage -Online | Select-Object -ExpandProperty DisplayName | ConvertTo-Json -Compress')
+  if (!r.ok || !r.out) return []
+  try {
+    const data = JSON.parse(r.out)
+    return Array.isArray(data) ? data : [data]
+  } catch { return [] }
+})
+
+// ─── Windows Ads / Suggestions panel ─────────────────────────────────────────
+// Each toggle: { id, hive, path, name, type, enableVal, disableVal }
+const WIN_ADS_TOGGLES = [
+  { id: 'lock-screen-ads',   hive: 'HKCU', path: 'SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\ContentDeliveryManager', name: 'RotatingLockScreenEnabled',           type: 'REG_DWORD', enableVal: '1', disableVal: '0' },
+  { id: 'start-suggestions', hive: 'HKCU', path: 'SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\ContentDeliveryManager', name: 'SubscribedContent-338388Enabled',     type: 'REG_DWORD', enableVal: '1', disableVal: '0' },
+  { id: 'start-tiles',       hive: 'HKCU', path: 'SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\ContentDeliveryManager', name: 'SubscribedContent-338393Enabled',     type: 'REG_DWORD', enableVal: '1', disableVal: '0' },
+  { id: 'silent-app-install',hive: 'HKCU', path: 'SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\ContentDeliveryManager', name: 'SilentInstalledAppsEnabled',           type: 'REG_DWORD', enableVal: '1', disableVal: '0' },
+  { id: 'tips-notifications',hive: 'HKCU', path: 'SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\ContentDeliveryManager', name: 'SubscribedContent-338389Enabled',     type: 'REG_DWORD', enableVal: '1', disableVal: '0' },
+  { id: 'welcome-experience',hive: 'HKCU', path: 'SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\ContentDeliveryManager', name: 'SubscribedContent-310093Enabled',     type: 'REG_DWORD', enableVal: '1', disableVal: '0' },
+  { id: 'advertising-id',    hive: 'HKCU', path: 'SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\AdvertisingInfo',        name: 'Enabled',                             type: 'REG_DWORD', enableVal: '1', disableVal: '0' },
+  { id: 'ms-account-nag',    hive: 'HKCU', path: 'SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\UserProfileEngagement',  name: 'ScoobeSystemSettingEnabled',           type: 'REG_DWORD', enableVal: '1', disableVal: '0' },
+  { id: 'spotlight',         hive: 'HKCU', path: 'SOFTWARE\\Policies\\Microsoft\\Windows\\CloudContent',                 name: 'DisableWindowsSpotlightFeatures',     type: 'REG_DWORD', enableVal: '0', disableVal: '1' },
+  { id: 'tailored-exp',      hive: 'HKCU', path: 'SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Privacy',               name: 'TailoredExperiencesWithDiagnosticDataEnabled', type: 'REG_DWORD', enableVal: '1', disableVal: '0' },
+]
+
+ipcMain.handle('get-ads-states', async () => {
+  const results = {}
+  for (const t of WIN_ADS_TOGGLES) {
+    const r = await runCmd(`reg query "HKCU\\${t.path}" /v "${t.name}" 2>nul`)
+    const match = r.out.match(/REG_DWORD\s+(0x[\da-fA-F]+|\d+)/)
+    if (match) {
+      const val = parseInt(match[1], 16).toString()
+      results[t.id] = (val === t.disableVal) ? 'disabled' : 'enabled'
+    } else {
+      results[t.id] = 'enabled'
+    }
+  }
+  return results
+})
+
+ipcMain.handle('set-ads-toggle', async (_, { id, disable }) => {
+  const t = WIN_ADS_TOGGLES.find(x => x.id === id)
+  if (!t) return { ok: false }
+  const val = disable ? t.disableVal : t.enableVal
+  await regAdd(t.hive, t.path, t.name, t.type, val)
+  return { ok: true }
+})
+
+ipcMain.handle('kill-all-ads', async () => {
+  for (const t of WIN_ADS_TOGGLES) {
+    await regAdd(t.hive, t.path, t.name, t.type, t.disableVal)
+  }
+  return { ok: true }
+})
+
+// ─── Windows Optional Features Manager ───────────────────────────────────────
+ipcMain.handle('get-optional-features', async () => {
+  const CURATED = [
+    'Internet-Explorer-Optional-amd64',
+    'SMB1Protocol',
+    'SMB1Protocol-Server',
+    'SMB1Protocol-Client',
+    'MicrosoftWindowsPowerShellV2Root',
+    'MicrosoftWindowsPowerShellV2',
+    'Xps-Foundation-Xps-Viewer',
+    'WindowsMediaPlayer',
+    'WorkFolders-Client',
+    'TelnetClient',
+    'TFTP',
+    'SimpleTCP',
+    'FaxServicesClientPackage',
+    'MediaPlayback',
+    'DirectPlay',
+  ]
+  const r = await runPS(`
+Get-WindowsOptionalFeature -Online -ErrorAction SilentlyContinue |
+  Select-Object FeatureName, State |
+  ConvertTo-Json -Compress
+`, 30000)
+  if (!r.ok || !r.out) return []
+  try {
+    const all = JSON.parse(r.out)
+    const arr = Array.isArray(all) ? all : [all]
+    return arr
+      .filter(f => CURATED.some(c => f.FeatureName && f.FeatureName.toLowerCase().includes(c.toLowerCase())))
+      .map(f => ({ name: f.FeatureName, enabled: f.State === 'Enabled' }))
+  } catch { return [] }
+}, 35000)
+
+ipcMain.handle('disable-optional-feature', async (_, featureName) => {
+  if (!/^[\w\-\.]+$/.test(featureName)) return { ok: false, error: 'Invalid feature name' }
+  const safe = escapePSSingleQuote(String(featureName))
+  const r = await runPS(`Disable-WindowsOptionalFeature -Online -FeatureName '${safe}' -NoRestart -ErrorAction SilentlyContinue`, 90000)
+  return { ok: r.ok, restartNeeded: r.out.includes('RestartNeeded') || r.out.includes('restart') }
+})
+
+// ─── Shell Extension / Context Menu Scanner ───────────────────────────────────
+ipcMain.handle('get-shell-extensions', async () => {
+  const r = await runPS(`
+$results = @()
+$keys = @(
+  'Registry::HKEY_CLASSES_ROOT\\*\\shellex\\ContextMenuHandlers',
+  'Registry::HKEY_CLASSES_ROOT\\Directory\\shellex\\ContextMenuHandlers',
+  'Registry::HKEY_CLASSES_ROOT\\Directory\\Background\\shellex\\ContextMenuHandlers',
+  'Registry::HKEY_CLASSES_ROOT\\Folder\\shellex\\ContextMenuHandlers'
+)
+foreach ($base in $keys) {
+  if (-not (Test-Path $base)) { continue }
+  Get-ChildItem $base -ErrorAction SilentlyContinue | ForEach-Object {
+    $clsid = (Get-ItemProperty $_.PSPath -ErrorAction SilentlyContinue).'(default)'
+    if (-not $clsid) { $clsid = $_.PSChildName }
+    $name = $_.PSChildName
+    $dllPath = ''
+    $friendlyName = $name
+    try {
+      $clsidKey = "Registry::HKEY_CLASSES_ROOT\\CLSID\\$clsid\\InprocServer32"
+      if (Test-Path $clsidKey) {
+        $dllPath = (Get-ItemProperty $clsidKey -ErrorAction SilentlyContinue).'(default)'
+        $nameKey = "Registry::HKEY_CLASSES_ROOT\\CLSID\\$clsid"
+        $fn = (Get-ItemProperty $nameKey -ErrorAction SilentlyContinue).'(default)'
+        if ($fn) { $friendlyName = $fn }
+      }
+    } catch {}
+    $dllExists = if ($dllPath) { Test-Path $dllPath } else { $true }
+    $results += [PSCustomObject]@{
+      name        = $friendlyName
+      clsid       = $clsid
+      dllPath     = $dllPath
+      dllExists   = $dllExists
+      regPath     = $_.PSPath -replace 'Microsoft.PowerShell.Core\\Registry::', 'HKEY_CLASSES_ROOT\\'
+    }
+  }
+}
+$results | Sort-Object name | ConvertTo-Json -Depth 2 -Compress
+`, 20000)
+  if (!r.ok || !r.out) return []
+  try {
+    const data = JSON.parse(r.out)
+    return Array.isArray(data) ? data : [data]
+  } catch { return [] }
+})
+
+ipcMain.handle('remove-shell-extension', async (_, { clsid, regPath }) => {
+  if (!clsid || !regPath) return { ok: false }
+  // Backup the key to %TEMP%\jylli_shellext_backup_<clsid>.reg before deleting
+  const safeClsid = String(clsid).replace(/[^a-zA-Z0-9\-{}]/g, '')
+  const safeRegPath = String(regPath).replace(/'/g, "''")
+  const r = await runPS(`
+$backupPath = "$env:TEMP\\jylli_shellext_${safeClsid}.reg"
+$regKey = '${safeRegPath}'
+# Export backup first
+& reg export "$($regKey -replace 'HKEY_CLASSES_ROOT','HKCR')" "$backupPath" /y 2>$null
+# Delete the key
+Remove-Item "Registry::$regKey" -Recurse -Force -ErrorAction SilentlyContinue
+Write-Output "OK:$backupPath"
+`)
+  const backupMatch = r.out.match(/OK:(.+)/)
+  return { ok: !!backupMatch, backupPath: backupMatch?.[1]?.trim() }
+})
+
+// ─── Enable service / scheduled task (for undo/history) ──────────────────────
+ipcMain.handle('enable-service', async (_, svcId) => {
+  if (!/^[\w\-]{1,256}$/.test(svcId)) return { ok: false }
+  await runCmd(`sc config ${svcId} start= auto`)
+  await runCmd(`sc start ${svcId}`)
+  return { ok: true }
+})
+
+ipcMain.handle('enable-scheduled-task', async (_, { path, name }) => {
+  const safePath = escapePSSingleQuote(String(path || ''))
+  const safeName = escapePSSingleQuote(String(name || ''))
+  const r = await runPS(`Enable-ScheduledTask -TaskPath '${safePath}' -TaskName '${safeName}' -ErrorAction SilentlyContinue`)
+  return { ok: r.ok }
+})
+
+// ─── UserAssist usage data ─────────────────────────────────────────────────────
+ipcMain.handle('get-user-assist', async () => {
+  const r = await runPS(`
+function DeRot13($s) {
+  $out = ''
+  foreach ($c in $s.ToCharArray()) {
+    if ($c -ge 'A' -and $c -le 'Z') { $out += [char]((([int][char]$c - 65 + 13) % 26) + 65) }
+    elseif ($c -ge 'a' -and $c -le 'z') { $out += [char]((([int][char]$c - 97 + 13) % 26) + 97) }
+    else { $out += $c }
+  }
+  return $out
+}
+$results = @()
+$guids = Get-ChildItem 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\UserAssist' -ErrorAction SilentlyContinue
+foreach ($guid in $guids) {
+  $countKey = Join-Path $guid.PSPath 'Count'
+  if (-not (Test-Path $countKey)) { continue }
+  Get-ItemProperty $countKey -ErrorAction SilentlyContinue | ForEach-Object {
+    $props = $_ | Get-Member -MemberType NoteProperty | Select-Object -ExpandProperty Name
+    foreach ($p in $props) {
+      if ($p -in @('PSPath','PSParentPath','PSChildName','PSDrive','PSProvider')) { continue }
+      $decoded = DeRot13($p)
+      $val = $_.$p
+      if ($val -is [byte[]] -and $val.Length -ge 16) {
+        $count = [BitConverter]::ToInt32($val, 4)
+        $ftHigh = [BitConverter]::ToInt32($val, 12)
+        $ftLow = [BitConverter]::ToInt32($val, 8)
+        if ($ftHigh -gt 0 -or $ftLow -gt 0) {
+          $ft = [long]$ftHigh -shl 32 -bor ([long]$ftLow -band 0xFFFFFFFFL)
+          try { $dt = [DateTime]::FromFileTimeUtc($ft).ToString('o') } catch { $dt = '' }
+        } else { $dt = '' }
+        if ($count -gt 0 -and $decoded -match '\\\\|\.exe') {
+          $results += [PSCustomObject]@{ path=$decoded; count=$count; lastUsed=$dt }
+        }
+      }
+    }
+  }
+}
+$results | ConvertTo-Json -Depth 1 -Compress
+`, 15000)
+  if (!r.ok || !r.out) return []
+  try {
+    const data = JSON.parse(r.out)
+    return Array.isArray(data) ? data : [data]
+  } catch { return [] }
 })
 
 ipcMain.handle('list-installed-win32', async () => {
@@ -2349,35 +2693,37 @@ ipcMain.handle('check-lghub', async () => {
 // ─── FiveM in-game settings (gta5_settings.xml) ──────────────────────────────
 // Format: <KeyName value="val" /> inside <graphics> block
 const FIVEM_SETTINGS_DEFS = [
-  { key: 'LodScale',            label: 'LOD Scale',              impact: 'high',      rec: '1.000000',  type: 'select', opts: [['0.500000','0.5 (Best FPS)'],['1.000000','1.0 (Default)'],['1.500000','1.5'],['2.000000','2.0 (High)']] },
-  { key: 'PedLodBias',          label: 'Ped LOD Bias',           impact: 'high',      rec: '0.000000',  type: 'select', opts: [['0.000000','Off (Best FPS)'],['0.200000','Low'],['0.500000','Medium'],['1.000000','High']] },
-  { key: 'VehicleLodBias',      label: 'Vehicle LOD Bias',       impact: 'high',      rec: '0.000000',  type: 'select', opts: [['0.000000','Off (Best FPS)'],['0.200000','Low'],['0.500000','Medium'],['1.000000','High']] },
-  { key: 'ShadowQuality',       label: 'Shadow Quality',         impact: 'very high', rec: '1',         type: 'select', opts: [['0','Off'],['1','Normal (Recommended)'],['2','High'],['3','Very High'],['4','Ultra']] },
-  { key: 'ReflectionQuality',   label: 'Reflection Quality',     impact: 'medium',    rec: '1',         type: 'select', opts: [['0','Off'],['1','Normal (Recommended)'],['2','High'],['3','Very High'],['4','Ultra']] },
-  { key: 'ReflectionMSAA',      label: 'Reflection MSAA',        impact: 'medium',    rec: '0',         type: 'select', opts: [['0','Off (Recommended)'],['2','2x'],['4','4x'],['8','8x']] },
-  { key: 'MSAA',                label: 'MSAA Anti-Aliasing',     impact: 'high',      rec: '0',         type: 'select', opts: [['0','Off (Recommended)'],['2','2x'],['4','4x'],['8','8x']] },
-  { key: 'FXAA_Enabled',        label: 'FXAA Anti-Aliasing',     impact: 'low',       rec: 'false',     type: 'select', opts: [['false','Off (Recommended)'],['true','On']] },
-  { key: 'TXAA_Enabled',        label: 'TXAA Anti-Aliasing',     impact: 'medium',    rec: 'false',     type: 'select', opts: [['false','Off (Recommended)'],['true','On']] },
-  { key: 'ParticleQuality',     label: 'Particle Quality',       impact: 'medium',    rec: '1',         type: 'select', opts: [['0','Low'],['1','Normal (Recommended)'],['2','High'],['3','Very High'],['4','Ultra']] },
-  { key: 'WaterQuality',        label: 'Water Quality',          impact: 'medium',    rec: '0',         type: 'select', opts: [['0','Low (Recommended)'],['1','Normal'],['2','High'],['3','Very High'],['4','Ultra']] },
-  { key: 'GrassQuality',        label: 'Grass Quality',          impact: 'very high', rec: '0',         type: 'select', opts: [['0','Off (Best FPS)'],['1','Normal'],['2','High'],['3','Ultra']] },
-  { key: 'ShaderQuality',       label: 'Shader Quality',         impact: 'high',      rec: '2',         type: 'select', opts: [['0','Low'],['1','Normal'],['2','High (Recommended)'],['3','Very High'],['4','Ultra']] },
-  { key: 'Shadow_Distance',     label: 'Shadow Draw Distance',   impact: 'high',      rec: '0.500000',  type: 'select', opts: [['0.250000','0.25 (Best FPS)'],['0.500000','0.5 (Recommended)'],['0.750000','0.75'],['1.000000','1.0 (Max)']] },
-  { key: 'Shadow_SoftShadows',  label: 'Soft Shadows',           impact: 'medium',    rec: '0',         type: 'select', opts: [['0','Off (Recommended)'],['1','Softer'],['2','Softest'],['3','AMD CHS']] },
-  { key: 'UltraShadows_Enabled',label: 'Ultra Shadows',          impact: 'high',      rec: 'false',     type: 'select', opts: [['false','Off (Recommended)'],['true','On']] },
-  { key: 'Shadow_ParticleShadows',label:'Particle Shadows',      impact: 'medium',    rec: 'false',     type: 'select', opts: [['false','Off (Recommended)'],['true','On']] },
-  { key: 'Shadow_LongShadows',  label: 'Long Shadows',           impact: 'low',       rec: 'false',     type: 'select', opts: [['false','Off (Recommended)'],['true','On']] },
-  { key: 'CityDensity',         label: 'Ped Density',            impact: 'very high', rec: '0.000000',  type: 'select', opts: [['0.000000','Off (Best FPS)'],['0.500000','Low (Recommended)'],['1.000000','Normal'],['1.500000','High']] },
-  { key: 'VehicleVarietyMultiplier', label: 'Vehicle Density',   impact: 'very high', rec: '0.000000',  type: 'select', opts: [['0.000000','Off (Best FPS)'],['0.500000','Low (Recommended)'],['1.000000','Normal'],['1.500000','High']] },
-  { key: 'PedVarietyMultiplier',label: 'Ped Variety',            impact: 'high',      rec: '0.000000',  type: 'select', opts: [['0.000000','Off (Best FPS)'],['0.500000','Low'],['1.000000','Normal']] },
-  { key: 'PostFX',              label: 'Post FX Quality',        impact: 'medium',    rec: '1',         type: 'select', opts: [['0','Off'],['1','Normal (Recommended)'],['2','High'],['3','Very High'],['4','Ultra']] },
-  { key: 'DoF',                 label: 'Depth of Field',         impact: 'medium',    rec: 'false',     type: 'select', opts: [['false','Off (Recommended)'],['true','On']] },
-  { key: 'MotionBlurStrength',  label: 'Motion Blur',            impact: 'low',       rec: '0.000000',  type: 'select', opts: [['0.000000','Off (Recommended)'],['0.500000','Low'],['1.000000','Full']] },
-  { key: 'Tessellation',        label: 'Tessellation',           impact: 'medium',    rec: '0',         type: 'select', opts: [['0','Off (Recommended)'],['1','Normal'],['2','High'],['3','Very High']] },
-  { key: 'AnisotropicFiltering',label: 'Anisotropic Filtering',  impact: 'low',       rec: '16',        type: 'select', opts: [['0','Off'],['2','2x'],['4','4x'],['8','8x'],['16','16x (Recommended)']] },
-  { key: 'SSAO',                label: 'Ambient Occlusion (SSAO)',impact: 'medium',   rec: '0',         type: 'select', opts: [['0','Off (Recommended)'],['1','Normal'],['2','High']] },
-  { key: 'Lighting_FogVolumes', label: 'Volumetric Fog',         impact: 'medium',    rec: 'false',     type: 'select', opts: [['false','Off (Recommended)'],['true','On']] },
-  { key: 'HdStreamingInFlight', label: 'HD Streaming While Flying', impact: 'high',   rec: 'false',     type: 'select', opts: [['false','Off (Recommended)'],['true','On']] },
+  { key: 'LodScale',            label: 'LOD Scale',              impact: 'high',      rec: '1.000000',  type: 'select', opts: [['0.500000','0.5 (Best FPS)'],['1.000000','1.0 (Default)'],['1.500000','1.5'],['2.000000','2.0 (High)']],   tooltip: 'Controls how far away objects swap to lower-detail models. Higher = prettier at distance but costs CPU/GPU. In FiveM most server assets are already low-poly at range, so 1.0 is a good sweet spot.' },
+  { key: 'PedLodBias',          label: 'Ped LOD Bias',           impact: 'high',      rec: '0.000000',  type: 'select', opts: [['0.000000','Off (Best FPS)'],['0.200000','Low'],['0.500000','Medium'],['1.000000','High']],              tooltip: 'Forces higher-quality ped (NPC) models at greater distance. FiveM RP servers spawn their own peds via scripts — keeping this Off avoids doubling the rendering cost.' },
+  { key: 'VehicleLodBias',      label: 'Vehicle LOD Bias',       impact: 'high',      rec: '0.000000',  type: 'select', opts: [['0.000000','Off (Best FPS)'],['0.200000','Low'],['0.500000','Medium'],['1.000000','High']],              tooltip: 'Forces higher-quality vehicle models at greater distance. Heavy in FiveM because servers stream custom high-poly cars — Off recommended unless you have 8+ GB VRAM.' },
+  { key: 'ShadowQuality',       label: 'Shadow Quality',         impact: 'very high', rec: '1',         type: 'select', opts: [['0','Off'],['1','Normal (Recommended)'],['2','High'],['3','Very High'],['4','Ultra']],                   tooltip: 'Resolution and complexity of all shadows. The single biggest shadow cost. High (2) is the sweet spot for most FiveM servers — Ultra (4) can cut FPS by 30%+ with minimal visual gain.' },
+  { key: 'ReflectionQuality',   label: 'Reflection Quality',     impact: 'high',      rec: '1',         type: 'select', opts: [['0','Off'],['1','Normal (Recommended)'],['2','High'],['3','Very High'],['4','Ultra']],                   tooltip: 'Quality of environment reflections on surfaces. Very expensive in FiveM due to custom server cars with high-resolution reflection probes. Normal is recommended for most setups.' },
+  { key: 'ReflectionMSAA',      label: 'Reflection MSAA',        impact: 'medium',    rec: '0',         type: 'select', opts: [['0','Off (Recommended)'],['2','2x'],['4','4x'],['8','8x']],                                             tooltip: 'Anti-aliasing applied inside reflection cubemaps. Expensive and nearly invisible. Leave Off — use FXAA instead for overall image quality.' },
+  { key: 'MSAA',                label: 'MSAA Anti-Aliasing',     impact: 'high',      rec: '0',         type: 'select', opts: [['0','Off (Recommended)'],['2','2x'],['4','4x'],['8','8x']],                                             tooltip: 'Multi-sample anti-aliasing. Very smooth but kills GPU performance — 4x can cost 20-40% FPS. Use FXAA instead for near-free smoothing in FiveM.' },
+  { key: 'FXAA_Enabled',        label: 'FXAA Anti-Aliasing',     impact: 'low',       rec: 'true',      type: 'select', opts: [['false','Off'],['true','On (Recommended)']],                                                            tooltip: 'Fast post-process anti-aliasing. Nearly free performance cost and significantly reduces jagged edges. Always recommended — there is no reason to turn this off.' },
+  { key: 'TXAA_Enabled',        label: 'TXAA Anti-Aliasing',     impact: 'high',      rec: 'false',     type: 'select', opts: [['false','Off (Recommended)'],['true','On']],                                                            tooltip: 'Temporal anti-aliasing. Causes heavy motion blur and ghosting in GTA V specifically, and has high performance cost. Not recommended for FiveM.' },
+  { key: 'TextureQuality',      label: 'Texture Quality',        impact: 'high',      rec: '2',         type: 'select', opts: [['0','Low'],['1','Normal'],['2','High (Recommended)'],['3','Very High'],['4','Ultra']],                   tooltip: 'Resolution of all textures in the game. High (2) covers VRAM usage well up to 6 GB. Very High / Ultra can exhaust VRAM on FiveM servers that stream custom high-res vehicle and ped textures.' },
+  { key: 'ParticleQuality',     label: 'Particle Quality',       impact: 'medium',    rec: '1',         type: 'select', opts: [['0','Low'],['1','Normal (Recommended)'],['2','High'],['3','Very High'],['4','Ultra']],                   tooltip: 'Quality of explosions, smoke, fire, and weather particles. FiveM servers with scripted effects (EMS smoke, drift smoke, etc.) amplify the cost at higher settings.' },
+  { key: 'WaterQuality',        label: 'Water Quality',          impact: 'low',       rec: '0',         type: 'select', opts: [['0','Low (Recommended)'],['1','Normal'],['2','High'],['3','Very High'],['4','Ultra']],                   tooltip: 'Ocean and lake rendering quality. Most FiveM RP servers are land-based (city, countryside) — water quality rarely matters. Low is recommended unless you play on water-heavy servers.' },
+  { key: 'GrassQuality',        label: 'Grass Quality',          impact: 'very high', rec: '0',         type: 'select', opts: [['0','Off (Best FPS)'],['1','Normal'],['2','High'],['3','Ultra']],                                        tooltip: 'Single biggest FPS killer in open areas. Most FiveM RP servers have no grass scripts — Off costs nothing visually and gives 10-25+ FPS back. Strongly recommended to keep Off.' },
+  { key: 'ShaderQuality',       label: 'Shader Quality',         impact: 'high',      rec: '2',         type: 'select', opts: [['0','Low'],['1','Normal'],['2','High (Recommended)'],['3','Very High'],['4','Ultra']],                   tooltip: 'Quality of lighting calculations and material shaders. High (2) is visually excellent and efficient. Very High/Ultra have diminishing returns and affect all surfaces including custom server assets.' },
+  { key: 'Shadow_Distance',     label: 'Shadow Draw Distance',   impact: 'high',      rec: '0.500000',  type: 'select', opts: [['0.250000','0.25 (Best FPS)'],['0.500000','0.5 (Recommended)'],['0.750000','0.75'],['1.000000','1.0 (Max)']], tooltip: 'How far away shadows are rendered. 0.5 is a strong balance — you see shadows for nearby objects but distant ones are culled. 1.0 (Max) is costly without much visible payoff in FiveM.' },
+  { key: 'Shadow_SoftShadows',  label: 'Soft Shadows',           impact: 'medium',    rec: '0',         type: 'select', opts: [['0','Off (Recommended)'],['1','Softer'],['2','Softest'],['3','AMD CHS']],                               tooltip: 'Blurs shadow edges for realism. AMD CHS (3) looks great on AMD GPUs specifically. On NVIDIA, Softer (1) or Off (0) is recommended. Softest (2) has diminishing returns over Softer.' },
+  { key: 'UltraShadows_Enabled',label: 'Ultra Shadows',          impact: 'high',      rec: 'false',     type: 'select', opts: [['false','Off (Recommended)'],['true','On']],                                                            tooltip: 'Adds a second high-quality shadow pass for distant areas. Significant cost for a subtle improvement. Not recommended for FiveM where performance headroom is better spent on player density.' },
+  { key: 'Shadow_ParticleShadows',label:'Particle Shadows',      impact: 'medium',    rec: 'false',     type: 'select', opts: [['false','Off (Recommended)'],['true','On']],                                                            tooltip: 'Casts shadows from smoke and debris particles. In FiveM with active particle effects (crashes, gunfire, drift) this can spike GPU cost unexpectedly. Keep Off for stability.' },
+  { key: 'Shadow_LongShadows',  label: 'Long Shadows',           impact: 'low',       rec: 'false',     type: 'select', opts: [['false','Off (Recommended)'],['true','On']],                                                            tooltip: 'Draws very long shadows during sunrise/sunset hours. Minor cost but can reduce shadow quality near the player. Off recommended.' },
+  { key: 'CityDensity',         label: 'Ped Density',            impact: 'very high', rec: '0.000000',  type: 'select', opts: [['0.000000','Off (Best FPS)'],['0.500000','Low (Recommended)'],['1.000000','Normal'],['1.500000','High']], tooltip: 'Ambient NPC density. FiveM RP servers spawn their own custom peds on top of this — stacking doubles the CPU/GPU cost. Keep Off or Low to avoid hitching during heavy server ped spawning.' },
+  { key: 'VehicleVarietyMultiplier', label: 'Vehicle Density',   impact: 'very high', rec: '0.000000',  type: 'select', opts: [['0.000000','Off (Best FPS)'],['0.500000','Low (Recommended)'],['1.000000','Normal'],['1.500000','High']], tooltip: 'Ambient traffic density. FiveM servers control their own traffic via scripts — ambient traffic stacks on top. Off = no ambient traffic, more headroom for server-spawned vehicles.' },
+  { key: 'PedVarietyMultiplier',label: 'Ped Variety',            impact: 'high',      rec: '0.000000',  type: 'select', opts: [['0.000000','Off (Best FPS)'],['0.500000','Low'],['1.000000','Normal']],                                tooltip: 'How many different ped model types are used for ambient NPCs. Off reduces VRAM usage from ambient ped models, freeing space for server-streamed custom player models.' },
+  { key: 'PostFX',              label: 'Post FX Quality',        impact: 'low',       rec: '1',         type: 'select', opts: [['0','Off'],['1','Normal (Recommended)'],['2','High'],['3','Very High'],['4','Ultra']],                   tooltip: 'Color grading, bloom, and post-processing effects. Normal (1) through High (2) are very efficient. Only Ultra has significant cost. Turning Off removes game color grading entirely.' },
+  { key: 'DoF',                 label: 'Depth of Field',         impact: 'medium',    rec: 'false',     type: 'select', opts: [['false','Off (Recommended)'],['true','On']],                                                            tooltip: 'Blurs background when aiming or in a vehicle. Looks cinematic but actively blurs your field of view during combat — most FiveM players keep this Off for visibility.' },
+  { key: 'MotionBlurStrength',  label: 'Motion Blur',            impact: 'low',       rec: '0.000000',  type: 'select', opts: [['0.000000','Off (Recommended)'],['0.500000','Low'],['1.000000','Full']],                               tooltip: 'Blurs the screen when moving fast. Almost universally disliked in competitive/RP gameplay. Off is strongly recommended for clarity.' },
+  { key: 'Tessellation',        label: 'Tessellation',           impact: 'medium',    rec: '0',         type: 'select', opts: [['0','Off (Recommended)'],['1','Normal'],['2','High'],['3','Very High']],                               tooltip: 'Subdivides geometry surfaces for smoother curves. Affects terrain and some objects. In FiveM with custom map streaming the cost can spike unpredictably. Off recommended.' },
+  { key: 'AnisotropicFiltering',label: 'Anisotropic Filtering',  impact: 'low',       rec: '16',        type: 'select', opts: [['0','Off'],['2','2x'],['4','4x'],['8','8x'],['16','16x (Recommended)']],                               tooltip: 'Sharpens textures on surfaces at oblique angles (roads, walls). 16x is essentially free on modern GPUs and makes a noticeable visual improvement. Always keep at 16x.' },
+  { key: 'SSAO',                label: 'Ambient Occlusion (SSAO)',impact: 'medium',   rec: '0',         type: 'select', opts: [['0','Off (Recommended)'],['1','Normal'],['2','High']],                                                 tooltip: 'Adds soft shadows in corners and contact areas. Normal (1) looks good but costs ~3-5% GPU. In FiveM with many players clustered together, SSAO on all those characters adds up quickly.' },
+  { key: 'Lighting_FogVolumes', label: 'Volumetric Fog',         impact: 'high',      rec: 'false',     type: 'select', opts: [['false','Off (Recommended)'],['true','On']],                                                            tooltip: 'Raymarched volumetric fog and god rays. Very expensive in FiveM because many servers add dynamic weather (rain, fog, storms) that greatly amplify the volumetric rendering cost.' },
+  { key: 'HdStreamingInFlight', label: 'HD Streaming While Flying', impact: 'high',   rec: 'false',     type: 'select', opts: [['false','Off (Recommended)'],['true','On']],                                                            tooltip: 'Streams full-res textures even when in aircraft at high altitude. Causes stuttering as the game rapidly loads and unloads high-res textures during fast flight. Off eliminates this stutter.' },
+  { key: 'ScaleformQuality',    label: 'Scaleform / UI Quality', impact: 'low',       rec: '1',         type: 'select', opts: [['0','Low'],['1','Normal (Recommended)'],['2','High'],['3','Very High'],['4','Ultra']],                   tooltip: 'Quality of the in-game UI, minimap, and HUD elements rendered via Scaleform. FiveM servers with custom HUDs and NUI overlays are not affected by this setting. Normal (1) is ideal.' },
 ]
 
 // Pre-compiled regex map — built once at startup, reused on every read/write
@@ -2391,27 +2737,34 @@ const _fivemSettingsRegexMap = new Map(
   ])
 )
 
-// gta5_settings.xml finder — primary path is %APPDATA%\CitizenFX\gta5_settings.xml
+// gta5_settings.xml finder — tries multiple known locations
 function findFivemSettings(manualPath) {
   if (manualPath && manualPath.trim()) {
-    try { require('fs').accessSync(manualPath.trim()); return manualPath.trim() } catch {}
+    try { require('fs').accessSync(manualPath.trim()); return { settingsPath: manualPath.trim(), source: 'manual' } } catch {}
     return null
   }
-  const primary = path.join(process.env.APPDATA || '', 'CitizenFX', 'gta5_settings.xml')
-  try { require('fs').accessSync(primary); return primary } catch {}
+  const candidates = [
+    { p: path.join(process.env.APPDATA || '', 'CitizenFX', 'gta5_settings.xml'), source: 'primary' },
+    { p: path.join(process.env.USERPROFILE || '', 'AppData', 'Roaming', 'CitizenFX', 'gta5_settings.xml'), source: 'secondary' },
+    { p: path.join(process.env.LOCALAPPDATA || '', 'FiveM', 'FiveM.app', 'data', 'gta5_settings.xml'), source: 'secondary' },
+  ]
+  for (const { p, source } of candidates) {
+    try { require('fs').accessSync(p); return { settingsPath: p, source } } catch {}
+  }
   return null
 }
 
 ipcMain.handle('fivem-read-settings', async (_, manualPath) => {
   if (!requiresPremium('fivem-read-settings')) return { ok: false, reason: 'premium_required' }
-  const settingsPath = findFivemSettings(manualPath)
-  if (!settingsPath) {
+  const found = findFivemSettings(manualPath)
+  if (!found) {
     return {
       ok: false,
       reason: 'gta5_settings.xml not found at %APPDATA%\\CitizenFX\\gta5_settings.xml',
       hint: 'Launch FiveM, open Settings → Graphics, adjust any setting and close FiveM. The file will be created automatically.'
     }
   }
+  const { settingsPath, source } = found
   let raw
   try { raw = fs.readFileSync(settingsPath, 'utf8') } catch (e) {
     return { ok: false, reason: `Could not read ${settingsPath}: ${e.message}` }
@@ -2422,13 +2775,15 @@ ipcMain.handle('fivem-read-settings', async (_, manualPath) => {
     const m = rx ? raw.match(rx.read) : null
     vals[def.key] = m ? m[1] : null
   }
-  return { ok: true, vals, defs: FIVEM_SETTINGS_DEFS, path: settingsPath }
+  return { ok: true, vals, defs: FIVEM_SETTINGS_DEFS, path: settingsPath, source }
 })
 
 ipcMain.handle('fivem-write-settings', async (_, changes, manualPath) => {
   if (!requiresPremium('fivem-write-settings')) return { ok: false, reason: 'premium_required' }
-  const settingsPath = findFivemSettings(manualPath)
-  if (!settingsPath) return { ok: false, reason: 'gta5_settings.xml not found — cannot save.' }
+  if (await isFivemRunning()) return { ok: false, reason: 'fivem_running', gameRunning: true }
+  const found = findFivemSettings(manualPath)
+  if (!found) return { ok: false, reason: 'gta5_settings.xml not found — cannot save.' }
+  const { settingsPath } = found
   let content
   try { content = fs.readFileSync(settingsPath, 'utf8') } catch (e) {
     return { ok: false, reason: `Could not read file: ${e.message}` }
@@ -2489,7 +2844,27 @@ ipcMain.handle('fivem-write-settings', async (_, changes, manualPath) => {
 // ─── CitizenFX.ini batch read/write helper ────────────────────────────────────
 // All CitizenFX.ini tweaks share one read→mutate→write cycle to avoid spawning
 // multiple PowerShell processes for a single file.
-const CITIZENFX_INI_PATH = () => path.join(process.env.LOCALAPPDATA || '', 'FiveM', 'FiveM.app', 'CitizenFX.ini')
+function getFivemAppPath() {
+  const si = cachedSysInfo || {}
+  return si.fivemPath || path.join(process.env.LOCALAPPDATA || '', 'FiveM', 'FiveM.app')
+}
+const CITIZENFX_INI_PATH = () => path.join(getFivemAppPath(), 'CitizenFX.ini')
+
+// Shared helper — checks if FiveM or GTA5 is currently running (no PowerShell, uses cached process list)
+async function isFivemRunning() {
+  try {
+    const { execSync } = require('child_process')
+    const out = execSync(
+      'tasklist /FI "STATUS eq RUNNING" /NH /FO CSV 2>nul',
+      { timeout: 4000, stdio: ['ignore','pipe','ignore'] }
+    ).toString().toLowerCase()
+    return out.includes('fivem') || out.includes('gta5') || out.includes('gta_sa')
+  } catch { return false }
+}
+
+ipcMain.handle('fivem-running-check', async () => {
+  return { running: await isFivemRunning() }
+})
 
 function readCitizenFXIni() {
   const p = CITIZENFX_INI_PATH()
@@ -2578,6 +2953,16 @@ const CITIZENFX_INI_DEFS = [
     label: 'Boost Game Priority',  desc: 'Instructs FiveM to request elevated process priority at launch. Similar to the fivem-priority tweak but applied at the FiveM level before the game process spawns.' },
   { key: 'DisableReporting',       category: 'advanced',   type: 'boolean', default: 0,    recommended: 1,
     label: 'Disable Reporting',    desc: 'Stops FiveM sending server connection and performance reports to Cfx.re analytics. Combined with TelemetryUpload=0 for full telemetry opt-out.' },
+  // Additional performance keys
+  { key: 'EnableCycleSnap',        category: 'performance', type: 'boolean', default: 0,    recommended: 1,
+    label: 'Enable Cycle Snap',    desc: 'Reduces streaming pop-in at high vehicle speeds by snapping LOD cycles earlier. Helps with texture loading when travelling fast across the map.' },
+  { key: 'GpuSuggestedFrameTime',  category: 'performance', type: 'number',  default: 0,    recommended: 0,    min: 0, max: 33,
+    label: 'GPU Suggested Frame Time (ms)', desc: 'Hint to FiveM\'s frame pacing logic. 0 = disabled (let the GPU run free). Only set this if you experience GPU-side frame pacing issues. Leave at 0 for max FPS.' },
+  // Pool overrides (advanced)
+  { key: 'PoolOverrideDirt',       category: 'advanced',   type: 'number',  default: 0,    recommended: null, min: 0, max: 100,
+    label: 'Pool Override: Dirt',  desc: 'Overrides the internal dirt/terrain pool size. 0 = default. Power users only — incorrect values cause instant crashes.' },
+  { key: 'PoolOverrideVehicle',    category: 'advanced',   type: 'number',  default: 0,    recommended: null, min: 0, max: 100,
+    label: 'Pool Override: Vehicle', desc: 'Overrides the vehicle pool size. 0 = default. Increase if you see errors about vehicle pools being exhausted on heavily-modded servers.' },
 ]
 
 // IPC: read all known CitizenFX.ini keys and return current values
@@ -2669,7 +3054,7 @@ const HEAVY_PATTERNS_SORTED = [
 ]
 
 // ASI/DLL exports that indicate incompatible loaders even when filename is generic
-const BANNED_EXPORTS = ['ScriptMain', 'DirectInput8Create', 'InitializeASI', 'DllMain']
+const BANNED_EXPORTS = ['ScriptMain', 'DirectInput8Create', 'InitializeASI', 'DllMain', 'InitializePlugin', 'GetPluginName']
 
 function peHasKnownExport(filePath) {
   try {
@@ -2698,13 +3083,33 @@ ipcMain.handle('fivem-scan-mods', async () => {
     return { ..._modScanCache, cached: true }
   }
 
-  const lad = process.env.LOCALAPPDATA || ''
+  const fivemBase = getFivemAppPath()
+  const ud = process.env.USERPROFILE || ''
+
+  // Detect GTA V install path for ASI scanning (same registry logic as commandline tweak)
+  let gtaInstallPath = null
+  try {
+    const { execSync } = require('child_process')
+    const regKeys = [
+      'HKLM\\SOFTWARE\\WOW6432Node\\Rockstar Games\\Grand Theft Auto V',
+      'HKLM\\SOFTWARE\\Rockstar Games\\Grand Theft Auto V',
+    ]
+    for (const key of regKeys) {
+      try {
+        const out = execSync(`reg query "${key}" /v InstallFolder 2>nul`, { timeout: 3000, stdio: ['ignore','pipe','ignore'] }).toString()
+        const m = out.match(/InstallFolder\s+REG_SZ\s+(.+)/i)
+        if (m && fs.existsSync(m[1].trim())) { gtaInstallPath = m[1].trim(); break }
+      } catch {}
+    }
+  } catch {}
 
   const searchDirs = [
-    path.join(lad, 'FiveM', 'FiveM.app', 'plugins'),
-    path.join(lad, 'FiveM', 'FiveM.app', 'addons'),
-    path.join(process.env.USERPROFILE || '', 'Documents', 'Rockstar Games', 'GTA V', 'scripts'),
-    path.join(process.env.USERPROFILE || '', 'Documents', 'Rockstar Games', 'GTA V', 'plugins'),
+    path.join(fivemBase, 'plugins'),
+    path.join(fivemBase, 'addons'),
+    path.join(ud, 'Documents', 'Rockstar Games', 'GTA V', 'scripts'),
+    path.join(ud, 'Documents', 'Rockstar Games', 'GTA V', 'plugins'),
+    path.join(ud, 'Documents', 'Rockstar Games', 'GTA V', 'mods'),
+    ...(gtaInstallPath ? [gtaInstallPath] : []),
   ]
 
   const found = []
@@ -3096,6 +3501,14 @@ function buildRunPlan(runMode, ctx, sysInfo, appliedIds = new Set()) {
     const tier  = tweak.safetyTier  || 1
     const impact = tweak.gamerImpact || 'low'
 
+    // ── Global hardware guards (apply to all modes) ──────────────────────────
+    // Power plan tweaks break thermal management on laptops — skip for all modes
+    const POWER_PLAN_IDS = ['intel-power-plan', 'amd-power-plan', 'ultimate-power-plan']
+    if (ctx.isLaptop && POWER_PLAN_IDS.includes(id)) continue
+    // Memory compression / SysMain disable can hurt low-RAM systems
+    const LOW_RAM_SKIP = ['disable-sysmain', 'sysmain', 'disable-memory-compression']
+    if ((sysInfo?.ramGB || 16) < 8 && LOW_RAM_SKIP.includes(id)) continue
+
     if (runMode === 'smart') {
       // Skip tier-3 (spectre-meltdown) and purely destructive one-shot ops
       if (tier === 3) continue
@@ -3106,6 +3519,14 @@ function buildRunPlan(runMode, ctx, sysInfo, appliedIds = new Set()) {
       if (tier > 1) continue
       if (!['gaming','latency','input','gpu','cpu','network'].includes(cat)) continue
       if (impact !== 'high') continue
+    } else if (runMode === 'safe') {
+      // Tier-1 only; skip CPU scheduler, power plans, and GPU settings on laptops; skip memory tweaks on low RAM
+      if (tier > 1) continue
+      const SAFE_SKIP = ['intel-power-plan','amd-power-plan','ultimate-power-plan','cpuidle-disable',
+                         'cpu-parking','disable-hpet','bcdedit-tweaks','disable-sysmain','sysmain',
+                         'disable-memory-compression','power-throttling','nic-offloads',
+                         'nic-interrupt-mod','nic-flow-control','nic-energy-efficient']
+      if (SAFE_SKIP.includes(id)) continue
     } else if (runMode === 'deep') {
       // Everything except tier-3
       if (tier === 3) continue
@@ -3159,6 +3580,13 @@ ipcMain.handle('run-auto-opti', async (_, sysInfo) => {
     return { ok: false, aborted: true, reason: 'game-running' }
   }
 
+  // Block network tweaks during active video call
+  const NIC_TWEAK_IDS = ['nagle-disable','tcp-stack','tcp-ack','disable-netbios','dns-optimize','netsh-opt','qos-bandwidth']
+  if (_systemContext.videoCallActive && (sysInfo?.selectedTweaks || []).some(id => NIC_TWEAK_IDS.includes(id))) {
+    clearDiscordOverride()
+    return { ok: false, aborted: true, reason: 'video-call-active' }
+  }
+
   send('◆ Auto-Optimization started', 'head')
   progress(0, 1, 'Creating Restore Point…')
   const rp = await createRestorePointInternal(send)
@@ -3190,6 +3618,8 @@ ipcMain.handle('run-auto-opti', async (_, sysInfo) => {
   }
 
   const failedTasks = []
+  const appliedIds = []
+  const skippedIds = []
   const taskTimeout = (ms) => new Promise((_, rej) => setTimeout(() => rej(new Error(`Timed out after ${ms / 1000}s`)), ms))
   if (selected && Array.isArray(selected) && selected.length > 0) {
     for (let i = 0; i < selected.length; i++) {
@@ -3207,17 +3637,21 @@ ipcMain.handle('run-auto-opti', async (_, sysInfo) => {
             if (alreadyApplied) {
               send(`    Already applied — skipping ${id}`, 'info')
               progress(i + 1, selected.length, label, id, 'skipped')
+              skippedIds.push(id)
+              const sSkip = loadSettings(); sSkip[`tweak_${id}`] = 'applied'; sSkip[`tweak_${id}_ts`] = Date.now(); sSkip[`tweak_${id}_via`] = 'auto-optimize'; saveSettings(sSkip)
               continue
             }
           }
           await Promise.race([
             tweak.apply(
               (msg, lvl) => send(`    ${msg}`, lvl || 'ok'),
-              runPS, runCmd, regAdd, regDelete
+              runPS, runCmd, regAdd, regDelete, sysInfo
             ),
             taskTimeout(30000)
           ])
           progress(i + 1, selected.length, label, id, 'ok')
+          appliedIds.push(id)
+          const sApply = loadSettings(); sApply[`tweak_${id}`] = 'applied'; sApply[`tweak_${id}_ts`] = Date.now(); sApply[`tweak_${id}_via`] = 'auto-optimize'; saveSettings(sApply)
         } catch (e) {
           send(`    Skipped: ${e.message}`, 'warn')
           progress(i + 1, selected.length, label, id, 'failed')
@@ -3272,7 +3706,16 @@ ipcMain.handle('run-auto-opti', async (_, sysInfo) => {
   const tweakCount     = selected?.length || 0
   const includedFiveM  = (selected || []).some(id => id.startsWith('fivem-'))
   sessionTweaksCount  += tweakCount
-  return { ok: true, failedTasks }
+
+  // Persist AOM run to changelog
+  try {
+    const cl = loadChangelog()
+    cl.unshift({ type: 'aom-run', ts: new Date().toISOString(), appliedIds, failedIds: failedTasks.map(f => f.id), skippedIds, tweakCount: appliedIds.length, restorePointName: 'JylliTool_AutoOpti' })
+    if (cl.length > 200) cl.splice(200)
+    saveChangelog(cl)
+  } catch {}
+
+  return { ok: true, failedTasks, appliedIds, skippedIds, restorePointName: 'JylliTool_AutoOpti' }
 })
 
 async function createRestorePointInternal(send) {
@@ -5341,6 +5784,22 @@ const TWEAKS = {
       s('Power plan restored to Balanced.', 'ok')
     }
   },
+  'fivem-timer-resolution': {
+    name: 'FiveM 1ms Timer Resolution (GlobalTimerResolutionRequests)',
+    category: 'cpu',
+    safetyTier: 1,
+    gamerImpact: 'high',
+    apply: async (s, ps) => {
+      const base = 'HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Session Manager\\kernel'
+      await ps(`Set-ItemProperty -Path "${base}" -Name GlobalTimerResolutionRequests -Value 1 -Type DWord -Force`)
+      s('GlobalTimerResolutionRequests=1 set. Windows timer resolution locked to ~0.5ms — reduces input latency and frame timing jitter.', 'ok')
+    },
+    restore: async (s, ps) => {
+      const base = 'HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Session Manager\\kernel'
+      await ps(`Remove-ItemProperty -Path "${base}" -Name GlobalTimerResolutionRequests -ErrorAction SilentlyContinue`)
+      s('GlobalTimerResolutionRequests removed — timer resolution returns to Windows default (~15ms).', 'ok')
+    }
+  },
   'fivem-network': {
     name: 'FiveM Network Tweaks (Nagle Off)',
     category: 'network',
@@ -5466,7 +5925,7 @@ const TWEAKS = {
     category: 'gaming',
     safetyTier: 1,
     gamerImpact: 'high',
-    apply: async (s, ps) => {
+    apply: async (s, ps, _cmd, _ra, _rd, si) => {
       // 4c: registry-first lookup, then hardcoded paths as fallback
       const gtaPathR = await ps(`
         $p = $null
@@ -5503,9 +5962,16 @@ const TWEAKS = {
       `)
       const gtaPath = gtaPathR.out.trim()
       if (!gtaPath) { s('GTA V install not found via registry or common paths — commandline.txt not created. Please place commandline.txt manually in your GTA V folder.', 'warn'); return }
-      const lines = ['-dx11', '-fullscreen', '-notexturebudget', '-high'].join('\r\n')
+      const vram = si?.vramMB || 0
+      const refresh = si?.displayRefresh || 0
+      const flags = ['-dx11', '-fullscreen', '-notexturebudget', '-high']
+      if (vram > 0 && vram < 4096)       flags.push('-memrestrict 3145728')
+      else if (vram >= 4096 && vram < 6144) flags.push('-memrestrict 4194304')
+      if (refresh >= 240) { flags.push('-highres'); flags.push('-framelimit 0') }
+      else if (refresh >= 144) flags.push('-highres')
+      const lines = flags.join('\r\n')
       await ps(`Set-Content -Path "${gtaPath}\\commandline.txt" -Value "${lines.replace(/\n/g,'`n')}" -Encoding ASCII -Force`)
-      s(`GTA V commandline.txt created: DX11, fullscreen, no texture budget, high priority.`, 'ok')
+      s(`GTA V commandline.txt created: ${flags.join(', ')}`, 'ok')
       s(`  Path: ${gtaPath}\\commandline.txt`, 'info')
     },
     restore: async (s, ps) => {
@@ -7467,6 +7933,7 @@ ipcMain.handle('run-preflight-scan', async () => {
     $r['fivem-gamebar']          = (gp 'HKCU:\\System\\GameConfigStore' 'GameDVR_Enabled' -EA SilentlyContinue) -eq 0
     $r['fivem-mouse-accel']      = (gp 'HKCU:\\Control Panel\\Mouse' 'MouseSpeed' -EA SilentlyContinue) -eq 0
     $r['fivem-power-plan']       = (powercfg /getactivescheme) -match '8c5e7fda'
+    $r['fivem-timer-resolution'] = (gp 'HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Session Manager\\kernel' 'GlobalTimerResolutionRequests' -EA SilentlyContinue) -eq 1
 
     # ── Section 6: Additional system checks ─────────────────────────────────────
     $vbs = (Get-ItemProperty 'HKLM:\SYSTEM\CurrentControlSet\Control\DeviceGuard' -EA SilentlyContinue).EnableVirtualizationBasedSecurity
@@ -7778,6 +8245,43 @@ ipcMain.handle('clean-power-plans', async () => {
 
 // What's New content
 const WHATS_NEW = [
+  { version: '1.5.3', date: 'May 2026', items: [
+    'Pulse — FPS Command Center with Avg FPS, 1% Low, Stability % tiles and 90-sample sparkline',
+    'Pulse — SMOOTHNESS score (0–100) from frame time variance; Session History saves last 5 sessions',
+    'Pulse — ARIA Predictive Mode: predicts CPU/GPU/RAM spikes 8 s ahead using linear regression',
+    'Pulse — Per-core CPU heatmap and GPU temp row in Live Monitor; System Threat Meter (OPTIMAL → CRITICAL)',
+    'Pulse — Session debrief card after every session; activation cinematic; active-game hero bar',
+    'Debloat — UWP removal also purges provisioned OS image; Bloat Score card (0–100)',
+    'Debloat — Windows Ads panel with "Kill All Ads" button; Developer PC & Streamer PC presets',
+    'Debloat — Context menu scanner, Windows Optional Features manager, OEM bloatware detection',
+    'Scheduler — Rich task cards with state badge, next-run countdown, Run Now and History actions',
+    'Home — System Identity hero card, trend arrows on metric tiles, optimization streak counter',
+    'Smart Conflict Engine — blocks harmful tweak combinations (Wi-Fi + network, video call + MMCSS, etc.)',
+    'App Optimizer — LIVE badge on currently running unoptimized apps; "Optimize All Running" one-click',
+    'FiveM — Settings pack export/import (.jyt); Smart Recommend 4-tier logic; VRAM-adaptive graphics',
+    'FiveM — Search, performance budget meter, undo stack, keyboard shortcuts, multi-format export',
+    'Auto-Optimize — Smart / Gaming / Safe mode selector; idle scheduling; real before/after report',
+    'ARIA — Performance Journal, DPC Spike Log, and Tweak Impact Tracker (before/after per tweak)',
+    'BIOS — Side-by-side profile comparison; Restore Point diff shows which tweaks would revert',
+  ], items_fi: [
+    'Pulse — FPS Command Center: Avg FPS, 1% Low, Vakaus-% ja 90-näytteen sparkline',
+    'Pulse — SULAVUUS-pistytys (0–100) ruutuaikojen vaihtelusta; istuntohistoria tallentaa 5 viimeistä sessiota',
+    'Pulse — ARIA ennakoiva tila: ennustaa CPU/GPU/RAM-piikkejä 8 s etukäteen lineaarisella regressiolla',
+    'Pulse — Per-ydin CPU-lämpökartta ja GPU-lämpötila Live-monitorissa; järjestelmäuhkamittari (OPTIMAL → KRIITTINEN)',
+    'Pulse — Istunnon yhteenvetokortti session jälkeen; aktivointianimaatio; peliherobiitti',
+    'Debloat — UWP-poisto puhdistaa myös provisioidun OS-kuvan; Bloat Score -kortti (0–100)',
+    'Debloat — Windows-mainospaneeli "Tapa kaikki mainokset" -napilla; Kehittäjä-PC ja Striimaaja-PC -esiasetukset',
+    'Debloat — Pikavalikkoskanneri, Windowsin valinnaiset ominaisuudet (DISM), OEM-turvottamistunnistus',
+    'Ajastin — Rikkaat tehtäväkortit: tila, seuraava ajo, Aja nyt ja Historia-toiminnot',
+    'Kotinäkymä — Järjestelmäidentiteettikortti, trendinuolet mittareissa, optimointiputki-laskuri',
+    'Älykäs konfliktimoottori — estää haitalliset säätöyhdistelmät (Wi-Fi + verkko, videopuhelu + MMCSS jne.)',
+    'Sovellusoptimoija — LIVE-merkki käynnissä oleville optimoimattomille sovelluksille; "Optimoi kaikki käynnissä olevat"',
+    'FiveM — Asetuspaketti (.jyt vienti/tuonti); Smart Recommend 4-tason logiikalla; VRAM-mukautuva grafiikka',
+    'FiveM — Haku, suoritusbudjettimittari, kumoa-pino, näppäinoikotiet, usean muodon vienti',
+    'Auto-Optimize — Älytila / Pelitila / Turvallinen tila; tyhjäkäyntiaikataulu; todellinen ennen/jälkeen-raportti',
+    'ARIA — Suorituspäiväkirja, DPC-piikkikirjanpito ja säätövaikutusmittari (ennen/jälkeen jokaiselle säädölle)',
+    'BIOS — Profiilien rinnakkainen vertailu; palautuspisteen diff näyttää mitkä säädöt peruuntuisivat',
+  ]},
   { version: '1.5.2', date: 'May 2026', items: [
     'Fix — USB Selective Suspend / Power Guard restore no longer permanently disables Logitech G HUB service',
     'Fix — Mouse Ghosting fix restore now also re-enables G HUB service',
@@ -8609,6 +9113,50 @@ ipcMain.handle('scan-installed-apps', async () => {
   return installed
 })
 
+ipcMain.handle('autodetect-aom-answers', async () => {
+  const lad  = process.env['LOCALAPPDATA'] || ''
+  const appd = process.env['APPDATA'] || ''
+  const pf   = process.env['ProgramFiles'] || 'C:\\Program Files'
+  const pf86 = process.env['ProgramFiles(x86)'] || 'C:\\Program Files (x86)'
+  const hints = {}
+
+  // Edge, Chrome, OneDrive — filesystem presence
+  hints.useEdge   = fs.existsSync(path.join(pf86, 'Microsoft\\Edge\\Application\\msedge.exe')) || fs.existsSync(path.join(pf, 'Microsoft\\Edge\\Application\\msedge.exe'))
+  hints.useChrome = fs.existsSync(path.join(pf, 'Google\\Chrome\\Application\\chrome.exe')) || fs.existsSync(path.join(pf86, 'Google\\Chrome\\Application\\chrome.exe'))
+
+  // OneDrive — process env path or exe presence
+  const odPath = process.env['OneDrive'] || process.env['OneDriveConsumer'] || ''
+  hints.useOneDrive = !!(odPath) || fs.existsSync(path.join(appd, 'Microsoft\\OneDrive\\OneDrive.exe')) || fs.existsSync(path.join(lad, 'Microsoft\\OneDrive\\OneDrive.exe'))
+
+  try {
+    // Batched PS query: Bluetooth, Printer, Hibernate, Xbox, Cortana — single spawn
+    const psScript = [
+      '$out = @{}',
+      'try { $s = Get-Service bthserv -EA Stop; $out.bt = ($s.StartType -ne "Disabled") } catch { $out.bt = $false }',
+      'try { $s = Get-Service Spooler -EA Stop; $out.pr = ($s.Status -eq "Running") } catch { $out.pr = $false }',
+      'try { $h = (Get-ItemProperty -Path "HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Power" -Name HibernateEnabled -EA Stop).HibernateEnabled; $out.hib = ($h -eq 1) } catch { $out.hib = $false }',
+      'try { $s = Get-Service XblGameSave -EA Stop; $out.xbox = ($s.StartType -ne "Disabled") } catch { $out.xbox = $false }',
+      'try { $c = (Get-ItemProperty "HKCU:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Search" -Name CortanaEnabled -EA Stop).CortanaEnabled; $out.cortana = ($c -ne 0) } catch { $out.cortana = $true }',
+      '$out | ConvertTo-Json -Compress'
+    ].join('; ')
+
+    const raw = require('child_process').execSync(
+      `powershell -NoProfile -NonInteractive -Command "${psScript}"`,
+      { encoding: 'utf8', timeout: 4000 }
+    ).trim()
+    const parsed = JSON.parse(raw)
+    hints.useBluetooth  = !!parsed.bt
+    hints.usePrinter    = !!parsed.pr
+    hints.useHibernate  = !!parsed.hib
+    hints.useXbox       = !!parsed.xbox
+    hints.useCortana    = !!parsed.cortana
+  } catch {
+    // On failure leave these keys undefined — frontend will keep saved/default values
+  }
+
+  return hints
+})
+
 ipcMain.handle('health-check-app-optimizer', async () => {
   const appd = process.env['APPDATA'] || ''
   const pf = process.env['ProgramFiles'] || 'C:\\Program Files'
@@ -8733,15 +9281,38 @@ ipcMain.handle('apply-game-tweak', async (_, { gameId, action, installPath }) =>
 // ─── Process Manager ──────────────────────────────────────────────────────────
 ipcMain.handle('get-processes', async () => {
   const r = await runPS(`
-    Get-Process | Where-Object {$_.CPU -ne $null} |
-    Select-Object Name, Id,
-      @{N='CPU';E={[math]::Round($_.CPU,1)}},
-      @{N='RAM';E={[math]::Round($_.WorkingSet64/1MB,1)}},
-      @{N='Path';E={try{$_.MainModule.FileName}catch{''}}} |
-    Sort-Object RAM -Descending | Select-Object -First 80 |
-    ConvertTo-Json -Depth 2
+    $cores = [Environment]::ProcessorCount
+    if ($cores -lt 1) { $cores = 1 }
+    # Get-Counter gives real per-process CPU% normalised by Windows (same source as Task Manager)
+    $cpuMap = @{}
+    try {
+      $samples = (Get-Counter '\\Process(*)\\% Processor Time' -SampleInterval 1 -MaxSamples 1 -EA Stop).CounterSamples
+      foreach ($s in $samples) {
+        $inst = $s.InstanceName.ToLower()
+        if ($inst -eq '_total' -or $inst -eq 'idle') { continue }
+        $pct = [math]::Round($s.CookedValue / $cores, 1)
+        if ($cpuMap.ContainsKey($inst)) { $cpuMap[$inst] += $pct } else { $cpuMap[$inst] = $pct }
+      }
+    } catch {}
+    Get-Process -EA SilentlyContinue | Where-Object { $_.WorkingSet64 -gt 0 } | ForEach-Object {
+      $base = $_.Name.ToLower()
+      # Get-Counter instance names for duplicates: "discord", "discord#1", "discord#2" — sum them all
+      $cpu = 0.0
+      if ($cpuMap.ContainsKey($base)) { $cpu += $cpuMap[$base] }
+      $i = 1; while ($cpuMap.ContainsKey("$base#$i")) { $cpu += $cpuMap["$base#$i"]; $i++ }
+      [PSCustomObject]@{
+        Name = $_.Name
+        Id   = $_.Id
+        CPU  = [math]::Round([math]::Min(100, [math]::Max(0, $cpu)), 1)
+        RAM  = [math]::Round($_.WorkingSet64/1MB, 1)
+        Path = try{$_.MainModule.FileName}catch{''}
+      }
+    } | Sort-Object RAM -Descending | Select-Object -First 80 | ConvertTo-Json -Depth 1 -Compress
   `, 15000)
-  try { return JSON.parse(r.out) } catch { return [] }
+  try {
+    const parsed = JSON.parse(r.out)
+    return Array.isArray(parsed) ? parsed : (parsed ? [parsed] : [])
+  } catch { return [] }
 })
 
 ipcMain.handle('kill-process', async (_, pid) => {
@@ -8826,7 +9397,13 @@ ipcMain.handle('open-pulse-window', () => {
     }
   })
   pulseWindow.loadFile('pulse.html')
-  pulseWindow.once('ready-to-show', () => pulseWindow.show())
+  pulseWindow.once('ready-to-show', () => {
+    pulseWindow.show()
+    pulseWindow.setAlwaysOnTop(true, 'screen-saver')
+  })
+  pulseWindow.on('focus', () => {
+    if (pulseWindow && !pulseWindow.isDestroyed()) pulseWindow.setAlwaysOnTop(true, 'screen-saver')
+  })
   pulseWindow.on('closed', () => { pulseWindow = null })
 })
 
@@ -9107,6 +9684,8 @@ let pulseOrigPowerPlan = null
 let autoPulseTriggeredPreset = null  // set when game watcher auto-activated pulse
 let lastUsedPulsePreset = null       // remembered for tray "Start Pulse" shortcut
 let pulseStartTimestamp = null       // set when Pulse activates, cleared on restore
+let _pulseSessionFps = null          // populated by game-watcher on session end, consumed by deactivatePulse
+let _pulseLastInterruptTarget = 3    // remembered for logging
 
 
 async function pulseRestoreAll(send) {
@@ -9188,7 +9767,40 @@ public class TimerRes { [DllImport("ntdll.dll")] public static extern int NtSetT
   `, 15000)
 
   pulseStartTimestamp = null
+  _pulseSessionFps = null
   send('◆ Pulse deactivated — all settings restored.', 'ok')
+}
+
+// Queries per-core CPU loads and picks the best core for interrupt affinity routing.
+// Excludes core 0 (Windows DPC home), core 1 (game main thread), and on Intel hybrid CPUs,
+// excludes E-cores (index >= half of logical core count) to avoid DPC latency on low-freq cores.
+async function pickInterruptTargetCore(coreCount) {
+  try {
+    const isHybrid = /12th Gen|13th Gen|14th Gen|Ultra/i.test(cachedSysInfo?.cpu || '')
+    const pCoreLimit = isHybrid ? Math.ceil(coreCount / 2) : coreCount
+    const r = await runPS(`
+      $s = (Get-Counter "\\\\Processor(*)\\\\% Processor Time" -SampleInterval 1 -MaxSamples 1 -EA Stop).CounterSamples
+      $s | Where-Object { $_.InstanceName -ne '_total' } |
+        Sort-Object { [int]$_.InstanceName } |
+        ForEach-Object { Write-Output "CORE_$([int]$_.InstanceName)=$([math]::Round($_.CookedValue,1))" }
+    `, 6000).catch(() => ({ ok: false, out: '' }))
+    const loads = {}
+    for (const line of (r.out || '').split('\n')) {
+      const m = line.match(/CORE_(\d+)=(.+)/)
+      if (m) loads[parseInt(m[1])] = parseFloat(m[2])
+    }
+    if (!Object.keys(loads).length) return { coreIndex: 3, load: null }
+    let best = null, bestLoad = Infinity
+    for (const [idx, load] of Object.entries(loads)) {
+      const i = parseInt(idx)
+      if (i <= 1) continue                    // skip core 0 (DPC) and core 1 (game thread)
+      if (isHybrid && i >= pCoreLimit) continue  // skip E-cores on Intel hybrid
+      if (load < bestLoad) { bestLoad = load; best = i }
+    }
+    return { coreIndex: best ?? 3, load: bestLoad !== Infinity ? bestLoad : null }
+  } catch {
+    return { coreIndex: 3, load: null }
+  }
 }
 
 async function activatePulse(presetId, killBg, send) {
@@ -9216,6 +9828,9 @@ async function activatePulse(presetId, killBg, send) {
   const effectivePriority = (preset.cpuIntensive && coreCount >= 12)
     ? 'AboveNormal'
     : preset.priority
+
+  // Start per-core load query in parallel with step 1 (Get-Counter takes ~1s — don't wait)
+  const _interruptCorePromise = (!isLaptop && coreCount >= 6) ? pickInterruptTargetCore(coreCount) : Promise.resolve({ coreIndex: 3, load: null })
 
   // ── 1. Timer resolution: request 0.5ms via NtSetTimerResolution ──────────────
   // 5000 = 0.5ms in 100ns units. Falls back silently if ntdll isn't available.
@@ -9287,8 +9902,11 @@ public class TimerRes { [DllImport("ntdll.dll")] public static extern int NtSetT
   // Only run on ≥ 6 core desktop systems — skipped on laptops (heat/battery risk)
   // and low-core systems (HID starvation risk).
   if (!isLaptop && coreCount >= 6) {
+    const { coreIndex: targetCore, load: coreLoad } = await _interruptCorePromise
+    _pulseLastInterruptTarget = targetCore
+    const loadDesc = coreLoad != null ? `, ${coreLoad}% load` : ''
     await runPS(`
-      $targetCpu = 3  # CPU 3 — away from OS scheduler (0), game thread (1), and HID (2)
+      $targetCpu = ${targetCore}
       $mask = [uint32](1 -shl $targetCpu)
       $pciBase = 'HKLM:\\SYSTEM\\CurrentControlSet\\Enum\\PCI'
       $netGuid = '{4d36e972-e325-11ce-bfc1-08002be10318}'
@@ -9313,7 +9931,7 @@ public class TimerRes { [DllImport("ntdll.dll")] public static extern int NtSetT
       Write-Output "AFFINITY_OK:$moved"
     `, 20000).then(r => {
       const m = r.out.match(/AFFINITY_OK:(\d+)/)
-      if (m) send(`  Interrupt affinity routed for ${m[1]} device(s) → CPU 3`, 'ok')
+      if (m) send(`  Interrupt affinity routed for ${m[1]} device(s) → CPU ${targetCore} (least-loaded${loadDesc})`, 'ok')
     })
   } else if (isLaptop) {
     send('  Interrupt affinity skipped (laptop)', 'info')
@@ -9372,11 +9990,42 @@ public class TimerRes { [DllImport("ntdll.dll")] public static extern int NtSetT
 }
 
 async function deactivatePulse(send) {
+  const _endPreset = pulseActivePreset
+  const _endElapsedMs = pulseStartTimestamp ? (Date.now() - pulseStartTimestamp) : 0
   pulseActivePreset = null
   discordPulseGame = null
   updateDiscordPresence()
   await pulseRestoreAll(send)
   mainWindow?.webContents.send('pulse-tick', { active: false })
+  // Emit session-end data to Pulse window for debrief card
+  if (_endElapsedMs > 0) {
+    const presetMeta = PULSE_PRESETS?.[_endPreset]
+    const sessionEndPayload = {
+      elapsedMs: _endElapsedMs,
+      presetName: presetMeta?.name || _endPreset || '—',
+      peaks: _ariaSessionPeaks ? { ..._ariaSessionPeaks } : null,
+      avgFps:     _pulseSessionFps?.avgFps     ?? null,
+      low1Fps:    _pulseSessionFps?.low1Fps    ?? null,
+      smoothness: _pulseSessionFps?.smoothness ?? null,
+    }
+    pulseWindow?.webContents.send('pulse-session-end', sessionEndPayload)
+    // Persist to history
+    if (PULSE_HISTORY_PATH) {
+      const entry = {
+        ts: Date.now(),
+        presetId: _endPreset || null,
+        presetName: sessionEndPayload.presetName,
+        elapsedMs: _endElapsedMs,
+        avgFps:     sessionEndPayload.avgFps,
+        low1Fps:    sessionEndPayload.low1Fps,
+        smoothness: sessionEndPayload.smoothness,
+        peaks:      sessionEndPayload.peaks,
+      }
+      const hist = loadPulseHistory()
+      hist.push(entry)
+      savePulseHistory(hist)
+    }
+  }
   updateTrayMenu()
   return { ok: true }
 }
@@ -9451,6 +10100,36 @@ ipcMain.handle('pulse-detect-game', async () => {
   return { found: false }
 })
 
+function loadPulseHistory() {
+  try { return JSON.parse(fs.readFileSync(PULSE_HISTORY_PATH, 'utf8')) } catch { return [] }
+}
+function savePulseHistory(entries) {
+  try { fs.writeFileSync(PULSE_HISTORY_PATH, JSON.stringify(entries.slice(-20), null, 2), 'utf8') } catch {}
+}
+
+ipcMain.handle('pulse-get-history', () => {
+  if (!requiresPremium('pulse-get-history')) return []
+  return loadPulseHistory().slice(-10).reverse()
+})
+
+ipcMain.handle('pulse-get-core-loads', async () => {
+  if (!requiresPremium('pulse-get-core-loads')) return {}
+  try {
+    const r = await runPS(`
+      $s = (Get-Counter "\\\\Processor(*)\\\\% Processor Time" -SampleInterval 1 -MaxSamples 1 -EA Stop).CounterSamples
+      $s | Where-Object { $_.InstanceName -ne '_total' } |
+        Sort-Object { [int]$_.InstanceName } |
+        ForEach-Object { Write-Output "CORE_$([int]$_.InstanceName)=$([math]::Round($_.CookedValue,1))" }
+    `, 6000).catch(() => ({ ok: false, out: '' }))
+    const loads = {}
+    for (const line of (r.out || '').split('\n')) {
+      const m = line.match(/CORE_(\d+)=(.+)/)
+      if (m) loads[parseInt(m[1])] = parseFloat(m[2])
+    }
+    return loads
+  } catch { return {} }
+})
+
 // ─── Startup Boot Impact (Windows Diagnostics-Performance Event Log) ─────────
 // Reads Event ID 101 from Microsoft-Windows-Diagnostics-Performance/Operational.
 // Each event has a <Name> (process path) and <Duration> (milliseconds it delayed boot).
@@ -9520,6 +10199,19 @@ ipcMain.handle('get-startup-items', async () => {
         $items += [PSCustomObject]@{Name=$_.Name;Command=$_.Value;Source='HKLM Registry';Enabled=$true;Impact='Medium';Key=$p2}
       }
     }
+    # Disabled items — moved to AutorunsDisabled subkeys by toggle-startup-item
+    $disabledMap = @{
+      'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Run\\AutorunsDisabled' = @('HKCU Registry', 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Run', 'Low')
+      'HKLM:\\Software\\Microsoft\\Windows\\CurrentVersion\\Run\\AutorunsDisabled' = @('HKLM Registry', 'HKLM:\\Software\\Microsoft\\Windows\\CurrentVersion\\Run', 'Medium')
+    }
+    foreach ($dp in $disabledMap.Keys) {
+      $meta = $disabledMap[$dp]
+      if (Test-Path $dp) {
+        (Get-ItemProperty $dp).PSObject.Properties | Where-Object {$_.Name -notmatch '^PS'} | ForEach-Object {
+          $items += [PSCustomObject]@{Name=$_.Name;Command=$_.Value;Source=$meta[0];Enabled=$false;Impact=$meta[2];Key=$meta[1]}
+        }
+      }
+    }
     # Task Scheduler startup tasks
     Get-ScheduledTask | Where-Object {$_.Triggers.CimClass.CimClassName -contains 'MSFT_TaskLogonTrigger' -or $_.Triggers.CimClass.CimClassName -contains 'MSFT_TaskBootTrigger'} |
     Select-Object TaskName,TaskPath,@{N='State';E={$_.State}} | ForEach-Object {
@@ -9548,23 +10240,33 @@ ipcMain.handle('toggle-startup-item', async (_, { name, source, key, enable }) =
     if (!enable) {
       // Move to disabled key
       const disabledKey = escapePSSingleQuote(key.replace('\\Run', '\\Run\\AutorunsDisabled'))
-      await runPS(`
+      const r = await runPS(`
         $val = (Get-ItemProperty -Path '${safeKey}' -Name '${safeName}' -EA SilentlyContinue).'${safeName}'
         if ($val) {
           New-Item -Path '${disabledKey}' -Force -EA SilentlyContinue | Out-Null
-          New-ItemProperty -Path '${disabledKey}' -Name '${safeName}' -Value $val -Force
+          New-ItemProperty -Path '${disabledKey}' -Name '${safeName}' -Value $val -Force | Out-Null
           Remove-ItemProperty -Path '${safeKey}' -Name '${safeName}' -Force -EA SilentlyContinue
-        }
+          Write-Output 'MOVED=1'
+        } else { Write-Output 'MOVED=0' }
       `)
+      if (!r.out.includes('MOVED=1')) {
+        send(`✗ Could not disable startup item: ${name} (not found or access denied)`, 'err')
+        return { ok: false, error: 'not found or access denied' }
+      }
     } else {
       const disabledKey = escapePSSingleQuote(key.replace('\\Run', '\\Run\\AutorunsDisabled'))
-      await runPS(`
+      const r = await runPS(`
         $val = (Get-ItemProperty -Path '${disabledKey}' -Name '${safeName}' -EA SilentlyContinue).'${safeName}'
         if ($val) {
-          New-ItemProperty -Path '${safeKey}' -Name '${safeName}' -Value $val -Force
+          New-ItemProperty -Path '${safeKey}' -Name '${safeName}' -Value $val -Force | Out-Null
           Remove-ItemProperty -Path '${disabledKey}' -Name '${safeName}' -Force -EA SilentlyContinue
-        }
+          Write-Output 'MOVED=1'
+        } else { Write-Output 'MOVED=0' }
       `)
+      if (!r.out.includes('MOVED=1')) {
+        send(`✗ Could not enable startup item: ${name} (not found in disabled store)`, 'err')
+        return { ok: false, error: 'not found in disabled store' }
+      }
     }
     send(`${enable ? 'Enabled' : 'Disabled'} startup item: ${name}`, 'ok')
   }
@@ -9890,12 +10592,13 @@ ipcMain.handle('stop-live-ping', () => {
 
 // ─── Network Health Check ─────────────────────────────────────────────────────
 ipcMain.handle('run-net-health', async () => {
+  try {
   const results = {}
 
   // Step 1: Gateway RTT (20 pings)
   const gwScript = `
 $gw = try { (Get-NetRoute -DestinationPrefix '0.0.0.0/0' -EA SilentlyContinue | Sort-Object RouteMetric | Select-Object -First 1).NextHop } catch { $null }
-if (-not $gw) { Write-Output "GW_FAIL"; exit }
+if (-not $gw) { Write-Output "GW_FAIL" } else {
 Write-Output "GW_IP=$gw"
 $rtts = [System.Collections.Generic.List[int]]::new()
 1..20 | ForEach-Object {
@@ -9919,6 +10622,7 @@ if ($good.Count -gt 0) {
   Write-Output "GW_JITTER=$jitter"
   Write-Output "GW_LOSS=$([math]::Round($loss.Count / 20 * 100, 0))"
 } else { Write-Output "GW_FAIL" }
+}
 `
 
   // Step 2: DNS resolution time (5 samples)
@@ -9944,7 +10648,7 @@ if ($times.Count -gt 0) {
 
   // Step 3: ISP first 3 hops via tracert
   const tracertScript = `
-$output = tracert -d -h 3 -w 2000 8.8.8.8 2>$null | Select-Object -Skip 4
+$output = tracert -d -h 3 -w 2000 8.8.8.8 | Select-Object -Skip 4
 $hop = 0
 foreach ($line in $output) {
   if ($line -match '^\\s*(\\d+)\\s') {
@@ -9953,11 +10657,11 @@ foreach ($line in $output) {
     $ip   = [regex]::Match($line, '(\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3})').Value
     if ($rtts.Count -gt 0) {
       $avg = [math]::Round(($rtts | Measure-Object -Average).Average, 1)
-      Write-Output "HOP${hop}_IP=$ip"
-      Write-Output "HOP${hop}_AVG=$avg"
+      Write-Output "HOP\${hop}_IP=$ip"
+      Write-Output "HOP\${hop}_AVG=$avg"
     } else {
-      Write-Output "HOP${hop}_IP=*"
-      Write-Output "HOP${hop}_AVG=*"
+      Write-Output "HOP\${hop}_IP=*"
+      Write-Output "HOP\${hop}_AVG=*"
     }
     if ($hop -ge 3) { break }
   }
@@ -10034,6 +10738,10 @@ Write-Output "CF_LOSS=$([math]::Round($lost / 20 * 100, 0))"
   results.cloudflare = { loss: cfLossLine ? parseInt(cfLossLine.split('=')[1]) : null }
 
   return { ok: true, results }
+  } catch (e) {
+    startupTrace(`[net-health] handler error: ${e?.message ?? e}`)
+    return { ok: false, error: String(e?.message ?? e) }
+  }
 })
 
 // ─── Game Detection ───────────────────────────────────────────────────────────
@@ -10136,15 +10844,24 @@ ipcMain.handle('detect-games', async () => {
 
 // ─── Per-Game Auto Profile (process watcher) ──────────────────────────────────
 let gameWatcherInterval = null
+let _gameWatcherTick = null  // stored so restartGameWatcher can re-schedule it
 let activeGameProfile = null
 let activeGameProfileTweaksApplied = false  // true when per-game tweak profile was applied by watcher
+
+function restartGameWatcher() {
+  if (!_gameWatcherTick) return
+  if (gameWatcherInterval) { clearInterval(gameWatcherInterval); gameWatcherInterval = null }
+  // Scan less often while a game is active — only need to detect when it exits
+  const ms = activeGameProfile ? 10000 : 5000
+  gameWatcherInterval = setInterval(_gameWatcherTick, ms)
+}
 
 ipcMain.handle('start-game-watcher', async () => {
   if (gameWatcherInterval) return { ok: true, status: 'already running' }
 
   mainWindow?.webContents.send('log', { msg: '◆ Game Watcher started — monitoring for game launches…', level: 'ok', ts: new Date().toLocaleTimeString() })
 
-  gameWatcherInterval = setInterval(async () => {
+  _gameWatcherTick = async () => {
     try {
     const r = await runCmd('tasklist /fo csv /nh')
     if (!r.ok || !r.out) return
@@ -10216,9 +10933,13 @@ ipcMain.handle('start-game-watcher', async () => {
         }
       }
 
+      // Reduce background polling frequency while game is running
+      if (_metricsInterval) restartMetricsInterval()
+      restartGameWatcher()
+
       // ARIA: reset session accumulators for fresh session
       _ariaSessionAnomalies = []
-      _ariaSessionPeaks = { cpu: 0, gpu: 0, ram: 0, cpuTemp: 0 }
+      _ariaSessionPeaks = { cpu: 0, gpu: 0, ram: 0, cpuTemp: 0, gpuTemp: 0 }
       _ariaSessionStart = Date.now()
       if (_ariaEnabled) createFpsHud()
 
@@ -10264,6 +10985,9 @@ ipcMain.handle('start-game-watcher', async () => {
       const hadProfileTweaks = activeGameProfileTweaksApplied
       activeGameProfile = null
       activeGameProfileTweaksApplied = false
+      // Restore normal polling frequency now that game is closed
+      if (_metricsInterval) restartMetricsInterval()
+      restartGameWatcher()
       mainWindow?.webContents.send('game-watcher-event', { event: 'game-closed', gameId: prev })
       mainWindow?.webContents.send('log', { msg: `Game closed: ${prev} — restoring defaults…`, level: 'info', ts: new Date().toLocaleTimeString() })
 
@@ -10277,7 +11001,8 @@ ipcMain.handle('start-game-watcher', async () => {
         await new Promise(r => setTimeout(r, 400))
         const sessionStats = parsePresentMonCsvFromBuffer(_pmFrameBuffer)
         if (sessionStats) {
-          _sessionFps = { avgFps: Math.round(1000 / sessionStats.mean), low1Fps: Math.round(1000 / sessionStats.p1Low) }
+          _sessionFps = { avgFps: Math.round(1000 / sessionStats.mean), low1Fps: Math.round(1000 / sessionStats.p1Low), smoothness: sessionStats.smoothness ?? null }
+          _pulseSessionFps = _sessionFps
           mainWindow?.webContents.send('game-frame-session', { game: prev, stats: sessionStats })
           mainWindow?.webContents.send('log', { msg: `◆ Frame session — avg: ${Math.round(1000 / sessionStats.mean)} FPS  1%Low: ${Math.round(1000 / sessionStats.p1Low)} FPS  0.1%Low: ${Math.round(1000 / sessionStats.p01Low)} FPS`, level: 'ok', ts: new Date().toLocaleTimeString() })
         }
@@ -10301,7 +11026,7 @@ ipcMain.handle('start-game-watcher', async () => {
         mainWindow?.webContents.send('log', { msg: `◆ ARIA session summary: ${Object.keys(anomalyCounts).length} metrics anomalous over ${Math.round(durationMs/60000)} min`, level: 'info', ts: new Date().toLocaleTimeString() })
         _ariaSessionAnomalies = []
         _ariaSessionStart = null
-        _ariaSessionPeaks = { cpu: 0, gpu: 0, ram: 0, cpuTemp: 0 }
+        _ariaSessionPeaks = { cpu: 0, gpu: 0, ram: 0, cpuTemp: 0, gpuTemp: 0 }
       }
 
       // Clear game from Discord presence
@@ -10333,13 +11058,15 @@ ipcMain.handle('start-game-watcher', async () => {
     } catch (e) {
       mainWindow?.webContents.send('log', { msg: `Game watcher error: ${e.message}`, level: 'err', ts: new Date().toLocaleTimeString() })
     }
-  }, 5000)
+  }
+  gameWatcherInterval = setInterval(_gameWatcherTick, 5000)
 
   return { ok: true, status: 'started' }
 })
 
 ipcMain.handle('stop-game-watcher', async () => {
   if (gameWatcherInterval) { clearInterval(gameWatcherInterval); gameWatcherInterval = null }
+  _gameWatcherTick = null
   activeGameProfile = null
   discordActiveGame = null
   updateDiscordPresence()
@@ -10381,7 +11108,7 @@ ipcMain.handle('add-changelog-entry', (_, entry) => {
 ipcMain.handle('clear-changelog', () => { saveChangelog([]); return { ok: true } })
 
 // ─── Tweak Scheduler ─────────────────────────────────────────────────────────
-ipcMain.handle('schedule-tweak', async (_, { taskName, schedule, action }) => {
+ipcMain.handle('schedule-tweak', async (_, { taskName, schedule, action, time, dayOfWeek, label }) => {
   if (!requiresPremium('schedule-tweak')) return { ok: false, reason: 'premium_required' }
   const send = (msg, level) => mainWindow?.webContents.send('log', { msg, level, ts: new Date().toLocaleTimeString() })
 
@@ -10399,11 +11126,22 @@ ipcMain.handle('schedule-tweak', async (_, { taskName, schedule, action }) => {
   // Encode as UTF-16 LE Base64 so -EncodedCommand handles all quoting automatically
   const encodedCommand = Buffer.from(psCommand, 'utf16le').toString('base64')
 
+  const safeTime = (time || '03:00').replace(/[^0-9:]/g, '') || '03:00'
+  const validDays = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday']
+  const safeDay = validDays.includes(dayOfWeek) ? dayOfWeek : 'Sunday'
+  const safeLabel = (label || '').replace(/'/g, "''").slice(0, 255)
+
   let trigger = ''
-  if (schedule === 'startup')    trigger = 'New-ScheduledTaskTrigger -AtStartup'
+  if (schedule === 'startup')         trigger = 'New-ScheduledTaskTrigger -AtStartup'
+  else if (schedule === 'logon')      trigger = 'New-ScheduledTaskTrigger -AtLogon'
   else if (schedule === 'daily-3am')  trigger = 'New-ScheduledTaskTrigger -Daily -At "3:00AM"'
   else if (schedule === 'weekly-sun') trigger = 'New-ScheduledTaskTrigger -Weekly -DaysOfWeek Sunday -At "3:00AM"'
-  else if (schedule === 'logon')      trigger = 'New-ScheduledTaskTrigger -AtLogon'
+  else if (schedule === 'daily-custom')  trigger = `New-ScheduledTaskTrigger -Daily -At "${safeTime}"`
+  else if (schedule === 'weekly-custom') trigger = `New-ScheduledTaskTrigger -Weekly -DaysOfWeek ${safeDay} -At "${safeTime}"`
+  else if (schedule === 'hourly')     trigger = 'New-ScheduledTaskTrigger -Once -At (Get-Date) -RepetitionInterval (New-TimeSpan -Hours 1)'
+
+  const safeTaskName = taskName.replace(/\W/g, '_')
+  const descParam = safeLabel ? `-Description '${safeLabel}'` : ''
 
   const r = await runPS(`
     try {
@@ -10411,7 +11149,7 @@ ipcMain.handle('schedule-tweak', async (_, { taskName, schedule, action }) => {
       $trigger   = ${trigger}
       $settings  = New-ScheduledTaskSettingsSet -RunOnlyIfNetworkAvailable:$false -StartWhenAvailable
       $principal = New-ScheduledTaskPrincipal -UserId 'SYSTEM' -RunLevel Highest
-      Register-ScheduledTask -TaskName 'JT_${taskName.replace(/\W/g, '_')}' -Action $action -Trigger $trigger -Settings $settings -Principal $principal -Force -ErrorAction Stop | Out-Null
+      Register-ScheduledTask -TaskName 'JT_${safeTaskName}' -Action $action -Trigger $trigger -Settings $settings -Principal $principal ${descParam} -Force -ErrorAction Stop | Out-Null
       Write-Output 'ok'
     } catch {
       Write-Error $_.Exception.Message
@@ -10428,14 +11166,57 @@ ipcMain.handle('schedule-tweak', async (_, { taskName, schedule, action }) => {
 
 ipcMain.handle('list-scheduled-tweaks', async () => {
   if (!requiresPremium('list-scheduled-tweaks')) return []
-  const r = await runPS('Get-ScheduledTask | Where-Object {$_.TaskName -like "JT_*"} | Select-Object TaskName,@{N="State";E={$_.State}} | ConvertTo-Json')
-  try { const d = JSON.parse(r.out); return Array.isArray(d) ? d : [d] } catch { return [] }
+  const r = await runPS(`Get-ScheduledTask | Where-Object {$_.TaskName -like 'JT_*'} | ForEach-Object {
+    $info = $_ | Get-ScheduledTaskInfo -EA SilentlyContinue
+    [PSCustomObject]@{
+      TaskName       = $_.TaskName
+      State          = [string]$_.State
+      LastRunTime    = if($info.LastRunTime -and $info.LastRunTime -gt [datetime]'1999-01-01'){$info.LastRunTime.ToString('o')}else{$null}
+      NextRunTime    = if($info.NextRunTime -and $info.NextRunTime -gt [datetime]'1999-01-01'){$info.NextRunTime.ToString('o')}else{$null}
+      LastTaskResult = $info.LastTaskResult
+      Description    = $_.Description
+    }
+  } | ConvertTo-Json -Compress`)
+  try { const d = JSON.parse(r.out); return Array.isArray(d) ? d : (d ? [d] : []) } catch { return [] }
 })
 
 ipcMain.handle('delete-scheduled-tweak', async (_, taskName) => {
   if (!requiresPremium('delete-scheduled-tweak')) return { ok: false, reason: 'premium_required' }
   await runPS(`Unregister-ScheduledTask -TaskName '${taskName}' -Confirm:$false -ErrorAction SilentlyContinue`)
   return { ok: true }
+})
+
+ipcMain.handle('run-scheduled-tweak', async (_, taskName) => {
+  if (!requiresPremium('run-scheduled-tweak')) return { ok: false, reason: 'premium_required' }
+  const safe = taskName.replace(/'/g, "''")
+  const r = await runPS(`Start-ScheduledTask -TaskName '${safe}' -EA Stop; Write-Output 'ok'`, 15000)
+  return { ok: r.out.trim() === 'ok', error: r.err }
+})
+
+ipcMain.handle('toggle-scheduled-tweak', async (_, { taskName, enable }) => {
+  if (!requiresPremium('toggle-scheduled-tweak')) return { ok: false, reason: 'premium_required' }
+  const safe = taskName.replace(/'/g, "''")
+  const cmd = enable
+    ? `Enable-ScheduledTask -TaskName '${safe}' -EA SilentlyContinue`
+    : `Disable-ScheduledTask -TaskName '${safe}' -EA SilentlyContinue`
+  await runPS(cmd)
+  return { ok: true }
+})
+
+ipcMain.handle('get-scheduled-task-history', async (_, taskName) => {
+  if (!requiresPremium('get-scheduled-task-history')) return []
+  const safe = taskName.replace(/'/g, "''")
+  const r = await runPS(`
+    try {
+      $evts = Get-WinEvent -LogName 'Microsoft-Windows-TaskScheduler/Operational' -MaxEvents 100 -EA SilentlyContinue |
+        Where-Object { $_.Message -like '*${safe}*' -and $_.Id -in @(201,202,203) } |
+        Select-Object -First 5 -Property TimeCreated,Id,Message
+      if ($evts) {
+        $evts | ForEach-Object { [PSCustomObject]@{ ts=$_.TimeCreated.ToString('o'); id=$_.Id; msg=($_.Message -split '\`n')[0] } } | ConvertTo-Json -Compress
+      } else { Write-Output '[]' }
+    } catch { Write-Output '[]' }
+  `, 10000)
+  try { const d = JSON.parse(r.out.trim()); return Array.isArray(d) ? d : (d ? [d] : []) } catch { return [] }
 })
 
 // ─── PC Health Score ──────────────────────────────────────────────────────────
@@ -10865,6 +11646,13 @@ ipcMain.handle('bios-list-profiles', async () => {
   return { ok: true, profiles: p.map(({ name, ts, board }) => ({ name, ts, board })) }
 })
 
+ipcMain.handle('bios-get-profile', async (_, name) => {
+  const profiles = loadBiosProfiles()
+  const profile = profiles.find(p => p.name === name)
+  if (!profile) return { ok: false, error: 'Profile not found' }
+  return { ok: true, name: profile.name, board: profile.board, entries: profile.settings || [] }
+})
+
 ipcMain.handle('bios-save-profile', async (_, { name, dumpPath, entries }) => {
   if (!name) return { ok: false, error: 'Name required' }
   let board = 'Unknown'
@@ -11265,11 +12053,12 @@ let _ariaEnabled        = false
 let _ariaTimer          = null
 let _ariaBaseline       = []   // rolling array of { cpu, gpu, ram, cpuTemp }
 let _ariaLastAlert      = {}   // metric → last alert timestamp
+let _ariaLastPredAlert  = {}   // metric → last predictive alert timestamp
 let _ariaInsights       = []   // stored causal insight records
 let _ariaTweakSnapshot  = null // before-fingerprint during active tweak measurement
 let _ariaSessionAnomalies = [] // anomalies accumulated during the current game session
 let _ariaSessionStart     = null // timestamp when current game session began
-let _ariaSessionPeaks     = { cpu: 0, gpu: 0, ram: 0, cpuTemp: 0 } // peak metric values seen this session
+let _ariaSessionPeaks     = { cpu: 0, gpu: 0, ram: 0, cpuTemp: 0, gpuTemp: 0 } // peak metric values seen this session
 let _ariaFpsTimer          = null
 const ARIA_FPS_INTERVAL_MS = 5000
 const ARIA_FPS_TAIL_LINES  = 400  // ~5-7s of frames at 60fps
@@ -11300,12 +12089,15 @@ function parsePresentMonCsv(csvPath) {
       .map(l => parseFloat(l.split(',')[msIdx]))
       .filter(v => !isNaN(v) && v > 0 && v < 1000)
     if (frameTimes.length < 10) return null
-    frameTimes.sort((a, b) => a - b)
     const n = frameTimes.length
     const mean = frameTimes.reduce((s, v) => s + v, 0) / n
+    const variance = frameTimes.reduce((s, v) => s + (v - mean) ** 2, 0) / n
+    const cv = mean > 0 ? Math.sqrt(variance) / mean * 100 : 0
+    const smoothness = Math.max(0, Math.round(100 - cv / 0.30))
+    frameTimes.sort((a, b) => a - b)
     const p1Low  = frameTimes[Math.floor(n * 0.99)]  // 1% low (99th percentile frame time)
     const p01Low = frameTimes[Math.floor(n * 0.999)] // 0.1% low (99.9th percentile)
-    return { mean: Math.round(mean * 100) / 100, p1Low: Math.round(p1Low * 100) / 100, p01Low: Math.round(p01Low * 100) / 100, samples: n }
+    return { mean: Math.round(mean * 100) / 100, p1Low: Math.round(p1Low * 100) / 100, p01Low: Math.round(p01Low * 100) / 100, samples: n, smoothness }
   } catch { return null }
 }
 
@@ -11319,14 +12111,17 @@ function parsePresentMonCsvFromBuffer(buf) {
       .map(l => parseFloat(l.split(',')[msIdx]))
       .filter(v => !isNaN(v) && v > 0 && v < 1000)
     if (frameTimes.length < 10) return null
-    frameTimes.sort((a, b) => a - b)
     const n = frameTimes.length
     const mean = frameTimes.reduce((s, v) => s + v, 0) / n
+    const variance = frameTimes.reduce((s, v) => s + (v - mean) ** 2, 0) / n
+    const cv = mean > 0 ? Math.sqrt(variance) / mean * 100 : 0
+    const smoothness = Math.max(0, Math.round(100 - cv / 0.30))
+    frameTimes.sort((a, b) => a - b)
     const p1Slice  = frameTimes.slice(Math.floor(n * 0.99))
     const p1Low    = p1Slice.reduce((s, v) => s + v, 0) / p1Slice.length
     const p01Slice = frameTimes.slice(Math.floor(n * 0.999))
     const p01Low   = p01Slice.reduce((s, v) => s + v, 0) / p01Slice.length
-    return { mean: Math.round(mean * 100) / 100, p1Low: Math.round(p1Low * 100) / 100, p01Low: Math.round(p01Low * 100) / 100, samples: n }
+    return { mean: Math.round(mean * 100) / 100, p1Low: Math.round(p1Low * 100) / 100, p01Low: Math.round(p01Low * 100) / 100, samples: n, smoothness }
   } catch { return null }
 }
 
@@ -11344,11 +12139,14 @@ function parsePresentMonBuffer(buf, maxLines) {
     if (frameTimes.length < 10) return null
     const n = frameTimes.length
     const mean = frameTimes.reduce((s, v) => s + v, 0) / n
+    const variance = frameTimes.reduce((s, v) => s + (v - mean) ** 2, 0) / n
+    const cv = mean > 0 ? Math.sqrt(variance) / mean * 100 : 0
+    const smoothness = Math.max(0, Math.round(100 - cv / 0.30))
     const sorted = frameTimes.slice().sort((a, b) => a - b)
     const p1Start = Math.floor(n * 0.99)
     const worst1pct = sorted.slice(p1Start)
     const p1Low = worst1pct.reduce((s, v) => s + v, 0) / worst1pct.length
-    return { avgFps: Math.round(1000 / mean), low1Fps: Math.round(1000 / p1Low) }
+    return { avgFps: Math.round(1000 / mean), low1Fps: Math.round(1000 / p1Low), smoothness }
   } catch { return null }
 }
 
@@ -11397,6 +12195,17 @@ function ariaSaveInsights() {
   } catch {}
 }
 
+// Least-squares slope (units per sample) over the last N values of a time series
+function ariaSlope(vals) {
+  const last = vals.slice(-5)
+  const k = last.length
+  if (k < 3) return 0
+  let sumX = 0, sumY = 0, sumXY = 0, sumXX = 0
+  last.forEach((y, i) => { sumX += i; sumY += y; sumXY += i * y; sumXX += i * i })
+  const denom = k * sumXX - sumX * sumX
+  return denom === 0 ? 0 : (k * sumXY - sumX * sumY) / denom
+}
+
 // Compute mean and standard deviation over an array of numbers
 function ariaStat(arr) {
   if (!arr.length) return { mean: 0, std: 0 }
@@ -11414,6 +12223,7 @@ function ariaSnapshot() {
     gpu:     _lastMetrics.gpu     || 0,
     ram:     _lastMetrics.ram     || 0,
     cpuTemp: _lastMetrics.cpuTemp || 0,
+    gpuTemp: _lastMetrics.gpuTemp || 0,
   }
 }
 
@@ -11443,8 +12253,34 @@ function ariaCheckAnomalies(sample) {
         game:  activeGameProfile || null,
       }
       mainWindow?.webContents.send('aria-tick', evt)
+      pulseWindow?.webContents.send('aria-tick', evt)
       // Accumulate in session anomaly list (cap at 200 to avoid unbounded growth)
       if (_ariaSessionAnomalies.length < 200) _ariaSessionAnomalies.push(evt)
+    }
+  }
+
+  // Predictive alerts: project 8 seconds ahead (4 ticks × 2s) using linear regression slope
+  const predictThresholds = { cpu: 88, gpu: 92, ram: 88, cpuTemp: 88 }
+  for (const key of metrics) {
+    if (predictThresholds[key] == null) continue
+    const slope = ariaSlope(_ariaBaseline.map(s => s[key]))
+    const projected = sample[key] + slope * 4
+    if (slope > 1.5 && projected >= predictThresholds[key] && sample[key] < predictThresholds[key]) {
+      const lastPred = _ariaLastPredAlert[key] || 0
+      if (now - lastPred < ARIA_COOLDOWN_MS) continue
+      _ariaLastPredAlert[key] = now
+      const secsAway = Math.max(1, Math.round((predictThresholds[key] - sample[key]) / slope * 2))
+      const evt = {
+        type:      'predict',
+        metric:    key,
+        value:     Math.round(sample[key]),
+        projected: Math.round(projected),
+        secsAway,
+        ts:   now,
+        game: activeGameProfile || null,
+      }
+      mainWindow?.webContents.send('aria-tick', evt)
+      pulseWindow?.webContents.send('aria-tick', evt)
     }
   }
 }
@@ -11458,7 +12294,7 @@ function ariaTick() {
   if (_ariaBaseline.length > ARIA_WINDOW) _ariaBaseline.shift()
   // Track session peaks while a game is running
   if (activeGameProfile && sample) {
-    for (const k of ['cpu', 'gpu', 'ram', 'cpuTemp']) {
+    for (const k of ['cpu', 'gpu', 'ram', 'cpuTemp', 'gpuTemp']) {
       if (sample[k] != null && sample[k] > (_ariaSessionPeaks[k] || 0)) _ariaSessionPeaks[k] = sample[k]
     }
   }

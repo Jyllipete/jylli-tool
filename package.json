@@ -1,7 +1,7 @@
 {
   "name": "jylli-tool",
-  "version": "1.5.2",
-  "description": "Professional Windows Optimization Tool",
+  "version": "1.5.3",
+  "description": "Jylli Tool",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
