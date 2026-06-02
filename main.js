@@ -1055,8 +1055,9 @@ try {
         lhmStatus = (r.out || '').trim() || 'lhm_error'
         if (lhmStatus === 'lhm_ok') break
       }
-      mainWindow?.webContents.send('lhm-status', lhmStatus)
-      if (lhmStatus !== 'lhm_ok' && !_lhmErrorReported) {
+      if (lhmStatus === 'lhm_ok') {
+        mainWindow?.webContents.send('lhm-status', lhmStatus)
+      } else if (!_lhmErrorReported) {
         const diagR = await runPS(`
 $proc = Get-Process 'LibreHardwareMonitor' -EA SilentlyContinue
 $procLine = if ($proc) { "LHM_PROC=running (PID $($proc.Id))" } else { "LHM_PROC=not found" }
@@ -1088,11 +1089,11 @@ Write-Output $logLine
           const retryStatus = (retryR.out || '').trim() || 'lhm_error'
           mainWindow?.webContents.send('lhm-status', retryStatus)
           if (retryStatus === 'lhm_ok') return
-          // Elevated relaunch still failed — fall through to notify
           _lhmErrorReported = true
           notifyBot('lhm_unavailable', { lhmStatus: retryStatus, lhmDiag: lhmDiag + ' | elevated_retry_failed' })
           return
         }
+        mainWindow?.webContents.send('lhm-status', lhmStatus)
         _lhmErrorReported = true
         notifyBot('lhm_unavailable', { lhmStatus, lhmDiag })
       }
