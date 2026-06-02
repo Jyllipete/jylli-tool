@@ -202,9 +202,8 @@ async function _bootAuth() {
     if (r?.ok) { _authCleared = true; api.startupTrace?.('calling init()'); init(r?.isPremium === true) } else { api.startupTrace?.('calling showLockScreen()'); showLockScreen() }
   } catch (e) {
     api.startupTrace?.(`_bootAuth catch: code=${e?.code} msg=${e?.message} → calling init()`)
-    // Network error or DNS timeout → proceed to app (offline tolerance), use cached tier
-    const cached = await api.loadSettings().catch(() => ({}))
-    init(cached?.isPremium === true)
+    // Bot unreachable — allow app open but force non-premium until bot is back
+    init(false)
   }
 }
 

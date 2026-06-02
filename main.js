@@ -829,8 +829,15 @@ function createWindow() {
           const notExpired = s2.authExpiry && Date.now() < s2.authExpiry
           const hmacOk = s2.settingsHmac === _settingsHmac(s2)
           startupTrace(`main auth gate offline: notExpired=${notExpired} hmacOk=${hmacOk}`)
-          if (!notExpired || !hmacOk) mainWindow?.webContents.send('auth-required')
-          else startTierRefresh()
+          if (!notExpired || !hmacOk) {
+            mainWindow?.webContents.send('auth-required')
+          } else {
+            // Bot unreachable — allow app open but force non-premium until bot is back
+            s2.isPremium = false
+            saveSettingsWithHmac(s2)
+            mainWindow?.webContents.send('tier-update', { isPremium: false })
+            startTierRefresh()
+          }
         } else {
           mainWindow?.webContents.send('auth-required')
         }
@@ -8632,7 +8639,7 @@ ipcMain.handle('auth-verify', async () => {
     startupTrace(`auth-verify: error code=${e?.code} msg=${e?.message}`)
     // Only allow through on actual network errors (ENOTFOUND, ECONNREFUSED, etc.)
     const isNetErr = e.code && (e.code.startsWith('E') || e.code === 'ETIMEDOUT')
-    if (isNetErr) return { ok: true, reason: 'offline', isPremium: s.isPremium === true }
+    if (isNetErr) return { ok: true, reason: 'offline', isPremium: false }
     return { ok: false, reason: 'error' }
   }
 })
