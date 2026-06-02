@@ -1082,27 +1082,32 @@ Write-Output $nsExists
 Write-Output $logLine
 `, 6000).catch(() => ({ out: '' }))
         const lhmDiag = (diagR.out || '').trim().slice(0, 500) || null
-        // WMI namespace missing despite LHM running → needs elevation to register provider
+        // WMI namespace missing despite LHM running → elevate LHM via bundled elevate.exe for proper UAC prompt
         if (lhmDiag && lhmDiag.includes('LHM_NS=missing')) {
           mainWindow?.webContents.send('lhm-status', 'lhm_elevating')
           stopLhm()
           const lhmExe = assetPath('assets', 'lhm', 'LibreHardwareMonitor.exe')
-          execFile('powershell.exe', [
-            '-WindowStyle', 'Hidden', '-Command',
-            `Start-Process '${lhmExe.replace(/'/g, "''")}' -ArgumentList '--no-pawnio','--no-gui' -Verb RunAs`
-          ], { windowsHide: true }, () => {})
+          const elevatePath = app.isPackaged ? path.join(process.resourcesPath, 'elevate.exe') : null
+          if (elevatePath && fs.existsSync(elevatePath)) {
+            execFile(elevatePath, [lhmExe, '--no-pawnio', '--no-gui'], { windowsHide: true }, () => {})
+          } else {
+            execFile('powershell.exe', [
+              '-WindowStyle', 'Hidden', '-Command',
+              `Start-Process '${lhmExe.replace(/'/g, "''")}' -ArgumentList '--no-pawnio','--no-gui' -Verb RunAs`
+            ], { windowsHide: true }, () => {})
+          }
           await new Promise(r => setTimeout(r, 8000))
           const retryR = await probeLhm().catch(() => ({ out: '' }))
           const retryStatus = (retryR.out || '').trim() || 'lhm_error'
           mainWindow?.webContents.send('lhm-status', retryStatus)
           if (retryStatus === 'lhm_ok') return
           _lhmErrorReported = true
-          notifyBot('lhm_unavailable', { lhmStatus: retryStatus, lhmDiag: lhmDiag + ' | elevated_retry_failed' })
+          notifyBot('lhm_unavailable', { lhmStatus: retryStatus, lhmDiag: lhmDiag + ' | elevated_retry_failed', lhmElevated: true })
           return
         }
         mainWindow?.webContents.send('lhm-status', lhmStatus)
         _lhmErrorReported = true
-        notifyBot('lhm_unavailable', { lhmStatus, lhmDiag })
+        notifyBot('lhm_unavailable', { lhmStatus, lhmDiag, lhmElevated: false })
       }
     } catch { mainWindow?.webContents.send('lhm-status', 'lhm_error') }
   }, 8000)
@@ -1360,6 +1365,9 @@ function migrateSettings(s) {
   if ((s.gameShieldMidSessionThreshold ?? 80) <= (s.gameShieldTier3Threshold ?? 70)) {
     s.gameShieldMidSessionThreshold = Math.min(95, (s.gameShieldTier3Threshold ?? 70) + 10)
   }
+
+  // Remove stale flag left by a previous build attempt
+  delete s.lhmElevationAttempted
 
   s.__schemaVersion = SETTINGS_SCHEMA_VERSION
   return s
@@ -8701,6 +8709,31 @@ ipcMain.handle('clean-power-plans', async () => {
 
 // What's New content
 const WHATS_NEW = [
+  { version: '1.5.6', date: 'June 2026', items: [
+    'Pulse — Update Guard: prevents Windows Update from starting during game sessions; resumes automatically after game closes | Pulse — Päivityssuoja: estää Windows Updaten käynnistymisen pelisessioiden aikana — jatkuu automaattisesti pelin sulkemisen jälkeen',
+    'Pulse — Game Shield: kills background processes on game launch for maximum CPU headroom; restored after game closes | Pulse — Pelisuoja: tappaa taustaprosessit pelin käynnistyessä maksimaalisen CPU-tilan saamiseksi — palautetaan pelin sulkemisen jälkeen',
+    'Pulse — Improved overall logic and reliability | Pulse — Ylipäätänsä paranneltu logiikkaa ja toimivuutta',
+    'Advanced — Interrupt Affinity Tool: sets Interrupt Management Affinity Policy in the Windows device registry for NIC, audio and USB driver classes; moves IRQ handling to logical cores 2+ leaving cores 0–1 free for your game thread | Lisäasetukset — Keskeytysaffiniteettityökalu: asettaa "Interrupt Management → Affinity Policy" Windowsin laiterekisteriin verkkokortti-, ääni- ja USB-ohjainluokille; siirtää IRQ-käsittelyn loogisille ytimille 2+, jättäen ytimet 0–1 vapaaksi pelisäikeellesi',
+    'Advanced — CPU Core Topology Optimizer: pin your game to the best cores | Lisäasetukset — CPU-ytimen topologiaoptimoija: kiinnitä peli parhaisiin ytimiin',
+    'Advanced — Thermal Throttle Finder: real-time throttle reason detection | Lisäasetukset — Lämpörajoitusetsijä: reaaliaikainen rajoitussyyn tunnistus',
+    'Advanced — Power Efficiency Monitor: GPU watts per frame — find your optimal TDP | Lisäasetukset — Tehonsäästöseuranta: GPU-wattia per ruutu — löydä optimaalinen TDP',
+    'Advanced — Latency Profiler: frame pipeline view — CPU, GPU and display queue | Lisäasetukset — Latenssikaavioisija: ruutuputkilinja — CPU, GPU ja näyttöjono',
+    'App Optimizer — Smart Game Mode: automatic background management during gameplay | Sovellussäätö — Älykäs pelitila: automaattinen taustahallinta pelin aikana',
+    'App Optimizer — Conflict Detector: identifies all conflicts in app combinations and tells you how to fix them | Sovellussäätö — Ristiriitahavainto: tunnistaa kaikki ristiriidat sovellusyhdistelmissä ja kertoo miten korjata ne',
+    'Cleanup — Ghost App Detector: find leftover data from uninstalled apps | Siivous — Haamusovellusten tunnistin: löydä tietoja poistettujen sovellusten jäljiltä',
+    'Cleanup — Disk Health Timeline: track cleanup history and disk fill rate | Siivous — Levyterveyden aikajana: seuraa siivoushistoriaa ja levyn täyttönopeutta',
+    'BIOS Tuner — Stability Confidence Score: runs a quick background test after tuning and checks Windows hardware error logs for instability signals | BIOS-säätäjä — Vakausluottamuspistemäärä: suorittaa nopean taustatestin virityksen jälkeen ja tarkistaa laitteistovirhelokeja epävakauden merkkejä varten',
+    'BIOS Tuner — Thermal Fingerprint: 60-second passive observation classifies your system thermal personality | BIOS-säätäjä — Lämpösormenjälki: 60 sekunnin passiivinen tarkkailu luokittelee tietokoneesi termisen persoonallisuuden',
+    'BIOS Tuner — Boot Time Chronicle: shows exactly where your PC spends time at startup using Windows boot data | BIOS-säätäjä — Käynnistysaikakatsaus: näyttää tarkalleen missä tietokoneesi käyttää aikaa käynnistyksen aikana',
+    'BIOS Tuner — Improved overall logic and reliability | BIOS-säätäjä — Paranneltu logiikkaa ja toimivuutta ylipäätänsä',
+    'Settings — Quiet Mode: Jylli pauses its own background activity and silences Windows notifications during gaming | Asetukset — Hiljainen tila: pelaamisen aikana Jylli keskeyttää oman taustatoimintansa ja hiljentää Windowsin ilmoitukset',
+    'Settings — Low Resource Mode: slows background checks while in tray — game detection may take up to 30 s, thermal monitoring pauses | Asetukset — Matala resurssitila: hidastaa taustatarkistuksia kelluessa ilmoitusalueella — pelidetektio voi kestää 30 s, lämpöseuranta pysähtyy',
+    'Settings — ThermalGuard: shows CPU temperature in the sidebar continuously; warns if CPU runs too hot at idle | Asetukset — ThermalGuard: näyttää CPU-lämpötilan sivupalkissa jatkuvasti — varoittaa, jos CPU lämpenee liikaa tyhjäkäynnillä',
+    'Every tab audited and every found bug fixed | Jokainen sivu käyty läpi ja korjattu jokainen bugi mitä löytyi',
+    'Numerous recurring bugs and errors fixed | Korjattu paljon ilmeneviä bugeja/erroreita',
+    'ARIA analysis improved — significantly more accurate readings | ARIA:n analyysiä paranneltu — huomattavasti tarkemmat lukemat',
+    'Many other extras and improvements | Paljon muuta extraa!'
+  ]},
   { version: '1.5.5', date: 'June 2026', items: [
     'Discord-kirjautuminen korjattu — ei enää jää jumiin "Avataan selain..." -tilaan | Discord login fixed — no longer stuck on "Opening browser..."',
     'Discord-kirjautuminen toimii nyt kaikille käyttäjille, myös niille jotka eivät ole serverillä | Discord login now works for all users, including those not in the server',
