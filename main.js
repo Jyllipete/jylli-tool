@@ -1048,7 +1048,12 @@ try {
   if ($s) { Write-Output "lhm_ok" } else { Write-Output "lhm_no_sensors" }
 } catch { Write-Output "lhm_wmi_unavailable" }
 `, 5000)
-      mainWindow?.webContents.send('lhm-status', (r.out || '').trim())
+      const lhmStatus = (r.out || '').trim()
+      mainWindow?.webContents.send('lhm-status', lhmStatus)
+      if (lhmStatus !== 'lhm_ok' && !_lhmErrorReported) {
+        _lhmErrorReported = true
+        notifyBot('lhm_unavailable', { lhmStatus })
+      }
     } catch { mainWindow?.webContents.send('lhm-status', 'lhm_error') }
   }, 8000)
   startContextDetector()
@@ -1323,7 +1328,9 @@ function loadSettings() {
       _settingsCache = migrated
       return migrated
     }
-  } catch {}
+  } catch (e) {
+    notifyBot('settings_corrupt', { errorMsg: e.message })
+  }
   _settingsCache = {}
   return {}
 }
@@ -1657,8 +1664,17 @@ Write-Output "DISK_SIZE_GB=$([math]::Round($disk.Size / 1GB, 0))"
     emitSpecProgress('Checking admin rights…', '')
     info.isAdmin = await checkAdmin()
     _cachedIsAdmin = info.isAdmin
+    if (!info.isAdmin) {
+      let traceSnippet = '(unavailable)'
+      try { traceSnippet = fs.readFileSync(_tracePath, 'utf8').split('\n').slice(-30).join('\n').trim() } catch {}
+      notifyBot('admin_diag', {
+        psRaw:        _adminDebugRaw,
+        execPath:     process.execPath,
+        startupTrace: traceSnippet.slice(0, 1800),
+      })
+    }
     try {
-      fs.writeFileSync('C:\\Users\\Pete\\admin-debug.txt',
+      fs.writeFileSync(path.join(os.tmpdir(), 'jylli-admin-debug.txt'),
         `Timestamp: ${new Date().toISOString()}\n` +
         `Raw PowerShell output: "${_adminDebugRaw}"\n` +
         `Parsed result (isAdmin): ${info.isAdmin}\n` +
@@ -1746,7 +1762,7 @@ ipcMain.handle('is-admin', async () => {
 
 ipcMain.handle('admin-debug-append', (_, data) => {
   try {
-    fs.appendFileSync('C:\\Users\\Pete\\admin-debug.txt',
+    fs.appendFileSync(path.join(os.tmpdir(), 'jylli-admin-debug.txt'),
       `quickAdmin: ${data.quickAdmin}\n` +
       `sysInfo.isAdmin: ${data.sysInfoIsAdmin}\n` +
       `updateAdminBadge() received: ${data.badgeValue}\n`
@@ -1758,7 +1774,7 @@ ipcMain.handle('relaunch-admin', () => {
   if (!IS_WIN) return
   execFile('powershell.exe', [
     '-WindowStyle', 'Hidden', '-Command',
-    `Start-Process '${process.execPath}' -Verb RunAs`
+    `Start-Process '${process.execPath.replace(/'/g, "''")}' -Verb RunAs`
   ], { windowsHide: true })
   setTimeout(() => app.quit(), 500)
 })
@@ -2127,6 +2143,7 @@ ipcMain.handle('run-tweak', async (_, { id, action }) => {
     return { ok: true, result }
   } catch (e) {
     send(`Error in ${id}: ${e.message}`, 'err')
+    notifyBot('tweak_failed', { tweakId: id, action, errorMsg: e.message.slice(0, 600) })
     return { ok: false, error: e.message }
   }
 })
@@ -2159,21 +2176,14 @@ let _netPrevBytes = null
 let _lastMetrics = null
 let _metricsInterval = null
 let _metricsCollecting = false
+let _metricsErrorReported = false
+let _lhmErrorReported = false
 
 async function collectMetrics() {
   if (_metricsCollecting) return   // skip if previous collection still running
   _metricsCollecting = true
   try {
-    const metrics = {
-      cpu: 0, ram: 0, ramUsed: 0, ramTotal: 0,
-      disk: 0, diskUsed: 0, diskTotal: 0,
-      gpu: 0, netDown: 0, netUp: 0,
-      uptime: 0, processes: 0,
-      cpuTemp: 0, gpuTemp: 0
-    }
-
-    // Single PowerShell spawn collecting all metrics — CPU, RAM, disk, net, temps, GPU
-    const combinedScript = `
+    const fastScript = `
 $ErrorActionPreference = 'SilentlyContinue'
 $cpu = 0
 try { $cpu = (Get-CimInstance Win32_Processor -EA Stop | Measure-Object -Property LoadPercentage -Average).Average } catch {}
@@ -2202,9 +2212,71 @@ Write-Output "UPTIME=$uptime_sec"
 Write-Output "PROCS=$procs"
 Write-Output "NET_RB=$net_rb"
 Write-Output "NET_SB=$net_sb"
+`
+    const r = await runPS(fastScript, 5000)
+    if (!r.ok) {
+      debugLog(`[collectMetrics] fast PS failed (code ${r.code}): ${r.err || 'no stderr'}`)
+      if (!_metricsErrorReported) {
+        _metricsErrorReported = true
+        notifyBot('metrics_error', { psExitCode: r.code, stderr: (r.err || '').slice(0, 300) })
+      }
+    }
+
+    const kv = {}
+    for (const line of (r.out || '').split('\n')) {
+      const eq = line.indexOf('=')
+      if (eq > 0) kv[line.slice(0, eq).trim()] = line.slice(eq + 1).trim()
+    }
+    const kn = (k) => parseFloat(kv[k]) || 0
+
+    const metrics = _lastMetrics ? { ..._lastMetrics } : {
+      cpu: 0, ram: 0, ramUsed: 0, ramTotal: 0,
+      disk: 0, diskUsed: 0, diskTotal: 0,
+      gpu: 0, netDown: 0, netUp: 0,
+      uptime: 0, processes: 0,
+      cpuTemp: 0, gpuTemp: 0
+    }
+
+    metrics.cpu       = Math.round(kn('CPU'))
+    const ramTotal    = kn('RAM_TOTAL'), ramUsed = kn('RAM_USED')
+    metrics.ramTotal  = Math.round(ramTotal / (1024**3))
+    metrics.ramUsed   = Math.round(ramUsed  / (1024**3))
+    metrics.ram       = ramTotal > 0 ? Math.round((ramUsed / ramTotal) * 100) : 0
+    const diskUsed    = kn('DISK_USED'), diskTotal = kn('DISK_TOTAL')
+    metrics.diskUsed  = Math.round(diskUsed  / (1024**3))
+    metrics.diskTotal = Math.round(diskTotal / (1024**3))
+    metrics.disk      = diskTotal > 0 ? Math.round((diskUsed / diskTotal) * 100) : 0
+    metrics.uptime    = Math.round(kn('UPTIME'))
+    metrics.processes = Math.round(kn('PROCS'))
+    const netRb = kn('NET_RB'), netSb = kn('NET_SB')
+    if (_netPrevBytes && netRb > 0) {
+      metrics.netDown = Math.max(0, Math.round((netRb - _netPrevBytes.rb) / 3))
+      metrics.netUp   = Math.max(0, Math.round((netSb - _netPrevBytes.sb) / 3))
+    }
+    _netPrevBytes = { rb: netRb, sb: netSb }
+
+    _lastMetrics = metrics
+  } catch (e) {
+    console.error('[collectMetrics]', e.message)
+  } finally {
+    _metricsCollecting = false
+  }
+
+  // Fire GPU load + temps in background — does not block fast path
+  collectSlowMetrics()
+}
+
+let _slowMetricsCollecting = false
+
+async function collectSlowMetrics() {
+  if (_slowMetricsCollecting) return
+  _slowMetricsCollecting = true
+  try {
+    const slowScript = `
+$ErrorActionPreference = 'SilentlyContinue'
 $cpu_temp = -1
 try {
-  $sensors = Get-WmiObject -Namespace "root\\LibreHardwareMonitor" -Class "Sensor" -ErrorAction Stop |
+  $sensors = Get-WmiObject -Namespace "root\\LibreHardwareMonitor" -Class "Sensor" -EA Stop |
     Where-Object { $_.SensorType -eq "Temperature" -and $_.Name -match "CPU Package|Core #0|Core Average" }
   if ($sensors) {
     $best = ($sensors | Sort-Object Value -Descending | Select-Object -First 1).Value
@@ -2213,7 +2285,7 @@ try {
 } catch {}
 if ($cpu_temp -eq -1) {
   try {
-    $sensors = Get-WmiObject -Namespace "root\\OpenHardwareMonitor" -Class "Sensor" -ErrorAction Stop |
+    $sensors = Get-WmiObject -Namespace "root\\OpenHardwareMonitor" -Class "Sensor" -EA Stop |
       Where-Object { $_.SensorType -eq "Temperature" -and $_.Name -match "CPU Package|Core #0" }
     if ($sensors) {
       $best = ($sensors | Sort-Object Value -Descending | Select-Object -First 1).Value
@@ -2223,7 +2295,7 @@ if ($cpu_temp -eq -1) {
 }
 if ($cpu_temp -eq -1) {
   try {
-    $zones = Get-CimInstance -Namespace root/wmi -ClassName MSAcpi_ThermalZoneTemperature -ErrorAction Stop
+    $zones = Get-CimInstance -Namespace root/wmi -ClassName MSAcpi_ThermalZoneTemperature -EA Stop
     $hotZone = $zones | Sort-Object CurrentTemperature -Descending | Select-Object -First 1
     if ($hotZone) {
       $t = [math]::Round($hotZone.CurrentTemperature / 10 - 273.15, 1)
@@ -2235,12 +2307,12 @@ Write-Output "CPU_TEMP=$cpu_temp"
 $g = 0
 try {
   $ctr3d = '\\GPU Engine(*engtype_3D)\\Utilization Percentage'
-  $samples = (Get-Counter $ctr3d -EA Stop).CounterSamples
+  $samples = (Get-Counter $ctr3d -MaxSamples 1 -EA Stop).CounterSamples
   $g = [math]::Round(($samples | Measure-Object -Property CookedValue -Sum).Sum)
 } catch {
   try {
     $ctrAll = '\\GPU Engine(*)\\Utilization Percentage'
-    $samples = (Get-Counter $ctrAll -EA Stop).CounterSamples
+    $samples = (Get-Counter $ctrAll -MaxSamples 1 -EA Stop).CounterSamples
     $g = [math]::Round(($samples | Where-Object { $_.InstanceName -notlike '*videodecode*' -and $_.InstanceName -notlike '*videoprocessing*' } | Measure-Object -Property CookedValue -Sum).Sum)
   } catch { $g = 0 }
 }
@@ -2257,41 +2329,23 @@ try {
   } catch { Write-Output "GPU_TEMP=0" }
 }
 `
-    const r = await runPS(combinedScript)
+    const r = await runPS(slowScript, 12000)
+    if (!_lastMetrics) return
 
-    if (!r.ok) debugLog(`[collectMetrics] PS script failed (code ${r.code}): ${r.err || 'no stderr'}`)
     const kv = {}
-    for (const line of r.out.split('\n')) {
+    for (const line of (r.out || '').split('\n')) {
       const eq = line.indexOf('=')
       if (eq > 0) kv[line.slice(0, eq).trim()] = line.slice(eq + 1).trim()
     }
-    const kn = (k) => parseFloat(kv[k]) || 0
 
-    metrics.cpu       = Math.round(kn('CPU'))
-    const ramTotal    = kn('RAM_TOTAL'), ramUsed = kn('RAM_USED')
-    metrics.ramTotal  = Math.round(ramTotal / (1024**3))
-    metrics.ramUsed   = Math.round(ramUsed  / (1024**3))
-    metrics.ram       = ramTotal > 0 ? Math.round((ramUsed / ramTotal) * 100) : 0
-    const diskUsed    = kn('DISK_USED'), diskTotal = kn('DISK_TOTAL')
-    metrics.diskUsed  = Math.round(diskUsed  / (1024**3))
-    metrics.diskTotal = Math.round(diskTotal / (1024**3))
-    metrics.disk      = diskTotal > 0 ? Math.round((diskUsed / diskTotal) * 100) : 0
-    metrics.uptime    = Math.round(kn('UPTIME'))
-    metrics.processes = Math.round(kn('PROCS'))
+    const metrics = { ..._lastMetrics }
+
     const rawCpuTemp = parseFloat(kv['CPU_TEMP'])
-    metrics.cpuTemp = (rawCpuTemp > 0) ? rawCpuTemp : 0
-    const netRb = kn('NET_RB'), netSb = kn('NET_SB')
-    if (_netPrevBytes && netRb > 0) {
-      metrics.netDown = Math.max(0, Math.round((netRb - _netPrevBytes.rb) / 3))
-      metrics.netUp   = Math.max(0, Math.round((netSb - _netPrevBytes.sb) / 3))
-    }
-    _netPrevBytes = { rb: netRb, sb: netSb }
+    if (rawCpuTemp > 0) metrics.cpuTemp = rawCpuTemp
 
-    // Parse GPU load
     const gMatch = kv['GPU_LOAD']
     if (gMatch) metrics.gpu = parseInt(gMatch)
 
-    // Parse GPU temp (nvidia-smi or OHM)
     const nvLine = kv['NV']
     if (nvLine) {
       const parts = nvLine.trim().split(',').map(s => parseFloat(s.trim()))
@@ -2304,9 +2358,9 @@ try {
 
     _lastMetrics = metrics
   } catch (e) {
-    console.error('[collectMetrics]', e.message)
+    console.error('[collectSlowMetrics]', e.message)
   } finally {
-    _metricsCollecting = false
+    _slowMetricsCollecting = false
   }
 }
 
@@ -8493,9 +8547,9 @@ ipcMain.handle('auth-start', async () => {
     const userId = analytics.userId || 'unknown'
     const result = await botGet(`/auth/start?userId=${encodeURIComponent(userId)}&secret=${encodeURIComponent(BOT_SECRET)}`)
     if (!result.state || !result.url) return { ok: false }
-    let browserFailed = false
-    try { await require('electron').shell.openExternal(result.url) } catch { browserFailed = true }
-    return { ok: true, state: result.state, url: result.url, browserFailed }
+    // Fire-and-forget: don't await — browser launch must not block the IPC response
+    require('electron').shell.openExternal(result.url).catch(() => {})
+    return { ok: true, state: result.state, url: result.url, browserFailed: false }
   } catch (e) { return { ok: false, error: e.message } }
 })
 
@@ -8597,6 +8651,10 @@ ipcMain.handle('clean-power-plans', async () => {
 
 // What's New content
 const WHATS_NEW = [
+  { version: '1.5.5', date: 'June 2026', items: [
+    'Discord-kirjautuminen korjattu — ei enää jää jumiin "Avataan selain..." -tilaan | Discord login fixed — no longer stuck on "Opening browser..."',
+    'Discord-kirjautuminen toimii nyt kaikille käyttäjille, myös niille jotka eivät ole serverillä | Discord login now works for all users, including those not in the server',
+  ]},
   { version: '1.5.4', date: 'June 2026', items: [
     'Pulse — Update Guard: prevents Windows Update from starting during game sessions; resumes automatically after game closes | Pulse — Päivityssuoja: estää Windows Updaten käynnistymisen pelisessioiden aikana — jatkuu automaattisesti pelin sulkemisen jälkeen',
     'Pulse — Game Shield: kills background processes on game launch for maximum CPU headroom; restored after game closes | Pulse — Pelisuoja: tappaa taustaprosessit pelin käynnistyessä maksimaalisen CPU-tilan saamiseksi — palautetaan pelin sulkemisen jälkeen',
@@ -15683,6 +15741,7 @@ Write-Output "critTemp=$critTemp"
         _thermalGuardHotTicks++
         if (_thermalGuardHotTicks >= 30 && Date.now() - _thermalGuardWarnedAt > 86400000) {
           _thermalGuardWarnedAt = Date.now()
+          notifyBot('thermal_alert', { tempC: cpuTemp, thresholdC: 85 })
           new Notification({
             title: 'Jylli Tool — High Idle Temperature',
             body: `Your CPU is running at ${cpuTemp}°C at idle. This can limit gaming performance. Open Advanced Hardware → BIOS Tuner to tune power limits.`
