@@ -1057,7 +1057,6 @@ try {
       }
       mainWindow?.webContents.send('lhm-status', lhmStatus)
       if (lhmStatus !== 'lhm_ok' && !_lhmErrorReported) {
-        _lhmErrorReported = true
         const diagR = await runPS(`
 $proc = Get-Process 'LibreHardwareMonitor' -EA SilentlyContinue
 $procLine = if ($proc) { "LHM_PROC=running (PID $($proc.Id))" } else { "LHM_PROC=not found" }
@@ -1075,6 +1074,26 @@ Write-Output $nsExists
 Write-Output $logLine
 `, 6000).catch(() => ({ out: '' }))
         const lhmDiag = (diagR.out || '').trim().slice(0, 500) || null
+        // WMI namespace missing despite LHM running → needs elevation to register provider
+        if (lhmDiag && lhmDiag.includes('LHM_NS=missing')) {
+          mainWindow?.webContents.send('lhm-status', 'lhm_elevating')
+          stopLhm()
+          const lhmExe = assetPath('assets', 'lhm', 'LibreHardwareMonitor.exe')
+          execFile('powershell.exe', [
+            '-WindowStyle', 'Hidden', '-Command',
+            `Start-Process '${lhmExe.replace(/'/g, "''")}' -ArgumentList '--no-pawnio','--no-gui' -Verb RunAs`
+          ], { windowsHide: true }, () => {})
+          await new Promise(r => setTimeout(r, 8000))
+          const retryR = await probeLhm().catch(() => ({ out: '' }))
+          const retryStatus = (retryR.out || '').trim() || 'lhm_error'
+          mainWindow?.webContents.send('lhm-status', retryStatus)
+          if (retryStatus === 'lhm_ok') return
+          // Elevated relaunch still failed — fall through to notify
+          _lhmErrorReported = true
+          notifyBot('lhm_unavailable', { lhmStatus: retryStatus, lhmDiag: lhmDiag + ' | elevated_retry_failed' })
+          return
+        }
+        _lhmErrorReported = true
         notifyBot('lhm_unavailable', { lhmStatus, lhmDiag })
       }
     } catch { mainWindow?.webContents.send('lhm-status', 'lhm_error') }
