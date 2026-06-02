@@ -1039,20 +1039,43 @@ app.whenReady().then(() => {
       setTimeout(() => { if (!_thermalInterval) ipcMain.emit('thermal-start') }, 3000)
     }
   }
-  // Probe LHM WMI readiness 8s after launch — LHM needs a few seconds to register its WMI provider
+  // Probe LHM WMI readiness — retry up to 3 times (T+8s, T+13s, T+18s) to handle slow provider registration
   setTimeout(async () => {
-    try {
-      const r = await runPS(`
+    const probeLhm = () => runPS(`
 try {
   $s = Get-WmiObject -Namespace "root\\\\LibreHardwareMonitor" -Class "Sensor" -EA Stop | Select-Object -First 1
   if ($s) { Write-Output "lhm_ok" } else { Write-Output "lhm_no_sensors" }
 } catch { Write-Output "lhm_wmi_unavailable" }
 `, 5000)
-      const lhmStatus = (r.out || '').trim()
+    let lhmStatus = 'lhm_error'
+    try {
+      for (let attempt = 0; attempt < 3; attempt++) {
+        if (attempt > 0) await new Promise(r => setTimeout(r, 5000))
+        const r = await probeLhm()
+        lhmStatus = (r.out || '').trim() || 'lhm_error'
+        if (lhmStatus === 'lhm_ok') break
+      }
       mainWindow?.webContents.send('lhm-status', lhmStatus)
       if (lhmStatus !== 'lhm_ok' && !_lhmErrorReported) {
         _lhmErrorReported = true
-        notifyBot('lhm_unavailable', { lhmStatus })
+        const diagR = await runPS(`
+$proc = Get-Process 'LibreHardwareMonitor' -EA SilentlyContinue
+$procLine = if ($proc) { "LHM_PROC=running (PID $($proc.Id))" } else { "LHM_PROC=not found" }
+$nsExists = try {
+  $ns = Get-WmiObject -Namespace "root" -Class "__Namespace" -EA Stop | Where-Object { $_.Name -eq 'LibreHardwareMonitor' }
+  if ($ns) { "LHM_NS=registered" } else { "LHM_NS=missing" }
+} catch { "LHM_NS=wmi_error" }
+$lhmDir = Join-Path $env:TEMP 'LibreHardwareMonitor'
+$logLine = if (Test-Path $lhmDir) {
+  $latest = Get-ChildItem $lhmDir -Filter '*.log' -EA SilentlyContinue | Sort-Object LastWriteTime -Desc | Select-Object -First 1
+  if ($latest) { "LHM_LOG=" + ((Get-Content $latest.FullName -Tail 3 -EA SilentlyContinue) -join ' | ') } else { "LHM_LOG=no_log" }
+} else { "LHM_LOG=no_dir" }
+Write-Output $procLine
+Write-Output $nsExists
+Write-Output $logLine
+`, 6000).catch(() => ({ out: '' }))
+        const lhmDiag = (diagR.out || '').trim().slice(0, 500) || null
+        notifyBot('lhm_unavailable', { lhmStatus, lhmDiag })
       }
     } catch { mainWindow?.webContents.send('lhm-status', 'lhm_error') }
   }, 8000)
