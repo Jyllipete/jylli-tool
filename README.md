@@ -30,9 +30,9 @@
 > Voit joko tehdä tweakit itse valitsemalla ne yksitellen (Muista tehdä palautuspiste ja lue jokainen kohta ennen käyttöä!)
 > Tai suorittaa **Auto-Optimoinnin**, joka valitsee sinun koneelle parhaat mahdolliset tweakit!
 > ### ❓ Mitä Jylli Tool sisältää?
-> Voit katsoa sovelluksen esittely videon <#1510198797614186576> kanavalta. (Ei ole aivan Up-to-date, videon jälkeen tullut laaja määrä uudistuksia)
+> Voit katsoa sovelluksen esittely videon "esittely" kanavalta discordissa. (Ei ole aivan Up-to-date, videon jälkeen tullut laaja määrä uudistuksia)
 > ### ❓ Auttaako se oikesti FPS:ään ja suorituskykyyn?
-> <#1465429665677316207> kanavalta näät käyttäjien arvosteluja sovelluksesta. Jokainen sovelluksen käyttäjä on ollut tyytyväinen tuloksiin!
+> Palaute kanavalta näät käyttäjien arvosteluja sovelluksesta. Jokainen sovelluksen käyttäjä on ollut tyytyväinen tuloksiin!
 > 
 > **⚠️ Jos pelaat älä pidä Jylli Toolia päällä kokonaan, laita se trayhin clickaamalla oikealla ylhäällä olevaa viivaa!⚠️ **
 > -# - Kaikki countterit yms rullaa jos se ei ole suljettuna tai trayssä. Aiheuttaa mahdollisia FPS Droppeja ja muita stability ongelmia
