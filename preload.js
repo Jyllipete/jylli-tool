@@ -32,8 +32,21 @@ contextBridge.exposeInMainWorld('api', {
   getPrefetchAges:    ()           => ipcRenderer.invoke('get-prefetch-ages'),
   disableServices:    (svcs)       => ipcRenderer.invoke('disable-services', svcs),
   disableScheduledTasks: (tasks)   => ipcRenderer.invoke('disable-scheduled-tasks', tasks),
-  getUnusedDevices:   ()           => ipcRenderer.invoke('get-unused-devices'),
-  removeDevices:      (ids)        => ipcRenderer.invoke('remove-devices', ids),
+  getUnusedDevices:        ()              => ipcRenderer.invoke('get-unused-devices'),
+  removeDevices:           (ids)           => ipcRenderer.invoke('remove-devices', ids),
+  scanProvisionedUwp:      ()              => ipcRenderer.invoke('scan-provisioned-uwp'),
+  getServiceStatuses:      (ids)           => ipcRenderer.invoke('get-service-statuses', ids),
+  enableService:           (id, start)     => ipcRenderer.invoke('enable-service', { id, start }),
+  getTaskStates:           ()              => ipcRenderer.invoke('get-task-states'),
+  enableScheduledTask:     (opts)          => ipcRenderer.invoke('enable-scheduled-task', opts),
+  getAdsStates:            ()              => ipcRenderer.invoke('get-ads-states'),
+  killAllAds:              ()              => ipcRenderer.invoke('kill-all-ads'),
+  setAdsToggle:            (opts)          => ipcRenderer.invoke('set-ads-toggle', opts),
+  getShellExtensions:      ()              => ipcRenderer.invoke('get-shell-extensions'),
+  removeShellExtension:    (opts)          => ipcRenderer.invoke('remove-shell-extension', opts),
+  getOptionalFeatures:     ()              => ipcRenderer.invoke('get-optional-features'),
+  disableOptionalFeature:  (name)          => ipcRenderer.invoke('disable-optional-feature', name),
+  getUserAssist:           ()              => ipcRenderer.invoke('get-user-assist'),
   fivemClearCache:    (opts)       => ipcRenderer.invoke('fivem-clear-cache', opts),
   fivemCacheInfo:     ()           => ipcRenderer.invoke('fivem-cache-info'),
   fivemServerHealth:  ()           => ipcRenderer.invoke('fivem-server-health'),
@@ -72,6 +85,11 @@ contextBridge.exposeInMainWorld('api', {
   pulseFixMouse:      ()           => ipcRenderer.invoke('pulse-fix-mouse'),
   pulseGetPresets:    ()           => ipcRenderer.invoke('pulse-get-presets'),
   pulseDetectGame:    ()           => ipcRenderer.invoke('pulse-detect-game'),
+  pulsePrearmScan:    ()           => ipcRenderer.invoke('pulse-prearm-scan'),
+  pulsePrearmDefer:   (opts)       => ipcRenderer.invoke('pulse-prearm-defer', opts),
+  pulseThermalAudit:  ()           => ipcRenderer.invoke('pulse-thermal-audit'),
+  onThermalProgress:  (cb)         => ipcRenderer.on('thermal-progress', (_, d) => cb(d)),
+  offThermalProgress: ()           => ipcRenderer.removeAllListeners('thermal-progress'),
   onPulseTick:        (cb)         => ipcRenderer.on('pulse-tick', (_, d) => cb(d)),
   getStartupItems:    ()           => ipcRenderer.invoke('get-startup-items'),
   toggleStartupItem:  (item)       => ipcRenderer.invoke('toggle-startup-item', item),
@@ -90,11 +108,17 @@ contextBridge.exposeInMainWorld('api', {
   clearChangelog:     ()           => ipcRenderer.invoke('clear-changelog'),
   scheduleTweak:      (opts)       => ipcRenderer.invoke('schedule-tweak', opts),
   listScheduledTweaks: ()          => ipcRenderer.invoke('list-scheduled-tweaks'),
-  deleteScheduledTweak: (name)     => ipcRenderer.invoke('delete-scheduled-tweak', name),
+  deleteScheduledTweak:    (name)  => ipcRenderer.invoke('delete-scheduled-tweak', name),
+  runScheduledTweak:       (name)  => ipcRenderer.invoke('run-scheduled-tweak', name),
+  toggleScheduledTweak:    (opts)  => ipcRenderer.invoke('toggle-scheduled-tweak', opts),
+  getScheduledTaskHistory: (name)  => ipcRenderer.invoke('get-scheduled-task-history', name),
   getTempSize:        ()           => ipcRenderer.invoke('get-temp-size'),
   getDiskUsage:       ()           => ipcRenderer.invoke('get-disk-usage'),
   getRecycleBinSize:  ()           => ipcRenderer.invoke('get-recycle-bin-size'),
-  getCleanupSizes:    ()           => ipcRenderer.invoke('get-cleanup-sizes'),
+  getCleanupSizes:        ()     => ipcRenderer.invoke('get-cleanup-sizes'),
+  getCleanupHistory:      ()     => ipcRenderer.invoke('get-cleanup-history'),
+  addCleanupHistoryEntry: (data) => ipcRenderer.invoke('add-cleanup-history-entry', data),
+  getDiskProjection:      ()     => ipcRenderer.invoke('get-disk-projection'),
   exportReport:       ()           => ipcRenderer.invoke('export-report'),
   cleanRam:           ()           => ipcRenderer.invoke('clean-ram'),
   getLatencySample:   ()           => ipcRenderer.invoke('get-latency-sample'),
@@ -139,6 +163,8 @@ contextBridge.exposeInMainWorld('api', {
   runWindowsHealth:   ()           => ipcRenderer.invoke('run-windows-health'),
   runPreflightScan:   ()           => ipcRenderer.invoke('run-preflight-scan'),
   checkLghub:         ()           => ipcRenderer.invoke('check-lghub'),
+  onThermalTick:      (cb)         => ipcRenderer.on('thermal-tick',       (_, d) => cb(d)),
+  onLhmStatus:        (cb)         => ipcRenderer.on('lhm-status',         (_, d) => cb(d)),
   onTrayPulseChanged: (cb)         => ipcRenderer.on('tray-pulse-changed', (_, d) => cb(d)),
   getBiosInfo:        ()            => ipcRenderer.invoke('get-bios-info'),
   biosScewinRead:     ()            => ipcRenderer.invoke('bios-scewin-read'),
@@ -172,6 +198,7 @@ contextBridge.exposeInMainWorld('api', {
   authLogout:         ()            => ipcRenderer.invoke('auth-logout'),
   onAuthRequired:     (cb)          => ipcRenderer.on('auth-required', () => cb()),
   getPremiumUrl:      ()            => ipcRenderer.invoke('get-premium-url'),
+  getCachedTier:      ()            => ipcRenderer.invoke('get-cached-tier'),
   onTierUpdate:       (cb)          => ipcRenderer.on('tier-update', (_, d) => cb(d)),
   getMetricsHistory:  (opts)        => ipcRenderer.invoke('get-metrics-history', opts),
   ariaStart:          ()            => ipcRenderer.invoke('aria-start'),
@@ -180,6 +207,8 @@ contextBridge.exposeInMainWorld('api', {
   ariaAfterTweak:     (opts)        => ipcRenderer.invoke('aria-after-tweak', opts),
   getAriaInsights:    ()            => ipcRenderer.invoke('get-aria-insights'),
   onAriaTick:         (cb)          => ipcRenderer.on('aria-tick', (_, d) => cb(d)),
+  onBudgetTick:         (cb) => ipcRenderer.on('budget-tick',           (_, d) => cb(d)),
+  onBudgetSessionReport:(cb) => ipcRenderer.on('budget-session-report', (_, d) => cb(d)),
   startupTrace:       (msg)         => ipcRenderer.invoke('startup-trace', msg),
   adminDebugAppend:   (data)        => ipcRenderer.invoke('admin-debug-append', data),
   getSystemContext:   ()            => ipcRenderer.invoke('get-system-context'),
@@ -201,4 +230,138 @@ contextBridge.exposeInMainWorld('api', {
   getSrDiskUsage:       ()           => ipcRenderer.invoke('get-sr-disk-usage'),
   saveTextFile:         (opts)       => ipcRenderer.invoke('save-text-file', opts),
   onAutoSnapshotDone:   (cb)         => ipcRenderer.on('auto-snapshot-done', (_, d) => cb(d)),
+  thermalStart:         ()           => ipcRenderer.invoke('thermal-start'),
+  thermalStop:          ()           => ipcRenderer.invoke('thermal-stop'),
+  thermalGuardSet:      (on)         => ipcRenderer.invoke(on ? 'thermal-start' : 'thermal-stop'),
+  efficiencyStart:      ()           => ipcRenderer.invoke('efficiency-start'),
+  efficiencyStop:       ()           => ipcRenderer.invoke('efficiency-stop'),
+  onEfficiencyTick:     (cb)         => ipcRenderer.on('efficiency-tick',     (_, d) => cb(d)),
+  latencyBudgetStart:   ()           => ipcRenderer.invoke('latency-budget-start'),
+  latencyBudgetStop:    ()           => ipcRenderer.invoke('latency-budget-stop'),
+  onLatencyBudgetTick:  (cb)         => ipcRenderer.on('latency-budget-tick', (_, d) => cb(d)),
+
+  // Settings alias
+  getSettings:          ()           => ipcRenderer.invoke('load-settings'),
+
+  // Pulse session end (fired when ARIA game session ends)
+  onPulseSessionEnd:        (cb)     => ipcRenderer.on('pulse-session-end', (_, d) => cb(d)),
+
+  // AI Advisor (ONNX local inference)
+  aiGetRecommendations: ()     => ipcRenderer.invoke('ai-get-recommendations'),
+  aiGetStatus:          ()     => ipcRenderer.invoke('ai-get-status'),
+
+  // Thread mapper (JylliJobMon named-pipe + SharedArrayBuffer)
+  getThreadSab:         ()     => ipcRenderer.invoke('get-thread-sab'),
+  startThreadMapper:    (pid)  => ipcRenderer.invoke('start-thread-mapper', pid),
+  stopThreadMapper:     ()     => ipcRenderer.invoke('stop-thread-mapper'),
+  onThreadMapTick:      (cb)   => ipcRenderer.on('thread-map-tick',  (_, d) => cb(d)),
+  onThreadMapNames:     (cb)   => ipcRenderer.on('thread-map-names', (_, d) => cb(d)),
+  offThreadMapTick:     ()     => ipcRenderer.removeAllListeners('thread-map-tick'),
+
+  // Sensor bridge (1000Hz LHM named-pipe)
+  sensorGetSchema:      ()     => ipcRenderer.invoke('sensor-get-schema'),
+  sensorGetRate:        ()     => ipcRenderer.invoke('sensor-get-rate'),
+  sensorBridgeStatus:   ()     => ipcRenderer.invoke('sensor-bridge-status'),
+  onSensorTick:         (cb)   => ipcRenderer.on('sensor-tick',  (_, d) => cb(d)),
+  onSensorRate:         (cb)   => ipcRenderer.on('sensor-rate',  (_, d) => cb(d)),
+  offSensorTick:        ()     => ipcRenderer.removeAllListeners('sensor-tick'),
+
+  // Listener cleanup (prevents stacking on modal reopen)
+  offWindowsHealthProgress: ()       => ipcRenderer.removeAllListeners('windows-health-progress'),
+  offPreflightProgress:     ()       => ipcRenderer.removeAllListeners('preflight-progress'),
+  offAutoOptiProgress:      ()       => ipcRenderer.removeAllListeners('auto-opti-progress'),
+  offDebloatProgress:       ()       => ipcRenderer.removeAllListeners('debloat-progress'),
+  offSpecProgress:          ()       => ipcRenderer.removeAllListeners('spec-progress'),
+  offPulseTick:             ()       => ipcRenderer.removeAllListeners('pulse-tick'),
+  offLivePingTick:          ()       => ipcRenderer.removeAllListeners('live-ping-tick'),
+  offGameWatcherEvent:      ()       => ipcRenderer.removeAllListeners('game-watcher-event'),
+  offAriaSessionSummary:    ()       => ipcRenderer.removeAllListeners('aria-session-summary'),
+  offAriaTick:              ()       => ipcRenderer.removeAllListeners('aria-tick'),
+  offTierUpdate:            ()       => ipcRenderer.removeAllListeners('tier-update'),
+  offGameDetected:          ()       => ipcRenderer.removeAllListeners('game-detected'),
+  offGameExited:            ()       => ipcRenderer.removeAllListeners('game-exited'),
+  offUpdateAvailable:       ()       => ipcRenderer.removeAllListeners('update-available'),
+  offUpdateProgress:        ()       => ipcRenderer.removeAllListeners('update-progress'),
+  offUpdateDownloaded:      ()       => ipcRenderer.removeAllListeners('update-downloaded'),
+  offTrayPulseChanged:      ()       => ipcRenderer.removeAllListeners('tray-pulse-changed'),
+  offPingResultV2:          ()       => ipcRenderer.removeAllListeners('ping-result-v2'),
+
+  // Process Freeze/Defrost
+  freezeGetPids:        ()           => ipcRenderer.invoke('freeze-get-pids'),
+  freezeProcess:        (pid)        => ipcRenderer.invoke('freeze-process', pid),
+  freezeSetStat:        (opts)       => ipcRenderer.invoke('freeze-set-stat', opts),
+  defrostProcess:       (pid)        => ipcRenderer.invoke('defrost-process', pid),
+
+  // CPU Affinity / IRQ Pinning
+  cpuGetTopology:       ()           => ipcRenderer.invoke('cpu-get-topology'),
+  cpuGetPinStatus:      ()           => ipcRenderer.invoke('cpu-get-pin-status'),
+  cpuPinGame:           (opts)       => ipcRenderer.invoke('cpu-pin-game', opts),
+  cpuUnpinGame:         ()           => ipcRenderer.invoke('cpu-unpin-game'),
+  irqGetStatus:         ()           => ipcRenderer.invoke('irq-get-status'),
+  irqGetDevices:        ()           => ipcRenderer.invoke('irq-get-devices'),
+  irqApplyGameAffinity: ()           => ipcRenderer.invoke('irq-apply-game-affinity'),
+  irqRestoreAffinity:   ()           => ipcRenderer.invoke('irq-restore-affinity'),
+
+  // FPS HUD Settings
+  openFpsHudSettings:   ()           => ipcRenderer.invoke('open-fps-hud-settings'),
+  setFpsHudSize:        (sizeKey)    => ipcRenderer.invoke('set-fps-hud-size', sizeKey),
+  setFpsHudColor:       (hex)        => ipcRenderer.invoke('set-fps-hud-color', hex),
+  setFpsHudCorner:      (corner)     => ipcRenderer.invoke('set-fps-hud-corner', corner),
+  closeFpsHudSettings:  ()           => ipcRenderer.invoke('close-fps-hud-settings'),
+
+  // FiveM running check (used by fivem-settings save to show warning banner)
+  fivemRunningCheck:    ()           => ipcRenderer.invoke('fivem-running-check'),
+
+  // Game Shield / Update Guard
+  toggleUpdateGuard:    (on)         => ipcRenderer.invoke('toggle-update-guard', on),
+  toggleGameShield:     (on)         => ipcRenderer.invoke('toggle-game-shield', on),
+  getGameShieldExclusions: ()        => ipcRenderer.invoke('get-game-shield-exclusions'),
+
+  // Game History / Custom Games
+  addCustomGame:        (exe, name)  => ipcRenderer.invoke('add-custom-game', { exe, name }),
+  getGameHistory:       ()           => ipcRenderer.invoke('get-game-history'),
+  setAutoPulseOverride: (gameId, preset) => ipcRenderer.invoke('set-auto-pulse-override', { gameId, preset }),
+
+  // Thermal Status
+  thermalGetStatus:     ()           => ipcRenderer.invoke('thermal-get-status'),
+
+  // App Optimizer Extended
+  aoGetCpuCaps:         ()           => ipcRenderer.invoke('ao-get-cpu-caps'),
+  aoSetCpuCap:          (appId, capPercent) => ipcRenderer.invoke('ao-set-cpu-cap', { appId, capPercent }),
+  aoFingerprintDriftCause: (id, driftedAt) => ipcRenderer.invoke('ao-fingerprint-drift-cause', { id, driftedAt }),
+
+  // Cleanup Extended
+  getCleanupRegrets:    ()           => ipcRenderer.invoke('get-cleanup-regrets'),
+  getCleanupFingerprints: ()         => ipcRenderer.invoke('get-cleanup-fingerprints'),
+  scanPhantomApps:      ()           => ipcRenderer.invoke('scan-phantom-apps'),
+  deletePhantomFolder:  (folderPath) => ipcRenderer.invoke('delete-phantom-folder', folderPath),
+
+  // BIOS Extended
+  biosBootChronicle:    ()           => ipcRenderer.invoke('bios-boot-chronicle'),
+  biosStabilityCheck:   ()           => ipcRenderer.invoke('bios-stability-check'),
+  biosCapsuleSnapshot:  (entries)    => ipcRenderer.invoke('bios-capsule-snapshot', entries),
+  biosCapsuleCheck:     ()           => ipcRenderer.invoke('bios-capsule-check'),
+  biosGetProfile:       (name)       => ipcRenderer.invoke('bios-get-profile', name),
+
+  // ARIA Session Coach
+  ariaGetSessionCoach:  ()           => ipcRenderer.invoke('aria-get-session-coach'),
+
+  // Focus / Priority / Suppression Toggles
+  setFocusAssist:       (on)         => ipcRenderer.invoke('set-focus-assist', on),
+  setSelfPriority:      (on)         => ipcRenderer.invoke('set-self-priority', on),
+  setLowResourceMode:   (on)         => ipcRenderer.invoke('set-low-resource-mode', on),
+  setUpdateIntercept:   (val)        => ipcRenderer.invoke('set-update-intercept', val),
+  setIdleSuppression:   (val)        => ipcRenderer.invoke('set-idle-suppression', val),
+
+  // Runtime Installer
+  detectMissingRuntimes:    ()       => ipcRenderer.invoke('detect-missing-runtimes'),
+  prepareDduReinstall:      ()       => ipcRenderer.invoke('prepare-ddu-reinstall'),
+  installRuntimes:          (items)  => ipcRenderer.invoke('install-runtimes', items),
+  onRuntimeInstallProgress: (cb)     => ipcRenderer.on('runtime-install-progress', (_, d) => cb(d)),
+
+  // Tweak Diff Snapshot
+  tweakDiffSnapshot:    (id)         => ipcRenderer.invoke('tweak-diff-snapshot', id),
+
+  // Ryzen AutoTune
+  ryzenAutoTune:        ()           => ipcRenderer.invoke('ryzen-auto-tune'),
 })

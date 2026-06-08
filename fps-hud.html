@@ -7,94 +7,50 @@
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 html, body {
-  width: 160px;
-  height: 72px;
+  width: 100%; height: 100%;
   overflow: hidden;
   background: transparent;
-  font-family: 'Segoe UI', system-ui, sans-serif;
   user-select: none;
-}
-.hud {
-  background: rgba(8,8,14,0.60);
-  border-radius: 10px;
-  padding: 8px 10px 7px;
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  width: 160px;
-  transition: opacity 0.4s ease;
-}
-.hud.faded { opacity: 0.25; }
-.hud-title {
-  font-size: 7.5px;
-  font-weight: 700;
-  color: rgba(46,204,113,0.55);
-  text-transform: uppercase;
-  letter-spacing: 0.12em;
-  margin-bottom: 6px;
-}
-.fps-row {
   display: flex;
-  gap: 8px;
+  align-items: center;
+  justify-content: center;
 }
-.fps-tile {
-  flex: 1;
-  text-align: center;
-}
-.fps-label {
-  font-size: 7.5px;
-  color: rgba(255,255,255,0.3);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  margin-bottom: 1px;
-}
-.fps-val {
-  font-size: 20px;
+.hud { display: flex; align-items: center; justify-content: center; transition: opacity 0.4s ease; }
+.hud.faded { opacity: 0.20; }
+#fps-val {
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  font-size: var(--fps-font-size, 36px);
   font-weight: 800;
   line-height: 1;
   font-variant-numeric: tabular-nums;
+  color: #ffffff;
+  text-shadow: 0 1px 6px rgba(0,0,0,0.7);
 }
-#val-avg  { color: #2ecc71; }
-#val-low1 { color: #f39c12; }
+body[data-size='sm'] { --fps-font-size: 24px; }
+body[data-size='md'] { --fps-font-size: 36px; }
+body[data-size='lg'] { --fps-font-size: 52px; }
+body[data-size='xl'] { --fps-font-size: 72px; }
 </style>
 </head>
-<body>
-<div class="hud" id="hud">
-  <div class="hud-title">FPS · ARIA</div>
-  <div class="fps-row">
-    <div class="fps-tile">
-      <div class="fps-label">AVG</div>
-      <div class="fps-val" id="val-avg">—</div>
-    </div>
-    <div class="fps-tile">
-      <div class="fps-label">1% Low</div>
-      <div class="fps-val" id="val-low1">—</div>
-    </div>
-  </div>
-</div>
+<body data-size="md">
+<div class="hud" id="hud"><div id="fps-val">—</div></div>
 <script>
 let _fadeTimer = null
-
 function resetFadeTimer() {
   clearTimeout(_fadeTimer)
   document.getElementById('hud').classList.remove('faded')
-  _fadeTimer = setTimeout(() => {
-    document.getElementById('hud').classList.add('faded')
-  }, 6000)
+  _fadeTimer = setTimeout(() => { document.getElementById('hud').classList.add('faded') }, 6000)
 }
-
-api.onAriaFpsTick(({ avgFps, low1Fps }) => {
-  const avg  = document.getElementById('val-avg')
-  const low1 = document.getElementById('val-low1')
-  if (avgFps == null) {
-    if (avg)  avg.textContent  = '—'
-    if (low1) low1.textContent = '—'
-    return
-  }
-  if (avg)  avg.textContent  = avgFps
-  if (low1) {
-    low1.textContent = low1Fps
-    low1.style.color = low1Fps >= 60 ? '#2ecc71' : low1Fps >= 30 ? '#f39c12' : '#e74c3c'
-  }
+api.onAriaHudInit(({ size, color }) => {
+  if (size) document.body.dataset.size = size
+  const val = document.getElementById('fps-val')
+  if (val && color) val.style.color = color
+})
+api.onAriaHudTick(({ currentFps }) => {
+  const el = document.getElementById('fps-val')
+  if (!el) return
+  if (currentFps == null) { el.textContent = '—'; return }
+  el.textContent = currentFps
   resetFadeTimer()
 })
 </script>

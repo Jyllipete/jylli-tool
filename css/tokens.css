@@ -1,21 +1,21 @@
 /* ─── Design Tokens — shared across all windows ──────────────────────────── */
 :root {
-  /* ── Surfaces: warm chrome (purple-black undertone) ── */
-  --c-bg-base:        #14141A;
-  --c-bg-elevated:    #1E1E28;
-  --c-bg-raised:      #272735;
-  --c-bg-glass:       rgba(30,30,40,0.62);
+  /* ── Surfaces: deep velvet purple-black ── */
+  --c-bg-base:        #0D0B14;
+  --c-bg-elevated:    #17131F;
+  --c-bg-raised:      #211C2E;
+  --c-bg-glass:       rgba(23,19,31,0.62);
 
   /* ── Text ── */
   --c-text-primary:   #ECEEF2;
   --c-text-secondary: rgba(236,238,242,0.52);
   --c-text-tertiary:  rgba(236,238,242,0.32);
 
-  /* ── Accent: electric indigo (Jylli default — overridden at runtime by applyTheme) ── */
-  --c-accent:         #6C63FF;
-  --c-accent-muted:   rgba(108,99,255,0.10);
-  --c-accent-ring:    rgba(108,99,255,0.22);
-  --c-accent-glow:    rgba(108,99,255,0.12);
+  /* ── Accent: deep royal purple (Jylli default — overridden at runtime by applyTheme) ── */
+  --c-accent:         #7C3AED;
+  --c-accent-muted:   rgba(124,58,237,0.10);
+  --c-accent-ring:    rgba(124,58,237,0.22);
+  --c-accent-glow:    rgba(124,58,237,0.12);
 
   /* ── Borders ── */
   --c-border-subtle:  rgba(255,255,255,0.05);
@@ -42,12 +42,15 @@
   /* ── Shadows: pure depth, accent only in shadow-3 hairline ── */
   --shadow-1: 0 1px 4px rgba(0,0,0,0.40);
   --shadow-2: 0 4px 16px rgba(0,0,0,0.55);
-  --shadow-3: 0 8px 32px rgba(0,0,0,0.75), 0 0 0 1px rgba(108,99,255,0.06);
+  --shadow-3: 0 8px 32px rgba(0,0,0,0.75), 0 0 0 1px rgba(124,58,237,0.06);
 
   /* ── Easing ── */
-  --ease-default: cubic-bezier(0.25, 0.46, 0.45, 0.94);
-  --ease-spring:  cubic-bezier(0.34, 1.56, 0.64, 1);
-  --ease-snap:    cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-default:   cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  --ease-spring:    cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-snap:      cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-out-expo:  cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-back:   cubic-bezier(0.36, 0, 0.66, -0.56);
+  --ease-fluid:     cubic-bezier(0.4, 0, 0.2, 1);
 
   /* ── Duration ── */
   --dur-micro:  80ms;
@@ -60,15 +63,55 @@
   --motion-exit:        var(--dur-short)  var(--ease-snap);
   --motion-interaction: var(--dur-micro)  var(--ease-default);
   --motion-reveal:      var(--dur-long)   var(--ease-spring);
+  --motion-hover:       var(--dur-short)  var(--ease-fluid);
+  --motion-press:       60ms              linear;
+  --motion-page:        var(--dur-medium) var(--ease-out-expo);
+  --motion-page-exit:   var(--dur-short)  var(--ease-in-back);
+  --motion-lift:        var(--dur-short)  var(--ease-out-expo);
+
+  /* ── Z-index layers ── */
+  --z-tooltip:          7000;
+  --z-modal-backdrop:   8000;
+  --z-modal:            8100;
+  --z-toast:            8500;
+  --z-command-palette:  9000;
+  --z-critical:         9999;
+
+  /* ── Pulse hardware metric colors ── */
+  --disk-color: #F39C12;
+
+  /* ── Extended surfaces ── */
+  --c-bg-deep:    #090711;
+  --c-bg-overlay: rgba(0,0,0,0.82);
+
+  /* ── Per-hardware semantic colors ── */
+  --c-hw-cpu:      #3498DB;   --c-hw-cpu-bg:   rgba(52,152,219,0.10);
+  --c-hw-gpu:      #9B59B6;   --c-hw-gpu-bg:   rgba(155,89,182,0.10);
+  --c-hw-ram:      #2ECC71;   --c-hw-ram-bg:   rgba(46,204,113,0.10);
+  --c-hw-net:      #00D4AA;   --c-hw-net-bg:   rgba(0,212,170,0.10);
+  --c-hw-disk:     #F39C12;   --c-hw-disk-bg:  rgba(243,156,18,0.10);
+
+  /* ── Typography scale ── */
+  --font-size-xs:   9.5px;
+  --font-size-sm:   11px;
+  --font-size-md:   12px;
+  --font-size-base: 13px;
+  --font-size-lg:   15px;
+  --font-size-xl:   18px;
+  --font-size-2xl:  20px;
+  --font-size-3xl:  24px;
+
+  /* ── Enhanced shadows ── */
+  --shadow-modal: 0 24px 80px rgba(0,0,0,0.85), 0 0 0 1px rgba(124,58,237,0.10);
 
   /* ── Backward-compat aliases — canvas code reads --pink-rgb at runtime ── */
   --pink:       var(--c-accent);
   --pink-hover: color-mix(in srgb, var(--c-accent) 82%, #fff);
   --pink-dim:   var(--c-accent-muted);
   --pink-glow:  var(--c-accent-ring);
-  --pink-rgb:   108,99,255;
+  --pink-rgb:   124,58,237;
   --cyan:       var(--c-accent);
-  --cyan-rgb:   108,99,255;
+  --cyan-rgb:   124,58,237;
   --cyan-glow:  var(--c-accent-ring);
   --cyan-dim:   var(--c-accent-muted);
 }

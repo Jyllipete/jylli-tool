@@ -156,7 +156,12 @@ function showLockScreen(deniedMsg) {
                   <div style="color:var(--success);font-size:13px;font-weight:600">${tUI('lsGranted')}</div>
                 </div>`
             }
-            setTimeout(() => { document.getElementById('lock-screen')?.remove(); init(p.isPremium === true) }, 1200)
+            setTimeout(() => {
+              cancelBtn.removeEventListener('click', resetToIdle)
+              btn.removeEventListener('click', startAuth)
+              document.getElementById('lock-screen')?.remove()
+              init(p.isPremium === true)
+            }, 1200)
           } else if (p.status === 'denied') {
             clearInterval(pollTimer); clearInterval(countdownTimer)
             status.style.color = 'var(--danger)'
@@ -179,7 +184,12 @@ function showLockScreen(deniedMsg) {
     retry.style.color = 'var(--c-text-secondary)'
     retry.textContent = tUI('lsChecking')
     const r = await api.authVerify().catch(() => ({ ok: false }))
-    if (r.ok) { document.getElementById('lock-screen')?.remove(); init(r.isPremium === true) }
+    if (r.ok) {
+      cancelBtn.removeEventListener('click', resetToIdle)
+      btn.removeEventListener('click', startAuth)
+      document.getElementById('lock-screen')?.remove()
+      init(r.isPremium === true)
+    }
     else { retry.style.color = 'var(--c-accent)'; retry.textContent = tUI('lsRetry') }
   })
 }
@@ -202,8 +212,10 @@ async function _bootAuth() {
     if (r?.ok) { _authCleared = true; api.startupTrace?.('calling init()'); init(r?.isPremium === true) } else { api.startupTrace?.('calling showLockScreen()'); showLockScreen() }
   } catch (e) {
     api.startupTrace?.(`_bootAuth catch: code=${e?.code} msg=${e?.message} → calling init()`)
-    // Bot unreachable — allow app open but force non-premium until bot is back
-    init(false)
+    // Network error or DNS timeout → proceed to app (offline tolerance), use cached tier
+    // Only grant cached premium if the settings HMAC is intact (prevents tampered settings bypass)
+    const cachedTier = await api.getCachedTier().catch(() => false)
+    init(cachedTier === true)
   }
 }
 

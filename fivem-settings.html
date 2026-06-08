@@ -100,7 +100,7 @@ html, body {
   padding: 16px;
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 10px;
 }
 #content::-webkit-scrollbar { width: 4px; }
 #content::-webkit-scrollbar-track { background: transparent; }
@@ -213,7 +213,7 @@ html, body {
 }
 .setting-row:last-child { border-bottom: none; }
 .setting-row:hover { background: rgba(255,255,255,0.02); }
-.setting-row.is-changed { background: rgba(255,46,99,0.05); }
+.setting-row.is-changed { background: rgba(255,46,99,0.05); border-left: 2px solid var(--pink); }
 .setting-label {
   font-size: 11px; font-weight: 500;
   color: var(--white);
@@ -285,21 +285,24 @@ html, body {
 /* ── Preset bar ── */
 #preset-bar {
   display: none;
-  align-items: center;
-  gap: 8px;
+  flex-direction: column;
+  gap: 5px;
 }
-.preset-label {
-  font-size: 10px; font-weight: 600;
-  color: #444;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  white-space: nowrap;
-  margin-right: 2px;
+#preset-row-1 {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+#preset-row-2 {
+  display: flex;
+  align-items: center;
+  gap: 5px;
 }
 .preset-btn {
-  display: inline-flex; align-items: center; gap: 6px;
+  flex: 1;
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
   border-radius: 8px;
-  padding: 7px 14px;
+  padding: 7px 10px;
   font-size: 11px; font-weight: 600;
   cursor: pointer; transition: all 0.12s;
   border: 1px solid transparent;
@@ -334,11 +337,137 @@ html, body {
   background: rgba(46,204,113,0.18);
   border-color: rgba(46,204,113,0.55);
 }
-.preset-divider {
-  width: 1px; height: 20px;
-  background: #222;
-  margin: 0 2px;
+
+/* ── Search bar ── */
+#search-bar {
+  display: none;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 8px;
+  background: rgba(255,255,255,0.02);
+  border: 1px solid var(--border);
+  border-radius: 8px;
 }
+#search-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  padding: 3px 4px;
+  color: #ccc;
+  font-size: 11px;
+  outline: none;
+}
+#search-bar:focus-within {
+  border-color: rgba(255,46,99,0.35);
+}
+#search-clear {
+  background: none; border: none; color: #444; cursor: pointer; font-size: 14px; padding: 2px 4px; line-height: 1;
+}
+#search-clear:hover { color: var(--pink); }
+.search-hidden { display: none !important; }
+mark.sh { background: rgba(255,46,99,0.25); color: #ff6b8a; border-radius: 2px; padding: 0 1px; }
+
+/* ── Performance budget meter ── */
+#perf-budget-bar {
+  display: none;
+  padding: 4px 2px 0;
+}
+#perf-budget-track {
+  height: 4px;
+  background: #111;
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 3px;
+}
+#perf-budget-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.25s ease, background 0.25s ease;
+}
+#perf-budget-label {
+  font-size: 9px;
+  color: #555;
+  font-weight: 500;
+  text-align: right;
+}
+
+/* ── Collapsible category ── */
+.cat-header { cursor: pointer; user-select: none; }
+.cat-header:hover .cat-name { color: #ccc; }
+.cat-chevron { margin-left: auto; color: #333; font-size: 10px; transition: transform 0.18s ease; flex-shrink: 0; }
+.cat-collapsed .cat-chevron { transform: rotate(-90deg); }
+.cat-rows { overflow: hidden; transition: max-height 0.2s ease; }
+
+/* ── Tooltip ── */
+#tt-popup {
+  position: fixed;
+  z-index: 7000;
+  max-width: 240px;
+  background: #111;
+  border: 1px solid #2a2a2a;
+  border-radius: 7px;
+  padding: 7px 10px;
+  font-size: 10px;
+  color: #aaa;
+  line-height: 1.5;
+  pointer-events: none;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.5);
+  display: none;
+}
+.tt-icon { color: #2a2a2a; cursor: help; margin-left: 5px; font-size: 10px; vertical-align: middle; transition: color 0.1s; }
+.tt-icon:hover { color: #555; }
+
+/* ── Split export button ── */
+#export-split { position: relative; display: none; }
+#export-split.loaded { display: flex; }
+#btn-export-caret {
+  padding: 5px 7px;
+  font-size: 10px;
+  border-left: 1px solid rgba(255,255,255,0.08) !important;
+  border-radius: 0 7px 7px 0 !important;
+}
+#btn-export-main { border-radius: 7px 0 0 7px !important; }
+#export-menu {
+  position: absolute;
+  bottom: calc(100% + 4px);
+  right: 0;
+  background: #111;
+  border: 1px solid #252525;
+  border-radius: 8px;
+  padding: 4px;
+  min-width: 140px;
+  display: none;
+  z-index: 6500;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.5);
+}
+#export-menu.open { display: block; }
+.export-menu-item {
+  padding: 6px 10px;
+  font-size: 10px;
+  color: #aaa;
+  border-radius: 5px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.export-menu-item:hover { background: rgba(255,255,255,0.05); color: #eee; }
+
+/* ── Undo button in preset bar ── */
+#btn-undo { opacity: 0.3; pointer-events: none; }
+#btn-undo.active { opacity: 1; pointer-events: auto; }
+
+/* ── Reset button in footer ── */
+#btn-reset { display: none; }
+#btn-reset.visible { display: inline-flex; }
+
+/* ── Keyboard hint in footer ── */
+#kb-hints { font-size: 9px; color: #333; }
+
+@keyframes save-nudge {
+  0%   { box-shadow: 0 0 0 0   rgba(var(--pink-rgb,124,110,248), 0.7); }
+  50%  { box-shadow: 0 0 0 8px rgba(var(--pink-rgb,124,110,248), 0.25); }
+  100% { box-shadow: 0 0 0 0   rgba(var(--pink-rgb,124,110,248), 0); }
+}
+#btn-save.save-nudge { animation: save-nudge 0.55s ease-out 2; }
 
 </style>
 </head>
@@ -368,31 +497,50 @@ html, body {
 
     <!-- Preset bar -->
     <div id="preset-bar">
-      <span class="preset-label"><i class="fa fa-wand-magic-sparkles"></i> <span id="lbl-presets">Presets</span></span>
-      <div class="preset-divider"></div>
-      <button class="preset-btn preset-quality" onclick="applyPreset('quality')">
-        <i class="fa fa-gem"></i> <span id="lbl-preset-quality">Quality</span>
-      </button>
-      <button class="preset-btn preset-balanced" onclick="applyPreset('balanced')">
-        <i class="fa fa-gauge-high"></i> <span id="lbl-preset-balanced">Balanced</span>
-      </button>
-      <button class="preset-btn preset-performance" onclick="applyPreset('performance')">
-        <i class="fa fa-bolt"></i> <span id="lbl-preset-performance">Performance</span>
-      </button>
-      <div class="preset-divider"></div>
-      <button class="btn btn-ghost" style="font-size:10px;padding:5px 10px;" onclick="applyRecommended()">
-        <i class="fa fa-wand-sparkles"></i> <span id="lbl-preset-recommended">Recommended</span>
-      </button>
-      <button class="btn btn-ghost" style="font-size:10px;padding:5px 10px;border-color:rgba(255,46,99,0.4);color:#FF2E63" onclick="applySmartPreset()" id="btn-smart-recommend">
-        <i class="fa fa-microchip"></i> <span id="lbl-smart-recommend">Smart Recommend</span>
-      </button>
+      <!-- Row 1: Main presets — equal-width pills -->
+      <div id="preset-row-1">
+        <button class="preset-btn preset-quality" onclick="applyPreset('quality')">
+          <i class="fa fa-gem"></i> <span id="lbl-preset-quality">Quality</span>
+        </button>
+        <button class="preset-btn preset-balanced" onclick="applyPreset('balanced')">
+          <i class="fa fa-gauge-high"></i> <span id="lbl-preset-balanced">Balanced</span>
+        </button>
+        <button class="preset-btn preset-performance" onclick="applyPreset('performance')">
+          <i class="fa fa-bolt"></i> <span id="lbl-preset-performance">Performance</span>
+        </button>
+      </div>
+      <!-- Row 2: Utility buttons -->
+      <div id="preset-row-2">
+        <button class="btn btn-ghost" style="font-size:10px;padding:4px 10px;" onclick="applyRecommended()">
+          <i class="fa fa-wand-sparkles"></i> <span id="lbl-preset-recommended">Recommended</span>
+        </button>
+        <button class="btn btn-ghost" style="font-size:10px;padding:4px 10px;background:rgba(255,46,99,0.06);border-color:rgba(255,46,99,0.4);color:#FF2E63" onclick="applySmartPreset()" id="btn-smart-recommend">
+          <i class="fa fa-microchip"></i> <span id="lbl-smart-recommend">Smart Recommend</span>
+        </button>
+        <button class="btn btn-ghost" id="btn-undo" style="font-size:10px;padding:4px 10px;margin-left:auto" onclick="undoLast()" title="Undo last preset/profile">
+          <i class="fa fa-rotate-left"></i> <span id="lbl-undo-btn">Undo</span>
+        </button>
+      </div>
     </div>
 
     <!-- Hardware info strip (shown after Smart Recommend) -->
-    <div id="smart-hw-info" style="display:none;font-size:10px;color:#555;padding:4px 2px 0;text-align:center"></div>
+    <div id="smart-hw-info" style="display:none;font-size:10px;color:#555;padding:3px 2px 0;text-align:left"></div>
+
+    <!-- Performance budget meter -->
+    <div id="perf-budget-bar">
+      <div id="perf-budget-track"><div id="perf-budget-fill"></div></div>
+      <div id="perf-budget-label"></div>
+    </div>
+
+    <!-- Search bar -->
+    <div id="search-bar">
+      <i class="fa fa-magnifying-glass" style="color:#333;font-size:11px;flex-shrink:0"></i>
+      <input id="search-input" type="text" spellcheck="false" oninput="filterSettings(this.value)" onkeydown="if(event.key==='Escape'){clearSearch();event.stopPropagation()}" placeholder="Search settings…">
+      <button id="search-clear" onclick="clearSearch()" title="Clear search" style="display:none"><i class="fa fa-xmark"></i></button>
+    </div>
 
     <!-- Profile toolbar -->
-    <div id="profile-bar" style="display:flex;gap:6px;align-items:center;padding:6px 0 2px">
+    <div id="profile-bar" style="display:flex;gap:6px;align-items:center;padding:7px 0 2px;border-top:1px solid var(--border)">
       <span style="font-size:10px;font-weight:700;color:#444;text-transform:uppercase;letter-spacing:0.05em;white-space:nowrap" id="lbl-profiles">Profiles</span>
       <select id="profile-select" onchange="loadProfileOnChange()" style="flex:1;padding:4px 8px;border-radius:6px;border:1px solid #1e1e1e;background:#0e0e0e;color:#ccc;font-size:11px;outline:none">
         <option value="" id="opt-profile-placeholder">— Select profile —</option>
@@ -429,9 +577,20 @@ html, body {
   <div id="footer">
     <div id="footer-info">
       <span id="path-display"><!-- set by JS --></span>
+      <span id="kb-hints" style="display:block;margin-top:2px">Ctrl+S save · Ctrl+R reload · Ctrl+Z undo · / search</span>
     </div>
     <span id="changes-count">0 changes</span>
-    <button class="btn btn-ghost" id="btn-export" onclick="exportToClipboard()" disabled title="Copy settings summary to clipboard" style="padding:5px 10px;font-size:10px"><i class="fa fa-copy"></i> <span id="lbl-export-btn">Export</span></button>
+    <button class="btn btn-ghost" id="btn-reset" onclick="resetToFileValues()" style="padding:5px 10px;font-size:10px;color:var(--pink);border-color:rgba(255,46,99,0.35)"><i class="fa fa-rotate-left"></i> <span id="lbl-reset-btn">Reset to file</span></button>
+    <!-- Split export button -->
+    <div id="export-split">
+      <button class="btn btn-ghost" id="btn-export-main" onclick="exportFormat('text')" style="padding:5px 10px;font-size:10px"><i class="fa fa-copy"></i> <span id="lbl-export-btn">Export</span></button>
+      <button class="btn btn-ghost" id="btn-export-caret" onclick="toggleExportMenu(event)"><i class="fa fa-caret-up"></i></button>
+      <div id="export-menu">
+        <div class="export-menu-item" onclick="exportFormat('text')"><i class="fa fa-align-left" style="width:14px"></i> <span id="lbl-export-text">Export as text</span></div>
+        <div class="export-menu-item" onclick="exportFormat('json')"><i class="fa fa-code" style="width:14px"></i> <span id="lbl-export-json">Export as JSON</span></div>
+        <div class="export-menu-item" onclick="exportFormat('xml')"><i class="fa fa-file-code" style="width:14px"></i> <span id="lbl-export-xml">Export as XML</span></div>
+      </div>
+    </div>
     <button class="btn btn-primary" id="btn-save" onclick="saveSettings()" disabled><i class="fa fa-floppy-disk"></i> <span id="lbl-save-btn">Save Settings</span></button>
   </div>
 </div>
@@ -487,6 +646,18 @@ const LANG_FIVEM = {
     profileLoaded: 'Profile loaded',
     profileDeleted: 'Profile deleted',
     profilesLabel: 'Profiles',
+    searchPlaceholder: 'Search settings…',
+    searchClearTitle: 'Clear search',
+    resetToFile: 'Reset to file',
+    undoBtn: 'Undo',
+    exportAsText: 'Export as text',
+    exportAsJson: 'Export as JSON',
+    exportAsXml: 'Export as XML',
+    perfBudgetLight: 'Light GPU load',
+    perfBudgetMedium: 'Moderate GPU load',
+    perfBudgetHeavy: 'Heavy GPU load',
+    perfBudgetExtreme: 'Extreme GPU load',
+    perfBudgetLabel: 'Performance budget',
   },
   fi: {
     titleSub: 'gta5_settings.xml -muokkain',
@@ -535,6 +706,18 @@ const LANG_FIVEM = {
     profileLoaded: 'Profiili ladattu',
     profileDeleted: 'Profiili poistettu',
     profilesLabel: 'Profiilit',
+    searchPlaceholder: 'Etsi asetuksia…',
+    searchClearTitle: 'Tyhjennä haku',
+    resetToFile: 'Palauta tiedostosta',
+    undoBtn: 'Kumoa',
+    exportAsText: 'Vie tekstinä',
+    exportAsJson: 'Vie JSON:na',
+    exportAsXml: 'Vie XML:nä',
+    perfBudgetLight: 'Kevyt GPU-kuorma',
+    perfBudgetMedium: 'Kohtalainen GPU-kuorma',
+    perfBudgetHeavy: 'Raskas GPU-kuorma',
+    perfBudgetExtreme: 'Äärimmäinen GPU-kuorma',
+    perfBudgetLabel: 'Suorituskykybudjetti',
   }
 }
 function getLangF() {
@@ -582,7 +765,7 @@ const CATEGORIES = [
     icon: '<i class="fa fa-microchip"></i>',
     color: '#FF2E63',
     get desc() { return tF('catRenderingDesc') },
-    keys: ['ShaderQuality', 'ReflectionQuality', 'SSAO', 'Tessellation', 'AnisotropicFiltering', 'PostFX']
+    keys: ['ShaderQuality', 'ReflectionQuality', 'TextureQuality', 'SSAO', 'Tessellation', 'AnisotropicFiltering', 'PostFX']
   },
   {
     id: 'effects',
@@ -590,7 +773,7 @@ const CATEGORIES = [
     icon: '<i class="fa fa-wand-sparkles"></i>',
     color: '#F39C12',
     get desc() { return tF('catEffectsDesc') },
-    keys: ['DoF', 'MotionBlurStrength']
+    keys: ['DoF', 'MotionBlurStrength', 'ScaleformQuality']
   }
 ]
 
@@ -626,6 +809,8 @@ const PRESETS = {
     MotionBlurStrength:        '0.000000',  // Off — cleaner aiming
     Tessellation:              '1',         // Normal — subtle geometry detail
     AnisotropicFiltering:      '16',        // 16x — textures sharp at all angles, free
+    TextureQuality:            '2',         // High — recommended, good VRAM balance
+    ScaleformQuality:          '2',         // High — UI/minimap quality
     SSAO:                      '1',         // Normal — ambient occlusion, nice depth
     Lighting_FogVolumes:       'false',     // Off — volumetric fog is a GPU hog
     HdStreamingInFlight:       'false',     // Off — only matters if flying constantly
@@ -659,6 +844,8 @@ const PRESETS = {
     MotionBlurStrength:        '0.000000',  // Off
     Tessellation:              '0',         // Off — no geometry subdivision
     AnisotropicFiltering:      '16',        // 16x — essentially free, keep it
+    TextureQuality:            '1',         // Normal — reduces VRAM load from server assets
+    ScaleformQuality:          '1',         // Normal — UI quality drop barely noticeable
     SSAO:                      '0',         // Off — skip ambient occlusion
     Lighting_FogVolumes:       'false',     // Off
     HdStreamingInFlight:       'false',     // Off
@@ -692,6 +879,8 @@ const PRESETS = {
     MotionBlurStrength:        '0.000000',  // Off
     Tessellation:              '0',         // Off
     AnisotropicFiltering:      '16',        // 16x — free
+    TextureQuality:            '2',         // High — good balance
+    ScaleformQuality:          '2',         // High
     SSAO:                      '0',         // Off
     Lighting_FogVolumes:       'false',     // Off
     HdStreamingInFlight:       'false',     // Off
@@ -734,19 +923,27 @@ async function loadSettings() {
   currentDefs = r.defs
   currentVals = r.vals
   currentPath = r.path
-  pathStatus.innerHTML = `<i class="fa fa-check" style="color:#2ECC71"></i> ${r.path}`
+  const srcNote = r.source === 'secondary' ? ' (secondary location)' : ''
+  pathStatus.innerHTML = `<i class="fa fa-check" style="color:#2ECC71"></i> ${r.path}${srcNote}`
   const pd = document.getElementById('path-display'); if (pd) { pd.textContent = r.path; pd._set = true }
   document.getElementById('btn-save').disabled = false
-  document.getElementById('btn-export').disabled = false
+  document.getElementById('export-split').classList.add('loaded')
   document.getElementById('preset-bar').style.display = 'flex'
+  document.getElementById('search-bar').style.display = 'flex'
+  document.getElementById('perf-budget-bar').style.display = 'block'
+  _undoStack = []
+  updateUndoButton()
 
   renderSettings()
   trackChanges()
+  updatePerfBudget()
 }
 
 function renderSettings() {
   const body = document.getElementById('settings-body')
   body.innerHTML = ''
+
+  const collapsed = (() => { try { return JSON.parse(localStorage.getItem('fivem_gfx_collapsed') || '[]') } catch { return [] } })()
 
   // Build key→def lookup
   const defMap = {}
@@ -756,20 +953,31 @@ function renderSettings() {
     const catDefs = cat.keys.map(k => defMap[k]).filter(Boolean)
     if (!catDefs.length) continue
 
+    const isCollapsed = collapsed.includes(cat.id)
+
     const group = document.createElement('div')
     group.className = 'cat-group'
+    group.dataset.catId = cat.id
 
-    // Header
+    // Header (clickable to collapse)
     const header = document.createElement('div')
-    header.className = 'cat-header'
+    header.className = 'cat-header' + (isCollapsed ? ' cat-collapsed' : '')
     header.innerHTML = `
       <div class="cat-icon" style="background:${cat.color}18;border:1px solid ${cat.color}33;color:${cat.color}">${cat.icon}</div>
       <div class="cat-name">${cat.name}</div>
       <div class="cat-desc">${cat.desc}</div>
+      <i class="fa fa-chevron-down cat-chevron"></i>
     `
+    header.addEventListener('click', () => toggleCatCollapse(cat.id, group, header))
     group.appendChild(header)
 
-    // Rows
+    // Rows container (for collapse animation)
+    const rowsEl = document.createElement('div')
+    rowsEl.className = 'cat-rows'
+    rowsEl.id = `cat-rows-${cat.id}`
+    if (isCollapsed) rowsEl.style.maxHeight = '0'
+    else rowsEl.style.maxHeight = '2000px'
+
     for (const def of catDefs) {
       const curVal = currentVals[def.key]
       const isRec = curVal !== null && String(curVal) === String(def.rec)
@@ -790,9 +998,13 @@ function renderSettings() {
         optionsHtml += `<option value="${v}" ${sel}>${label}</option>`
       }
 
+      const ttHtml = def.tooltip ? `<i class="fa fa-circle-info tt-icon" data-tip="${def.tooltip.replace(/"/g,'&quot;')}"></i>` : ''
+
       row.innerHTML = `
         <div class="setting-label">
-          ${def.label}
+          <div style="display:flex;align-items:center;gap:0">
+            <span class="slt">${def.label}</span>${ttHtml}
+          </div>
           ${isMissing ? `<span class="missing-tag"><i class="fa fa-circle-exclamation"></i> ${tF('missingTag')}</span>` : ''}
         </div>
         <div class="setting-control">
@@ -802,9 +1014,10 @@ function renderSettings() {
         </div>
         <div><span class="impact-pill ${impCls}">${impLbl}</span></div>
       `
-      group.appendChild(row)
+      rowsEl.appendChild(row)
     }
 
+    group.appendChild(rowsEl)
     body.appendChild(group)
   }
 }
@@ -824,28 +1037,46 @@ function onSettingChange(key) {
   el.classList.toggle('is-rec', isRec)
 
   const origVal = currentVals[key]
-  const isChanged = origVal !== null && String(el.value) !== String(origVal)
+  const isChanged = origVal !== null
+    ? String(el.value) !== String(origVal)
+    : String(el.value) !== String(def.rec)
   document.getElementById(`srow-${key}`)?.classList.toggle('is-changed', isChanged)
 
   trackChanges()
+  updatePerfBudget()
 }
 
 function trackChanges() {
   if (!currentDefs.length) return
   let count = 0
+  const catCounts = {}
   for (const def of currentDefs) {
     const el = document.getElementById(`sval-${def.key}`)
     if (!el) continue
     const orig = currentVals[def.key]
-    if (orig !== null && String(el.value) !== String(orig)) count++
+    const changed = orig !== null
+      ? String(el.value) !== String(orig)
+      : String(el.value) !== String(def.rec)
+    if (changed) {
+      count++
+      for (const cat of CATEGORIES) {
+        if (cat.keys.includes(def.key)) { catCounts[cat.name] = (catCounts[cat.name] || 0) + 1; break }
+      }
+    }
   }
   pendingChanges = count
   const badge = document.getElementById('changes-count')
+  const resetBtn = document.getElementById('btn-reset')
   if (count > 0) {
     badge.style.display = 'inline-block'
     badge.textContent = (count !== 1 ? tF('changesPlural') : tF('changes')).replace('{n}', count)
+    const breakdown = Object.entries(catCounts).map(([c,n]) => `${c} (${n})`).join(', ')
+    badge.title = breakdown
+    if (resetBtn) resetBtn.classList.add('visible')
   } else {
     badge.style.display = 'none'
+    badge.title = ''
+    if (resetBtn) resetBtn.classList.remove('visible')
   }
 }
 
@@ -853,6 +1084,7 @@ function applyPreset(presetId) {
   if (!currentDefs.length) return
   const values = PRESETS[presetId]
   if (!values) return
+  snapshotState()
   for (const def of currentDefs) {
     const el = document.getElementById(`sval-${def.key}`)
     if (!el) continue
@@ -861,7 +1093,7 @@ function applyPreset(presetId) {
       onSettingChange(def.key)
     }
   }
-  // Visual feedback on the button
+  // Visual feedback on the preset button
   const btn = document.querySelector(`.preset-${presetId}`)
   if (btn) {
     const orig = btn.innerHTML
@@ -869,25 +1101,49 @@ function applyPreset(presetId) {
     btn.style.opacity = '0.7'
     setTimeout(() => { btn.innerHTML = orig; btn.style.opacity = '' }, 1800)
   }
+  // Nudge save button so user knows they still need to save
+  const saveBtn = document.getElementById('btn-save')
+  if (saveBtn && !saveBtn.disabled) {
+    saveBtn.classList.remove('save-nudge')
+    void saveBtn.offsetWidth // force reflow to restart animation
+    saveBtn.classList.add('save-nudge')
+    setTimeout(() => saveBtn.classList.remove('save-nudge'), 1200)
+  }
 }
 
-function exportToClipboard() {
+let _lastExportFormat = 'text'
+function exportFormat(fmt) {
+  closeExportMenu()
   if (!currentDefs.length) return
-  const lines = currentDefs.map(def => {
+  _lastExportFormat = fmt
+  const entries = currentDefs.map(def => {
     const el = document.getElementById(`sval-${def.key}`)
-    const val = el ? el.value : (currentVals[def.key] ?? def.rec)
-    return `${def.key}: ${val}`
+    return { key: def.key, val: el ? el.value : (currentVals[def.key] ?? def.rec) }
   })
-  navigator.clipboard.writeText(lines.join('\n')).then(() => {
-    const btn = document.getElementById('btn-export')
+  let text = ''
+  if (fmt === 'json') {
+    const obj = {}; entries.forEach(({ key, val }) => { obj[key] = val }); text = JSON.stringify(obj, null, 2)
+  } else if (fmt === 'xml') {
+    const lines = entries.map(({ key, val }) => `  <${key} value="${val}" />`).join('\n')
+    text = `<!-- Jylli Tool — GTA5 Settings (changes only, not a full file) -->\n<graphics>\n${lines}\n</graphics>`
+  } else {
+    text = entries.map(({ key, val }) => `${key}: ${val}`).join('\n')
+  }
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.getElementById('btn-export-main')
+    if (!btn) return
     const orig = btn.innerHTML
     btn.innerHTML = `<i class="fa fa-check"></i> ${tF('exportCopied')}`
     setTimeout(() => { btn.innerHTML = orig }, 1800)
-  })
+  }).catch(() => showToastFivem('Copy failed'))
 }
+function toggleExportMenu(e) { e.stopPropagation(); document.getElementById('export-menu')?.classList.toggle('open') }
+function closeExportMenu() { document.getElementById('export-menu')?.classList.remove('open') }
+document.addEventListener('click', closeExportMenu)
 
 function applyRecommended() {
   if (!currentDefs.length) return
+  snapshotState()
   for (const def of currentDefs) {
     const el = document.getElementById(`sval-${def.key}`)
     if (!el) continue
@@ -902,20 +1158,69 @@ async function applySmartPreset() {
   let si = null
   try { si = await window.api.getSystemInfo() } catch (e) { si = null }
   if (btn) btn.disabled = false
-  let preset = 'balanced'
-  if (si) {
-    const vram = si.vramGB || si.gpuVramGB || 0
-    const ram = si.ramGB || si.totalRamGB || 0
-    if (vram >= 8 && ram >= 16) preset = 'quality'
-    else if (vram <= 3 || ram <= 8) preset = 'performance'
+
+  const vram  = si ? (si.vramGB || 0) : 0
+  const ram   = si ? (si.ramGB  || si.totalRamGB || 0) : 0
+  const cores = si ? (si.cpuCores || si.cores || 0) : 0
+  const vendor = si ? (si.gpuVendor || 'unknown') : 'unknown'
+  const isAmd = vendor === 'amd'
+
+  // 4-tier hardware classifier
+  // tier 3 = ultra, tier 2 = high, tier 1 = mid, tier 0 = low
+  const tier = (vram >= 12 && ram >= 32 && (cores === 0 || cores >= 8)) ? 3
+             : (vram >= 8  && ram >= 16 && (cores === 0 || cores >= 6)) ? 2
+             : (vram >= 4  && ram >= 8  && (cores === 0 || cores >= 4)) ? 1
+             : 0
+
+  // Per-setting value tables [tier0, tier1, tier2, tier3]
+  const SMART_VALUES = {
+    LodScale:                  ['0.500000','0.750000','1.000000','1.500000'],
+    PedLodBias:                ['0.000000','0.000000','0.000000','0.200000'],
+    VehicleLodBias:            ['0.000000','0.000000','0.000000','0.200000'],
+    ShadowQuality:             ['1','1','2','3'],
+    Shadow_Distance:           ['0.250000','0.500000','0.750000','1.000000'],
+    Shadow_SoftShadows:        isAmd ? ['0','3','3','3'] : ['0','1','1','2'],
+    UltraShadows_Enabled:      ['false','false','false','true'],
+    Shadow_ParticleShadows:    ['false','false','false','false'],
+    Shadow_LongShadows:        ['false','false','false','false'],
+    GrassQuality:              ['0','0','0','0'],  // always Off — biggest FPS cost in FiveM
+    WaterQuality:              ['0','0','1','2'],
+    ParticleQuality:           ['0','1','1','2'],
+    Lighting_FogVolumes:       ['false','false','false','true'],
+    CityDensity:               ['0.000000','0.000000','0.250000','0.500000'],
+    VehicleVarietyMultiplier:  ['0.000000','0.000000','0.250000','0.500000'],
+    PedVarietyMultiplier:      ['0.000000','0.000000','0.000000','0.500000'],
+    ShaderQuality:             ['2','2','2','3'],
+    ReflectionQuality:         ['0','1','1','2'],
+    TextureQuality:            ['1','2','2','3'],
+    SSAO:                      ['0','0','1','1'],
+    Tessellation:              ['0','0','1','2'],
+    AnisotropicFiltering:      ['16','16','16','16'],
+    PostFX:                    ['1','1','2','2'],
+    MSAA:                      ['0','0','0','2'],
+    FXAA_Enabled:              ['false','true','true','true'],
+    TXAA_Enabled:              ['false','false','false','false'],
+    ReflectionMSAA:            ['0','0','0','0'],
+    DoF:                       ['false','false','false','false'],
+    MotionBlurStrength:        ['0.000000','0.000000','0.000000','0.000000'],
+    HdStreamingInFlight:       ['false','false','false','false'],
+    ScaleformQuality:          ['0','1','1','1'],
   }
-  applyPreset(preset)
-  const labels = { quality: tF('presetQuality'), balanced: tF('presetBalanced'), performance: tF('presetPerformance') }
+
+  snapshotState()
+  for (const def of currentDefs) {
+    const el = document.getElementById(`sval-${def.key}`)
+    if (!el) continue
+    const vals = SMART_VALUES[def.key]
+    if (vals) { el.value = vals[tier]; onSettingChange(def.key) }
+  }
+
+  const tierLabels = ['Low-end', 'Mid-range', 'High-end', 'Ultra']
   const strip = document.getElementById('smart-hw-info')
-  if (strip && si) {
-    const vram = si.vramGB || si.gpuVramGB || 0
-    const ram = si.ramGB || si.totalRamGB || 0
-    strip.textContent = `${tF('smartHwLabel')} ${si.cpu || 'Unknown CPU'} | ${vram}GB VRAM | ${ram}GB RAM → ${labels[preset]}`
+  if (strip) {
+    const coreStr = cores ? ` · ${cores} cores` : ''
+    const vendorStr = vendor !== 'unknown' ? ` (${vendor.toUpperCase()})` : ''
+    strip.textContent = `${tF('smartHwLabel')} ${si?.cpu || 'Unknown CPU'}${vendorStr} | ${vram}GB VRAM | ${ram}GB RAM${coreStr} → Tier ${tier + 1}: ${tierLabels[tier]}`
     strip.style.display = 'block'
   }
 }
@@ -958,6 +1263,7 @@ function loadProfileOnChange() {
   if (!sel || !sel.value) return
   const snapshot = getGtaProfiles()[sel.value]
   if (!snapshot) return
+  snapshotState()
   currentDefs.forEach(def => {
     if (snapshot[def.key] !== undefined) {
       const el = document.getElementById(`sval-${def.key}`)
@@ -974,6 +1280,7 @@ function deleteProfile() {
   delete profiles[name]
   localStorage.setItem('fivem_gta_profiles', JSON.stringify(profiles))
   populateProfileSelect()
+  if (sel) sel.value = ''
   showToastFivem(tF('profileDeleted') + ': ' + name)
 }
 function showToastFivem(msg) {
@@ -981,7 +1288,7 @@ function showToastFivem(msg) {
   if (!t) {
     t = document.createElement('div')
     t.id = 'fivem-settings-toast'
-    t.style.cssText = 'position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:#1e1e1e;border:1px solid #2a2a2a;color:#ccc;padding:8px 16px;border-radius:8px;font-size:11px;z-index:999;transition:opacity 0.3s'
+    t.style.cssText = 'position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:#1e1e1e;border:1px solid #2a2a2a;color:#ccc;padding:8px 16px;border-radius:8px;font-size:11px;z-index:8500;transition:opacity 0.3s'
     document.body.appendChild(t)
   }
   t.textContent = msg
@@ -1010,22 +1317,36 @@ async function saveSettings() {
     else if (el && currentVals[def.key] === null) changedCount++ // missing key being injected
   }
 
-  // Warn if FiveM might be running
+  // Warn only if FiveM is actually running (live check)
   const warnBanner = document.getElementById('fivem-warn-banner')
   if (warnBanner && !warnBanner.dataset.confirmed) {
-    warnBanner.style.display = 'flex'
-    warnBanner.dataset.pendingChanges = JSON.stringify(changes)
-    return
+    let fivemLive = false
+    try { const cr = await window.api.fivemRunningCheck(); fivemLive = !!cr?.running } catch {}
+    if (fivemLive) {
+      warnBanner.style.display = 'flex'
+      return
+    }
   }
 
   _saving = true  // 3c: lock
   btn.disabled = true
   btn.innerHTML = `<i class="fa fa-spinner fa-spin"></i> ${tF('savingBtn')}`
 
-  const r = await window.api.fivemWriteSettings(changes, getManualPath())
-  _saving = false  // 3c: unlock
-  btn.disabled = false
+  let r
+  try {
+    r = await window.api.fivemWriteSettings(changes, getManualPath())
+  } catch {
+    r = { ok: false, reason: 'ipc_error' }
+  } finally {
+    _saving = false  // 3c: unlock
+    btn.disabled = false
+  }
 
+  if (!r.ok && r.reason === 'fivem_running') {
+    btn.innerHTML = `<i class="fa fa-floppy-disk"></i> ${tF('saveBtn')}`
+    if (warnBanner) { warnBanner.style.display = 'flex' }
+    return
+  }
   if (r.ok) {
     btn.innerHTML = `<i class="fa fa-check"></i> ${tF('savedBtn')}`
     if (warnBanner) { warnBanner.style.display = 'none'; delete warnBanner.dataset.confirmed }
@@ -1095,15 +1416,214 @@ function applyTranslationsF() {
   t('lbl-warn-cancel', 'warnCancel')
   t('lbl-warn-save-anyway', 'warnSaveAnyway')
   t('lbl-save-btn', 'saveBtn')
+  t('lbl-undo-btn', 'undoBtn')
+  t('lbl-reset-btn', 'resetToFile')
+  t('lbl-export-text', 'exportAsText')
+  t('lbl-export-json', 'exportAsJson')
+  t('lbl-export-xml', 'exportAsXml')
   const pd = document.getElementById('path-display'); if (pd && !pd._set) pd.textContent = tF('noFile')
   const mp = document.getElementById('manual-path'); if (mp) mp.placeholder = tF('pathPlaceholder')
+  const si = document.getElementById('search-input'); if (si) si.placeholder = tF('searchPlaceholder')
+  const sc = document.getElementById('search-clear'); if (sc) sc.title = tF('searchClearTitle')
 }
+
+// ─── Undo stack ───────────────────────────────────────────────────────────────
+let _undoStack = []
+function snapshotState() {
+  if (!currentDefs.length) return
+  const snap = {}
+  currentDefs.forEach(d => { const el = document.getElementById(`sval-${d.key}`); if (el) snap[d.key] = el.value })
+  _undoStack.push(snap)
+  if (_undoStack.length > 20) _undoStack.shift()
+  updateUndoButton()
+}
+function undoLast() {
+  const snap = _undoStack.pop()
+  if (!snap) return
+  currentDefs.forEach(def => {
+    if (snap[def.key] !== undefined) {
+      const el = document.getElementById(`sval-${def.key}`)
+      if (el) { el.value = snap[def.key]; onSettingChange(def.key) }
+    }
+  })
+  updateUndoButton()
+}
+function updateUndoButton() {
+  const btn = document.getElementById('btn-undo')
+  if (!btn) return
+  if (_undoStack.length > 0) btn.classList.add('active'); else btn.classList.remove('active')
+}
+
+// ─── Reset to file values ─────────────────────────────────────────────────────
+function resetToFileValues() {
+  if (!currentDefs.length) return
+  snapshotState()
+  currentDefs.forEach(def => {
+    const el = document.getElementById(`sval-${def.key}`)
+    if (!el) return
+    el.value = currentVals[def.key] !== null ? currentVals[def.key] : def.rec
+    onSettingChange(def.key)
+  })
+}
+
+// ─── Search / filter ──────────────────────────────────────────────────────────
+function filterSettings(query) {
+  const q = query.trim().toLowerCase()
+  const clearBtn = document.getElementById('search-clear')
+  if (clearBtn) clearBtn.style.display = q ? 'inline' : 'none'
+  const groups = document.querySelectorAll('.cat-group')
+  groups.forEach(group => {
+    let anyVisible = false
+    group.querySelectorAll('.setting-row').forEach(row => {
+      const label = row.querySelector('.setting-label')?.textContent?.toLowerCase() || ''
+      const match = !q || label.includes(q)
+      row.classList.toggle('search-hidden', !match)
+      if (match) anyVisible = true
+      // Highlight matched text — target only .slt to preserve sibling tooltip icon
+      const labelSpan = row.querySelector('.slt')
+      if (labelSpan) {
+        if (q && match) {
+          const rx = new RegExp(`(${q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')})`, 'gi')
+          labelSpan.innerHTML = labelSpan.textContent.replace(rx, '<mark class="sh">$1</mark>')
+        } else {
+          labelSpan.innerHTML = labelSpan.textContent
+        }
+      }
+    })
+    group.classList.toggle('search-hidden', !anyVisible)
+  })
+}
+function clearSearch() {
+  const inp = document.getElementById('search-input')
+  if (inp) { inp.value = ''; filterSettings('') }
+}
+
+// ─── Collapsible categories ───────────────────────────────────────────────────
+function toggleCatCollapse(catId, group, header) {
+  const rowsEl = document.getElementById(`cat-rows-${catId}`)
+  if (!rowsEl) return
+  const isNowCollapsed = !header.classList.contains('cat-collapsed')
+  header.classList.toggle('cat-collapsed', isNowCollapsed)
+  rowsEl.style.maxHeight = isNowCollapsed ? '0' : '2000px'
+  // Persist
+  let collapsed = (() => { try { return JSON.parse(localStorage.getItem('fivem_gfx_collapsed') || '[]') } catch { return [] } })()
+  if (isNowCollapsed) { if (!collapsed.includes(catId)) collapsed.push(catId) }
+  else { collapsed = collapsed.filter(id => id !== catId) }
+  localStorage.setItem('fivem_gfx_collapsed', JSON.stringify(collapsed))
+}
+
+// ─── Tooltip ──────────────────────────────────────────────────────────────────
+function handleTooltip(e) {
+  const icon = e.target.closest('.tt-icon')
+  if (!icon) return
+  const tip = icon.getAttribute('data-tip')
+  if (!tip) return
+  const popup = document.getElementById('tt-popup')
+  if (!popup) return
+  popup.textContent = tip
+  popup.style.display = 'block'
+  const r = icon.getBoundingClientRect()
+  const popupW = popup.offsetWidth || parseInt(getComputedStyle(popup).maxWidth) || 240
+  let left = r.right + 8
+  let top = r.top - 4
+  if (left + popupW > window.innerWidth) left = r.left - popupW - 8
+  if (top + popup.offsetHeight > window.innerHeight) top = window.innerHeight - popup.offsetHeight - 8
+  popup.style.left = Math.max(4, left) + 'px'
+  popup.style.top = Math.max(4, top) + 'px'
+}
+function hideTooltip(e) {
+  if (!e.target.closest('.tt-icon')) {
+    const popup = document.getElementById('tt-popup')
+    if (popup) popup.style.display = 'none'
+  }
+}
+
+// ─── Performance budget meter ─────────────────────────────────────────────────
+const PERF_WEIGHTS = {
+  GrassQuality:              { '0':0, '1':8, '2':14, '3':20 },
+  ShadowQuality:             { '0':0, '1':6, '2':10, '3':16, '4':22 },
+  Shadow_Distance:           { '0.250000':0, '0.500000':3, '0.750000':6, '1.000000':10 },
+  CityDensity:               { '0.000000':0, '0.500000':8, '1.000000':15, '1.500000':22 },
+  VehicleVarietyMultiplier:  { '0.000000':0, '0.500000':6, '1.000000':12, '1.500000':18 },
+  LodScale:                  { '0.500000':0, '0.750000':2, '1.000000':4, '1.500000':8, '2.000000':14 },
+  MSAA:                      { '0':0, '2':6, '4':12, '8':20 },
+  ReflectionQuality:         { '0':0, '1':3, '2':6, '3':10, '4':16 },
+  TextureQuality:            { '0':1, '1':2, '2':3, '3':5, '4':8 },
+  ShaderQuality:             { '0':2, '1':4, '2':5, '3':8, '4':12 },
+  SSAO:                      { '0':0, '1':3, '2':6 },
+  PostFX:                    { '0':0, '1':1, '2':2, '3':3, '4':5 },
+  Tessellation:              { '0':0, '1':2, '2':4, '3':7 },
+  AnisotropicFiltering:      { '0':1, '2':1, '4':1, '8':1, '16':1 },
+  WaterQuality:              { '0':0, '1':1, '2':2, '3':3, '4':5 },
+  ParticleQuality:           { '0':1, '1':2, '2':4, '3':6, '4':9 },
+  UltraShadows_Enabled:      { 'false':0, 'true':5 },
+  Shadow_SoftShadows:        { '0':0, '1':2, '2':3, '3':4 },
+  Lighting_FogVolumes:       { 'false':0, 'true':6 },
+  TXAA_Enabled:              { 'false':0, 'true':5 },
+  PedLodBias:                { '0.000000':0, '0.200000':2, '0.500000':4, '1.000000':7 },
+  VehicleLodBias:            { '0.000000':0, '0.200000':2, '0.500000':4, '1.000000':7 },
+  PedVarietyMultiplier:      { '0.000000':0, '0.500000':3, '1.000000':6 },
+  ReflectionMSAA:            { '0':0, '2':3, '4':6, '8':10 },
+}
+const PERF_MAX = 200
+
+function updatePerfBudget() {
+  const bar = document.getElementById('perf-budget-bar')
+  if (!bar || bar.style.display === 'none') return
+  let total = 0
+  for (const def of currentDefs) {
+    const el = document.getElementById(`sval-${def.key}`)
+    if (!el) continue
+    const w = PERF_WEIGHTS[def.key]
+    if (w) total += (w[el.value] ?? 0)
+  }
+  const pct = Math.min(100, Math.round(total / PERF_MAX * 100))
+  const fill = document.getElementById('perf-budget-fill')
+  const label = document.getElementById('perf-budget-label')
+  const color = pct < 40 ? '#2ECC71' : pct < 65 ? '#facc15' : pct < 80 ? '#f97316' : '#ef4444'
+  const desc = pct < 40 ? tF('perfBudgetLight') : pct < 65 ? tF('perfBudgetMedium') : pct < 80 ? tF('perfBudgetHeavy') : tF('perfBudgetExtreme')
+  if (fill) {
+    if (!fill._animated) {
+      fill.style.transition = 'none'
+      fill.style.width = '0%'
+      fill._animated = true
+      requestAnimationFrame(() => { fill.style.transition = ''; fill.style.width = pct + '%'; fill.style.background = color })
+    } else {
+      fill.style.width = pct + '%'
+      fill.style.background = color
+    }
+  }
+  if (label) label.textContent = `${pct} / 100 — ${desc}`
+}
+
+// ─── Keyboard shortcuts ───────────────────────────────────────────────────────
+window.addEventListener('keydown', e => {
+  if (e.ctrlKey && e.key === 's') { e.preventDefault(); saveSettings() }
+  else if (e.ctrlKey && e.key === 'z') { e.preventDefault(); undoLast() }
+  else if (e.ctrlKey && e.key === 'r') { e.preventDefault(); loadSettings() }
+  else if (e.ctrlKey && e.key === 'e') { e.preventDefault(); exportFormat(_lastExportFormat) }
+  else if (e.key === '/' && document.activeElement?.tagName !== 'INPUT') {
+    e.preventDefault()
+    const inp = document.getElementById('search-input')
+    if (inp) inp.focus()
+  } else if (e.key === 'Escape') {
+    closeExportMenu()
+    const inp = document.getElementById('search-input')
+    if (inp && inp.value) { clearSearch(); return }
+  }
+})
 
 // Auto-load on open
 window.addEventListener('DOMContentLoaded', () => {
   applyTranslationsF()
   populateProfileSelect()
   loadSettings()
+  // Tooltip popup element + listeners — registered once here, not inside renderSettings
+  const tt = document.createElement('div')
+  tt.id = 'tt-popup'
+  document.body.appendChild(tt)
+  document.body.addEventListener('mouseover', handleTooltip)
+  document.body.addEventListener('mouseout', hideTooltip)
 })
 </script>
 </body>

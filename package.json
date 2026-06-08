@@ -1,6 +1,6 @@
 {
   "name": "jylli-tool",
-  "version": "1.5.6",
+  "version": "1.5.7",
   "description": "Jylli Tool",
   "main": "main.js",
   "scripts": {
@@ -30,7 +30,12 @@
       "assets/cpuz/**",
       "assets/ryzenadj/**",
       "assets/scewin/**",
-      "assets/presentmon/**"
+      "assets/presentmon/**",
+      "assets/sensor/**",
+      "assets/jobmon/**",
+      "assets/etw/**",
+      "assets/ai/**",
+      "node_modules/onnxruntime-node/**"
     ],
     "publish": {
       "provider": "github",
@@ -47,6 +52,7 @@
     "@fortawesome/fontawesome-free": "^7.2.0",
     "discord-rpc": "^4.0.1",
     "discord.js": "^14.26.4",
-    "electron-updater": "^6.8.3"
+    "electron-updater": "^6.8.3",
+    "onnxruntime-node": "^1.26.0"
   }
 }

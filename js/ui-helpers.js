@@ -85,69 +85,99 @@ function _promptModalCancel() {
 }
 
 // ─── What's New ───────────────────────────────────────────────────────────────
+let _wnData = null
+
+function _wnParseTag(item) {
+  const m = item.match(/^(New Fix|New|Fix|Update)\s*[—\-]\s*/i)
+  if (!m) return { tag: 'default', label: null, rest: item }
+  const raw = m[1].toLowerCase()
+  const tag = (raw === 'fix') ? 'fix' : (raw === 'update') ? 'update' : 'new'
+  return { tag, label: raw === 'new fix' ? 'New' : m[1], rest: item.slice(m[0].length) }
+}
+
 function _wnRenderItems(items) {
-  return items.map(item => `
-    <div style="display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);font-size:11px;color:var(--gray)">
-      <span style="color:var(--pink);font-size:8px;margin-top:3px;flex-shrink:0">✦</span>
-      <span>${item}</span>
-    </div>`).join('')
+  return items.map(item => {
+    const { tag, label, rest } = _wnParseTag(item)
+    const badge = label
+      ? `<span class="wn-tag wn-tag-${tag}">${label}</span>`
+      : `<span class="wn-tag wn-tag-default">✦</span>`
+    return `<div class="wn-item">${badge}<span class="wn-item-text">${rest}</span></div>`
+  }).join('')
 }
+
+function _wnRenderSidebar(data, activeVersion) {
+  return data.map((v, i) => `
+    <button class="wn-sidebar-item${v.version === activeVersion ? ' active' : ''}" onclick="wnSelectVersion('${v.version}')">
+      <span class="wn-sidebar-dot"></span>
+      <span class="wn-sidebar-label">v${v.version}</span>
+    </button>`).join('')
+}
+
+function wnSelectVersion(version) {
+  if (!_wnData) return
+  const v = _wnData.find(e => e.version === version) || _wnData[0]
+  document.getElementById('wn-ver').textContent = `Version ${v.version} · ${v.date}`
+  document.getElementById('wn-items').innerHTML = _wnRenderItems(v.items)
+  document.querySelectorAll('.wn-sidebar-item').forEach(btn => {
+    btn.classList.toggle('active', btn.querySelector('.wn-sidebar-label')?.textContent === `v${version}`)
+  })
+}
+
 function _wnUpdateStaticText() {
-  const title = document.getElementById('wn-title')
+  const title    = document.getElementById('wn-title')
+  const subtitle = document.getElementById('wn-subtitle')
   const closeBtn = document.getElementById('wn-close-btn')
-  if (title) title.innerHTML = `<i class="fa fa-star"></i> ${tUI('whatsNewTitle')}`
-  if (closeBtn) closeBtn.innerHTML = `<i class="fa fa-xmark"></i> ${tUI('whatsNewClose')}`
+  if (title)    title.textContent    = tUI('whatsNewTitle')
+  if (subtitle) subtitle.textContent = tUI('whatsNewSubtitle')
+  if (closeBtn) closeBtn.innerHTML   = `<i class="fa fa-xmark"></i> ${tUI('whatsNewClose')}`
 }
+
 async function showWhatsNew(version) {
   _wnUpdateStaticText()
   try {
     const data = await api.getWhatsNew(currentLang)
     if (!data?.length) return
+    _wnData = data
     const v = (version ? data.find(e => e.version === String(version)) : null) || data[0]
-    document.getElementById('wn-ver').textContent = `Version ${v.version} · ${v.date}`
-    document.getElementById('wn-items').innerHTML = _wnRenderItems(v.items)
+    document.getElementById('wn-sidebar').innerHTML = _wnRenderSidebar(data, v.version)
+    document.getElementById('wn-ver').textContent   = `Version ${v.version} · ${v.date}`
+    document.getElementById('wn-items').innerHTML   = _wnRenderItems(v.items)
     _openModal('wn-overlay')
   } catch(e) {
     // api not ready yet — show static version
-    document.getElementById('wn-ver').textContent = 'Version 1.5.3 · May 2026'
     const _wnItemsEn = [
-      'Pulse — FPS Command Center with Avg FPS, 1% Low, Stability % tiles and 90-sample sparkline',
-      'Pulse — SMOOTHNESS score (0–100) from frame time variance; Session History saves last 5 sessions',
-      'Pulse — ARIA Predictive Mode: predicts CPU/GPU/RAM spikes 8 s ahead using linear regression',
-      'Pulse — Per-core CPU heatmap and GPU temp row in Live Monitor; System Threat Meter (OPTIMAL → CRITICAL)',
-      'Pulse — Session debrief card after every session; activation cinematic; active-game hero bar',
-      'Debloat — UWP removal also purges provisioned OS image; Bloat Score card (0–100)',
-      'Debloat — Windows Ads panel with "Kill All Ads" button; Developer PC & Streamer PC presets',
-      'Debloat — Context menu scanner, Windows Optional Features manager, OEM bloatware detection',
-      'Scheduler — Rich task cards with state badge, next-run countdown, Run Now and History actions',
-      'Home — System Identity hero card, trend arrows on metric tiles, optimization streak counter',
-      'Smart Conflict Engine — blocks harmful tweak combinations (Wi-Fi + network, video call + MMCSS, etc.)',
-      'App Optimizer — LIVE badge on currently running unoptimized apps; "Optimize All Running" one-click',
-      'FiveM — Settings pack export/import (.jyt); Smart Recommend 4-tier logic; VRAM-adaptive graphics',
-      'Auto-Optimize — Smart / Gaming / Safe mode selector; idle scheduling; real before/after report',
-      'ARIA — Performance Journal, DPC Spike Log, and Tweak Impact Tracker (before/after per tweak)',
-      'BIOS — Side-by-side profile comparison; Restore Point diff shows which tweaks would revert',
+      'Brand new app — faster, lighter, and no setup required',
+      'Live CPU, RAM and disk meters on the dashboard',
+      'PC Health Score — see how optimised your PC is at a glance',
+      'Game Profiles — detects your installed games and applies per-game tweaks',
+      'Auto-Profiles — tweaks are applied automatically when you launch a game',
+      'App Optimizer — cut background resource usage from browsers, Discord, Spotify and more',
+      'Process Manager — see what\'s running and boost your game with one click',
+      'Startup Manager — control what launches when your PC boots',
+      'Ping Test — check your latency to gaming servers around the world',
+      'Tweak Scheduler — automatically clean temp files and run maintenance on a schedule',
+      'Tweak History — a full log of every change made to your system',
+      'Search — find any tweak instantly from anywhere in the app',
     ]
     const _wnItemsFi = [
-      'Pulse — FPS Command Center: Avg FPS, 1% Low, Vakaus-% ja 90-näytteen sparkline',
-      'Pulse — SULAVUUS-pistytys (0–100) ruutuaikojen vaihtelusta; istuntohistoria tallentaa 5 viimeistä sessiota',
-      'Pulse — ARIA ennakoiva tila: ennustaa CPU/GPU/RAM-piikkejä 8 s etukäteen lineaarisella regressiolla',
-      'Pulse — Per-ydin CPU-lämpökartta ja GPU-lämpötila Live-monitorissa; järjestelmäuhkamittari (OPTIMAL → KRIITTINEN)',
-      'Pulse — Istunnon yhteenvetokortti session jälkeen; aktivointianimaatio; peliherobiitti',
-      'Debloat — UWP-poisto puhdistaa myös provisioidun OS-kuvan; Bloat Score -kortti (0–100)',
-      'Debloat — Windows-mainospaneeli "Tapa kaikki mainokset" -napilla; Kehittäjä-PC ja Striimaaja-PC -esiasetukset',
-      'Debloat — Pikavalikkoskanneri, Windowsin valinnaiset ominaisuudet (DISM), OEM-turvottamistunnistus',
-      'Ajastin — Rikkaat tehtäväkortit: tila, seuraava ajo, Aja nyt ja Historia-toiminnot',
-      'Kotinäkymä — Järjestelmäidentiteettikortti, trendinuolet mittareissa, optimointiputki-laskuri',
-      'Älykäs konfliktimoottori — estää haitalliset säätöyhdistelmät (Wi-Fi + verkko, videopuhelu + MMCSS jne.)',
-      'Sovellusoptimoija — LIVE-merkki käynnissä oleville optimoimattomille sovelluksille; "Optimoi kaikki käynnissä olevat"',
-      'FiveM — Asetuspaketti (.jyt vienti/tuonti); Smart Recommend 4-tason logiikalla; VRAM-mukautuva grafiikka',
-      'Auto-Optimize — Älytila / Pelitila / Turvallinen tila; tyhjäkäyntiaikataulu; todellinen ennen/jälkeen-raportti',
-      'ARIA — Suorituspäiväkirja, DPC-piikkikirjanpito ja säätövaikutusmittari (ennen/jälkeen jokaiselle säädölle)',
-      'BIOS — Profiilien rinnakkainen vertailu; palautuspisteen diff näyttää mitkä säädöt peruuntuisivat',
+      'Täysin uusi sovellus — nopeampi, kevyempi, ei asennusta',
+      'Reaaliaikaiset CPU, RAM ja levy -mittarit kojelaudalla',
+      'PC-terveyspistemäärä — näe yhdellä silmäyksellä kuinka optimoitu tietokoneesi on',
+      'Peliprofiilit — tunnistaa asennetut pelisi ja soveltaa pelikohtaiset säädöt',
+      'Auto-profiilit — säädöt aktivoituvat automaattisesti kun käynnistät pelin',
+      'Sovellusoptimoija — vähennä taustakäyttöä selaimilla, Discord, Spotify ja muut',
+      'Prosessinhallinta — näe mitä ajossa on ja tehosta peliäsi yhdellä klikkauksella',
+      'Käynnistyksenhallinnat — hallitse mitä käynnistyy PC:n käynnistyessä',
+      'Ping-testi — tarkista viiveesi pelipalvelimille ympäri maailmaa',
+      'Säätöajastin — puhdista automaattisesti väliaikaiset tiedostot aikataulun mukaan',
+      'Säätöhistoria — täydellinen loki kaikista järjestelmään tehdyistä muutoksista',
+      'Haku — löydä mikä tahansa säätö välittömästi mistä tahansa sovelluksesta',
     ]
-    const _wnItems = (typeof currentLang !== 'undefined' && currentLang === 'fi') ? _wnItemsFi : _wnItemsEn
-    document.getElementById('wn-items').innerHTML = _wnItems.map(item => `<div style="display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);font-size:11px;color:var(--gray)"><span style="color:var(--pink);font-size:8px;margin-top:3px;flex-shrink:0">✦</span><span>${item}</span></div>`).join('')
+    const items = (typeof currentLang !== 'undefined' && currentLang === 'fi') ? _wnItemsFi : _wnItemsEn
+    _wnData = [{ version: '6.0', date: 'May 2026', items }]
+    document.getElementById('wn-sidebar').innerHTML = _wnRenderSidebar(_wnData, '6.0')
+    document.getElementById('wn-ver').textContent   = 'Version 6.0 · May 2026'
+    document.getElementById('wn-items').innerHTML   = _wnRenderItems(items)
     _openModal('wn-overlay')
   }
 }
@@ -158,12 +188,28 @@ function showBugReport() {
   document.getElementById('br-title').value = ''
   document.getElementById('br-desc').value = ''
   document.getElementById('br-steps').value = ''
+  document.getElementById('br-title-count').textContent = '0 / 120'
+  document.getElementById('br-desc-count').textContent = '0 / 1800'
+  document.getElementById('br-steps-count').textContent = '0 / 900'
   document.getElementById('br-submit-btn').disabled = false
-  document.getElementById('br-submit-btn').innerHTML = `<i class="fa fa-paper-plane"></i> ${tUI('brSendReport')}`
+  document.getElementById('br-submit-btn').innerHTML = `<i class="fa fa-paper-plane"></i> <span>${tUI('brSendReport')}</span>`
+  // Apply i18n to static labels
+  document.querySelectorAll('#br-overlay [data-i18n]').forEach(el => { const k = el.dataset.i18n; if (k) el.textContent = tUI(k) })
+  document.querySelectorAll('#br-overlay [data-i18n-placeholder]').forEach(el => { const k = el.dataset.i18nPlaceholder; if (k) el.placeholder = tUI(k) })
   _openModal('br-overlay')
   document.getElementById('br-title').focus()
 }
 function closeBugReport() { _closeModal('br-overlay') }
+
+function closeAdvancedIntro() {
+  const cb = document.getElementById('adv-intro-dont-show')
+  if (cb?.checked) { settings.advIntroSeen = true; saveSettingsDebounced() }
+  document.querySelectorAll('[data-advanced="true"]').forEach(el => {
+    el.classList.add('adv-pulse')
+    el.addEventListener('animationend', () => el.classList.remove('adv-pulse'), { once: true })
+  })
+  _closeModal('advanced-intro-overlay')
+}
 
 async function submitBugReport() {
   const title = document.getElementById('br-title').value.trim()
@@ -174,11 +220,16 @@ async function submitBugReport() {
 
   const btn = document.getElementById('br-submit-btn')
   btn.disabled = true
-  btn.innerHTML = `<i class="fa fa-spinner fa-spin"></i> ${tUI('brSending')}`
+  btn.innerHTML = `<i class="fa fa-spinner fa-spin"></i> <span>${tUI('brSending')}</span>`
 
-  await api.submitBugReport({ title, description, steps: steps || null, page: currentPage })
-  closeBugReport()
-  toast(tUI('bugReportSent'), tUI('bugReportThanks'), 'ok')
+  try {
+    await api.submitBugReport({ title, description, steps: steps || null, page: currentPage })
+    closeBugReport()
+    toast(tUI('bugReportSent'), tUI('bugReportThanks'), 'ok')
+  } finally {
+    btn.disabled = false
+    btn.innerHTML = `<i class="fa fa-paper-plane"></i> <span>${tUI('brSendReport')}</span>`
+  }
 }
 
 // ─── Undo last tweak ─────────────────────────────────────────────────────────
