@@ -104,6 +104,11 @@
   /* ── Enhanced shadows ── */
   --shadow-modal: 0 24px 80px rgba(0,0,0,0.85), 0 0 0 1px rgba(124,58,237,0.10);
 
+  /* ── Risk tier colors for tweak safety badges ── */
+  --c-tier-1:     #2ECC71;   --c-tier-1-bg: rgba(46,204,113,0.12);
+  --c-tier-2:     #F39C12;   --c-tier-2-bg: rgba(243,156,18,0.12);
+  --c-tier-3:     #E74C3C;   --c-tier-3-bg: rgba(231,76,60,0.12);
+
   /* ── Backward-compat aliases — canvas code reads --pink-rgb at runtime ── */
   --pink:       var(--c-accent);
   --pink-hover: color-mix(in srgb, var(--c-accent) 82%, #fff);

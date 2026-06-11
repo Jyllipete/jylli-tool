@@ -58,6 +58,21 @@
   </div>
 </div>
 
+<!-- kbdclass damage recovery banner -->
+<div id="kbdclass-damage-banner" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9998;background:#1a0000;border-top:2px solid #e53935;padding:10px 20px;animation:slideUp 0.3s ease">
+  <div style="display:flex;align-items:center;gap:12px;max-width:900px;margin:0 auto">
+    <span style="font-size:20px;color:#e53935;flex-shrink:0">⌨</span>
+    <div style="flex:1;font-size:11px;color:var(--text)">
+      <strong id="kbdclass-banner-title" style="color:#ff6b6b"></strong>
+      <span id="kbdclass-banner-desc" style="color:var(--gray);margin-left:6px"></span>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;flex-shrink:0">
+      <button id="kbdclass-banner-fix-btn" class="btn btn-sm" style="background:#e53935;color:#fff;border:none;font-size:11px" onclick="kbdclassBannerFix()"></button>
+      <button id="kbdclass-banner-dismiss-btn" class="btn btn-ghost btn-sm" style="font-size:11px" onclick="kbdclassBannerDismiss()"></button>
+    </div>
+  </div>
+</div>
+
 <!-- AV Tip Banner -->
 <div id="av-tip-banner" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9997;background:#1a1200;border-top:1px solid var(--warning);padding:10px 20px;animation:slideUp 0.3s ease">
   <div style="display:flex;align-items:center;gap:12px;max-width:900px;margin:0 auto">
@@ -508,63 +523,58 @@
   <div id="hud-popover"></div>
 
   <div id="body">
-    <!-- Sidebar — Paragon sections -->
+    <!-- Sidebar — intent-based navigation -->
     <nav id="sidebar">
-      <div class="sidebar-section-label" data-i18n="sidebarGeneral">General</div>
+      <div class="sidebar-section-label" data-i18n="sidebarOverview">Overview</div>
       <button class="nav-btn active" data-page="dashboard" data-label="Home" onclick="showPage('dashboard')">
         <span class="nav-icon"><i class="fa fa-house"></i></span><span class="nav-label" data-i18n-title="dashboard">Home</span>
-      </button>
-      <button class="nav-btn" data-page="restore-points" data-label="System Restore" onclick="showPage('restore-points')">
-        <span class="nav-icon"><i class="fa fa-shield-halved"></i></span><span class="nav-label" data-i18n-title="restore-points">System Restore</span>
-      </button>
-      <button class="nav-btn" data-page="fixes" data-label="Fixes" onclick="showPage('fixes')">
-        <span class="nav-icon"><i class="fa fa-wrench"></i></span><span class="nav-label" data-i18n-title="fixes">Fixes</span>
       </button>
       <button class="nav-btn" data-page="preflight" data-label="Pre-Flight" onclick="showPage('preflight')">
         <span class="nav-icon"><i class="fa fa-stethoscope"></i></span><span class="nav-label" data-i18n-title="preflight">Pre-Flight</span>
         <span class="nav-badge" id="badge-preflight" style="display:none">!</span>
       </button>
-      <button class="nav-btn" data-page="process-manager" data-label="Processes" data-advanced="true" onclick="showPage('process-manager')">
+      <button class="nav-btn" data-page="fixes" data-label="Fixes" onclick="showPage('fixes')">
+        <span class="nav-icon"><i class="fa fa-wrench"></i></span><span class="nav-label" data-i18n-title="fixes">Fixes</span>
+      </button>
+      <button class="nav-btn" data-page="restore-points" data-label="System Restore" onclick="showPage('restore-points')">
+        <span class="nav-icon"><i class="fa fa-rotate-left"></i></span><span class="nav-label" data-i18n-title="restore-points">System Restore</span>
+      </button>
+      <div class="sidebar-section-label" data-i18n="sidebarOptimize">Optimize</div>
+      <button class="nav-btn" data-page="performance" data-label="Performance" onclick="showPage('performance')">
+        <span class="nav-icon"><i class="fa fa-gauge-high"></i></span><span class="nav-label" data-i18n-title="performance">Performance</span>
+      </button>
+      <button class="nav-btn" data-page="gaming" data-label="Gaming" onclick="showPage('gaming')">
+        <span class="nav-icon"><i class="fa fa-gamepad"></i></span><span class="nav-label" data-i18n-title="gaming">Gaming</span>
+      </button>
+      <button class="nav-btn" data-page="network" data-label="Networking" onclick="showPage('network')">
+        <span class="nav-icon"><i class="fa fa-globe"></i></span><span class="nav-label" data-i18n-title="network">Networking</span>
+      </button>
+      <button class="nav-btn" data-page="privacy-cleanup" data-label="Privacy & Cleanup" onclick="showPage('privacy-cleanup')">
+        <span class="nav-icon"><i class="fa fa-shield-halved"></i></span><span class="nav-label" data-i18n-title="privacy-cleanup">Privacy & Cleanup</span>
+      </button>
+      <div class="sidebar-section-label" data-i18n="sidebarSystem">System</div>
+      <button class="nav-btn" data-page="startup-manager" data-label="Startups" onclick="showPage('startup-manager')">
+        <span class="nav-icon"><i class="fa fa-rocket"></i></span><span class="nav-label" data-i18n-title="startup-manager">Startups</span>
+      </button>
+      <button class="nav-btn" data-page="process-manager" data-label="Processes" onclick="showPage('process-manager')">
         <span class="nav-icon"><i class="fa fa-diagram-project"></i></span><span class="nav-label" data-i18n-title="process-manager">Processes</span>
         <span class="nav-badge" id="badge-boost" style="display:none">LIVE</span>
       </button>
       <button class="nav-btn" data-page="latency-monitor" data-label="Latency" data-advanced="true" onclick="showPage('latency-monitor')">
         <span class="nav-icon"><i class="fa fa-wave-square"></i></span><span class="nav-label" data-i18n-title="latency-monitor">Latency</span>
       </button>
-      <div class="sidebar-section-label" style="margin-top:4px" data-i18n="sidebarTweaks">Tweaks</div>
-      <button class="nav-btn" data-page="windows-opti" data-label="General Tweaks" onclick="showPage('windows-opti')">
-        <span class="nav-icon"><i class="fa fa-windows fab"></i></span><span class="nav-label" data-i18n-title="windows-opti">General</span>
+      <button class="nav-btn" data-page="bios-tuner" data-label="BIOS Tuner" data-advanced="true" onclick="showPage('bios-tuner')">
+        <span class="nav-icon"><i class="fa fa-server"></i></span><span class="nav-label" data-i18n-title="bios-tuner">BIOS Tuner</span>
       </button>
-      <button class="nav-btn" data-page="debloater" data-label="Debloating" onclick="showPage('debloater')">
-        <span class="nav-icon"><i class="fa fa-trash"></i></span><span class="nav-label" data-i18n-title="debloater">Debloating</span>
-      </button>
-      <button class="nav-btn" data-page="network" data-label="Networking" onclick="showPage('network')">
-        <span class="nav-icon"><i class="fa fa-globe"></i></span><span class="nav-label" data-i18n-title="network">Networking</span>
-      </button>
-      <button class="nav-btn" data-page="hardware" data-label="Advanced" onclick="showPage('hardware')">
-        <span class="nav-icon"><i class="fa fa-sliders"></i></span><span class="nav-label" data-i18n-title="hardware">Advanced</span>
-      </button>
-      <button class="nav-btn" data-page="startup-manager" data-label="Startups" onclick="showPage('startup-manager')">
-        <span class="nav-icon"><i class="fa fa-rocket"></i></span><span class="nav-label" data-i18n-title="startup-manager">Startups</span>
-      </button>
-      <button class="nav-btn" data-page="game-opti" data-label="Game Profiles" onclick="showPage('game-opti')">
-        <span class="nav-icon"><i class="fa fa-gamepad"></i></span><span class="nav-label" data-i18n-title="game-opti">Game Profiles</span>
-      </button>
-      <button class="nav-btn" data-page="app-optimizer" data-label="App Optimizer" onclick="showPage('app-optimizer')">
-        <span class="nav-icon"><i class="fa fa-mobile-screen"></i></span><span class="nav-label" data-i18n-title="app-optimizer">App Optimizer</span>
-      </button>
-      <div class="sidebar-section-label" style="margin-top:4px" data-i18n="sidebarTools">Tools</div>
+      <div class="sidebar-section-label" data-i18n="sidebarTools">Tools</div>
       <button class="nav-btn" data-page="pulse" data-label="Pulse" onclick="showPage('pulse')">
         <span class="nav-icon"><i class="fa fa-bolt"></i></span><span class="nav-label" data-i18n-title="pulse">Pulse</span>
       </button>
       <button class="nav-btn" data-page="fivem" data-label="FiveM" onclick="showPage('fivem')">
         <span class="nav-icon"><i class="fa fa-car-side"></i></span><span class="nav-label" data-i18n-title="fivem">FiveM</span>
       </button>
-      <button class="nav-btn" data-page="cleanup" data-label="Cleanup" onclick="showPage('cleanup')">
-        <span class="nav-icon"><i class="fa fa-broom"></i></span><span class="nav-label" data-i18n-title="cleanup">Cleanup</span>
-      </button>
-      <button class="nav-btn" data-page="bios-tuner" data-label="BIOS Tuner" data-advanced="true" onclick="showPage('bios-tuner')">
-        <span class="nav-icon"><i class="fa fa-server"></i></span><span class="nav-label" data-i18n-title="bios-tuner">BIOS Tuner</span>
+      <button class="nav-btn" data-page="cs2" data-label="CS2" onclick="showPage('cs2')">
+        <span class="nav-icon"><i class="fa fa-burst"></i></span><span class="nav-label" data-i18n-title="cs2">CS2</span>
       </button>
       <button class="nav-btn" data-page="scheduler" data-label="Scheduler" onclick="showPage('scheduler')">
         <span class="nav-icon"><i class="fa fa-clock"></i></span><span class="nav-label" data-i18n-title="scheduler">Scheduler</span>
@@ -608,6 +618,7 @@
 
 <script src="js/ui-helpers.js"></script>
 <script src="js/fivem-logic.js"></script>
+<script src="js/cs2-logic.js"></script>
 <script src="js/thread-mapper.js"></script>
 <script>
 'use strict'
@@ -623,12 +634,15 @@ const LANG = {
       'debloater':'Remove bloatware','network':'Network stack optimizations',
       'hardware':'CPU, GPU & power settings','startup-manager':'Manage startup programs',
       'game-opti':'Per-game optimization profiles','app-optimizer':'App-specific tuning',
-      'fivem':'FiveM & GTA V tweaks','cleanup':'Clean temp files and caches',
+      'fivem':'FiveM & GTA V tweaks','cs2':'Counter-Strike 2 latency optimization','cleanup':'Clean temp files and caches',
       'ping-test':'Test network latency','scheduler':'Task scheduler management',
       'changelog':'Applied tweak history','settings':'App preferences and personalization',
       'latency-monitor':'Real-time latency tracking',
       'pulse':'Game performance mode — timer resolution, core unparking, interrupt routing',
       'bios-tuner':'Read and write BIOS/UEFI settings directly from Windows',
+      'performance':'Tweaks, CPU, GPU & power settings',
+      'gaming':'Game Profiles & App Optimizer',
+      'privacy-cleanup':'Debloat, cleanup & privacy controls',
     },
     sections: {},
     ui: {
@@ -636,6 +650,10 @@ const LANG = {
       confirm:'Confirm', back:'Back', next:'Next', close:'Close',
       advanced:'Advanced', language:'Language', langCode:'EN',
       sidebarGeneral:'General', sidebarTweaks:'Tweaks', sidebarTools:'Tools', sidebarCollapse:'Collapse',
+      sidebarOverview:'Overview', sidebarOptimize:'Optimize', sidebarSystem:'System',
+      tabQuickWins:'Quick Wins', tabWindows:'Windows', tabCPUMem:'CPU & Memory', tabGPU:'GPU', tabPower:'Power',
+      tabGameProfiles:'Game Profiles', tabAppOptimizer:'App Optimizer', tabFiveM:'FiveM',
+      tabCleanup:'Cleanup', tabDebloater:'Debloater', tabPrivacy:'Privacy', tabServices:'Services',
       logTitle:'OUTPUT LOG', logLegend:'✓=ok   ⚠=warn   ✗=err   ◆=section', logClear:'Clear',
       preApplied:'Already active on your system — applying again is safe but redundant.',
       safetyRequired:'Safety Toggle Required',
@@ -738,6 +756,7 @@ const LANG = {
       devicesSub:'Devices with errors or that are no longer connected. Removing them is safe and cleans up Device Manager.',
       devicesReady:'Click Scan to detect unused devices.',
       devicesScan:'Scan Devices', devicesRemove:'Disable Selected',
+      devicesRemoving:'Removing devices…', devicesRemoveDone:'Cleanup complete',
       servicesSub:'Disabling wrong services can break Windows features. Read warnings carefully.',
       servicesGaming:'Gaming Recommended', servicesDisable:'Disable Selected',
       servicesWSearch:'Slows file searches in Explorer.',
@@ -1142,6 +1161,70 @@ const LANG = {
       fivemCacheInfoError:'Could not read cache directories — FiveM may not be installed.',
       fivemCachedAgo:'cached {s}s ago',
       fivemSectionLabel:'System Tweaks',
+      // ── CS2 ──────────────────────────────────────────────────────────────
+      cs2TipTitle:'Apply System and Network tweaks first, then use Launch Options and Autoexec Generator for game-side gains.',
+      cs2NotDetected:'Counter-Strike 2 not detected. Some features require a CS2 installation.',
+      cs2OrderTip:'Recommended order: System Tweaks → Network → Launch Options → Autoexec → Reboot.',
+      cs2ScoreLabel:'CS2 Optimization Score',
+      cs2TweaksApplied:'{n} of {total} tweaks applied',
+      cs2ApplyAllSafeBtn:'Apply All Safe Tweaks',
+      cs2OptiTierFull:'Competition-ready',
+      cs2OptiTierGood:'Well optimized',
+      cs2OptiTierPartial:'Partially optimized',
+      cs2OptiTierNone:'Not optimized',
+      cs2HeroGoToSection:'Jump to section',
+      cs2HeroOpenTool:'Open tool',
+      cs2HeroSystemTitle:'System Tweaks',
+      cs2HeroSystemDesc:'MMCSS, timer, priority, input',
+      cs2HeroNetworkTitle:'Network Tuning',
+      cs2HeroNetworkDesc:'Nagle off, ACK freq, interp',
+      cs2HeroLaunchTitle:'Launch Options',
+      cs2HeroLaunchDesc:'Visual flag builder',
+      cs2HeroAutoexecTitle:'Autoexec Generator',
+      cs2HeroAutoexecDesc:'Mouse, net rates, HUD, audio',
+      cs2HeroPingTitle:'Live Ping Plotter',
+      cs2HeroPingDesc:'Real-time server latency chart',
+      cs2HeroFrameTitle:'Frame Consistency',
+      cs2HeroFrameDesc:'Avg / 1% low / 0.1% low FPS',
+      cs2LaunchPanelTitle:'Launch Options Builder',
+      cs2LaunchPanelDesc:'Build your CS2 launch string visually. Copy or apply directly to Steam.',
+      cs2LaunchCopyBtn:'Copy',
+      cs2LaunchApplyBtn:'Apply to Steam',
+      cs2AutoexecPanelTitle:'Autoexec.cfg Generator',
+      cs2AutoexecPanelDesc:'Generate a tuned autoexec.cfg with mouse, network, and HUD settings.',
+      cs2AutoexecCopyBtn:'Copy cfg',
+      cs2AutoexecDeployBtn:'Deploy to CS2 Folder',
+      cs2PingPanelTitle:'Live Ping Plotter',
+      cs2PingPanelDesc:'Real-time latency chart to official Valve relay servers.',
+      cs2FramePanelTitle:'Frame Consistency Meter',
+      cs2FramePanelDesc:'Live frame time analysis via PresentMon.',
+      cs2FrameNotRunning:'Launch CS2 to start recording frame data.',
+      cs2SectionSystem:'System & Input',
+      cs2SectionNetwork:'Network',
+      cs2SectionGraphics:'Graphics & Display',
+      cs2SectionProcess:'Process & Scheduling',
+      cs2SectionLabel:'CS2 Tweaks',
+      cs2RebootTip:'cs2-timer and cs2-affinity require a reboot to take full effect.',
+      cs2NotDetectedTitle:'CS2 not found',
+      cs2OrderBannerLabel:'Recommended optimization order',
+      cs2TweaksUnit:'tweaks applied',
+      cs2ResetAllTitle:'Restore all tweaks',
+      cs2SearchPlaceholder:'Search CS2 tweaks…',
+      cs2FrameIdleHint:'Open CS2, then click Retry to begin recording frame time data.',
+      cs2FrameRetry:'Retry',
+      cs2SafetyTip:'All Tier-1 tweaks are safe to apply without rebooting. Tier-2 tweaks (cs2-affinity) should be tested before competitive play.',
+      cs2ProfilesPanelTitle:'Config Profiles',
+      cs2ProfilesPanelDesc:'Save, load and share your complete CS2 optimization state.',
+      cs2ProfilesBuiltinLabel:'Built-in presets',
+      cs2ProfilesSavedLabel:'My saved profiles',
+      cs2ProfilesSaveBtn:'Save current state as profile',
+      cs2ProfilesSelectHint:'Select a profile to preview its tweaks',
+      cs2ProfilesNoSaved:'No saved profiles yet',
+      cs2ProfilesApplyBtn:'Apply profile',
+      cs2ProfilesPreviewLabel:'Profile preview',
+      cs2HeroProfilesTitle:'Config Profiles',
+      cs2HeroProfilesDesc:'Save & restore your full optimization state in one click.',
+      cs2Copied:'Copied!',
       aoApplied:'APPLIED', aoDefault:'DEFAULT', aoNotInstalled:'Not installed', aoDrifted:'DRIFTED', aoReapply:'Re-apply', aoScanning:'Scanning…', aoHealthOk:'All optimizations active', aoNoCatApps:'No installed apps in this category',
       aoCurrentlyRunning:'Currently running — optimization takes effect instantly',
       aoRunningAppsTitle:'Running apps detected — optimize them now for instant effect',
@@ -1356,6 +1439,11 @@ const LANG = {
       fingerprintBannerDesc:'{n} applied tweak{s} may not suit your current hardware.',
       fingerprintBannerReview:'Review →',
       fingerprintDismiss:'Dismiss for 7 days',
+      kbdclassBannerTitle:'Keyboard damage detected',
+      kbdclassBannerDesc:'A previous Jylli Tool tweak set ConnectMultiplePorts=0, which can completely break keyboards on some hardware.',
+      kbdclassBannerFix:'Fix Now',
+      kbdclassBannerDismiss:'Dismiss (not affected)',
+      kbdclassBannerFixed:'Keyboard registry cleaned — please reboot.',
       settingsSilentMode:'Silent Mode',
       settingsSilentModeDesc:'While gaming, Jylli pauses its own background activity and silences Windows notifications',
       settingsLowResourceMode:'Low Resource Mode',
@@ -1401,9 +1489,6 @@ const LANG = {
       dashHistoryEmpty:'No history yet — data is collected every 60 seconds.',
       dashHistoryCpu:'CPU %', dashHistoryRam:'RAM %',
       dashHistory1h:'1H', dashHistory6h:'6H', dashHistory24h:'24H',
-      dashImpactTitle:'Impact Report',
-      dashImpactEmpty:'Apply tweaks to see their measured CPU & RAM impact here.',
-      dashImpactCpu:'CPU', dashImpactRam:'RAM',
       ariaTitle:'ARIA Advisor',
       ariaSubtitle:'Adaptive Resource Intelligence',
       ariaDisabled:'Enable ARIA in Settings → Behavior to activate real-time system intelligence.',
@@ -1734,7 +1819,6 @@ const LANG = {
       conflictNicWifi:'NIC tweaks are for Ethernet adapters. On Wi-Fi they may cause packet loss or disconnect the adapter.',
       warnEthernetSpike:'Ping may spike ~150ms briefly while the NIC stack resets after applying — this is normal and resolves on its own.',
       conflictEngineApplyAnyway:'Apply Anyway',
-      impactMeasured:'Measured impact',
       conflictEngineWifiNicTitle:'Wi-Fi Detected — NIC Tweak Warning',
       conflictEngineWifiNicBody:'This tweak targets Ethernet adapters. On Wi-Fi it may increase packet loss, cause brief disconnections, or have no effect. Apply anyway?',
       conflictEngineVideoCallTitle:'Active Video Call Detected',
@@ -2375,6 +2459,8 @@ const LANG = {
       'ping-test':'Ping Test','scheduler':'Scheduler','changelog':'Tweak History',
       'settings':'Settings','latency-monitor':'Latency Monitor',
       'pulse':'Pulse','bios-tuner':'BIOS Tuner',
+      'performance':'Performance','gaming':'Gaming','privacy-cleanup':'Privacy & Cleanup',
+      'cs2':'CS2',
     },
     aoNames: {
       'edge-optimize':'Microsoft Edge Optimization',
@@ -2439,6 +2525,20 @@ const LANG = {
       'tcp-timedwait': 'Sets TcpTimedWaitDelay=30 (default: 240 seconds). Speeds up port reuse after connections close — critical for game servers with frequent reconnects. Reduces TIME_WAIT socket accumulation that can cause port exhaustion on high-activity multiplayer sessions.',
       'net-del-ack': 'Sets TcpDelAckTicks=0 (default: 2). Sends ACKs immediately instead of batching them every ~200ms. Reduces round-trip latency for real-time game protocols where every millisecond of ACK delay directly increases perceived ping.',
       'net-max-ports': 'Expands the ephemeral TCP port range from the Windows default of ~16,384 ports to 64,510 using netsh. Prevents port exhaustion on game servers with high connection turnover — required for high-concurrency FiveM, Rust, and MMO servers.',
+      // CS2
+      'cs2-network': 'Disables Nagle algorithm and sets TcpAckFrequency=1. Every game packet is sent immediately — no buffering delay.',
+      'cs2-mmcss': 'Sets MMCSS GPU Priority=8, Scheduling Category=High. Forces Windows to treat GPU work as real-time multimedia.',
+      'cs2-priority': 'Writes CpuPriorityClass=3 + IoPriority=3 to cs2.exe IFEO. CS2 gets elevated CPU cycles on every launch automatically.',
+      'cs2-fullscreen-opti': 'Sets DISABLEDXMAXIMIZEDWINDOWEDMODE for cs2.exe. Forces true exclusive fullscreen, bypassing DWM compositing.',
+      'cs2-timer': 'Sets GlobalTimerResolutionRequests=1 for 0.5ms system timer precision. Reduces game-loop interval jitter.',
+      'cs2-gpu-prerender': 'Sets NVIDIA PreRenderedFrames=1. Minimises the GPU render-ahead queue to one frame — reduces display latency directly.',
+      'cs2-audio-latency': 'Sets Multimedia SystemProfile AlwaysOn=1 + LazyModeTimeout=0. Prevents the audio engine from entering power-save mid-session.',
+      'cs2-input-responsiveness': 'Reduces mouclass MouseDataQueueSize to 16 and sets IRQ8Priority=1. Shrinks the OS mouse input buffer for faster event processing.',
+      'cs2-affinity': 'Computes CpuAffinityMask from physical P-core count and writes it to cs2.exe IFEO. Prevents CS2 threads from scheduling onto E-cores.',
+      'cs2-gpu-scheduling': 'Enables Hardware-Accelerated GPU Scheduling (HAGS) via HwSchMode=2. Moves GPU work scheduling from CPU driver to GPU hardware.',
+      'cs2-network-recv-buf': 'Sets AFD socket receive/send buffers to 128 KB. Tightens the Windows socket buffer to match CS2\'s packet cadence.',
+      'cs2-hpet-off': 'Disables HPET via bcdedit and enables disabledynamictick. Forces TSC/LAPIC timing for lower DPC latency.',
+      'cs2-power-throttle-off': 'Sets PowerThrottlingOff=1. Prevents Windows from applying EcoQoS throttling to foreground apps — CS2 always gets full CPU frequency.',
     },
     tweakNames: {
       // General
@@ -2476,9 +2576,9 @@ const LANG = {
       'raw-aim-curve':'Raw Aim Curve',
       'proximity-deny':'Proximity Deny (Nearby Sharing Off)',
       'cursor-max-rate':'Cursor Max Rate (8000Hz+ support)',
-      'kbdclass-queue':'Keyboard Driver Queue Tuning',
       'nudge-blocker':'Nudge Blocker (Disable AutoPlay nudges)',
       'sticky-keys-guard':'StickyKeys Guard (Disable accidentally)',
+      'kbdclass-recovery':'Keyboard Fix (kbdclass Recovery)',
       'telemetry-zero':'Telemetry Zero (AllowTelemetry=0)',
       'search-box-local':'Search Box Local Only',
       'search-cloud-off':'Search Cloud Suggestions Off',
@@ -2582,6 +2682,20 @@ const LANG = {
       'fivem-gamebar':'Disable Xbox Game Bar & Game DVR Recording',
       'fivem-mouse-accel':'Disable Mouse Acceleration (Enhance Pointer Precision)',
       'fivem-power-plan':'Set Power Plan → High Performance',
+      // CS2
+      'cs2-network':'CS2 Network (Nagle Off / ACK Tuning)',
+      'cs2-mmcss':'CS2 MMCSS GPU Priority',
+      'cs2-priority':'CS2 Process Priority (IFEO)',
+      'cs2-fullscreen-opti':'Disable Fullscreen Optimizations for CS2',
+      'cs2-timer':'CS2 System Timer Resolution (0.5ms)',
+      'cs2-gpu-prerender':'CS2 NVIDIA Render-Ahead (1 Frame)',
+      'cs2-audio-latency':'CS2 Audio Latency (Always-On Mode)',
+      'cs2-input-responsiveness':'CS2 Input Queue Tuning',
+      'cs2-affinity':'CS2 CPU Affinity (P-Cores Only)',
+      'cs2-gpu-scheduling':'CS2 Hardware-Accelerated GPU Scheduling',
+      'cs2-network-recv-buf':'CS2 Network Socket Buffers (128K)',
+      'cs2-hpet-off':'CS2 Disable HPET (Use TSC)',
+      'cs2-power-throttle-off':'CS2 Disable CPU Power Throttling',
       // Cleanup
       'clean-temp':'Deep Clean System Temps',
       'clean-winsxs':'Windows Component Store (WinSxS)',
@@ -2640,6 +2754,7 @@ const LANG = {
       'fix-usb-ghosting':       'Mouse Ghosting / Audio Beeping Fix',
       'fix-phantom-hid':        'Remove Phantom HID / USB Devices',
       'fix-lghub-restore':      'Restore Logitech G HUB',
+      'fix-keyboard':           'Keyboard Fix (kbdclass Recovery)',
     },
     tweakWarnings: {
       'spectre-meltdown':'Disables kernel-level CPU security. Never on a shared PC.',
@@ -2653,6 +2768,10 @@ const LANG = {
       'fivem-mouse-accel':'Affects all Windows mice system-wide. Restore if you use other apps that rely on pointer precision.',
       'fivem-power-plan':'Increases power consumption and heat. Restore when not gaming.',
       'fivem-reduce-draw-distance':'Can cause low-texture / low-LOD visuals — buildings and objects appear blurry or washed out. Restore if you notice texture quality issues.',
+      'cs2-affinity':'Tier 2 — Test before competitive play. Pins CS2 to P-cores only; may need adjustment on non-standard CPU layouts.',
+      'cs2-hpet-off':'Reboot required. Some older hardware relies on HPET — restore if you experience system instability.',
+      'cs2-gpu-scheduling':'Reboot required. Requires Windows 10 2004+ and a DirectX 12 GPU with updated drivers.',
+      'cs2-gpu-prerender':'NVIDIA only. Has no effect on AMD or Intel GPUs.',
     },
     rpCards: [
       { title:"What's protected?", body:"Registry changes, system files, and driver installs. Personal files and documents are NOT protected." },
@@ -2833,6 +2952,8 @@ const LANG = {
       'ping-test':'Ping-testi','scheduler':'Ajastin','changelog':'Muutoshistoria',
       'settings':'Asetukset','latency-monitor':'Viivemonitori','pulse':'Pulse',
       'bios-tuner':'BIOS-säätäjä',
+      'performance':'Suorituskyky','gaming':'Pelaaminen','privacy-cleanup':'Yksityisyys & Siivous',
+      'cs2':'CS2',
     },
     subtitles: {
       'dashboard':'Järjestelmän yleiskatsaus',
@@ -2847,7 +2968,7 @@ const LANG = {
       'startup-manager':'Hallinnoi käynnistysohjelmia',
       'game-opti':'Pelikohtaiset optimointiprofiilit',
       'app-optimizer':'Sovelluskohtainen säätö',
-      'fivem':'FiveM & GTA V -säädöt',
+      'fivem':'FiveM & GTA V -säädöt','cs2':'Counter-Strike 2 -viiveoptimoiniti',
       'cleanup':'Siivoa väliaikais- ja välimuistitiedostot',
       'ping-test':'Testaa verkon viive',
       'scheduler':'Tehtäväajastimen hallinta',
@@ -2856,6 +2977,9 @@ const LANG = {
       'latency-monitor':'Reaaliaikainen viiveseuranta',
       'pulse':'Pelin suorituskykytila — ajastintarkkuus, ytimien vapautus, keskeytysreititys',
       'bios-tuner':'Lue ja kirjoita BIOS/UEFI-asetuksia suoraan Windowsista',
+      'performance':'Säädöt, CPU, GPU & virranhallinta',
+      'gaming':'Peliprofiilit & sovellusoptimointi',
+      'privacy-cleanup':'Bloatware, siivous & yksityisyys',
     },
     sections: {},
     ui: {
@@ -2863,6 +2987,10 @@ const LANG = {
       confirm:'Vahvista', back:'Takaisin', next:'Seuraava', close:'Sulje',
       advanced:'Lisäasetukset', language:'Kieli', langCode:'FI',
       sidebarGeneral:'Yleiset', sidebarTweaks:'Säädöt', sidebarTools:'Työkalut', sidebarCollapse:'Pienennä',
+      sidebarOverview:'Yleiskatsaus', sidebarOptimize:'Optimointi', sidebarSystem:'Järjestelmä',
+      tabQuickWins:'Pikanäppäimet', tabWindows:'Windows', tabCPUMem:'CPU & Muisti', tabGPU:'GPU', tabPower:'Virta',
+      tabGameProfiles:'Peliprofiilit', tabAppOptimizer:'Sovellusoptimointi', tabFiveM:'FiveM',
+      tabCleanup:'Siivous', tabDebloater:'Bloatware', tabPrivacy:'Yksityisyys', tabServices:'Palvelut',
       logTitle:'LOKI', logLegend:'✓=ok   ⚠=varoitus   ✗=virhe   ◆=osio', logClear:'Tyhjennä',
       preApplied:'Jo aktiivisena järjestelmässäsi — uudelleenkäyttö on turvallista mutta tarpeetonta.',
       safetyRequired:'Turvalukko vaaditaan',
@@ -2965,6 +3093,7 @@ const LANG = {
       devicesSub:'Virheellisiä tai jo irrotettuja laitteita. Niiden poistaminen on turvallista ja siistii Laitehallintaa.',
       devicesReady:'Klikkaa Skannaa havaitaksesi käyttämättömät laitteet.',
       devicesScan:'Skannaa laitteet', devicesRemove:'Poista valitut käytöstä',
+      devicesRemoving:'Poistetaan laitteita…', devicesRemoveDone:'Siivous valmis',
       servicesSub:'Väärien palveluiden poistaminen käytöstä voi rikkoa Windows-ominaisuuksia. Lue varoitukset huolellisesti.',
       servicesGaming:'Pelaamiseen suositeltu', servicesDisable:'Poista valitut käytöstä',
       servicesWSearch:'Hidastaa tiedostohakuja Resurssienhallinnassa.',
@@ -3326,6 +3455,70 @@ const LANG = {
       fivemCacheInfoError:'Välimuistikansioita ei löydy — FiveM ei ehkä ole asennettu.',
       fivemCachedAgo:'välimuistissa {s}s sitten',
       fivemSectionLabel:'Järjestelmäsäädöt',
+      // ── CS2 ──────────────────────────────────────────────────────────────
+      cs2TipTitle:'Aloita Järjestelmä- ja Verkkoparannuksilla, sitten Launch Options ja Autoexec.',
+      cs2NotDetected:'Counter-Strike 2 -asennusta ei löydetty. Jotkut ominaisuudet vaativat CS2:n.',
+      cs2OrderTip:'Suositeltu järjestys: Järjestelmä → Verkko → Käynnistysasetukset → Autoexec → Uudelleenkäynnistys.',
+      cs2ScoreLabel:'CS2 Optimointipisteet',
+      cs2TweaksApplied:'{n} / {total} säätöä käytetty',
+      cs2ApplyAllSafeBtn:'Käytä kaikki turvalliset säädöt',
+      cs2OptiTierFull:'Kilpailuvalmis',
+      cs2OptiTierGood:'Hyvin optimoitu',
+      cs2OptiTierPartial:'Osittain optimoitu',
+      cs2OptiTierNone:'Ei optimoitu',
+      cs2HeroGoToSection:'Siirry osioon',
+      cs2HeroOpenTool:'Avaa työkalu',
+      cs2HeroSystemTitle:'Järjestelmäparannukset',
+      cs2HeroSystemDesc:'MMCSS, ajastin, prioriteetti, syöte',
+      cs2HeroNetworkTitle:'Verkkoviritys',
+      cs2HeroNetworkDesc:'Nagle pois, ACK-tiheys, interp',
+      cs2HeroLaunchTitle:'Käynnistysasetukset',
+      cs2HeroLaunchDesc:'Visuaalinen lippurakentaja',
+      cs2HeroAutoexecTitle:'Autoexec-generaattori',
+      cs2HeroAutoexecDesc:'Hiiri, verkkonopeudet, HUD, ääni',
+      cs2HeroPingTitle:'Ping-piirtäjä',
+      cs2HeroPingDesc:'Reaaliaikainen palvelinviivekaavio',
+      cs2HeroFrameTitle:'Ruutuyhtenäisyys',
+      cs2HeroFrameDesc:'Avg / 1% alin / 0,1% alin FPS',
+      cs2LaunchPanelTitle:'Käynnistysasetusten Rakentaja',
+      cs2LaunchPanelDesc:'Rakenna CS2-käynnistysmerkkijono visuaalisesti. Kopioi tai lisää suoraan Steamiin.',
+      cs2LaunchCopyBtn:'Kopioi',
+      cs2LaunchApplyBtn:'Lisää Steamiin',
+      cs2AutoexecPanelTitle:'Autoexec.cfg-generaattori',
+      cs2AutoexecPanelDesc:'Luo viritety autoexec.cfg hiiri-, verkko- ja HUD-asetuksilla.',
+      cs2AutoexecCopyBtn:'Kopioi cfg',
+      cs2AutoexecDeployBtn:'Ota käyttöön CS2-kansioon',
+      cs2PingPanelTitle:'Ping-piirtäjä',
+      cs2PingPanelDesc:'Reaaliaikainen viivekaavio Valven virallisille välityspalvelimille.',
+      cs2FramePanelTitle:'Ruutuyhtenäisyysmittari',
+      cs2FramePanelDesc:'Reaaliaikainen ruutuaika-analyysi PresentMonin kautta.',
+      cs2FrameNotRunning:'Käynnistä CS2 aloittaaksesi ruutudatan tallennuksen.',
+      cs2SectionSystem:'Järjestelmä ja Syöte',
+      cs2SectionNetwork:'Verkko',
+      cs2SectionGraphics:'Grafiikka ja Näyttö',
+      cs2SectionProcess:'Prosessi ja Ajastus',
+      cs2SectionLabel:'CS2-säädöt',
+      cs2RebootTip:'cs2-timer ja cs2-affinity vaativat uudelleenkäynnistyksen täyden vaikutuksen saamiseksi.',
+      cs2NotDetectedTitle:'CS2:ta ei löydy',
+      cs2OrderBannerLabel:'Suositeltu optimointijärjestys',
+      cs2TweaksUnit:'säätöä käytetty',
+      cs2ResetAllTitle:'Palauta kaikki säädöt',
+      cs2SearchPlaceholder:'Hae CS2-säätöjä…',
+      cs2FrameIdleHint:'Avaa CS2, sitten napsauta Yritä uudelleen aloittaaksesi ruutuaikadatan tallennuksen.',
+      cs2FrameRetry:'Yritä uudelleen',
+      cs2SafetyTip:'Kaikki Taso-1-säädöt ovat turvallisia käyttää ilman uudelleenkäynnistystä. Taso-2-säädöt (cs2-affinity) tulisi testata ennen kilpailupeliä.',
+      cs2ProfilesPanelTitle:'Asetusprofiilit',
+      cs2ProfilesPanelDesc:'Tallenna, lataa ja jaa täydellinen CS2-optimointitilasi.',
+      cs2ProfilesBuiltinLabel:'Sisäänrakennetut esiasetukset',
+      cs2ProfilesSavedLabel:'Omat tallennetut profiilit',
+      cs2ProfilesSaveBtn:'Tallenna nykyinen tila profiilina',
+      cs2ProfilesSelectHint:'Valitse profiili nähdäksesi sen säädöt',
+      cs2ProfilesNoSaved:'Ei tallennettuja profiileja vielä',
+      cs2ProfilesApplyBtn:'Käytä profiilia',
+      cs2ProfilesPreviewLabel:'Profiilin esikatselu',
+      cs2HeroProfilesTitle:'Asetusprofiilit',
+      cs2HeroProfilesDesc:'Tallenna ja palauta koko optimointitilasi yhdellä napsautuksella.',
+      cs2Copied:'Kopioitu!',
       aoApplied:'KÄYTETTY', aoDefault:'OLETUS', aoNotInstalled:'Ei asennettu', aoDrifted:'MUUTTUNUT', aoReapply:'Käytä uudelleen', aoScanning:'Skannataan…', aoHealthOk:'Kaikki optimoinnit aktiiviset', aoNoCatApps:'Ei asennettuja sovelluksia tässä kategoriassa',
       aoCurrentlyRunning:'Käynnissä nyt — optimointi vaikuttaa heti',
       aoRunningAppsTitle:'Käynnissä olevia sovelluksia havaittu — optimoi ne nyt välittömästi',
@@ -3540,6 +3733,11 @@ const LANG = {
       fingerprintBannerDesc:'{n} käytetty säätö{s} ei välttämättä sovi nykyiselle laitteistollesi.',
       fingerprintBannerReview:'Tarkista →',
       fingerprintDismiss:'Piilota 7 päiväksi',
+      kbdclassBannerTitle:'Näppäimistövaurio havaittu',
+      kbdclassBannerDesc:'Jylli Toolin aiempi säätö asetti ConnectMultiplePorts=0, mikä voi rikkoa näppäimistön kokonaan joillakin laitteistoilla.',
+      kbdclassBannerFix:'Korjaa nyt',
+      kbdclassBannerDismiss:'Ohita (ei vaikuta minuun)',
+      kbdclassBannerFixed:'Näppäimistön rekisteri puhdistettu — käynnistä uudelleen.',
       settingsSilentMode:'Hiljainen tila',
       settingsSilentModeDesc:'Pelaamisen aikana Jylli keskeyttää oman taustatoimintansa ja hiljentää Windowsin ilmoitukset',
       settingsLowResourceMode:'Matala resurssitila',
@@ -3585,9 +3783,6 @@ const LANG = {
       dashHistoryEmpty:'Ei historiatietoja vielä — tietoja kerätään 60 sekunnin välein.',
       dashHistoryCpu:'CPU %', dashHistoryRam:'RAM %',
       dashHistory1h:'1T', dashHistory6h:'6T', dashHistory24h:'24T',
-      dashImpactTitle:'Vaikutusraportti',
-      dashImpactEmpty:'Käytä säätöjä nähdäksesi mitatun CPU- ja RAM-vaikutuksen tässä.',
-      dashImpactCpu:'CPU', dashImpactRam:'RAM',
       ariaTitle:'ARIA-neuvonantaja',
       ariaSubtitle:'Adaptiivinen resurssitiedustelu',
       ariaDisabled:'Ota ARIA käyttöön Asetukset → Toiminta -kohdassa aktivoidaksesi reaaliaikaisen järjestelmäanalytiikan.',
@@ -3961,7 +4156,6 @@ const LANG = {
       conflictNicWifi:'NIC-säädöt on tarkoitettu Ethernet-sovittimille. Wi-Fi-yhteydellä ne voivat aiheuttaa pakettihäviötä tai katkaista yhteyden.',
       warnEthernetSpike:'Pingi voi nousta hetkellisesti ~150ms verkkokorttipinojen nollautuessa säätöä käytettäessä — tämä on normaalia ja korjaantuu itsestään.',
       conflictEngineApplyAnyway:'Käytä silti',
-      impactMeasured:'Mitattu vaikutus',
       conflictEngineWifiNicTitle:'Wi-Fi havaittu — NIC-säätövaroitus',
       conflictEngineWifiNicBody:'Tämä säätö on tarkoitettu Ethernet-sovittimille. Wi-Fi-yhteydellä se voi lisätä pakettihäviötä, aiheuttaa lyhyen yhteyden katkeamisen tai olla tehoton.',
       conflictEngineVideoCallTitle:'Aktiivinen videopuhelu havaittu',
@@ -4645,7 +4839,6 @@ const LANG = {
       'dpc-coalescing': 'Poistaa Windowsin DPC-ajastimen eräajoksen (jopa 15 ms lisätty viive) ja keskeytyksen ohjauksen (keskeytyksen automaattinen siirto ytimien välillä). Mitattavasti vähentää DPC/ISR-viivettä LatencyMonissa. Erillinen HPET-säädöstä.',
       'gpu-preemption': 'Ottaa käyttöön hienojakoisen GPU-komennon keskeytyksen ja lyhentää DWM:n vsync-joutoaikatauluston. Mitattavasti vähentää kehysajan vaihtelua — 2–8 % paremmat 1 %:n minimiarvot vilkkaissa kohtauksissa.',
       'vrr-borderless': 'Ottaa käyttöön Variable Refresh Rate- ja G-Sync/FreeSync-tuen reunattomassa ikkunatilassa. Useimmat kilpapelit toimivat reunattomassa — ilman tätä VRR on poissa käytöstä ja kiinteä vsync lisää 8–16 ms kehyksen toimitusvaihtelun. Vaatii G-Sync- tai FreeSync-näytön. Turvallinen soveltaa ilmankin.',
-      'kbdclass-queue': 'Peilaa hiirikursorin jonon optimoinnin näppäimistön luokkaohjaimeen (kbdclass). Asettaa laitekohtaisen portin eristyksen (ConnectMultiplePorts=0) ja vastaavan jonosyvyyden. Poistaa jaetun portin näppäimistön jonotusviiveen, joka aiheuttaa epäjohdonmukaisia syötteiden aikaleimoja nopean hiiri+näppäimistö-syötteen aikana. Vaatii uudelleenkäynnistyksen.',
       'directstorage-nvme': 'Nostaa NVMe-ajurin jonosyvyyden 32:sta 64 komentoon — mahdollistaa DirectStoragen pipelinen useampia rinnakkaisia lukuja. Ottaa myös käyttöön DirectStorageEnabled- ja GDeflateEnabled-vihjeet Windows 11:ssä. GDeflate-laitteistopakkaus toimii NVIDIA 30-sarjassa+ ja AMD RDNA3+.',
       'pool-usage-max': 'Nostaa Windowsin ytimen ei-sivutetun poolimuistin takaisinottorajan 60 %:sta 96 %:iin. Lykkää ytimen poolin takaisinottoa pidempään, vähentäen DX12/Vulkan-komentopuskurien allokointikatkoksia. Eniten vaikutusta 16 Gt:n järjestelmissä, joissa ajetaan muistinkäyttöön raskaita pelejä (Warzone, Hogwarts Legacy).',
       'wasapi-min-period': 'Asettaa WASAPI:n eksklusiivitilan minimipuskurin 1 ms:iin (oletuksesta 10 ms) kaikissa äänitoistolaitteissa. Pelit, jotka käyttävät WASAPI-eksklusiivitilaa (EFT, Hunt: Showdown, DayZ), voivat pyytää alle-millisekunnin äänipuskureita, vähentäen ääni-peli­moottori-takaisinkutsuviivettä.',
@@ -4668,6 +4861,7 @@ const LANG = {
       'cursor-max-rate': 'Asettaa HIDDeviceInputProcessingMode=0 (yhtenäinen HID-syöteketju) ja kasvattaa hiiren tietojono­kokoa. Korjaa hiiren nykäykset ja klikkaushäviöt vedettäessä ikkunoita monitorien välillä. Sallii myös 8000Hz:n kyselynopeuden hiirille ilman Windowsin rajoitusta. Vaatii uudelleenkäynnistyksen.',
       'nudge-blocker': 'Poistaa AutoPlay-ilmoitukset, jotka ponnahtavat esiin USB-laitteiden kytkemisen yhteydessä pelin aikana.',
       'sticky-keys-guard': 'Poistaa StickyKeys-, FilterKeys- ja ToggleKeys-pikanäppäimet kokonaan. Estää niiden aktivoitumisen pelin aikana Shift-näppäintä painettaessa 5 kertaa tai pitkään pidettäessä.',
+      'kbdclass-recovery': 'Poistaa ConnectMultiplePorts=0-arvon kbdclass-ohjaimen rekisteristä — tämä arvo asetettiin Jylli Toolin aiemmassa versiossa ja rikkoo näppäimistön monilla laitekokoonpanoilla. Poistaa molemmat kbdclass-parametriylikirjoitukset ja palauttaa Windowsin oletukset. Vaatii uudelleenkäynnistyksen.',
       'telemetry-zero': 'Asettaa telemetrian Turvallisuus-tasolle (0) — minimaalinen tiedonsiirto Microsoftille. Aggressiivisempi kuin tavallinen telemetriesäätö.',
       'search-box-local': 'Pakottaa Windowsin haun etsimään vain paikallisesti — poistaa verkkotulokset Käynnistä-valikon hakukentästä.',
       'search-cloud-off': 'Poistaa Bing-ehdotukset ja pilvisisällön tehtäväpalkin hakukentästä.',
@@ -4767,6 +4961,19 @@ const LANG = {
       'fivem-gamebar': 'Pysäyttää Xbox Game Barin taustatallennuksen GTA V:lle ja FiveMille. Game DVR aiheuttaa ruudunpäivityspiikkejä korkean toiminnan kohtauksissa — erityisesti heikommilla kokoonpanoilla.',
       'fivem-mouse-accel': 'Asettaa MouseSpeed=0 ja MouseThreshold arvoon 0. Poistaa Windowsin hiirikiihtyvyyden tarkalle, 1:1-tähtäykselle FiveMissä. Vaikuttaa koko järjestelmään — palauta jos haluat normaalin Windowsin toiminnan.',
       'fivem-power-plan': 'Vaihtaa Windowsin virrankäyttösuunnitelman Korkea suorituskyky -tilaan. Estää CPU-kellon rajoittamisen pelin aikana — erityisen hyödyllinen kannettavissa, jotka käyttävät Tasapainoinen-suunnitelmaa.',
+      'cs2-network': 'Poistaa Naglen algoritmin ja asettaa TcpAckFrequency=1. Jokainen pelipaketti lähtee välittömästi — ei puskurointiviivettä.',
+      'cs2-mmcss': 'Asettaa MMCSS GPU-prioriteetin 8:aan, Scheduling=High. Pakottaa GPU-työn reaaliaikaiseksi multimediatehtäväksi.',
+      'cs2-priority': 'Kirjoittaa CpuPriorityClass=3 + IoPriority=3 cs2.exe IFEO-avaimeen. CS2 saa korotetut syklit automaattisesti jokaisella käynnistyksellä.',
+      'cs2-fullscreen-opti': 'Asettaa DISABLEDXMAXIMIZEDWINDOWEDMODE cs2.exe:lle. Pakottaa aidon eksklusiivisen koko­ruudun, ohittaa DWM-kompositoinnin.',
+      'cs2-timer': 'Asettaa GlobalTimerResolutionRequests=1 — 0,5 ms ajastintarkkuus. Vähentää pelin silmukan aikavälin vaihtelua.',
+      'cs2-gpu-prerender': 'Asettaa NVIDIA PreRenderedFrames=1. Minimoi esirendausjonon yhteen kehykseen — vähentää näyttöviivettä suoraan.',
+      'cs2-audio-latency': 'Asettaa AlwaysOn=1 + LazyModeTimeout=0. Estää äänimoottoria siirtymästä virransäästötilaan kesken session.',
+      'cs2-input-responsiveness': 'Pienentää mouclass MouseDataQueueSize-arvon 16:een ja asettaa IRQ8Priority=1. Pienempi hiiren syöttöpuskuri — nopeampi tapahtumien käsittely.',
+      'cs2-affinity': 'Laskee CpuAffinityMask fyysisistä P-ytimistä ja kirjoittaa sen cs2.exe IFEO-avaimeen. Estää CS2-säikeiden ajastamisen E-ytimille.',
+      'cs2-gpu-scheduling': 'Ottaa käyttöön HAGS:n HwSchMode=2-arvolla. Siirtää GPU-ajastuksen CPU-ohjaimelta GPU-laitteistolle — vähentää renderöintiviivettä.',
+      'cs2-network-recv-buf': 'Asettaa AFD socket-puskurit 128 KB:ksi. Tiukentaa Windowsin socket-puskuria CS2:n pakettikadenssiin sopivaksi.',
+      'cs2-hpet-off': 'Poistaa HPET:n käytöstä bcdedit-komennolla. Pakottaa TSC/LAPIC-ajastuksen — alhaisempi DPC-viive.',
+      'cs2-power-throttle-off': 'Asettaa PowerThrottlingOff=1. Estää EcoQoS-rajoituksen etualasovelluksissa — CS2 saa aina täyden CPU-taajuuden.',
       // Cleanup
       'clean-temp': 'Tyhjentää %TEMP%-, Windows\\Temp-, Prefetch-, Recent- ja Windows Update -latauskansiot. Tiedostot rakentuvat automaattisesti uudelleen.',
       'clean-winsxs': 'Ajaa DISM /StartComponentCleanup -komennon pakatakseen korvatut komponentit. Tyypillisesti palauttaa 1–5 Gt. Voi kestää useita minuutteja.',
@@ -4841,9 +5048,9 @@ const LANG = {
       'raw-aim-curve':'Raaka tähtäyskäyrä',
       'proximity-deny':'Läheisyysesto (Lähistöllä jakaminen pois)',
       'cursor-max-rate':'Kohdistimen enimmäisnopeus (8000Hz+ tuki)',
-      'kbdclass-queue':'Näppäimistöohjaimen jonosäätö',
       'nudge-blocker':'Kehotusesto (Poista automaattitoiston kehotteet)',
       'sticky-keys-guard':'StickyKeys-suoja (Poista vahingossa aktivoituminen)',
+      'kbdclass-recovery':'Näppäimistökorjaus (kbdclass-palautus)',
       'telemetry-zero':'Telemetria nollaan (AllowTelemetry=0)',
       'search-box-local':'Hakukenttä vain paikallinen',
       'search-cloud-off':'Pilvihaun ehdotukset pois',
@@ -4947,6 +5154,20 @@ const LANG = {
       'fivem-gamebar':'Poista Xbox Game Bar ja Game DVR tallennus käytöstä',
       'fivem-mouse-accel':'Poista hiirikiihtyvyys käytöstä (Paranna osoittimen tarkkuutta)',
       'fivem-power-plan':'Aseta virrankäyttösuunnitelma → Korkea suorituskyky',
+      // CS2
+      'cs2-network':'CS2 Verkko (Nagle Pois / ACK-säätö)',
+      'cs2-mmcss':'CS2 MMCSS GPU-prioriteetti',
+      'cs2-priority':'CS2 Prosessiprioritetti (IFEO)',
+      'cs2-fullscreen-opti':'Poista koko­ruutu-optimoinnit CS2:lle',
+      'cs2-timer':'CS2 Järjestelmäajastimen tarkkuus (0,5ms)',
+      'cs2-gpu-prerender':'CS2 NVIDIA Esirender (1 kehys)',
+      'cs2-audio-latency':'CS2 Ääniviive (Aina päällä -tila)',
+      'cs2-input-responsiveness':'CS2 Syöttöjonon säätö',
+      'cs2-affinity':'CS2 CPU-affiniteetti (vain P-ytimet)',
+      'cs2-gpu-scheduling':'CS2 Laitteistokiihdytetty GPU-ajastus',
+      'cs2-network-recv-buf':'CS2 Verkon socket-puskurit (128K)',
+      'cs2-hpet-off':'CS2 Poista HPET käytöstä (käytä TSC:tä)',
+      'cs2-power-throttle-off':'CS2 Poista CPU-tehon rajoitus käytöstä',
       // Cleanup
       'clean-temp':'Syvä järjestelmän väliaikaistiedostojen siivous',
       'clean-winsxs':'Windowsin komponenttivarasto (WinSxS)',
@@ -5023,6 +5244,7 @@ const LANG = {
       'fix-usb-ghosting':       'Hiiren katoamisen / äänihälytysten korjaus',
       'fix-phantom-hid':        'Poista phantom HID / USB-laitteet',
       'fix-lghub-restore':      'Palauta Logitech G HUB',
+      'fix-keyboard':           'Näppäimistökorjaus (kbdclass-palautus)',
     },
     tweakWarnings: {
       'spectre-meltdown':'Poistaa ytimen tason CPU-tietoturvan. Ei koskaan jaetulle PC:lle.',
@@ -5035,6 +5257,10 @@ const LANG = {
       'fivem-mouse-accel':'Vaikuttaa kaikkiin Windows-hiiriin koko järjestelmässä. Palauta jos käytät muita sovelluksia, jotka tarvitsevat osoittimen tarkkuutta.',
       'fivem-power-plan':'Lisää virrankulutusta ja lämpöä. Palauta kun et pelaa.',
       'fivem-reduce-draw-distance':'Voi aiheuttaa matalaresoluutioisia / huonolaatuisia tekstuureja — rakennukset ja objektit näyttävät epätarkoilta tai haalistuneita. Palauta jos huomaat tekstuuriongelmia.',
+      'cs2-affinity':'Taso 2 — testaa ennen kilpailupelaamista. Kiinnittää CS2:n vain P-ytimille; voi vaatia säätöä epätyypillisillä CPU-kokoonpanoilla.',
+      'cs2-hpet-off':'Vaatii uudelleenkäynnistyksen. Joillain vanhemmilla laitteistokokoonpanoilla HPET vaaditaan — palauta jos järjestelmä on epävakaa.',
+      'cs2-gpu-scheduling':'Vaatii uudelleenkäynnistyksen. Vaatii Windows 10 2004+ ja DirectX 12 -GPU:n ajantasaisilla ajureilla.',
+      'cs2-gpu-prerender':'Vain NVIDIA. Ei vaikutusta AMD- tai Intel-näytönohjaimilla.',
     },
     rpCards: [
       { title:'Mitä suojataan?', body:'Rekisterimuutokset, järjestelmätiedostot ja ajuriasennukset. Henkilökohtaisia tiedostoja ja asiakirjoja EI suojata.' },
@@ -5273,7 +5499,7 @@ window.addEventListener('beforeunload', () => {
 // Pages with live data (dashboard, process-manager, pulse, latency-monitor, bios-tuner)
 // are excluded and always rebuild.
 const _PAGE_CACHE = new Map()
-const _PAGE_CACHE_NO_STORE = new Set(['dashboard', 'process-manager', 'pulse', 'latency-monitor', 'bios-tuner', 'preflight', 'hardware', 'fivem', 'game-opti', 'scheduler', 'settings', 'debloater'])
+const _PAGE_CACHE_NO_STORE = new Set(['dashboard', 'process-manager', 'pulse', 'latency-monitor', 'bios-tuner', 'preflight', 'hardware', 'fivem', 'game-opti', 'scheduler', 'settings', 'debloater', 'performance', 'gaming', 'privacy-cleanup'])
 function invalidatePageCache(...pages) {
   if (pages.length === 0) _PAGE_CACHE.clear()
   else pages.forEach(p => _PAGE_CACHE.delete(p))
@@ -5570,6 +5796,7 @@ async function init(isPremium = false) {
     if (w32Lbl) w32Lbl.textContent = text
     document.getElementById('debloat-remove-prog')?.classList.remove('hidden')
   })
+  api.offDeviceRemoveProgress()
 
   // Start detection — IPC events from it resolve each stepPromise with real data.
   // Safety: if detection finishes without firing all events, resolve remaining steps.
@@ -6064,6 +6291,9 @@ async function init(isPremium = false) {
     }).catch(() => {})
   }
 
+  // kbdclass damage check — silently detect broken ConnectMultiplePorts=0 from old tweak
+  kbdclassStartupCheck()
+
   // Wire update events first, then check — so we never miss a fast response
   api.offUpdateAvailable?.()
   api.onUpdateAvailable?.((info) => {
@@ -6179,25 +6409,22 @@ function toggleSidebar() {
 
 // ─── Command Palette ──────────────────────────────────────────────────────────
 const CMD_PAGES = [
-  { name: 'Home',          sub: 'Dashboard overview',     page: 'dashboard',       icon: 'fa-house' },
-  { name: 'System Restore',sub: 'Create & manage restore points', page: 'restore-points', icon: 'fa-shield-halved' },
-  { name: 'Fixes',         sub: 'Quick system fixes',     page: 'fixes',           icon: 'fa-wrench' },
-  { name: 'Pre-Flight',    sub: 'Diagnostic scan',        page: 'preflight',       icon: 'fa-stethoscope' },
-  { name: 'Processes',     sub: 'Process manager',        page: 'process-manager', icon: 'fa-diagram-project' },
-  { name: 'Latency',       sub: 'DPC/ISR latency monitor',page: 'latency-monitor', icon: 'fa-wave-square' },
-  { name: 'General Tweaks',sub: 'Windows optimizations',  page: 'windows-opti',    icon: 'fa-windows fab' },
-  { name: 'Debloating',    sub: 'Remove bloatware',       page: 'debloater',       icon: 'fa-trash' },
-  { name: 'Networking',    sub: 'Network tweaks',         page: 'network',         icon: 'fa-globe' },
-  { name: 'Advanced',      sub: 'Hardware tweaks',        page: 'hardware',        icon: 'fa-sliders' },
-  { name: 'Startups',      sub: 'Startup manager',        page: 'startup-manager', icon: 'fa-rocket' },
-  { name: 'Game Profiles', sub: 'Per-game optimizations', page: 'game-opti',       icon: 'fa-gamepad' },
-  { name: 'App Optimizer', sub: 'App-specific tweaks',    page: 'app-optimizer',   icon: 'fa-mobile-screen' },
-  { name: 'FiveM',         sub: 'FiveM / GTA V tools',   page: 'fivem',           icon: 'fa-car-side' },
-  { name: 'Cleanup',       sub: 'Clean temp files',       page: 'cleanup',         icon: 'fa-broom' },
-  { name: 'BIOS Tuner',    sub: 'BIOS & firmware tools',  page: 'bios-tuner',      icon: 'fa-server' },
-  { name: 'Scheduler',     sub: 'Automated tweaks',       page: 'scheduler',       icon: 'fa-clock' },
-  { name: 'Tweak History', sub: 'Changelog of changes',   page: 'changelog',       icon: 'fa-clipboard-list' },
-  { name: 'Settings',       sub: 'App preferences',       page: 'settings',        icon: 'fa-gear' },
+  { name: 'Home',              sub: 'Dashboard overview',                    page: 'dashboard',       icon: 'fa-house' },
+  { name: 'Pre-Flight',        sub: 'Diagnostic scan',                       page: 'preflight',       icon: 'fa-stethoscope' },
+  { name: 'Performance',       sub: 'Tweaks, CPU, GPU & power settings',     page: 'performance',     icon: 'fa-gauge-high' },
+  { name: 'Gaming',            sub: 'Game Profiles & App Optimizer',          page: 'gaming',          icon: 'fa-gamepad' },
+  { name: 'Networking',        sub: 'Network tweaks',                        page: 'network',         icon: 'fa-globe' },
+  { name: 'Privacy & Cleanup', sub: 'Debloat, cleanup & privacy controls',   page: 'privacy-cleanup', icon: 'fa-shield-halved' },
+  { name: 'Startups',          sub: 'Startup manager',                       page: 'startup-manager', icon: 'fa-rocket' },
+  { name: 'Processes',         sub: 'Process manager',                       page: 'process-manager', icon: 'fa-diagram-project' },
+  { name: 'Latency',           sub: 'DPC/ISR latency monitor',               page: 'latency-monitor', icon: 'fa-wave-square' },
+  { name: 'BIOS Tuner',        sub: 'BIOS & firmware tools',                 page: 'bios-tuner',      icon: 'fa-server' },
+  { name: 'Pulse',             sub: 'Game performance mode',                 page: 'pulse',           icon: 'fa-bolt' },
+  { name: 'Scheduler',         sub: 'Automated tweaks',                      page: 'scheduler',       icon: 'fa-clock' },
+  { name: 'Tweak History',     sub: 'Changelog of changes',                  page: 'changelog',       icon: 'fa-clipboard-list' },
+  { name: 'Settings',          sub: 'App preferences',                       page: 'settings',        icon: 'fa-gear' },
+  { name: 'System Restore',    sub: 'Create & manage restore points',        page: 'restore-points',  icon: 'fa-shield-halved' },
+  { name: 'Fixes',             sub: 'Quick system fixes',                    page: 'fixes',           icon: 'fa-wrench' },
 ]
 const CMD_ACTIONS = [
   { name: 'Create Restore Point', sub: 'Quick safety snapshot', icon: 'fa-shield-halved', action: () => quickCreateRP() },
@@ -6289,11 +6516,11 @@ document.addEventListener('keydown', e => {
 })
 
 // ─── Premium tier helpers ──────────────────────────────────────────────────────
-const PREMIUM_PAGES = ['hardware','fivem','pulse','latency-monitor','game-opti','scheduler','bios-tuner']
+const PREMIUM_PAGES = ['hardware','fivem','cs2','pulse','latency-monitor','game-opti','scheduler','bios-tuner']
 
 const PREMIUM_TAB_NAMES = {
-  en: { hardware:'Advanced', fivem:'FiveM', pulse:'Pulse', 'latency-monitor':'Latency Monitor', 'game-opti':'Game Profiles', scheduler:'Scheduler' },
-  fi: { hardware:'Lisäasetukset', fivem:'FiveM', pulse:'Pulse', 'latency-monitor':'Latency Monitor', 'game-opti':'Peliprofiilit', scheduler:'Ajastin' }
+  en: { hardware:'Advanced', fivem:'FiveM', cs2:'Counter-Strike 2', pulse:'Pulse', 'latency-monitor':'Latency Monitor', 'game-opti':'Game Profiles', scheduler:'Scheduler' },
+  fi: { hardware:'Lisäasetukset', fivem:'FiveM', cs2:'Counter-Strike 2', pulse:'Pulse', 'latency-monitor':'Latency Monitor', 'game-opti':'Peliprofiilit', scheduler:'Ajastin' }
 }
 
 function applyTierToNav() {
@@ -6339,15 +6566,40 @@ async function buildPremiumBanner(c, tabKey) {
   c.style.overflow = 'hidden'
 }
 
+// Inline tab-scoped premium lock — tab bar stays active, only content area is locked
+async function _buildTabPremiumLock(c, tabKey) {
+  const url = await api.getPremiumUrl().catch(() => 'https://jyllitool.netlify.app/')
+  const tabName = (PREMIUM_TAB_NAMES[currentLang] || PREMIUM_TAB_NAMES.en)[tabKey] || tabKey
+  try { api.sendAnalytics?.({ event: 'premium_tab_view', page: tabKey, userId: settings.discordUserId }) } catch {}
+  const lock = document.createElement('div')
+  lock.className = 'tab-premium-lock'
+  lock.innerHTML = `
+    <div class="tab-premium-lock-icon"><i class="fa fa-lock"></i></div>
+    <div class="tab-premium-lock-title"><i class="fa fa-crown" style="color:#f39c12;margin-right:6px"></i>${tabName} — ${tUI('premiumLockTitle')}</div>
+    <div class="tab-premium-lock-sub">${tUI('premiumLockDesc')}</div>
+    <a href="#" class="btn btn-primary btn-sm" style="background:#9b59b6;margin-top:4px" onclick="api.openExternal('${url}');return false">
+      <i class="fa fa-crown"></i> ${tUI('premiumLockCta')}
+    </a>`
+  c.appendChild(lock)
+}
+
 // ─── Navigation ───────────────────────────────────────────────────────────────
-const _NAV_ORDER = ['dashboard','restore-points','fixes','preflight','process-manager','latency-monitor','windows-opti','debloater','network','hardware','startup-manager','game-opti','app-optimizer','pulse','fivem','cleanup','bios-tuner','scheduler','changelog','settings']
+const _NAV_ORDER = [
+  'dashboard','preflight',
+  'performance','gaming','network','privacy-cleanup',
+  'startup-manager','process-manager','latency-monitor','bios-tuner',
+  'pulse','fivem','scheduler','changelog','settings',
+  // compat aliases (not in sidebar, kept for shim routing)
+  'restore-points','fixes','windows-opti','debloater','hardware','game-opti','app-optimizer','cleanup'
+]
 
 const _PAGE_HUE = {
-  'dashboard': 0, 'restore-points': 20, 'fixes': -15, 'preflight': 35,
-  'process-manager': -25, 'latency-monitor': -30, 'windows-opti': 10,
-  'debloater': 45, 'network': -20, 'hardware': 15, 'startup-manager': 25,
-  'game-opti': -10, 'app-optimizer': -5, 'pulse': -35, 'fivem': 30,
-  'cleanup': 40, 'bios-tuner': 20, 'scheduler': 15, 'changelog': 0, 'settings': 0
+  'dashboard': 0, 'preflight': 35,
+  'performance': 10, 'gaming': -10, 'network': -20, 'privacy-cleanup': 45,
+  'startup-manager': 25, 'process-manager': -25, 'latency-monitor': -30, 'bios-tuner': 20,
+  'pulse': -35, 'fivem': 30, 'scheduler': 15, 'changelog': 0, 'settings': 0,
+  'restore-points': 20, 'fixes': -15, 'windows-opti': 10,
+  'debloater': 45, 'hardware': 15, 'game-opti': -10, 'app-optimizer': -5, 'fivem': 30, 'cleanup': 40,
 }
 
 function showPage(page) {
@@ -6372,6 +6624,8 @@ function showPage(page) {
     const hudDelay = leavingPage === 'dashboard' ? 160 : 0
     if (hudDelay) setTimeout(() => slideNavPill(activeNavBtn), hudDelay)
     else slideNavPill(activeNavBtn)
+    const sidebarEl = document.getElementById('sidebar')
+    if (sidebarEl) sidebarEl.scrollTop = activeNavBtn.offsetTop - sidebarEl.clientHeight / 2
   }
 
   const t = LANG[currentLang]?.titles?.[page] || LANG.en.titles[page] || page
@@ -6426,16 +6680,24 @@ function showPage(page) {
     c.classList.remove('page-enter', 'dir-up')
 
     const builders = {
+      // ── Primary pages ──
       dashboard: buildDashboard, 'restore-points': buildRestorePoints,
       'process-manager': buildProcessManager, fixes: buildFixes, preflight: buildPreflight,
-      'windows-opti': buildWindowsOpti,
-      debloater: buildDebloater, network: buildNetwork, hardware: buildHardware,
-      'startup-manager': buildStartupManager, 'game-opti': buildGameOpti,
-      'app-optimizer': buildAppOptimizer, fivem: buildFiveM, cleanup: buildCleanup,
+      network: buildNetwork, 'startup-manager': buildStartupManager,
       scheduler: buildScheduler, changelog: buildChangelog,
       settings: buildSettings, 'latency-monitor': buildLatencyMonitor,
-      pulse: buildPulse,
-      'bios-tuner': buildBiosTuner,
+      pulse: buildPulse, 'bios-tuner': buildBiosTuner,
+      // ── New intent-based pages ──
+      performance: buildPerformance, gaming: buildGaming, 'privacy-cleanup': buildPrivacyCleanup,
+      // ── Redirect shims: old page IDs still work (deep links, internal calls) ──
+      'windows-opti':   (c) => buildPerformance(c),
+      hardware:         (c) => buildPerformance(c),
+      debloater:        (c) => buildPrivacyCleanup(c),
+      cleanup:          (c) => buildPrivacyCleanup(c),
+      'game-opti':      (c) => buildGaming(c),
+      'app-optimizer':  (c) => buildGaming(c),
+      fivem:            buildFiveM,
+      cs2:              buildCS2,
     }
 
     const canCache = !_PAGE_CACHE_NO_STORE.has(page)
@@ -6444,6 +6706,7 @@ function showPage(page) {
       c.innerHTML = _PAGE_CACHE.get(page)
       // Re-wire page-specific closures lost when HTML was serialised into the cache
       if (page === 'startup-manager') _startupRewireAfterCacheRestore(c)
+      if (page === 'cs2') setTimeout(() => cs2RefreshScore(_cs2Sections), 50)
     } else {
       try {
         await builders[page]?.(c)
@@ -6967,6 +7230,56 @@ function fingerprintDismiss() {
   settings.fingerprintDismissedTs = Date.now()
   api.saveSettings(settings)
   const banner = document.getElementById('fingerprint-banner')
+  if (banner) banner.style.display = 'none'
+}
+
+async function kbdclassStartupCheck() {
+  if (settings.kbdclassDismissedTs && Date.now() - settings.kbdclassDismissedTs < 7 * 86400000) return
+  try {
+    const r = await api.checkKbdclassDamage()
+    if (!r?.damaged) return
+    const banner = document.getElementById('kbdclass-damage-banner')
+    if (!banner) return
+    document.getElementById('kbdclass-banner-title').textContent = tUI('kbdclassBannerTitle')
+    document.getElementById('kbdclass-banner-desc').textContent  = tUI('kbdclassBannerDesc')
+    document.getElementById('kbdclass-banner-fix-btn').textContent     = tUI('kbdclassBannerFix')
+    document.getElementById('kbdclass-banner-dismiss-btn').textContent = tUI('kbdclassBannerDismiss')
+    banner.style.display = 'flex'
+  } catch {}
+}
+
+async function kbdclassBannerFix() {
+  const fixBtn     = document.getElementById('kbdclass-banner-fix-btn')
+  const dismissBtn = document.getElementById('kbdclass-banner-dismiss-btn')
+  if (fixBtn)     { fixBtn.disabled = true; fixBtn.innerHTML = '<i class="fa fa-spinner fa-spin"></i>' }
+  if (dismissBtn) dismissBtn.disabled = true
+  try {
+    await api.runTweak('kbdclass-recovery', 'apply')
+    settings.kbdclassDismissedTs = Date.now() + 3650 * 86400000
+    await api.saveSettings(settings)
+    const banner = document.getElementById('kbdclass-damage-banner')
+    if (banner) {
+      banner.style.background    = '#001a00'
+      banner.style.borderTopColor = '#43a047'
+      const title = document.getElementById('kbdclass-banner-title')
+      if (title) { title.style.color = '#69f0ae'; title.textContent = tUI('kbdclassBannerFixed') }
+      const desc = document.getElementById('kbdclass-banner-desc')
+      if (desc) desc.textContent = ''
+      if (fixBtn) fixBtn.style.display = 'none'
+      if (dismissBtn) { dismissBtn.textContent = '✕'; dismissBtn.disabled = false; dismissBtn.onclick = () => { banner.style.display = 'none' } }
+    }
+    toast('Keyboard Fix', tUI('kbdclassBannerFixed'), 'ok')
+  } catch {
+    if (fixBtn)     { fixBtn.disabled = false; fixBtn.textContent = tUI('kbdclassBannerFix') }
+    if (dismissBtn) dismissBtn.disabled = false
+    toast('Keyboard Fix', 'Fix failed — try running as Administrator', 'err')
+  }
+}
+
+function kbdclassBannerDismiss() {
+  settings.kbdclassDismissedTs = Date.now()
+  api.saveSettings(settings)
+  const banner = document.getElementById('kbdclass-damage-banner')
   if (banner) banner.style.display = 'none'
 }
 
@@ -10004,6 +10317,11 @@ const FIXES_DEFS = [
     handler: async (s) => { await api.runTweak('fix-lghub-restore', 'apply') }
   },
   {
+    id: 'fix-keyboard', name: 'Keyboard Fix (kbdclass Recovery)', icon: '<i class="fa fa-keyboard" style="color:#e53935"></i>', category: 'hardware',
+    desc: 'Removes ConnectMultiplePorts=0 from the kbdclass driver registry — set by a previous Jylli Tool version and known to completely break keyboards on USB hub, multi-port, and HID composite device setups. Removes both kbdclass Parameter overrides to restore Windows defaults. Reboot required.',
+    handler: async (s) => { await api.runTweak('kbdclass-recovery', 'apply') }
+  },
+  {
     id: 'fix-2502', name: 'Error 2502/2503 Fix', icon: '<i class="fa fa-triangle-exclamation" style="color:var(--gray)"></i>', category: 'system',
     desc: 'Fixes Windows Installer errors 2502 and 2503 by creating the Temp folder if missing and granting proper permissions to temp directories',
     handler: async (s) => { await api.runTweak('fix-2502', 'apply') }
@@ -10063,6 +10381,9 @@ async function _fixBadgeRecommended(settings) {
     addBadge('fix-usb-ghosting')
     addBadge('fix-phantom-hid')
   }
+
+  // kbdclass damage detected → keyboard fix recommended
+  api.checkKbdclassDamage?.().then(r => { if (r?.damaged) addBadge('fix-keyboard') }).catch(() => {})
 
   // Game-based recommendations
   try {
@@ -14246,18 +14567,6 @@ async function applyTweak(id, action = 'apply') {
   }
   if (restoreBtn) { restoreBtn.disabled = true }
 
-  // Impact Tracker: sample before
-  let _impactBefore = null
-  if (action === 'apply') {
-    try {
-      const [mb, lb] = await Promise.all([
-        api.getMetrics().catch(() => null),
-        settings.isPremium ? api.getLatencySample().catch(() => null) : Promise.resolve(null)
-      ])
-      _impactBefore = { cpu: mb?.cpu ?? null, ram: mb?.ram ?? null, gpu: mb?.gpu ?? null, dpc: lb?.dpcPct ?? null }
-    } catch {}
-  }
-
   // Tweak Diff: snapshot registry values before run
   let _diffBefore = null
   try { _diffBefore = (await api.tweakDiffSnapshot(id))?.snapshot ?? null } catch {}
@@ -14273,23 +14582,6 @@ async function applyTweak(id, action = 'apply') {
       log.unshift(entry)
       if (log.length > 50) log.length = 50
       localStorage.setItem('tweak_diff_log', JSON.stringify(log))
-    } catch {}
-  }
-
-  // Impact Tracker: sample after and store diff in settings
-  if (action === 'apply' && _impactBefore && result.ok) {
-    try {
-      await new Promise(r => setTimeout(r, 1500))
-      const [ma, la] = await Promise.all([
-        api.getMetrics().catch(() => null),
-        settings.isPremium ? api.getLatencySample().catch(() => null) : Promise.resolve(null)
-      ])
-      const after = { cpu: ma?.cpu ?? null, ram: ma?.ram ?? null, gpu: ma?.gpu ?? null, dpc: la?.dpcPct ?? null }
-      const delta = {}
-      for (const k of ['cpu','ram','gpu','dpc']) {
-        if (_impactBefore[k] != null && after[k] != null) delta[k] = parseFloat((after[k] - _impactBefore[k]).toFixed(2))
-      }
-      settings[`tweak_${id}_impact`] = delta
     } catch {}
   }
 
@@ -14330,6 +14622,7 @@ async function applyTweak(id, action = 'apply') {
     await api.saveSettings(settings)
     invalidatePageCache(currentPage)
     updateDiscordScore()
+    if (typeof updateNetworkScore === 'function') updateNetworkScore()
     if (action === 'apply') {
       api.analyticsTweakApplied().catch(() => {})
       const tweakName = SEARCH_INDEX.find(r => r.id === id)?.label || id
@@ -14463,7 +14756,6 @@ function makeRow({ id, name, desc, danger = false, dangerLabel = 'I understand t
       ${reboot ? `<span class="reboot-badge"><i class="fa fa-arrow-rotate-right"></i> ${tUI('genRebootBadge')}</span>` : ''}
       ${preApplied ? `<div class="pf-row-tag"><i class="fa fa-magnifying-glass"></i> Already active on your system — detected by Pre-Flight scan</div>` : ''}
       ${(() => { const ci = getConflictInfo(id); return [ci.warnMsg ? `<div class="tweak-conflict-hint"><i class="fa fa-triangle-exclamation" style="color:var(--warning)"></i> ${ci.warnMsg}</div>` : '', ci.ethernetSpike ? `<div class="tweak-conflict-hint"><i class="fa fa-wave-square" style="color:var(--warning)"></i> ${tUI('warnEthernetSpike')}</div>` : ''].join('') })()}
-      ${(() => { try { const imp = settings[`tweak_${id}_impact`]; if (!imp) return ''; const parts = []; for (const [k,v] of Object.entries(imp)) { if (Math.abs(v) < 0.5) continue; const col = v<0?'#2ecc71':'#e74c3c'; const arrow = v<0?'↓':'↑'; parts.push(`<span style="color:${col}">${k.toUpperCase()} ${arrow}${Math.abs(v)}%</span>`) } return parts.length ? `<div class="tweak-conflict-hint" style="color:var(--muted)"><i class="fa fa-flask" style="color:#9b59b6"></i> ${tUI('impactMeasured')}: ${parts.join(' | ')}</div>` : '' } catch { return '' } })()}
     </div>
     <div class="tweak-right">
       <span class="tweak-badge ${bClass}" id="badge-${id}" title="${badgeTip(id)}">${bText}</span>
@@ -14549,7 +14841,7 @@ async function genRebootNow() {
 }
 
 function genRefreshQuickWinStrip() {
-  const QW_IDS = ['game-dvr','disable-fso','disable-mouse-accel','mmcss','priority-sep','disable-background-apps','mmcss-proaudio','kbdclass-queue','defender-idle-priority','vrr-borderless']
+  const QW_IDS = ['game-dvr','disable-fso','disable-mouse-accel','mmcss','priority-sep','disable-background-apps','mmcss-proaudio','defender-idle-priority','vrr-borderless']
   QW_IDS.forEach(id => {
     const applied = settings[`tweak_${id}`] === 'applied'
     const card = document.getElementById('qwc-' + id)
@@ -14569,7 +14861,7 @@ function genRefreshQuickWinStrip() {
 }
 
 async function genApplyQuickWins() {
-  const QW_IDS = ['game-dvr','disable-fso','disable-mouse-accel','mmcss','priority-sep','disable-background-apps','mmcss-proaudio','kbdclass-queue','defender-idle-priority','vrr-borderless']
+  const QW_IDS = ['game-dvr','disable-fso','disable-mouse-accel','mmcss','priority-sep','disable-background-apps','mmcss-proaudio','defender-idle-priority','vrr-borderless']
   const toApply = QW_IDS.filter(id => settings[`tweak_${id}`] !== 'applied')
   if (!toApply.length) return
   await applyTweakBatch(toApply, 'apply')
@@ -14610,7 +14902,6 @@ const GEN_TIP_DATA = {
   'defender-idle-priority': { reg:'HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\MsMpEng.exe\\PerfOptions: CpuPriorityClass=5', impact:{ en:'Sets Defender to BelowNormal CPU priority via IFEO; it yields to any game thread within one scheduler quantum — eliminates 50–200ms DPC spikes', fi:'Asettaa Defender BelowNormal-CPU-prioriteetiksi IFEO:n kautta; se väistää jokaista peli­säiettä yhden ajoituskvanttiajan sisällä — poistaa 50–200 ms:n DPC-piikit' } },
   'vrr-borderless':   { reg:'HKLM\\SYSTEM\\CurrentControlSet\\Control\\GraphicsDrivers: DxgkrnlTestParameters (MPO path enabled)', impact:{ en:'Enables the VRR/G-Sync presentation path for borderless windowed mode; without this, variable refresh rate is inactive outside exclusive fullscreen', fi:'Ottaa käyttöön VRR/G-Sync-esityspolun reunattomalle ikkunatilalle; ilman tätä muuttuva virkistystaajuus on inaktiivinen eksklusiivisen koko­ruudun ulkopuolella' } },
   'mmcss-proaudio':   { reg:'HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Multimedia\\SystemProfile\\Tasks\\Pro Audio: GPU Priority=8, Scheduling Category=High, Priority=1', impact:{ en:'Prioritises audio engine threads (Wwise, FMOD) at the same level as game render threads; eliminates audio-induced 1–5ms frame hitches in CS2, Valorant, EFT', fi:'Asettaa äänimoottori­säikeet (Wwise, FMOD) samalle prioriteetitasolle kuin peli­renderöinti­säikeet; poistaa äänen aiheuttamat 1–5 ms:n kehyskatkokset CS2:ssa, Valorantissa ja EFT:ssä' } },
-  'kbdclass-queue':   { reg:'HKLM\\SYSTEM\\CurrentControlSet\\Services\\kbdclass\\Parameters: KeyboardDataQueueSize=50, ConnectMultiplePorts=0', impact:{ en:'Mirrors mouclass queue optimisation to the keyboard class driver; eliminates shared-port timestamp jitter during simultaneous key+mouse input', fi:'Peilaa mouclass-jonooptimoinnin näppäimistöluokka-ajurille; poistaa jaetun portin aikaleimavirheen samanaikaisen näppäimistö- ja hiiri­syötön aikana' } },
   'proximity-deny':   { reg:'HKCU\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\CDP: RomeSdkChannelUserAuthzPolicy=0 + NearShare service disabled', impact:{ en:'Kills the CDP NearShare scanner that polls for nearby Bluetooth/Wi-Fi devices every ~30s; removes background radio scanning during gameplay', fi:'Poistaa CDP NearShare -skannerin, joka kyselee läheisiä Bluetooth/Wi-Fi-laitteita noin 30 s välein; poistaa taustaradion skannauksen pelin aikana' } },
   'do-solo-mode':     { reg:'HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\DeliveryOptimization\\Config: DODownloadMode=1', impact:{ en:'Restricts Windows Update Delivery Optimisation to LAN peers only; stops Windows uploading update data to internet peers on your connection', fi:'Rajoittaa Windows Update Delivery Optimisationin vain lähiverkon vertaisiin; estää Windowsia lähettämästä päivitysdataa internet-vertaisille yhteydessäsi' } },
   'search-box-local': { reg:'HKCU\\SOFTWARE\\Policies\\Microsoft\\Windows\\Explorer: DisableSearchBoxSuggestions=1', impact:{ en:'Forces Start Menu search to local index only; eliminates Bing network query on every keystroke in the search box', fi:'Pakottaa Käynnistä-valikon haun käyttämään vain paikallista hakemistoa; poistaa Bing-verkkokyselyn jokaiselta näppäinpainallukselta hakukentässä' } },
@@ -15293,7 +15584,7 @@ async function initHealthScoreRing() {
   if (!arc || !numEl) return
 
   let result
-  try { result = await api.getHealthScore(settings) } catch { return }
+  try { result = await api.getHealthScore(settings, getPreflightStates()) } catch { return }
   if (!result) return
 
   const score = Math.max(0, Math.min(100, Math.round(result.score ?? result.total ?? 0)))
@@ -16583,47 +16874,6 @@ async function ariaRefreshInsights() {
   } catch { el.innerHTML = '' }
 }
 
-
-function buildImpactReport() {
-  const el = document.getElementById('db-impact-body')
-  const panel = document.getElementById('db-impact-panel')
-  if (!el) return
-  const impacts = settings.tweak_impacts || {}
-  const entries = Object.entries(impacts).filter(([, v]) => v && (v.cpuDelta !== 0 || v.ramDelta !== 0))
-  if (entries.length === 0) {
-    if (panel) panel.style.display = 'none'
-    return
-  }
-  if (panel) panel.style.display = ''
-  // Summary line
-  const avgCpu = Math.round(entries.reduce((a, [, v]) => a + v.cpuDelta, 0) / entries.length * 10) / 10
-  const avgRam = Math.round(entries.reduce((a, [, v]) => a + v.ramDelta, 0) / entries.length * 10) / 10
-  const fmt = (v, unit) => {
-    const sign = v > 0 ? '+' : ''
-    const color = v < 0 ? '#2ecc71' : v > 0 ? '#e74c3c' : '#888'
-    return `<span style="color:${color};font-weight:700">${sign}${v}${unit}</span>`
-  }
-  el.innerHTML = `
-    <div style="display:flex;gap:12px;margin-bottom:10px;flex-wrap:wrap">
-      <div style="background:rgba(46,204,113,0.07);border:1px solid rgba(46,204,113,0.2);border-radius:8px;padding:7px 14px;font-size:11px">
-        Avg CPU delta: ${fmt(avgCpu,'%')}
-      </div>
-      <div style="background:rgba(52,152,219,0.07);border:1px solid rgba(52,152,219,0.2);border-radius:8px;padding:7px 14px;font-size:11px">
-        Avg RAM delta: ${fmt(avgRam,'%')}
-      </div>
-      <div style="background:rgba(255,255,255,0.03);border:1px solid #222;border-radius:8px;padding:7px 14px;font-size:11px;color:var(--muted)">
-        ${entries.length} tweaks measured
-      </div>
-    </div>
-    <div style="display:flex;flex-direction:column;gap:4px;max-height:140px;overflow-y:auto">
-      ${entries.sort((a, b) => a[1].cpuDelta - b[1].cpuDelta).map(([id, v]) => `
-        <div style="display:flex;align-items:center;gap:8px;font-size:10px;padding:3px 0;border-bottom:1px solid #111">
-          <span style="flex:1;color:#c0c0c0;font-weight:600">${tName(id) || id.replace(/-/g,' ').replace(/\b\w/g,c=>c.toUpperCase())}</span>
-          <span>${tUI('dashImpactCpu')}: ${fmt(v.cpuDelta,'%')}</span>
-          <span>${tUI('dashImpactRam')}: ${fmt(v.ramDelta,'%')}</span>
-        </div>`).join('')}
-    </div>`
-}
 
 let _activeHistoryRange = '24h'
 
@@ -18091,6 +18341,94 @@ async function quickCleanRam() {
   }
 }
 
+// ─── Page: Performance (tab wrapper) ─────────────────────────────────────────
+if (!window._activeTab) window._activeTab = {}
+
+function _makePageHero(iconHtml, title, sub, chipText) {
+  const hero = document.createElement('div')
+  hero.className = 'page-hero-strip'
+  hero.innerHTML = `
+    <div class="page-hero-icon">${iconHtml}</div>
+    <div class="page-hero-text">
+      <div class="page-hero-title">${title}</div>
+      <div class="page-hero-sub">${sub}</div>
+    </div>
+    ${chipText ? `<div class="page-hero-meta"><span class="page-hero-chip">${chipText}</span></div>` : ''}
+  `
+  return hero
+}
+
+function _makeTabBar(tabs, activeId, onSwitch) {
+  const bar = document.createElement('div')
+  bar.className = 'page-tabs'
+  tabs.forEach(t => {
+    const btn = document.createElement('button')
+    const isPremiumTab = t.premium && !settings.isPremium
+    btn.className = 'page-tab' + (t.id === activeId ? ' active' : '') + (isPremiumTab ? ' tab-is-premium' : '')
+    const lockIcon = isPremiumTab ? `<i class="fa fa-lock tab-lock-icon" style="font-size:9px;color:rgba(155,89,182,0.65);margin-left:5px"></i>` : ''
+    const countBadge = t.count != null ? `<span class="page-tab-count">${t.count}</span>` : ''
+    btn.innerHTML = t.label() + countBadge + lockIcon
+    btn.onclick = () => onSwitch(t.id)
+    bar.appendChild(btn)
+  })
+  return bar
+}
+
+async function buildPerformance(c) {
+  if (!window._activeTab.performance || window._activeTab.performance === 'quick') window._activeTab.performance = 'windows'
+
+  const HW_PREMIUM = true // CPU/GPU/Power tabs require premium
+
+  const TABS = [
+    { id:'windows',label:() => tUI('tabWindows'),    count: null, premium: false },
+    { id:'cpumem', label:() => tUI('tabCPUMem'),     count: null, premium: HW_PREMIUM },
+    { id:'gpu',    label:() => tUI('tabGPU'),         count: null, premium: HW_PREMIUM },
+    { id:'power',  label:() => tUI('tabPower'),       count: null, premium: HW_PREMIUM },
+  ]
+
+  const tab = window._activeTab.performance
+  c.innerHTML = ''
+
+  // Hero strip with CPU · GPU chip
+  const si = sysInfo
+  const cpuShort = (si?.cpu || '').replace(/\(.*\)/g,'').trim().split(' ').slice(0,4).join(' ')
+  const gpuShort = (si?.gpu || '').replace(/\(.*\)/g,'').trim().split(' ').slice(0,3).join(' ')
+  c.appendChild(_makePageHero(
+    '<i class="fa fa-gauge-high"></i>',
+    tTitle('performance'),
+    tSub('performance'),
+    cpuShort && gpuShort ? `${cpuShort} · ${gpuShort}` : null
+  ))
+
+  c.appendChild(_makeTabBar(TABS, tab, async (id) => {
+    window._activeTab.performance = id
+    await buildPerformance(c)
+    c.scrollTop = 0
+  }))
+
+  const inner = document.createElement('div')
+  inner.id = 'perf-tab-content'
+  c.appendChild(inner)
+
+  if (tab === 'windows') {
+    buildWindowsOpti(inner, 'full')
+  } else if (!settings.isPremium) {
+    // Tab bar stays visible; only content area shows the inline lock
+    await _buildTabPremiumLock(inner, 'hardware')
+  } else {
+    await buildHardware(inner)
+    const HW_TAB_SECTIONS = {
+      cpumem: new Set(['hw-mem', 'hw-audio']),
+      gpu:    new Set(['hw-nvidia', 'hw-amd', 'hw-gpu-adv']),
+      power:  new Set(['hw-power', 'hw-storage']),
+    }
+    const allowed = HW_TAB_SECTIONS[tab] || new Set()
+    inner.querySelectorAll('.section-card[data-sec-id]').forEach(el => {
+      el.style.display = allowed.has(el.dataset.secId) ? '' : 'none'
+    })
+  }
+}
+
 // ─── Page: Windows Opti ───────────────────────────────────────────────────────
 function buildWindowsOpti(c) {
   const si = sysInfo
@@ -18178,10 +18516,10 @@ function buildWindowsOpti(c) {
       { id:'bcd-tweaks',       name:'BCDEdit Boot Tweaks', desc:'Sets boot menu timeout to 0 for instant OS selection and disables boot logging (ntbtlog.txt). Reduces POST-to-desktop time by 2–8s on fast NVMe SSDs. Reboot required.', icon:'<i class="fa fa-terminal"></i>', danger:true, dangerLabel:'Confirm BCD', reboot:true },
     ]},
     { id:'input', get title() { return tUI('genSecInput') }, cards:[
+      { id:'kbdclass-recovery', name:'Keyboard Fix (kbdclass Recovery)', desc:'Removes ConnectMultiplePorts=0 from the kbdclass driver registry — set by a previous Jylli Tool version and known to break keyboards on many hardware configurations. Removes both kbdclass Parameter overrides to restore Windows defaults.', icon:'<i class="fa fa-keyboard"></i>', restore:false, reboot:true, warning:'Only needed if your keyboard stopped working after using a previous version of Jylli Tool.' },
       { id:'raw-aim-curve',    name:'Raw Aim Curve', desc:'Sets MouseSensitivity registry curve to a flat 1:1 raw input table. Eliminates any hidden Windows pointer curve for perfect aim consistency.', icon:'<i class="fa fa-crosshairs"></i>' },
       { id:'proximity-deny',  name:'Proximity Deny (Nearby Sharing Off)', desc:'Disables Windows Nearby Sharing service. Stops background Bluetooth/Wi-Fi proximity scans that cause micro-stutters.', icon:'<i class="fa fa-ban"></i>' },
       { id:'cursor-max-rate', name:'Cursor Max Rate (8000Hz+ support)', desc:'Sets HIDDeviceInputProcessingMode=0 (unified HID input thread) and increases mouse data queue size. Fixes mouse flicking and click loss when dragging windows between monitors. Also allows 8000Hz polling mice without Windows rate-limiting them. Reboot required.', icon:'<i class="fa fa-computer-mouse"></i>', reboot:true },
-      { id:'kbdclass-queue',  name:'Keyboard Driver Queue Tuning', desc:'Mirrors the mouse driver queue optimisation to the keyboard class driver (kbdclass). Sets per-device port isolation (ConnectMultiplePorts=0) and matching queue depth. Eliminates shared-port keyboard queuing delay that causes inconsistent input timestamps during rapid mouse+keyboard input. Reboot required.', icon:'<i class="fa fa-keyboard"></i>', reboot:true },
       { id:'nudge-blocker',   name:'Nudge Blocker (Disable AutoPlay nudges)', desc:'Disables AutoPlay notifications that pop up when inserting USB devices mid-game.', icon:'<i class="fa fa-circle-xmark"></i>' },
       { id:'sticky-keys-guard', name:'StickyKeys Guard (Disable accidentally)', desc:'Disables StickyKeys, FilterKeys and ToggleKeys hotkeys entirely. Prevents them from triggering mid-game when pressing Shift 5x or holding keys.', icon:'<i class="fa fa-keyboard"></i>' },
     ]},
@@ -18218,7 +18556,7 @@ function buildWindowsOpti(c) {
   ]
 
   // Quick Win strip — curated top section
-  const QUICK_WIN_IDS = ['game-dvr','disable-fso','disable-mouse-accel','mmcss','priority-sep','disable-background-apps','mmcss-proaudio','kbdclass-queue','defender-idle-priority','vrr-borderless']
+  const QUICK_WIN_IDS = ['game-dvr','disable-fso','disable-mouse-accel','mmcss','priority-sep','disable-background-apps','mmcss-proaudio','defender-idle-priority','vrr-borderless']
   const QUICK_WIN_META = {
     'game-dvr':               { get benefit() { return tUI('qwBenefitGameDvr') } },
     'disable-fso':            { get benefit() { return tUI('qwBenefitFso') } },
@@ -18227,7 +18565,6 @@ function buildWindowsOpti(c) {
     'priority-sep':           { get benefit() { return tUI('qwBenefitPriority') } },
     'disable-background-apps':{ get benefit() { return tUI('qwBenefitBgApps') } },
     'mmcss-proaudio':         { get benefit() { return tUI('qwBenefitMmcssProAudio') } },
-    'kbdclass-queue':         { get benefit() { return tUI('qwBenefitKbdQueue') } },
     'defender-idle-priority': { get benefit() { return tUI('qwBenefitDefenderIdle') } },
     'vrr-borderless':         { get benefit() { return tUI('qwBenefitVrrBorderless') } },
   }
@@ -18314,6 +18651,7 @@ function buildWindowsOpti(c) {
   _genCounterEl = document.getElementById('gen-applied-counter')
   _genRestoreBtnEl = document.getElementById('gen-restore-all-btn')
   genRefreshAllCounters()
+
 }
 
 let _genFilterTimer = null
@@ -18481,7 +18819,7 @@ const SPW_BASE = [
   'telemetry','diag-tasks-off','security-quiet','security-toast-off','do-solo-mode',
   'boot-sound-off','reality-telephony-off','sensor-suite-off','nudge-blocker',
   'msi-mode',
-  'mmcss-proaudio','kbdclass-queue','defender-idle-priority',
+  'mmcss-proaudio','defender-idle-priority',
 ]
 const SPW_FPS_EXTRA = [
   'cpu-focus-bias','tdr-delay','gpu-hwsch',
@@ -19796,7 +20134,7 @@ function buildNetwork(c) {
   const NET_TWEAK_IDS = [
     'tcp-stack','tcp-buffers','tcp-keepalive','winsock-reset','tcp-retransmit',
     'tcp-ctcp','tcp-task-offload','tcp-timedwait','net-del-ack','net-max-ports',
-    'dns-cloudflare','dns-google','dns-quad9','dns-adguard','dns-custom','dns-doh',
+    'flush-dns','dns-cloudflare','dns-google','dns-quad9','dns-adguard','dns-custom','dns-doh',
     'qos-reserve','net-throttling','disable-delivery-opt',
     'nic-offloads','nic-interrupt-mod','nic-flow-control','nic-energy-efficient','nic-rss-affinity','nic-ndis-poll',
     'disable-netbios','disable-ipv6','disable-wpad','disable-autoproxy'
@@ -20351,6 +20689,41 @@ async function runDnsBenchmark(btn) {
   resultsEl.style.display = 'block'
 }
 
+function updateNetworkScore() {
+  if (!document.getElementById('net-opti-score-num')) return
+  const IDS = [
+    'tcp-stack','tcp-buffers','tcp-keepalive','winsock-reset','tcp-retransmit',
+    'tcp-ctcp','tcp-task-offload','tcp-timedwait','net-del-ack','net-max-ports',
+    'flush-dns','dns-cloudflare','dns-google','dns-quad9','dns-adguard','dns-custom','dns-doh',
+    'qos-reserve','net-throttling','disable-delivery-opt',
+    'nic-offloads','nic-interrupt-mod','nic-flow-control','nic-energy-efficient','nic-rss-affinity','nic-ndis-poll',
+    'disable-netbios','disable-ipv6','disable-wpad','disable-autoproxy'
+  ]
+  const total   = IDS.length
+  const applied = IDS.filter(id => settings[`tweak_${id}`] === 'applied').length
+  const pending = total - applied
+  const pct     = total > 0 ? Math.round(applied / total * 100) : 0
+  const circ    = 163.4
+  let tierLabel
+  if (pct >= 90)      tierLabel = tUI('netOptiTierFull')
+  else if (pct >= 60) tierLabel = tUI('netOptiTierGood')
+  else if (pct >= 30) tierLabel = tUI('netOptiTierPartial')
+  else                tierLabel = tUI('netOptiTierNone')
+  const ringEl = document.getElementById('net-opti-ring')
+  const numEl  = document.getElementById('net-opti-score-num')
+  const barEl  = document.getElementById('net-opti-bar')
+  const tierEl = document.getElementById('net-opti-tier')
+  const subEl  = document.querySelector('.net-hero-score-sub')
+  const chips  = document.querySelectorAll('.net-hero-stat-chip')
+  if (ringEl) ringEl.style.strokeDashoffset = circ - (circ * pct / 100)
+  if (numEl)  numEl.textContent  = pct + '%'
+  if (barEl)  barEl.style.width  = pct + '%'
+  if (tierEl) tierEl.textContent = tierLabel
+  if (subEl)  subEl.textContent  = `${applied} / ${total} tweaks active`
+  if (chips[0]) chips[0].textContent = `${applied} ${tUI('netHeroApplied')}`
+  if (chips[1]) chips[1].textContent = `${pending} ${tUI('netHeroPending')}`
+}
+
 async function netApplySafeDefaults(btn) {
   const NET_SAFE_DEFAULTS = [
     'tcp-stack','tcp-buffers','tcp-keepalive','tcp-retransmit',
@@ -20412,7 +20785,7 @@ function getPreflightStates() {
 }
 function _invalidatePfStatesCache() { _pfStatesCache = null }
 
-function makeCard({ id, name, desc, icon = '<i class="fa fa-gear"></i>', danger = false, dangerLabel = 'Confirm', restore = true, warning = '', reboot = false, sinceVersion = '' }) {
+function makeCard({ id, name, desc, icon = '<i class="fa fa-gear"></i>', danger = false, dangerLabel = 'Confirm', restore = true, warning = '', reboot = false, sinceVersion = '', safetyTier = 1 }) {
   desc = tDesc(id) || desc
   name = tName(id) || name
   warning = tWarn(id) || warning
@@ -20426,6 +20799,8 @@ function makeCard({ id, name, desc, icon = '<i class="fa fa-gear"></i>', danger 
   d.className = 'tweak-card' + (danger ? ' tc-danger' : '') + (applied ? ' tc-applied' : '') + (preApplied ? ' tc-preapplied' : '') + (hasConflict ? ' tc-conflict' : '')
   d.id = `tcw-${id}`
   d.dataset.search = `${name} ${desc} ${id}`.toLowerCase()
+  const tierNum = danger ? 3 : (safetyTier || 1)
+  const tierIcon = tierNum === 1 ? '●' : tierNum === 2 ? '▲' : '⚠'
   d.innerHTML = `
     ${hasConflict ? `<div class="tc-conflict-badge"><i class="fa fa-triangle-exclamation"></i> ${tUI('conflictBadgeLabel').replace('{id}', conflictWith)}</div>` : ''}
     ${preApplied ? `<div class="tc-preapplied-tag"><i class="fa fa-magnifying-glass"></i> PRE-APPLIED</div>` : ''}
@@ -20433,7 +20808,7 @@ function makeCard({ id, name, desc, icon = '<i class="fa fa-gear"></i>', danger 
     <div class="tc-top">
       <div class="tc-icon">${icon}</div>
       <div class="tc-meta">
-        <div class="tc-name">${name}${newBadge(sinceVersion)}</div>
+        <div class="tc-name"><span class="tc-risk-badge tier-${tierNum}" title="Safety tier ${tierNum}">${tierIcon}</span>${name}${newBadge(sinceVersion)}</div>
         <div class="tc-desc">${desc}</div>
         ${preApplied ? `<div class="tc-warn" style="color:var(--info)"><i class="fa fa-lock"></i> Already active on your system — applying again is safe but redundant.</div>` : ''}
         ${warning ? `<div class="tc-warn"><i class="fa fa-triangle-exclamation"></i> ${warning}</div>` : ''}
@@ -20516,7 +20891,6 @@ async function applyTweakCard(id, checked, isDanger = false) {
     if (card) card.classList.toggle('tc-applied', applied)
 
     settings[`tweak_${id}`] = applied ? 'applied' : 'restored'
-    if (!applied && settings.tweak_impacts) delete settings.tweak_impacts[id]
     await api.saveSettings(settings)
     await api.addChangelogEntry({ id, action }).catch(() => {})
     if (!applied) {
@@ -20533,21 +20907,6 @@ async function applyTweakCard(id, checked, isDanger = false) {
     const conflictDef = TWEAK_CONFLICTS[id]
     if (conflictDef?.conflictsWith) {
       conflictDef.conflictsWith.forEach(other => refreshConflictBadge(other))
-    }
-
-    // After-sample: wait 5s for system to settle, then measure delta
-    if (applied && beforeMetrics?.cpu !== undefined) {
-      setTimeout(async () => {
-        try {
-          const after = await api.getMetrics()
-          if (!after?.cpu) return
-          const cpuDelta  = Math.round((after.cpu  - beforeMetrics.cpu)  * 10) / 10
-          const ramDelta  = Math.round((after.ram  - beforeMetrics.ram)  * 10) / 10
-          if (!settings.tweak_impacts) settings.tweak_impacts = {}
-          settings.tweak_impacts[id] = { cpuDelta, ramDelta, ts: Date.now() }
-          await api.saveSettings(settings).catch(() => {})
-        } catch {}
-      }, 5000)
     }
 
     toast(applied ? `Applied: ${friendly}` : `Restored: ${friendly}`, '', applied ? 'ok' : 'info')
@@ -20608,6 +20967,44 @@ const GAME_TIPS = {
   rdr2:          'Lower grass quality and shadows first — they are the biggest GPU cost. TAA sharpening to 100%.',
   pubg:          'Use Smooth + Unlocked framerate preset. Disable V-Sync. Lower foliage to very low.',
 }
+// ─── Page: Gaming (tab wrapper) ───────────────────────────────────────────────
+async function buildGaming(c) {
+  if (!window._activeTab.gaming) window._activeTab.gaming = 'profiles'
+
+  const TABS = [
+    { id:'profiles', label:() => tUI('tabGameProfiles'), premium: true },
+    { id:'appopt',   label:() => tUI('tabAppOptimizer'), premium: false },
+  ]
+
+  if (!window._activeTab.gaming || window._activeTab.gaming === 'fivem') window._activeTab.gaming = 'profiles'
+  const tab = window._activeTab.gaming
+  c.innerHTML = ''
+
+  c.appendChild(_makePageHero(
+    '<i class="fa fa-gamepad"></i>',
+    tTitle('gaming'),
+    tSub('gaming'),
+    null
+  ))
+
+  c.appendChild(_makeTabBar(TABS, tab, async (id) => {
+    window._activeTab.gaming = id
+    await buildGaming(c)
+    c.scrollTop = 0
+  }))
+
+  const inner = document.createElement('div')
+  inner.id = 'gaming-tab-content'
+  c.appendChild(inner)
+
+  if (tab === 'profiles') {
+    if (!settings.isPremium) await _buildTabPremiumLock(inner, 'game-opti')
+    else await buildGameOpti(inner)
+  } else if (tab === 'appopt') {
+    await buildAppOptimizer(inner)
+  }
+}
+
 let selectedGameId = 'fortnite'
 let gpScanned = false
 let _gpScanRunning = false
@@ -21796,6 +22193,39 @@ const CLEANUP_IMPACT = {
   'fivem-clear-cache':    { en:'FiveM re-downloads server resources on next connect — first join may take 1–3 minutes.', fi:'FiveM lataa palvelimen resurssit uudelleen seuraavalla yhteydellä — ensimmäinen liittyminen voi kestää 1–3 minuuttia.' },
   'clean-old-windows':    { en:'Permanent — cannot roll back to previous Windows version after deletion.', fi:'Pysyvä — aiempaan Windows-versioon ei voi palata poistamisen jälkeen.' },
   'clean-vs-temp':        { en:'Visual Studio rebuilds IntelliSense and obj files on next build — first build is slower.', fi:'Visual Studio rakentaa IntelliSense- ja obj-tiedostot uudelleen seuraavalla kokoamisella — ensimmäinen kokoaminen on hitaampi.' },
+}
+
+// ─── Page: Privacy & Cleanup (tab wrapper) ───────────────────────────────────
+async function buildPrivacyCleanup(c) {
+  if (!window._activeTab['privacy-cleanup']) window._activeTab['privacy-cleanup'] = 'cleanup'
+
+  const TABS = [
+    { id:'cleanup',   label:() => tUI('tabCleanup') },
+    { id:'debloater', label:() => tUI('tabDebloater') },
+  ]
+
+  const tab = window._activeTab['privacy-cleanup']
+  c.innerHTML = ''
+
+  c.appendChild(_makePageHero(
+    '<i class="fa fa-shield-halved"></i>',
+    tTitle('privacy-cleanup'),
+    tSub('privacy-cleanup'),
+    null
+  ))
+
+  c.appendChild(_makeTabBar(TABS, tab, async (id) => {
+    window._activeTab['privacy-cleanup'] = id
+    await buildPrivacyCleanup(c)
+    c.scrollTop = 0
+  }))
+
+  const inner = document.createElement('div')
+  inner.id = 'privacy-tab-content'
+  c.appendChild(inner)
+
+  if (tab === 'cleanup')        buildCleanup(inner)
+  else if (tab === 'debloater') buildDebloater(inner)
 }
 
 function buildCleanup(c) {
@@ -23523,13 +23953,91 @@ async function doScanDevices() {
 }
 
 async function doRemoveDevices() {
-  const selected = _scannedDevices.filter((_, i) => document.getElementById(`dev-chk-${i}`)?.checked).map(d => d.id)
-  if (!selected.length) { toast('Nothing Selected', 'Select at least one device.', 'warn'); return }
-  try { await showConfirm({ title: `${tUI('disableDevTitle')} (${selected.length})`, body: `${tUI('disableDevBody')}<br><span style="color:#888">They can be re-enabled at any time from Device Manager.</span>`, okText: tUI('disableOk'), okStyle: 'warning', icon: 'fa-microchip' }) } catch { return }
-  appendLog(`Disabling ${selected.length} unused device(s)…`, 'head')
-  await api.removeDevices(selected)
-  appendLog('Done.', 'ok')
-  doScanDevices()
+  const selectedDevices = _scannedDevices.filter((_, i) => document.getElementById(`dev-chk-${i}`)?.checked)
+  if (!selectedDevices.length) { toast('Nothing Selected', 'Select at least one device.', 'warn'); return }
+  try {
+    await showConfirm({
+      title:   `${tUI('disableDevTitle')} (${selectedDevices.length})`,
+      body:    `${tUI('disableDevBody')}<br><span style="color:#888">They can be re-enabled at any time from Device Manager.</span>`,
+      okText:  tUI('disableOk'),
+      okStyle: 'warning',
+      icon:    'fa-microchip'
+    })
+  } catch { return }
+
+  const scanBtn   = document.querySelector('button[onclick="doScanDevices()"]')
+  const removeBtn = document.getElementById('remove-devices-btn')
+  if (scanBtn)   { scanBtn.disabled = true;   scanBtn.classList.add('btn-running') }
+  if (removeBtn) { removeBtn.disabled = true; removeBtn.style.opacity = '0.45' }
+
+  const body  = document.getElementById('unused-devices-body')
+  const total = selectedDevices.length
+  const ids   = selectedDevices.map(d => d.id)
+
+  body.innerHTML = `
+    <div class="device-remove-progress" id="drp-root">
+      <div class="drp-header">
+        <span class="drp-pill" id="drp-pill">${tUI('devicesRemoving')}</span>
+        <span id="drp-count" style="font-size:10px;color:var(--c-text-tertiary)">0 / ${total}</span>
+      </div>
+      <div class="drp-track"><div class="drp-bar" id="drp-bar"></div></div>
+      <div class="drp-list" id="drp-list">
+        ${ids.map((id, i) => `
+          <div class="drp-row" id="drp-row-${i}" style="animation-delay:${i * 40}ms">
+            <span class="drp-icon spin" id="drp-icon-${i}"><i class="fa fa-circle-notch fa-spin"></i></span>
+            <span class="drp-name">${selectedDevices[i].name}</span>
+            <span class="drp-status" id="drp-stat-${i}"></span>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `
+
+  api.offDeviceRemoveProgress()
+  api.onDeviceRemoveProgress(({ current, total: t, ok }) => {
+    const idx    = current - 1
+    const iconEl = document.getElementById(`drp-icon-${idx}`)
+    const statEl = document.getElementById(`drp-stat-${idx}`)
+    const barEl  = document.getElementById('drp-bar')
+    const cntEl  = document.getElementById('drp-count')
+    if (iconEl) {
+      iconEl.className = `drp-icon ${ok ? 'ok' : 'fail'}`
+      iconEl.innerHTML = ok ? '<i class="fa fa-check"></i>' : '<i class="fa fa-triangle-exclamation"></i>'
+    }
+    if (statEl) { statEl.textContent = ok ? 'Removed' : 'Failed'; statEl.className = `drp-status ${ok ? 'ok' : 'fail'}` }
+    if (barEl)  barEl.style.width = `${Math.round((current / t) * 100)}%`
+    if (cntEl)  cntEl.textContent = `${current} / ${t}`
+  })
+
+  await api.removeDevices(ids)
+  api.offDeviceRemoveProgress()
+
+  const barEl  = document.getElementById('drp-bar')
+  const pillEl = document.getElementById('drp-pill')
+  if (barEl)  barEl.classList.add('done')
+  if (pillEl) { pillEl.textContent = tUI('devicesRemoveDone'); pillEl.classList.add('done') }
+
+  let removedCount = 0, failedCount = 0
+  ids.forEach((_, i) => {
+    const ic = document.getElementById(`drp-icon-${i}`)
+    if (ic?.classList.contains('ok'))   removedCount++
+    if (ic?.classList.contains('fail')) failedCount++
+  })
+
+  const listEl = document.getElementById('drp-list')
+  if (listEl) {
+    const summaryEl = document.createElement('div')
+    summaryEl.className = 'drp-summary'
+    summaryEl.innerHTML = failedCount
+      ? `<i class="fa fa-check-circle"></i> ${removedCount} removed · <span style="color:#f39c12">${failedCount} failed</span>`
+      : `<i class="fa fa-check-circle"></i> ${removedCount} device${removedCount !== 1 ? 's' : ''} removed successfully`
+    listEl.after(summaryEl)
+  }
+
+  if (scanBtn)   { scanBtn.disabled = false;  scanBtn.classList.remove('btn-running') }
+  if (removeBtn) { removeBtn.disabled = false; removeBtn.style.opacity = '' }
+
+  setTimeout(() => doScanDevices(), 1200)
 }
 
 // ─── Debloat: new feature functions ──────────────────────────────────────────

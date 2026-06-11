@@ -12,24 +12,37 @@
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 :root {
-  --pink:       var(--c-accent);
-  --pink-hover: color-mix(in srgb, var(--c-accent) 82%, #fff);
-  --pink-dim:   var(--c-accent-muted);
-  --pink-glow:  var(--c-accent-ring);
-  --bg:         var(--c-bg-base);
-  --bg-card:    var(--c-bg-elevated);
-  --bg-dark:    var(--c-bg-base);
-  --border:     var(--c-border-default);
-  --border2:    var(--c-border-subtle);
-  --white:      var(--c-text-primary);
-  --gray:       var(--c-text-secondary);
-  --muted:      var(--c-text-tertiary);
-  --success:    #2ECC71;
-  --success-bg: #0a1f12;
-  --warning:    #F39C12;
-  --danger:     #E74C3C;
-  --info:       #3498DB;
-  --orange:     #E67E22;
+  /* Surface aliases */
+  --bg:          var(--c-bg-base);
+  --bg-card:     var(--c-bg-elevated);
+  --bg-raised:   var(--c-bg-raised);
+  --bg-dark:     var(--c-bg-base);
+  --border:      var(--c-border-default);
+  --border2:     var(--c-border-subtle);
+  /* Text aliases */
+  --white:       var(--c-text-primary);
+  --gray:        var(--c-text-secondary);
+  --muted:       var(--c-text-tertiary);
+  /* Accent aliases (backwards compat) */
+  --pink:        var(--c-accent);
+  --pink-hover:  color-mix(in srgb, var(--c-accent) 82%, #fff);
+  --pink-dim:    var(--c-accent-muted);
+  --pink-glow:   var(--c-accent-ring);
+  /* Status colors */
+  --success:     #2ECC71;
+  --success-bg:  #0a1f12;
+  --success-bd:  #1a5c35;
+  --warning:     #F39C12;
+  --warning-bg:  #1f1400;
+  --warning-bd:  rgba(230,126,34,0.35);
+  --danger:      #E74C3C;
+  --danger-bg:   #1f0808;
+  --danger-bd:   #5c1a14;
+  --info:        #3498DB;
+  --orange:      #E67E22;
+  /* Radius shorthand */
+  --radius:      var(--r-md);
+  --radius-sm:   var(--r-sm);
 }
 html, body {
   background: var(--bg);
@@ -46,22 +59,32 @@ html, body {
 #titlebar {
   display: flex;
   align-items: center;
-  height: 44px;
-  background: var(--bg-dark);
-  border-bottom: 1px solid var(--border);
+  height: 46px;
+  background: rgba(13,11,20,0.96);
+  -webkit-backdrop-filter: blur(16px) saturate(150%);
+  backdrop-filter: blur(16px) saturate(150%);
+  border-bottom: 1px solid var(--border2);
   padding: 0 14px;
   -webkit-app-region: drag;
   flex-shrink: 0;
   gap: 10px;
+  position: relative;
+}
+#titlebar::after {
+  content: '';
+  position: absolute; bottom: 0; left: 0; right: 0; height: 1px;
+  background: linear-gradient(90deg, transparent 0%, var(--c-accent) 30%, var(--c-accent-ring) 70%, transparent 100%);
+  pointer-events: none;
 }
 .tb-icon {
-  width: 28px; height: 28px;
-  border-radius: 8px;
-  background: linear-gradient(135deg, var(--pink-dim), #1a0a12);
-  border: 1px solid rgba(255,46,99,0.3);
+  width: 30px; height: 30px;
+  border-radius: var(--r-sm);
+  background: var(--c-accent-muted);
+  border: 1px solid var(--c-accent);
   display: flex; align-items: center; justify-content: center;
-  color: var(--pink); font-size: 13px;
+  color: var(--c-accent); font-size: 14px;
   flex-shrink: 0;
+  box-shadow: 0 0 0 1px var(--c-accent-ring);
 }
 .tb-title {
   flex: 1;
@@ -71,7 +94,7 @@ html, body {
 }
 .tb-title span { color: var(--pink); }
 .tb-subtitle {
-  font-size: 10px; color: #444;
+  font-size: 10px; color: var(--muted);
   font-weight: 400; margin-top: 1px;
 }
 .tb-close {
@@ -80,7 +103,7 @@ html, body {
   border-radius: 6px;
   border: none;
   background: transparent;
-  color: #555;
+  color: var(--muted);
   cursor: pointer;
   font-size: 14px;
   display: flex; align-items: center; justify-content: center;
@@ -97,14 +120,15 @@ html, body {
 #content {
   flex: 1;
   overflow-y: auto;
-  padding: 16px;
+  padding: 14px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
 }
-#content::-webkit-scrollbar { width: 4px; }
+#content::-webkit-scrollbar { width: 5px; }
 #content::-webkit-scrollbar-track { background: transparent; }
-#content::-webkit-scrollbar-thumb { background: #222; border-radius: 2px; }
+#content::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.14); border-radius: var(--r-pill); }
+#content::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.28); }
 
 /* ── Path row ── */
 #path-row {
@@ -120,9 +144,9 @@ html, body {
   font-size: 11px;
   outline: none;
 }
-#path-row input:focus { border-color: rgba(255,46,99,0.5); }
+#path-row input:focus { border-color: var(--c-accent); box-shadow: 0 0 0 3px var(--c-accent-ring); }
 #path-status {
-  font-size: 10px; color: #444;
+  font-size: 10px; color: var(--muted);
   padding: 2px 0 4px;
 }
 
@@ -153,11 +177,11 @@ html, body {
   position: relative; overflow: hidden;
   transition: background 0.13s ease, border-color 0.13s ease;
 }
-.btn-ghost:not(:disabled):hover { background: rgba(255,255,255,0.09); border-color: #333; }
+.btn-ghost:not(:disabled):hover { background: rgba(255,255,255,0.09); border-color: var(--c-border-strong); }
 .btn-ghost:not(:disabled):active { transform: scale(0.97); }
 .btn-success {
   background: var(--success-bg);
-  border: 1px solid #1a5c35;
+  border: 1px solid var(--success-bd);
   color: var(--success);
   transition: background 0.13s ease, box-shadow 0.13s ease;
 }
@@ -171,57 +195,106 @@ html, body {
 #empty-state {
   flex: 1; display: flex; flex-direction: column;
   align-items: center; justify-content: center;
-  gap: 12px; color: #333; text-align: center;
-  padding: 40px;
+  gap: 14px; text-align: center;
+  padding: 48px 32px;
 }
-#empty-state i { font-size: 36px; color: #222; }
-#empty-state p { font-size: 12px; max-width: 320px; line-height: 1.6; }
-#empty-state small { font-size: 10px; color: #2a2a2a; }
+#empty-state .es-icon-wrap {
+  width: 64px; height: 64px;
+  border-radius: var(--r-xl);
+  background: var(--c-accent-muted);
+  border: 1px solid var(--c-accent-ring);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 26px; color: var(--c-accent);
+  box-shadow: 0 0 32px var(--c-accent-glow), 0 0 0 1px var(--c-accent-ring);
+  margin-bottom: 4px;
+}
+#empty-state .es-title {
+  font-size: 14px; font-weight: 700;
+  color: var(--white); letter-spacing: -0.02em; line-height: 1.3;
+}
+#empty-state .es-body {
+  font-size: 11px; color: var(--gray);
+  max-width: 320px; line-height: 1.6;
+}
+#empty-state .es-steps {
+  display: flex; flex-direction: column; gap: 6px;
+  align-items: flex-start; margin-top: 4px;
+}
+#empty-state .es-step {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 11px; color: var(--muted);
+}
+#empty-state .es-step-num {
+  width: 18px; height: 18px; border-radius: 50%;
+  background: var(--c-bg-raised); border: 1px solid var(--c-border-default);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 9px; font-weight: 700; color: var(--gray);
+  flex-shrink: 0;
+}
+#empty-state small { font-size: 9px; color: var(--muted); max-width: 280px; line-height: 1.5; }
 
 /* ── Category group ── */
 .cat-group {
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: 10px;
+  background: var(--c-bg-elevated);
+  border: 1px solid var(--c-border-subtle);
+  border-radius: var(--r-lg);
   overflow: hidden;
+  position: relative;
+  transition: box-shadow 0.15s ease, border-color 0.15s ease;
+}
+.cat-group:hover {
+  box-shadow: 0 4px 20px rgba(0,0,0,0.4), 0 0 0 1px var(--c-accent-ring);
+  border-color: var(--c-border-default);
 }
 .cat-header {
-  display: flex; align-items: center; gap: 8px;
-  padding: 10px 14px;
+  display: flex; align-items: center; gap: 10px;
+  padding: 11px 16px 10px;
   background: rgba(255,255,255,0.02);
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--c-border-subtle);
+  cursor: pointer; user-select: none;
+  transition: background 0.13s ease;
 }
+.cat-header:hover { background: rgba(255,255,255,0.03); }
 .cat-icon {
-  width: 24px; height: 24px;
-  border-radius: 6px;
+  width: 28px; height: 28px;
+  border-radius: var(--r-sm);
   display: flex; align-items: center; justify-content: center;
-  font-size: 11px;
+  font-size: 12px;
   flex-shrink: 0;
 }
 .cat-name { font-size: 12px; font-weight: 700; color: var(--white); }
-.cat-desc { font-size: 10px; color: #444; margin-left: auto; }
+.cat-desc { font-size: 10px; color: var(--muted); margin-left: auto; }
 
 /* ── Setting row ── */
 .setting-row {
   display: grid;
-  grid-template-columns: 1fr 140px 60px;
+  grid-template-columns: 1fr 150px auto;
   align-items: center;
   gap: 10px;
-  padding: 10px 14px;
-  border-bottom: 1px solid rgba(255,255,255,0.03);
-  transition: background 0.1s;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--c-border-subtle);
+  transition: background 0.13s ease;
+  min-height: 48px;
+  position: relative;
 }
 .setting-row:last-child { border-bottom: none; }
-.setting-row:hover { background: rgba(255,255,255,0.02); }
-.setting-row.is-changed { background: rgba(255,46,99,0.05); border-left: 2px solid var(--pink); }
+.setting-row:hover { background: var(--c-bg-raised); }
+.setting-row.is-changed {
+  background: var(--c-accent-muted);
+  border-left: 3px solid var(--c-accent);
+  padding-left: 13px;
+}
+.setting-row.is-changed .setting-label > div > .slt {
+  color: color-mix(in srgb, var(--c-text-primary) 90%, var(--c-accent));
+}
 .setting-label {
   font-size: 11px; font-weight: 500;
   color: var(--white);
   display: flex; flex-direction: column; gap: 2px;
 }
-.setting-label small { font-size: 9px; color: #383838; font-weight: 400; }
+.setting-label small { font-size: 9px; color: var(--muted); font-weight: 400; }
 .setting-label .missing-tag {
-  font-size: 9px; color: #5a2a2a;
+  font-size: 9px; color: var(--danger);
   background: rgba(231,76,60,0.1);
   border: 1px solid rgba(231,76,60,0.2);
   border-radius: 3px; padding: 1px 5px;
@@ -229,31 +302,37 @@ html, body {
 }
 .setting-control select {
   width: 100%;
-  background: #0f0f0f;
-  border: 1px solid #222;
-  border-radius: 6px;
-  padding: 5px 8px;
+  background: var(--c-bg-base);
+  border: 1px solid var(--c-border-default);
+  border-radius: var(--r-sm);
+  padding: 6px 8px;
   color: var(--white);
   font-size: 11px;
   cursor: pointer;
   outline: none;
-  transition: border-color 0.12s;
+  transition: border-color 0.13s ease, box-shadow 0.13s ease;
 }
-.setting-control select:focus { border-color: rgba(255,46,99,0.5); }
-.setting-control select.is-rec { border-color: rgba(46,204,113,0.35); }
+.setting-control select:focus {
+  border-color: var(--c-accent);
+  box-shadow: 0 0 0 2px var(--c-accent-ring);
+}
+.setting-control select.is-rec {
+  border-color: rgba(46,204,113,0.40);
+  box-shadow: 0 0 0 1px rgba(46,204,113,0.15);
+}
 .impact-pill {
   display: inline-flex; align-items: center; justify-content: center;
-  border-radius: 20px;
+  border-radius: var(--r-pill);
   padding: 2px 8px;
   font-size: 9px; font-weight: 700;
   letter-spacing: 0.04em;
   text-transform: uppercase;
   white-space: nowrap;
 }
-.imp-low       { background: rgba(74,222,128,0.1);  color: #4ade80; border: 1px solid rgba(74,222,128,0.25); }
-.imp-medium    { background: rgba(250,204,21,0.1);  color: #facc15; border: 1px solid rgba(250,204,21,0.25); }
-.imp-high      { background: rgba(249,115,22,0.1);  color: #f97316; border: 1px solid rgba(249,115,22,0.25); }
-.imp-very-high { background: rgba(239,68,68,0.12);  color: #ef4444; border: 1px solid rgba(239,68,68,0.3); }
+.imp-low       { background: rgba(74,222,128,0.14); color: #4ade80; border: 1px solid rgba(74,222,128,0.35); }
+.imp-medium    { background: rgba(250,204,21,0.14); color: #fde047; border: 1px solid rgba(250,204,21,0.35); }
+.imp-high      { background: rgba(249,115,22,0.14); color: #fb923c; border: 1px solid rgba(249,115,22,0.35); }
+.imp-very-high { background: rgba(239,68,68,0.18);  color: #f87171; border: 1px solid rgba(239,68,68,0.40); }
 
 /* ── Footer action bar ── */
 #footer {
@@ -262,80 +341,142 @@ html, body {
   align-items: center;
   gap: 8px;
   padding: 10px 16px;
-  background: var(--bg-dark);
-  border-top: 1px solid var(--border);
+  background: var(--c-bg-base);
+  border-top: 1px solid var(--c-border-subtle);
+  position: relative;
+}
+#footer::before {
+  content: '';
+  position: absolute; top: 0; left: 0; right: 0; height: 1px;
+  background: linear-gradient(90deg, transparent, var(--c-accent-ring), transparent);
+  pointer-events: none;
 }
 #footer-info {
   flex: 1;
-  font-size: 10px; color: #383838;
+  font-size: 10px; color: var(--muted);
   line-height: 1.5;
 }
-#footer-info span { color: #555; }
+#footer-info span { color: var(--gray); }
 #changes-count {
   font-size: 10px;
-  color: var(--pink);
-  background: var(--pink-dim);
-  border: 1px solid rgba(255,46,99,0.3);
-  border-radius: 20px;
-  padding: 2px 9px;
-  font-weight: 600;
+  color: var(--c-accent);
+  background: var(--c-accent-muted);
+  border: 1px solid var(--c-accent-ring);
+  border-radius: var(--r-pill);
+  padding: 3px 10px;
+  font-weight: 700;
   display: none;
+  box-shadow: 0 0 8px var(--c-accent-glow);
 }
 
 /* ── Preset bar ── */
 #preset-bar {
   display: none;
   flex-direction: column;
-  gap: 5px;
-}
-#preset-row-1 {
-  display: flex;
-  align-items: center;
   gap: 6px;
 }
-#preset-row-2 {
-  display: flex;
-  align-items: center;
-  gap: 5px;
+
+/* 3-column card grid */
+.preset-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
 }
-.preset-btn {
-  flex: 1;
-  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
-  border-radius: 8px;
-  padding: 7px 10px;
-  font-size: 11px; font-weight: 600;
-  cursor: pointer; transition: all 0.12s;
-  border: 1px solid transparent;
-  white-space: nowrap;
+.preset-card {
+  display: flex; flex-direction: column; align-items: flex-start;
+  gap: 3px;
+  padding: 10px 12px;
+  border-radius: var(--r-md);
+  border: 1px solid var(--c-border-default);
+  background: var(--c-bg-elevated);
+  cursor: pointer;
+  transition: background 0.13s ease, border-color 0.13s ease,
+              transform 0.15s ease, box-shadow 0.13s ease;
+  -webkit-app-region: no-drag;
+  position: relative; overflow: hidden;
+  text-align: left;
 }
-.preset-btn:hover { transform: translateY(-1px); }
-.preset-btn:active { transform: translateY(0); }
-.preset-quality {
-  background: rgba(52,152,219,0.1);
-  border-color: rgba(52,152,219,0.3);
-  color: #3498DB;
+.preset-card:hover { transform: translateY(-2px); }
+.preset-card:active { transform: scale(0.97); }
+.preset-card-icon {
+  width: 26px; height: 26px; border-radius: var(--r-sm);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; flex-shrink: 0;
+  margin-bottom: 3px;
+}
+.preset-card-name {
+  font-size: 11px; font-weight: 700; color: var(--white); line-height: 1.2;
+}
+.preset-card-hint {
+  font-size: 9px; color: var(--muted); font-weight: 400; line-height: 1.3;
+}
+
+/* Per-preset color theming */
+.preset-quality { border-color: rgba(52,152,219,0.25); }
+.preset-quality .preset-card-icon {
+  background: rgba(52,152,219,0.12); color: #3498DB;
+  border: 1px solid rgba(52,152,219,0.25);
 }
 .preset-quality:hover {
-  background: rgba(52,152,219,0.18);
-  border-color: rgba(52,152,219,0.55);
+  background: rgba(52,152,219,0.06);
+  border-color: rgba(52,152,219,0.5);
+  box-shadow: 0 4px 16px rgba(52,152,219,0.14);
 }
-.preset-performance {
-  background: rgba(255,46,99,0.1);
-  border-color: rgba(255,46,99,0.3);
-  color: var(--pink);
-}
-.preset-performance:hover {
-  background: rgba(255,46,99,0.18);
-  border-color: rgba(255,46,99,0.55);
-}
-.preset-balanced {
-  background: rgba(46,204,113,0.1);
-  border-color: rgba(46,204,113,0.3);
-  color: #2ECC71;
+
+.preset-balanced { border-color: rgba(46,204,113,0.25); }
+.preset-balanced .preset-card-icon {
+  background: rgba(46,204,113,0.12); color: #2ECC71;
+  border: 1px solid rgba(46,204,113,0.25);
 }
 .preset-balanced:hover {
-  background: rgba(46,204,113,0.18);
-  border-color: rgba(46,204,113,0.55);
+  background: rgba(46,204,113,0.06);
+  border-color: rgba(46,204,113,0.5);
+  box-shadow: 0 4px 16px rgba(46,204,113,0.14);
+}
+
+.preset-performance { border-color: var(--c-accent-ring); }
+.preset-performance .preset-card-icon {
+  background: var(--c-accent-muted); color: var(--c-accent);
+  border: 1px solid var(--c-accent-ring);
+}
+.preset-performance:hover {
+  background: var(--c-accent-muted);
+  border-color: var(--c-accent);
+  box-shadow: 0 4px 16px var(--c-accent-glow);
+}
+
+/* Smart Recommend — featured full-width */
+.preset-smart-btn {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  padding: 10px 16px;
+  border-radius: var(--r-md);
+  border: 1px solid var(--c-accent-ring);
+  background: var(--c-accent-muted);
+  color: var(--c-accent);
+  font-size: 12px; font-weight: 700;
+  cursor: pointer;
+  transition: background 0.13s ease, border-color 0.13s ease, box-shadow 0.13s ease;
+  position: relative; overflow: hidden;
+  -webkit-app-region: no-drag;
+}
+.preset-smart-btn::before {
+  content: ''; position: absolute; top: 0; left: -100%; width: 60%; height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.08), transparent);
+  transform: skewX(-20deg);
+  transition: left 0.5s ease;
+  pointer-events: none;
+}
+.preset-smart-btn:hover {
+  background: color-mix(in srgb, var(--c-accent-muted) 70%, var(--c-accent));
+  border-color: var(--c-accent);
+  box-shadow: 0 0 0 1px var(--c-accent-ring), 0 4px 20px var(--c-accent-glow);
+}
+.preset-smart-btn:hover::before { left: 160%; }
+.preset-smart-btn:active { transform: scale(0.98); }
+
+/* Utility row (Recommended + Undo) */
+.preset-utility-row {
+  display: flex; align-items: center; gap: 6px;
 }
 
 /* ── Search bar ── */
@@ -343,79 +484,150 @@ html, body {
   display: none;
   align-items: center;
   gap: 6px;
-  padding: 5px 8px;
-  background: rgba(255,255,255,0.02);
-  border: 1px solid var(--border);
-  border-radius: 8px;
+  padding: 7px 10px;
+  background: var(--c-bg-elevated);
+  border: 1px solid var(--c-border-default);
+  border-radius: var(--r-md);
+  transition: border-color 0.13s ease, box-shadow 0.13s ease;
+}
+#search-bar:focus-within {
+  border-color: var(--c-accent);
+  box-shadow: 0 0 0 3px var(--c-accent-ring);
 }
 #search-input {
   flex: 1;
   background: transparent;
   border: none;
   padding: 3px 4px;
-  color: #ccc;
+  color: var(--white);
   font-size: 11px;
   outline: none;
 }
-#search-bar:focus-within {
-  border-color: rgba(255,46,99,0.35);
-}
 #search-clear {
-  background: none; border: none; color: #444; cursor: pointer; font-size: 14px; padding: 2px 4px; line-height: 1;
+  background: none; border: none; color: var(--muted); cursor: pointer; font-size: 14px; padding: 2px 4px; line-height: 1;
 }
 #search-clear:hover { color: var(--pink); }
 .search-hidden { display: none !important; }
-mark.sh { background: rgba(255,46,99,0.25); color: #ff6b8a; border-radius: 2px; padding: 0 1px; }
+mark.sh { background: var(--c-accent-muted); color: var(--c-accent); border-radius: 2px; padding: 0 1px; }
+
+/* ── Profile bar ── */
+#profile-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: var(--c-bg-elevated);
+  border: 1px solid var(--c-border-subtle);
+  border-radius: var(--r-md);
+}
+#profile-bar .profile-label {
+  font-size: 9px; font-weight: 800;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+#profile-select {
+  flex: 1;
+  padding: 5px 8px;
+  border-radius: var(--r-sm);
+  border: 1px solid var(--c-border-default);
+  background: var(--c-bg-base);
+  color: var(--white);
+  font-size: 11px;
+  outline: none;
+  transition: border-color 0.13s ease, box-shadow 0.13s ease;
+}
+#profile-select:focus {
+  border-color: var(--c-accent);
+  box-shadow: 0 0 0 2px var(--c-accent-ring);
+}
+.btn-profile-save {
+  font-size: 10px; padding: 4px 12px;
+  background: var(--c-accent-muted);
+  border: 1px solid var(--c-accent-ring);
+  color: var(--c-accent);
+  border-radius: var(--r-sm);
+  cursor: pointer; font-weight: 700;
+  transition: background 0.13s ease, box-shadow 0.13s ease;
+  white-space: nowrap;
+}
+.btn-profile-save:hover {
+  background: var(--c-accent); color: white;
+  box-shadow: 0 0 0 1px var(--c-accent-ring);
+}
+.btn-profile-delete {
+  font-size: 10px; padding: 4px 10px;
+  background: transparent;
+  border: none;
+  color: var(--danger);
+  cursor: pointer;
+  border-radius: var(--r-sm);
+  transition: background 0.13s ease;
+  white-space: nowrap;
+}
+.btn-profile-delete:hover { background: var(--danger-bg); }
 
 /* ── Performance budget meter ── */
 #perf-budget-bar {
   display: none;
-  padding: 4px 2px 0;
+  padding: 4px 2px 2px;
 }
 #perf-budget-track {
-  height: 4px;
-  background: #111;
-  border-radius: 4px;
+  height: 8px;
+  background: var(--c-bg-raised);
+  border: 1px solid var(--c-border-subtle);
+  border-radius: var(--r-pill);
   overflow: hidden;
-  margin-bottom: 3px;
+  margin-bottom: 4px;
+  position: relative;
 }
 #perf-budget-fill {
   height: 100%;
-  border-radius: 4px;
-  transition: width 0.25s ease, background 0.25s ease;
+  border-radius: var(--r-pill);
+  transition: width 0.35s ease, background 0.35s ease;
+  position: relative;
+}
+#perf-budget-fill::after {
+  content: '';
+  position: absolute; top: 0; right: 0; bottom: 0; width: 30px;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.18));
+  border-radius: 0 var(--r-pill) var(--r-pill) 0;
+  pointer-events: none;
 }
 #perf-budget-label {
   font-size: 9px;
-  color: #555;
-  font-weight: 500;
+  color: var(--c-accent);
+  font-weight: 600;
   text-align: right;
+  letter-spacing: 0.02em;
 }
 
 /* ── Collapsible category ── */
-.cat-header { cursor: pointer; user-select: none; }
-.cat-header:hover .cat-name { color: #ccc; }
-.cat-chevron { margin-left: auto; color: #333; font-size: 10px; transition: transform 0.18s ease; flex-shrink: 0; }
+.cat-header:hover .cat-name { color: var(--white); }
+.cat-chevron { margin-left: auto; color: var(--muted); font-size: 11px; transition: transform 0.2s ease; flex-shrink: 0; }
 .cat-collapsed .cat-chevron { transform: rotate(-90deg); }
-.cat-rows { overflow: hidden; transition: max-height 0.2s ease; }
+.cat-rows { overflow: hidden; transition: max-height 0.22s ease; }
 
 /* ── Tooltip ── */
 #tt-popup {
   position: fixed;
   z-index: 7000;
   max-width: 240px;
-  background: #111;
-  border: 1px solid #2a2a2a;
-  border-radius: 7px;
-  padding: 7px 10px;
+  background: var(--c-bg-elevated);
+  border: 1px solid var(--c-border-default);
+  border-radius: var(--r-sm);
+  padding: 8px 10px;
   font-size: 10px;
-  color: #aaa;
+  color: var(--gray);
   line-height: 1.5;
   pointer-events: none;
-  box-shadow: 0 4px 16px rgba(0,0,0,0.5);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.5);
   display: none;
 }
-.tt-icon { color: #2a2a2a; cursor: help; margin-left: 5px; font-size: 10px; vertical-align: middle; transition: color 0.1s; }
-.tt-icon:hover { color: #555; }
+.tt-icon { color: var(--muted); cursor: help; margin-left: 5px; font-size: 10px; vertical-align: middle; transition: color 0.1s; }
+.tt-icon:hover { color: var(--gray); }
 
 /* ── Split export button ── */
 #export-split { position: relative; display: none; }
@@ -431,25 +643,25 @@ mark.sh { background: rgba(255,46,99,0.25); color: #ff6b8a; border-radius: 2px; 
   position: absolute;
   bottom: calc(100% + 4px);
   right: 0;
-  background: #111;
-  border: 1px solid #252525;
-  border-radius: 8px;
+  background: var(--c-bg-elevated);
+  border: 1px solid var(--c-border-default);
+  border-radius: var(--r-md);
   padding: 4px;
   min-width: 140px;
   display: none;
   z-index: 6500;
-  box-shadow: 0 4px 16px rgba(0,0,0,0.5);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.6), 0 2px 8px rgba(0,0,0,0.4);
 }
 #export-menu.open { display: block; }
 .export-menu-item {
   padding: 6px 10px;
   font-size: 10px;
-  color: #aaa;
+  color: var(--gray);
   border-radius: 5px;
   cursor: pointer;
   white-space: nowrap;
 }
-.export-menu-item:hover { background: rgba(255,255,255,0.05); color: #eee; }
+.export-menu-item:hover { background: rgba(255,255,255,0.06); color: var(--white); }
 
 /* ── Undo button in preset bar ── */
 #btn-undo { opacity: 0.3; pointer-events: none; }
@@ -460,7 +672,7 @@ mark.sh { background: rgba(255,46,99,0.25); color: #ff6b8a; border-radius: 2px; 
 #btn-reset.visible { display: inline-flex; }
 
 /* ── Keyboard hint in footer ── */
-#kb-hints { font-size: 9px; color: #333; }
+#kb-hints { font-size: 9px; color: var(--muted); }
 
 @keyframes save-nudge {
   0%   { box-shadow: 0 0 0 0   rgba(var(--pink-rgb,124,110,248), 0.7); }
@@ -468,6 +680,36 @@ mark.sh { background: rgba(255,46,99,0.25); color: #ff6b8a; border-radius: 2px; 
   100% { box-shadow: 0 0 0 0   rgba(var(--pink-rgb,124,110,248), 0); }
 }
 #btn-save.save-nudge { animation: save-nudge 0.55s ease-out 2; }
+
+/* ── FiveM toast ── */
+#fivem-settings-toast {
+  position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%);
+  background: var(--c-bg-elevated);
+  border: 1px solid var(--c-border-default);
+  color: var(--white);
+  padding: 9px 18px;
+  border-radius: var(--r-md);
+  font-size: 11px;
+  z-index: 8500;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+  white-space: nowrap;
+  pointer-events: none;
+}
+#fivem-settings-toast.toast-hidden {
+  opacity: 0;
+  transform: translateX(-50%) translateY(6px);
+}
+
+/* ── FiveM running warning banner ── */
+#fivem-warn-banner {
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 16px;
+  background: rgba(230,126,34,0.08);
+  border-top: 1px solid var(--warning-bd);
+  flex-shrink: 0;
+}
 
 </style>
 </head>
@@ -497,25 +739,34 @@ mark.sh { background: rgba(255,46,99,0.25); color: #ff6b8a; border-radius: 2px; 
 
     <!-- Preset bar -->
     <div id="preset-bar">
-      <!-- Row 1: Main presets — equal-width pills -->
-      <div id="preset-row-1">
-        <button class="preset-btn preset-quality" onclick="applyPreset('quality')">
-          <i class="fa fa-gem"></i> <span id="lbl-preset-quality">Quality</span>
+      <!-- 3-column card grid -->
+      <div class="preset-grid">
+        <button class="preset-card preset-quality" onclick="applyPreset('quality')">
+          <div class="preset-card-icon"><i class="fa fa-gem"></i></div>
+          <div class="preset-card-name" id="lbl-preset-quality">Quality</div>
+          <div class="preset-card-hint" id="lbl-preset-quality-hint">Best visuals</div>
         </button>
-        <button class="preset-btn preset-balanced" onclick="applyPreset('balanced')">
-          <i class="fa fa-gauge-high"></i> <span id="lbl-preset-balanced">Balanced</span>
+        <button class="preset-card preset-balanced" onclick="applyPreset('balanced')">
+          <div class="preset-card-icon"><i class="fa fa-gauge-high"></i></div>
+          <div class="preset-card-name" id="lbl-preset-balanced">Balanced</div>
+          <div class="preset-card-hint" id="lbl-preset-balanced-hint">Best all-round</div>
         </button>
-        <button class="preset-btn preset-performance" onclick="applyPreset('performance')">
-          <i class="fa fa-bolt"></i> <span id="lbl-preset-performance">Performance</span>
+        <button class="preset-card preset-performance" onclick="applyPreset('performance')">
+          <div class="preset-card-icon"><i class="fa fa-bolt"></i></div>
+          <div class="preset-card-name" id="lbl-preset-performance">Performance</div>
+          <div class="preset-card-hint" id="lbl-preset-performance-hint">Max FPS</div>
         </button>
       </div>
-      <!-- Row 2: Utility buttons -->
-      <div id="preset-row-2">
-        <button class="btn btn-ghost" style="font-size:10px;padding:4px 10px;" onclick="applyRecommended()">
+      <!-- Smart Recommend — featured full-width -->
+      <button class="preset-smart-btn" onclick="applySmartPreset()" id="btn-smart-recommend">
+        <i class="fa fa-microchip"></i>
+        <span id="lbl-smart-recommend">Smart Recommend</span>
+        <span id="lbl-smart-recommend-sub" style="font-size:9px;font-weight:400;color:var(--muted);margin-left:4px">— detects your GPU tier</span>
+      </button>
+      <!-- Utility row -->
+      <div class="preset-utility-row">
+        <button class="btn btn-ghost" style="font-size:10px;padding:4px 10px" onclick="applyRecommended()">
           <i class="fa fa-wand-sparkles"></i> <span id="lbl-preset-recommended">Recommended</span>
-        </button>
-        <button class="btn btn-ghost" style="font-size:10px;padding:4px 10px;background:rgba(255,46,99,0.06);border-color:rgba(255,46,99,0.4);color:#FF2E63" onclick="applySmartPreset()" id="btn-smart-recommend">
-          <i class="fa fa-microchip"></i> <span id="lbl-smart-recommend">Smart Recommend</span>
         </button>
         <button class="btn btn-ghost" id="btn-undo" style="font-size:10px;padding:4px 10px;margin-left:auto" onclick="undoLast()" title="Undo last preset/profile">
           <i class="fa fa-rotate-left"></i> <span id="lbl-undo-btn">Undo</span>
@@ -524,7 +775,7 @@ mark.sh { background: rgba(255,46,99,0.25); color: #ff6b8a; border-radius: 2px; 
     </div>
 
     <!-- Hardware info strip (shown after Smart Recommend) -->
-    <div id="smart-hw-info" style="display:none;font-size:10px;color:#555;padding:3px 2px 0;text-align:left"></div>
+    <div id="smart-hw-info" style="display:none;font-size:10px;color:var(--muted);padding:3px 2px 0;text-align:left"></div>
 
     <!-- Performance budget meter -->
     <div id="perf-budget-bar">
@@ -534,34 +785,40 @@ mark.sh { background: rgba(255,46,99,0.25); color: #ff6b8a; border-radius: 2px; 
 
     <!-- Search bar -->
     <div id="search-bar">
-      <i class="fa fa-magnifying-glass" style="color:#333;font-size:11px;flex-shrink:0"></i>
+      <i class="fa fa-magnifying-glass" style="color:var(--muted);font-size:11px;flex-shrink:0"></i>
       <input id="search-input" type="text" spellcheck="false" oninput="filterSettings(this.value)" onkeydown="if(event.key==='Escape'){clearSearch();event.stopPropagation()}" placeholder="Search settings…">
       <button id="search-clear" onclick="clearSearch()" title="Clear search" style="display:none"><i class="fa fa-xmark"></i></button>
     </div>
 
     <!-- Profile toolbar -->
-    <div id="profile-bar" style="display:flex;gap:6px;align-items:center;padding:7px 0 2px;border-top:1px solid var(--border)">
-      <span style="font-size:10px;font-weight:700;color:#444;text-transform:uppercase;letter-spacing:0.05em;white-space:nowrap" id="lbl-profiles">Profiles</span>
-      <select id="profile-select" onchange="loadProfileOnChange()" style="flex:1;padding:4px 8px;border-radius:6px;border:1px solid #1e1e1e;background:#0e0e0e;color:#ccc;font-size:11px;outline:none">
+    <div id="profile-bar" style="display:flex">
+      <span class="profile-label" id="lbl-profiles">Profiles</span>
+      <select id="profile-select" onchange="loadProfileOnChange()">
         <option value="" id="opt-profile-placeholder">— Select profile —</option>
       </select>
-      <button class="btn btn-ghost" style="font-size:10px;padding:4px 10px" onclick="saveProfile()" id="btn-profile-save">Save</button>
-      <button class="btn btn-ghost" style="font-size:10px;padding:4px 10px;color:#e74c3c;border-color:rgba(231,76,60,0.3)" onclick="deleteProfile()" id="btn-profile-delete">Delete</button>
+      <button class="btn-profile-save" onclick="saveProfile()" id="btn-profile-save"><span id="lbl-profile-save-btn">Save</span></button>
+      <button class="btn-profile-delete" onclick="deleteProfile()" id="btn-profile-delete"><span id="lbl-profile-delete-btn">Delete</span></button>
     </div>
 
     <!-- Settings body (populated by JS) -->
     <div id="settings-body">
       <div id="empty-state">
-        <i class="fa fa-sliders"></i>
-        <p id="lbl-empty-title">Load your FiveM graphics settings to get started.</p>
-        <small id="lbl-empty-small">File: %APPDATA%\CitizenFX\gta5_settings.xml<br>If the file doesn't exist, open FiveM → Settings → Graphics, change any option, then close FiveM.</small>
+        <div class="es-icon-wrap"><i class="fa fa-sliders"></i></div>
+        <div class="es-title" id="lbl-empty-title">Load your FiveM graphics settings to get started.</div>
+        <div class="es-body" id="lbl-empty-body">Auto-detection reads from <code style="color:var(--gray);font-family:'Geist Mono',monospace">%APPDATA%\CitizenFX\gta5_settings.xml</code></div>
+        <div class="es-steps">
+          <div class="es-step"><span class="es-step-num">1</span><span id="lbl-empty-step1">Click Load to auto-detect the file</span></div>
+          <div class="es-step"><span class="es-step-num">2</span><span id="lbl-empty-step2">Adjust settings using the dropdowns</span></div>
+          <div class="es-step"><span class="es-step-num">3</span><span id="lbl-empty-step3">Save — then relaunch FiveM</span></div>
+        </div>
+        <small id="lbl-empty-small">If the file doesn't exist, open FiveM → Settings → Graphics, change any option, then close FiveM.</small>
       </div>
     </div>
 
   </div>
 
   <!-- FiveM running warning banner (shown before first save) -->
-  <div id="fivem-warn-banner" style="display:none;align-items:flex-start;gap:12px;padding:12px 16px;background:rgba(230,126,34,0.08);border-top:1px solid rgba(230,126,34,0.25);flex-shrink:0">
+  <div id="fivem-warn-banner" style="display:none">
     <i class="fa fa-triangle-exclamation" style="color:#e67e22;font-size:16px;margin-top:1px;flex-shrink:0"></i>
     <div style="flex:1">
       <div id="lbl-warn-title" style="font-size:12px;font-weight:700;color:#e67e22;margin-bottom:3px">Make sure FiveM is fully closed before saving</div>
@@ -658,6 +915,14 @@ const LANG_FIVEM = {
     perfBudgetHeavy: 'Heavy GPU load',
     perfBudgetExtreme: 'Extreme GPU load',
     perfBudgetLabel: 'Performance budget',
+    presetQualityHint: 'Best visuals',
+    presetBalancedHint: 'Best all-round',
+    presetPerformanceHint: 'Max FPS',
+    smartRecommendSub: '— detects your GPU tier',
+    emptyBody: 'Auto-detection reads from %APPDATA%\\CitizenFX\\gta5_settings.xml',
+    emptyStep1: 'Click Load to auto-detect the file',
+    emptyStep2: 'Adjust settings using the dropdowns',
+    emptyStep3: 'Save — then relaunch FiveM',
   },
   fi: {
     titleSub: 'gta5_settings.xml -muokkain',
@@ -718,12 +983,18 @@ const LANG_FIVEM = {
     perfBudgetHeavy: 'Raskas GPU-kuorma',
     perfBudgetExtreme: 'Äärimmäinen GPU-kuorma',
     perfBudgetLabel: 'Suorituskykybudjetti',
+    presetQualityHint: 'Parhaat visuaalit',
+    presetBalancedHint: 'Paras yleissuorituskyky',
+    presetPerformanceHint: 'Maksimi FPS',
+    smartRecommendSub: '— tunnistaa GPU-tason',
+    emptyBody: 'Automaattinen haku lukee tiedoston %APPDATA%\\CitizenFX\\gta5_settings.xml',
+    emptyStep1: 'Klikkaa Lataa automaattista hakua varten',
+    emptyStep2: 'Muuta asetuksia pudotusvalikoilla',
+    emptyStep3: 'Tallenna — käynnistä sitten FiveM uudelleen',
   }
 }
-function getLangF() {
-  try { return JSON.parse(localStorage.getItem('jylli-settings') || '{}').language || 'en' } catch { return 'en' }
-}
-function tF(key) { const l = getLangF(); return (LANG_FIVEM[l] || LANG_FIVEM.en)[key] || LANG_FIVEM.en[key] || key }
+let _langF = 'en'
+function tF(key) { return (LANG_FIVEM[_langF] || LANG_FIVEM.en)[key] || LANG_FIVEM.en[key] || key }
 
 // ─── Category definitions ─────────────────────────────────────────────────────
 const CATEGORIES = [
@@ -904,17 +1175,17 @@ async function loadSettings() {
 
   btn.disabled = true
   btn.innerHTML = `<i class="fa fa-spinner fa-spin"></i> ${tF('loadBtn')}`
-  body.innerHTML = `<div id="empty-state"><i class="fa fa-spinner fa-spin" style="font-size:28px;color:#333"></i><p style="color:#333">${tF('loadingFile')}</p></div>`
+  body.innerHTML = `<div id="empty-state"><div class="es-icon-wrap"><i class="fa fa-spinner fa-spin"></i></div><div class="es-title" style="color:var(--muted)">${tF('loadingFile')}</div></div>`
 
   const r = await window.api.fivemReadSettings(getManualPath())
   btn.disabled = false
   btn.innerHTML = `<i class="fa fa-rotate"></i> ${tF('loadBtn')}`
 
   if (!r.ok) {
-    pathStatus.innerHTML = `<i class="fa fa-triangle-exclamation" style="color:#E74C3C"></i> ${r.reason}`
+    pathStatus.innerHTML = `<i class="fa fa-triangle-exclamation" style="color:var(--danger)"></i> ${r.reason}`
     body.innerHTML = `<div id="empty-state">
-      <i class="fa fa-triangle-exclamation" style="color:#E74C3C;font-size:32px"></i>
-      <p style="color:#555">${r.reason}</p>
+      <div class="es-icon-wrap" style="border-color:var(--danger-bd);background:var(--danger-bg);color:var(--danger);box-shadow:0 0 20px rgba(231,76,60,0.15)"><i class="fa fa-triangle-exclamation"></i></div>
+      <div class="es-title" style="color:var(--danger)">${r.reason}</div>
       ${r.hint ? `<small>${r.hint}</small>` : ''}
     </div>`
     return
@@ -924,7 +1195,7 @@ async function loadSettings() {
   currentVals = r.vals
   currentPath = r.path
   const srcNote = r.source === 'secondary' ? ' (secondary location)' : ''
-  pathStatus.innerHTML = `<i class="fa fa-check" style="color:#2ECC71"></i> ${r.path}${srcNote}`
+  pathStatus.innerHTML = `<i class="fa fa-check" style="color:var(--success)"></i> ${r.path}${srcNote}`
   const pd = document.getElementById('path-display'); if (pd) { pd.textContent = r.path; pd._set = true }
   document.getElementById('btn-save').disabled = false
   document.getElementById('export-split').classList.add('loaded')
@@ -1288,13 +1559,13 @@ function showToastFivem(msg) {
   if (!t) {
     t = document.createElement('div')
     t.id = 'fivem-settings-toast'
-    t.style.cssText = 'position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:#1e1e1e;border:1px solid #2a2a2a;color:#ccc;padding:8px 16px;border-radius:8px;font-size:11px;z-index:8500;transition:opacity 0.3s'
+    t.className = 'toast-hidden'
     document.body.appendChild(t)
   }
   t.textContent = msg
-  t.style.opacity = '1'
+  t.classList.remove('toast-hidden')
   clearTimeout(t._timer)
-  t._timer = setTimeout(() => { t.style.opacity = '0' }, 2500)
+  t._timer = setTimeout(() => t.classList.add('toast-hidden'), 2500)
 }
 
 async function saveSettings() {
@@ -1352,7 +1623,7 @@ async function saveSettings() {
     if (warnBanner) { warnBanner.style.display = 'none'; delete warnBanner.dataset.confirmed }
     const chLabel = (changedCount !== 1 ? tF('changesPlural') : tF('changes')).replace('{n}', changedCount)
     document.getElementById('path-status').innerHTML =
-      `<i class="fa fa-check" style="color:#2ECC71"></i> ${chLabel} → ${r.path}`
+      `<i class="fa fa-check" style="color:var(--success)"></i> ${chLabel} → ${r.path}`
     showSaveConfirmBanner(r.path)
     // Sync currentVals
     for (const def of currentDefs) {
@@ -1365,7 +1636,7 @@ async function saveSettings() {
   } else {
     btn.innerHTML = `<i class="fa fa-xmark"></i> ${tF('saveError')}`
     document.getElementById('path-status').innerHTML =
-      `<i class="fa fa-triangle-exclamation" style="color:#E74C3C"></i> ${r.reason || 'Save failed'}`
+      `<i class="fa fa-triangle-exclamation" style="color:var(--danger)"></i> ${r.reason || 'Save failed'}`
     setTimeout(() => { btn.innerHTML = `<i class="fa fa-floppy-disk"></i> ${tF('saveBtn')}`; btn.disabled = false }, 2500)
   }
 }
@@ -1375,14 +1646,14 @@ function showSaveConfirmBanner(filePath) {
   if (existing) existing.remove()
   const banner = document.createElement('div')
   banner.id = 'save-confirm-banner'
-  banner.style.cssText = 'background:rgba(46,204,113,0.08);border:1px solid rgba(46,204,113,0.25);border-radius:8px;padding:10px 14px;display:flex;align-items:center;gap:10px;font-size:11px;color:#c0c0cc'
+  banner.style.cssText = 'background:var(--success-bg);border:1px solid var(--success-bd);border-radius:var(--r-md);padding:10px 14px;display:flex;align-items:center;gap:10px;font-size:11px;color:var(--gray)'
   banner.innerHTML = `
-    <i class="fa fa-circle-check" style="color:#2ECC71;font-size:14px;flex-shrink:0"></i>
+    <i class="fa fa-circle-check" style="color:var(--success);font-size:14px;flex-shrink:0"></i>
     <div style="flex:1;line-height:1.5">
-      <strong style="color:#2ECC71">${tF('saveSuccess')}</strong><br>
-      <span style="color:#8a8a9a">${tF('saveSuccessNote')}</span>
+      <strong style="color:var(--success)">${tF('saveSuccess')}</strong><br>
+      <span style="color:var(--muted)">${tF('saveSuccessNote')}</span>
     </div>
-    <button onclick="this.closest('#save-confirm-banner').remove()" style="background:none;border:none;color:#555;cursor:pointer;font-size:13px;flex-shrink:0;padding:0 4px">✕</button>
+    <button onclick="this.closest('#save-confirm-banner').remove()" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:13px;flex-shrink:0;padding:0 4px">✕</button>
   `
   document.getElementById('content').insertBefore(banner, document.getElementById('settings-body'))
 }
@@ -1408,6 +1679,8 @@ function applyTranslationsF() {
   t('lbl-preset-recommended', 'presetRecommended')
   t('lbl-smart-recommend', 'smartRecommendBtn')
   t('lbl-profiles', 'profilesLabel')
+  t('lbl-profile-save-btn',   'profileSaveBtn')
+  t('lbl-profile-delete-btn', 'profileDeleteBtn')
   t('lbl-export-btn', 'exportBtn')
   t('lbl-empty-title', 'emptyTitle')
   t('lbl-empty-small', 'emptySmall')
@@ -1421,6 +1694,14 @@ function applyTranslationsF() {
   t('lbl-export-text', 'exportAsText')
   t('lbl-export-json', 'exportAsJson')
   t('lbl-export-xml', 'exportAsXml')
+  t('lbl-preset-quality-hint',     'presetQualityHint')
+  t('lbl-preset-balanced-hint',    'presetBalancedHint')
+  t('lbl-preset-performance-hint', 'presetPerformanceHint')
+  t('lbl-smart-recommend-sub',     'smartRecommendSub')
+  t('lbl-empty-body',              'emptyBody')
+  t('lbl-empty-step1',             'emptyStep1')
+  t('lbl-empty-step2',             'emptyStep2')
+  t('lbl-empty-step3',             'emptyStep3')
   const pd = document.getElementById('path-display'); if (pd && !pd._set) pd.textContent = tF('noFile')
   const mp = document.getElementById('manual-path'); if (mp) mp.placeholder = tF('pathPlaceholder')
   const si = document.getElementById('search-input'); if (si) si.placeholder = tF('searchPlaceholder')
@@ -1580,7 +1861,13 @@ function updatePerfBudget() {
   const pct = Math.min(100, Math.round(total / PERF_MAX * 100))
   const fill = document.getElementById('perf-budget-fill')
   const label = document.getElementById('perf-budget-label')
-  const color = pct < 40 ? '#2ECC71' : pct < 65 ? '#facc15' : pct < 80 ? '#f97316' : '#ef4444'
+  const color = pct < 40
+    ? 'linear-gradient(90deg, #2ECC71, #27ae60)'
+    : pct < 65
+    ? 'linear-gradient(90deg, #facc15, #f59e0b)'
+    : pct < 80
+    ? 'linear-gradient(90deg, #f97316, #ea580c)'
+    : 'linear-gradient(90deg, #ef4444, #dc2626)'
   const desc = pct < 40 ? tF('perfBudgetLight') : pct < 65 ? tF('perfBudgetMedium') : pct < 80 ? tF('perfBudgetHeavy') : tF('perfBudgetExtreme')
   if (fill) {
     if (!fill._animated) {
@@ -1614,7 +1901,8 @@ window.addEventListener('keydown', e => {
 })
 
 // Auto-load on open
-window.addEventListener('DOMContentLoaded', () => {
+window.addEventListener('DOMContentLoaded', async () => {
+  try { const s = await window.api.getSettings(); _langF = s?.language || 'en' } catch {}
   applyTranslationsF()
   populateProfileSelect()
   loadSettings()

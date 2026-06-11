@@ -122,8 +122,9 @@ contextBridge.exposeInMainWorld('api', {
   exportReport:       ()           => ipcRenderer.invoke('export-report'),
   cleanRam:           ()           => ipcRenderer.invoke('clean-ram'),
   getLatencySample:   ()           => ipcRenderer.invoke('get-latency-sample'),
-  getHealthScore:     (settings)   => ipcRenderer.invoke('get-health-score', settings),
+  getHealthScore:     (settings, pfStates) => ipcRenderer.invoke('get-health-score', settings, pfStates),
   runTweakHealth:     ()           => ipcRenderer.invoke('run-tweak-health'),
+  checkKbdclassDamage: ()          => ipcRenderer.invoke('check-kbdclass-damage'),
   detectAv:           ()           => ipcRenderer.invoke('detect-av'),
   checkUpdate:        ()           => ipcRenderer.invoke('check-update'),
   downloadUpdate:     ()           => ipcRenderer.invoke('download-update'),
@@ -137,7 +138,8 @@ contextBridge.exposeInMainWorld('api', {
   onSpecProgress:     (cb) => ipcRenderer.on('spec-progress',     (_, d) => cb(d)),
   onLog:              (cb) => ipcRenderer.on('log',               (_, d) => cb(d)),
   onAutoOptiProgress: (cb) => ipcRenderer.on('auto-opti-progress',(_, d) => cb(d)),
-  onDebloatProgress:  (cb) => ipcRenderer.on('debloat-progress',  (_, d) => cb(d)),
+  onDebloatProgress:        (cb) => ipcRenderer.on('debloat-progress',        (_, d) => cb(d)),
+  onDeviceRemoveProgress:   (cb) => ipcRenderer.on('device-remove-progress',  (_, d) => cb(d)),
   onPingResult:       (cb) => ipcRenderer.on('ping-result',       (_, d) => cb(d)),
   onPingResultV2:     (cb) => ipcRenderer.on('ping-result-v2',    (_, d) => cb(d)),
   startLivePing:      (opts)       => ipcRenderer.invoke('start-live-ping', opts),
@@ -271,6 +273,7 @@ contextBridge.exposeInMainWorld('api', {
   offPreflightProgress:     ()       => ipcRenderer.removeAllListeners('preflight-progress'),
   offAutoOptiProgress:      ()       => ipcRenderer.removeAllListeners('auto-opti-progress'),
   offDebloatProgress:       ()       => ipcRenderer.removeAllListeners('debloat-progress'),
+  offDeviceRemoveProgress:  ()       => ipcRenderer.removeAllListeners('device-remove-progress'),
   offSpecProgress:          ()       => ipcRenderer.removeAllListeners('spec-progress'),
   offPulseTick:             ()       => ipcRenderer.removeAllListeners('pulse-tick'),
   offLivePingTick:          ()       => ipcRenderer.removeAllListeners('live-ping-tick'),
@@ -364,4 +367,13 @@ contextBridge.exposeInMainWorld('api', {
 
   // Ryzen AutoTune
   ryzenAutoTune:        ()           => ipcRenderer.invoke('ryzen-auto-tune'),
+
+  // CS2 Latency Optimization
+  cs2PingServers:       (servers)    => ipcRenderer.invoke('cs2-ping-servers', servers),
+  cs2DeployAutoexec:    (cfg)        => ipcRenderer.invoke('cs2-deploy-autoexec', cfg),
+  cs2ApplyLaunchOpts:   (opts)       => ipcRenderer.invoke('cs2-apply-launch-opts', opts),
+  cs2CheckProcess:      (name)       => ipcRenderer.invoke('cs2-check-process', name),
+  cs2PresentmonStart:   (proc)       => ipcRenderer.invoke('cs2-presentmon-start', proc),
+  cs2PresentmonSnapshot:()           => ipcRenderer.invoke('cs2-presentmon-snapshot'),
+  cs2PresentmonStop:    ()           => ipcRenderer.invoke('cs2-presentmon-stop'),
 })
