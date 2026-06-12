@@ -1,6 +1,6 @@
 {
   "name": "jylli-tool",
-  "version": "1.5.8",
+  "version": "1.5.9",
   "description": "Jylli Tool",
   "main": "main.js",
   "scripts": {

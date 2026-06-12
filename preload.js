@@ -88,6 +88,9 @@ contextBridge.exposeInMainWorld('api', {
   pulsePrearmScan:    ()           => ipcRenderer.invoke('pulse-prearm-scan'),
   pulsePrearmDefer:   (opts)       => ipcRenderer.invoke('pulse-prearm-defer', opts),
   pulseThermalAudit:  ()           => ipcRenderer.invoke('pulse-thermal-audit'),
+  pulseBaselineCapture:   ()       => ipcRenderer.invoke('pulse-baseline-capture'),
+  pulseBaselineGet:       ()       => ipcRenderer.invoke('pulse-baseline-get'),
+  pulseSaveSession:       (record) => ipcRenderer.invoke('pulse-save-session', record),
   onThermalProgress:  (cb)         => ipcRenderer.on('thermal-progress', (_, d) => cb(d)),
   offThermalProgress: ()           => ipcRenderer.removeAllListeners('thermal-progress'),
   onPulseTick:        (cb)         => ipcRenderer.on('pulse-tick', (_, d) => cb(d)),
@@ -122,9 +125,8 @@ contextBridge.exposeInMainWorld('api', {
   exportReport:       ()           => ipcRenderer.invoke('export-report'),
   cleanRam:           ()           => ipcRenderer.invoke('clean-ram'),
   getLatencySample:   ()           => ipcRenderer.invoke('get-latency-sample'),
-  getHealthScore:     (settings, pfStates) => ipcRenderer.invoke('get-health-score', settings, pfStates),
+  getHealthScore:     (settings)   => ipcRenderer.invoke('get-health-score', settings),
   runTweakHealth:     ()           => ipcRenderer.invoke('run-tweak-health'),
-  checkKbdclassDamage: ()          => ipcRenderer.invoke('check-kbdclass-damage'),
   detectAv:           ()           => ipcRenderer.invoke('detect-av'),
   checkUpdate:        ()           => ipcRenderer.invoke('check-update'),
   downloadUpdate:     ()           => ipcRenderer.invoke('download-update'),
@@ -138,8 +140,7 @@ contextBridge.exposeInMainWorld('api', {
   onSpecProgress:     (cb) => ipcRenderer.on('spec-progress',     (_, d) => cb(d)),
   onLog:              (cb) => ipcRenderer.on('log',               (_, d) => cb(d)),
   onAutoOptiProgress: (cb) => ipcRenderer.on('auto-opti-progress',(_, d) => cb(d)),
-  onDebloatProgress:        (cb) => ipcRenderer.on('debloat-progress',        (_, d) => cb(d)),
-  onDeviceRemoveProgress:   (cb) => ipcRenderer.on('device-remove-progress',  (_, d) => cb(d)),
+  onDebloatProgress:  (cb) => ipcRenderer.on('debloat-progress',  (_, d) => cb(d)),
   onPingResult:       (cb) => ipcRenderer.on('ping-result',       (_, d) => cb(d)),
   onPingResultV2:     (cb) => ipcRenderer.on('ping-result-v2',    (_, d) => cb(d)),
   startLivePing:      (opts)       => ipcRenderer.invoke('start-live-ping', opts),
@@ -252,14 +253,6 @@ contextBridge.exposeInMainWorld('api', {
   aiGetRecommendations: ()     => ipcRenderer.invoke('ai-get-recommendations'),
   aiGetStatus:          ()     => ipcRenderer.invoke('ai-get-status'),
 
-  // Thread mapper (JylliJobMon named-pipe + SharedArrayBuffer)
-  getThreadSab:         ()     => ipcRenderer.invoke('get-thread-sab'),
-  startThreadMapper:    (pid)  => ipcRenderer.invoke('start-thread-mapper', pid),
-  stopThreadMapper:     ()     => ipcRenderer.invoke('stop-thread-mapper'),
-  onThreadMapTick:      (cb)   => ipcRenderer.on('thread-map-tick',  (_, d) => cb(d)),
-  onThreadMapNames:     (cb)   => ipcRenderer.on('thread-map-names', (_, d) => cb(d)),
-  offThreadMapTick:     ()     => ipcRenderer.removeAllListeners('thread-map-tick'),
-
   // Sensor bridge (1000Hz LHM named-pipe)
   sensorGetSchema:      ()     => ipcRenderer.invoke('sensor-get-schema'),
   sensorGetRate:        ()     => ipcRenderer.invoke('sensor-get-rate'),
@@ -273,7 +266,6 @@ contextBridge.exposeInMainWorld('api', {
   offPreflightProgress:     ()       => ipcRenderer.removeAllListeners('preflight-progress'),
   offAutoOptiProgress:      ()       => ipcRenderer.removeAllListeners('auto-opti-progress'),
   offDebloatProgress:       ()       => ipcRenderer.removeAllListeners('debloat-progress'),
-  offDeviceRemoveProgress:  ()       => ipcRenderer.removeAllListeners('device-remove-progress'),
   offSpecProgress:          ()       => ipcRenderer.removeAllListeners('spec-progress'),
   offPulseTick:             ()       => ipcRenderer.removeAllListeners('pulse-tick'),
   offLivePingTick:          ()       => ipcRenderer.removeAllListeners('live-ping-tick'),
@@ -367,13 +359,4 @@ contextBridge.exposeInMainWorld('api', {
 
   // Ryzen AutoTune
   ryzenAutoTune:        ()           => ipcRenderer.invoke('ryzen-auto-tune'),
-
-  // CS2 Latency Optimization
-  cs2PingServers:       (servers)    => ipcRenderer.invoke('cs2-ping-servers', servers),
-  cs2DeployAutoexec:    (cfg)        => ipcRenderer.invoke('cs2-deploy-autoexec', cfg),
-  cs2ApplyLaunchOpts:   (opts)       => ipcRenderer.invoke('cs2-apply-launch-opts', opts),
-  cs2CheckProcess:      (name)       => ipcRenderer.invoke('cs2-check-process', name),
-  cs2PresentmonStart:   (proc)       => ipcRenderer.invoke('cs2-presentmon-start', proc),
-  cs2PresentmonSnapshot:()           => ipcRenderer.invoke('cs2-presentmon-snapshot'),
-  cs2PresentmonStop:    ()           => ipcRenderer.invoke('cs2-presentmon-stop'),
 })
