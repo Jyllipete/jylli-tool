@@ -2,35 +2,52 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<link rel="stylesheet" href="css/tokens.css">
 <link rel="stylesheet" href="assets/fa/css/all.min.css">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline';">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com;">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700;800&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
 <title>FiveM Graphics Settings</title>
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 :root {
-  --pink:       #FF2E63;
-  --pink-hover: #E8254F;
-  --pink-dim:   #3a0f1a;
-  --pink-glow:  rgba(255,46,99,0.18);
-  --bg:         #0d0d0d;
-  --bg-card:    #141414;
-  --bg-dark:    #0a0a0a;
-  --border:     #1e1e1e;
-  --border2:    #222;
-  --white:      #f0f0f0;
-  --gray:       #6a6a6a;
-  --muted:      #333333;
-  --success:    #2ECC71;
-  --success-bg: #0a1f12;
-  --warning:    #F39C12;
-  --danger:     #E74C3C;
-  --info:       #3498DB;
-  --orange:     #E67E22;
+  /* Surface aliases */
+  --bg:          var(--c-bg-base);
+  --bg-card:     var(--c-bg-elevated);
+  --bg-raised:   var(--c-bg-raised);
+  --bg-dark:     var(--c-bg-base);
+  --border:      var(--c-border-default);
+  --border2:     var(--c-border-subtle);
+  /* Text aliases */
+  --white:       var(--c-text-primary);
+  --gray:        var(--c-text-secondary);
+  --muted:       var(--c-text-tertiary);
+  /* Accent aliases (backwards compat) */
+  --pink:        var(--c-accent);
+  --pink-hover:  color-mix(in srgb, var(--c-accent) 82%, #fff);
+  --pink-dim:    var(--c-accent-muted);
+  --pink-glow:   var(--c-accent-ring);
+  /* Status colors */
+  --success:     #2ECC71;
+  --success-bg:  #0a1f12;
+  --success-bd:  #1a5c35;
+  --warning:     #F39C12;
+  --warning-bg:  #1f1400;
+  --warning-bd:  rgba(230,126,34,0.35);
+  --danger:      #E74C3C;
+  --danger-bg:   #1f0808;
+  --danger-bd:   #5c1a14;
+  --info:        #3498DB;
+  --orange:      #E67E22;
+  /* Radius shorthand */
+  --radius:      var(--r-md);
+  --radius-sm:   var(--r-sm);
 }
 html, body {
   background: var(--bg);
   color: var(--white);
-  font-family: 'Segoe UI', system-ui, sans-serif;
+  font-family: 'Geist', 'Segoe UI', system-ui, sans-serif;
   font-size: 13px;
   height: 100%;
   overflow: hidden;
@@ -42,22 +59,32 @@ html, body {
 #titlebar {
   display: flex;
   align-items: center;
-  height: 44px;
-  background: var(--bg-dark);
-  border-bottom: 1px solid var(--border);
+  height: 46px;
+  background: rgba(13,11,20,0.96);
+  -webkit-backdrop-filter: blur(16px) saturate(150%);
+  backdrop-filter: blur(16px) saturate(150%);
+  border-bottom: 1px solid var(--border2);
   padding: 0 14px;
   -webkit-app-region: drag;
   flex-shrink: 0;
   gap: 10px;
+  position: relative;
+}
+#titlebar::after {
+  content: '';
+  position: absolute; bottom: 0; left: 0; right: 0; height: 1px;
+  background: linear-gradient(90deg, transparent 0%, var(--c-accent) 30%, var(--c-accent-ring) 70%, transparent 100%);
+  pointer-events: none;
 }
 .tb-icon {
-  width: 28px; height: 28px;
-  border-radius: 8px;
-  background: linear-gradient(135deg, var(--pink-dim), #1a0a12);
-  border: 1px solid rgba(255,46,99,0.3);
+  width: 30px; height: 30px;
+  border-radius: var(--r-sm);
+  background: var(--c-accent-muted);
+  border: 1px solid var(--c-accent);
   display: flex; align-items: center; justify-content: center;
-  color: var(--pink); font-size: 13px;
+  color: var(--c-accent); font-size: 14px;
   flex-shrink: 0;
+  box-shadow: 0 0 0 1px var(--c-accent-ring);
 }
 .tb-title {
   flex: 1;
@@ -67,7 +94,7 @@ html, body {
 }
 .tb-title span { color: var(--pink); }
 .tb-subtitle {
-  font-size: 10px; color: #444;
+  font-size: 10px; color: var(--muted);
   font-weight: 400; margin-top: 1px;
 }
 .tb-close {
@@ -76,7 +103,7 @@ html, body {
   border-radius: 6px;
   border: none;
   background: transparent;
-  color: #555;
+  color: var(--muted);
   cursor: pointer;
   font-size: 14px;
   display: flex; align-items: center; justify-content: center;
@@ -93,14 +120,15 @@ html, body {
 #content {
   flex: 1;
   overflow-y: auto;
-  padding: 16px;
+  padding: 14px;
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 8px;
 }
-#content::-webkit-scrollbar { width: 4px; }
+#content::-webkit-scrollbar { width: 5px; }
 #content::-webkit-scrollbar-track { background: transparent; }
-#content::-webkit-scrollbar-thumb { background: #222; border-radius: 2px; }
+#content::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.14); border-radius: var(--r-pill); }
+#content::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.28); }
 
 /* ── Path row ── */
 #path-row {
@@ -116,9 +144,9 @@ html, body {
   font-size: 11px;
   outline: none;
 }
-#path-row input:focus { border-color: rgba(255,46,99,0.5); }
+#path-row input:focus { border-color: var(--c-accent); box-shadow: 0 0 0 3px var(--c-accent-ring); }
 #path-status {
-  font-size: 10px; color: #444;
+  font-size: 10px; color: var(--muted);
   padding: 2px 0 4px;
 }
 
@@ -135,76 +163,138 @@ html, body {
 .btn-primary {
   background: var(--pink);
   color: white;
+  transition: background 0.13s ease, box-shadow 0.13s ease;
 }
-.btn-primary:not(:disabled):hover { background: var(--pink-hover); }
+.btn-primary:not(:disabled):hover {
+  background: var(--pink-hover);
+  box-shadow: 0 0 0 1px rgba(255,46,99,0.4), 0 0 18px rgba(255,46,99,0.22);
+}
+.btn-primary:not(:disabled):active { transform: scale(0.97); }
 .btn-ghost {
   background: rgba(255,255,255,0.05);
   border: 1px solid var(--border2);
   color: var(--white);
+  position: relative; overflow: hidden;
+  transition: background 0.13s ease, border-color 0.13s ease;
 }
-.btn-ghost:not(:disabled):hover { background: rgba(255,255,255,0.09); }
+.btn-ghost:not(:disabled):hover { background: rgba(255,255,255,0.09); border-color: var(--c-border-strong); }
+.btn-ghost:not(:disabled):active { transform: scale(0.97); }
 .btn-success {
   background: var(--success-bg);
-  border: 1px solid #1a5c35;
+  border: 1px solid var(--success-bd);
   color: var(--success);
+  transition: background 0.13s ease, box-shadow 0.13s ease;
 }
-.btn-success:not(:disabled):hover { background: var(--success); color: #0a2a14; }
+.btn-success:not(:disabled):hover {
+  background: var(--success); color: #0a2a14;
+  box-shadow: 0 0 0 1px rgba(46,204,113,0.4), 0 0 14px rgba(46,204,113,0.2);
+}
+.btn-success:not(:disabled):active { transform: scale(0.97); }
 
 /* ── Empty / error states ── */
 #empty-state {
   flex: 1; display: flex; flex-direction: column;
   align-items: center; justify-content: center;
-  gap: 12px; color: #333; text-align: center;
-  padding: 40px;
+  gap: 14px; text-align: center;
+  padding: 48px 32px;
 }
-#empty-state i { font-size: 36px; color: #222; }
-#empty-state p { font-size: 12px; max-width: 320px; line-height: 1.6; }
-#empty-state small { font-size: 10px; color: #2a2a2a; }
+#empty-state .es-icon-wrap {
+  width: 64px; height: 64px;
+  border-radius: var(--r-xl);
+  background: var(--c-accent-muted);
+  border: 1px solid var(--c-accent-ring);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 26px; color: var(--c-accent);
+  box-shadow: 0 0 32px var(--c-accent-glow), 0 0 0 1px var(--c-accent-ring);
+  margin-bottom: 4px;
+}
+#empty-state .es-title {
+  font-size: 14px; font-weight: 700;
+  color: var(--white); letter-spacing: -0.02em; line-height: 1.3;
+}
+#empty-state .es-body {
+  font-size: 11px; color: var(--gray);
+  max-width: 320px; line-height: 1.6;
+}
+#empty-state .es-steps {
+  display: flex; flex-direction: column; gap: 6px;
+  align-items: flex-start; margin-top: 4px;
+}
+#empty-state .es-step {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 11px; color: var(--muted);
+}
+#empty-state .es-step-num {
+  width: 18px; height: 18px; border-radius: 50%;
+  background: var(--c-bg-raised); border: 1px solid var(--c-border-default);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 9px; font-weight: 700; color: var(--gray);
+  flex-shrink: 0;
+}
+#empty-state small { font-size: 9px; color: var(--muted); max-width: 280px; line-height: 1.5; }
 
 /* ── Category group ── */
 .cat-group {
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: 10px;
+  background: var(--c-bg-elevated);
+  border: 1px solid var(--c-border-subtle);
+  border-radius: var(--r-lg);
   overflow: hidden;
+  position: relative;
+  transition: box-shadow 0.15s ease, border-color 0.15s ease;
+}
+.cat-group:hover {
+  box-shadow: 0 4px 20px rgba(0,0,0,0.4), 0 0 0 1px var(--c-accent-ring);
+  border-color: var(--c-border-default);
 }
 .cat-header {
-  display: flex; align-items: center; gap: 8px;
-  padding: 10px 14px;
+  display: flex; align-items: center; gap: 10px;
+  padding: 11px 16px 10px;
   background: rgba(255,255,255,0.02);
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--c-border-subtle);
+  cursor: pointer; user-select: none;
+  transition: background 0.13s ease;
 }
+.cat-header:hover { background: rgba(255,255,255,0.03); }
 .cat-icon {
-  width: 24px; height: 24px;
-  border-radius: 6px;
+  width: 28px; height: 28px;
+  border-radius: var(--r-sm);
   display: flex; align-items: center; justify-content: center;
-  font-size: 11px;
+  font-size: 12px;
   flex-shrink: 0;
 }
 .cat-name { font-size: 12px; font-weight: 700; color: var(--white); }
-.cat-desc { font-size: 10px; color: #444; margin-left: auto; }
+.cat-desc { font-size: 10px; color: var(--muted); margin-left: auto; }
 
 /* ── Setting row ── */
 .setting-row {
   display: grid;
-  grid-template-columns: 1fr 140px 60px;
+  grid-template-columns: 1fr 150px auto;
   align-items: center;
   gap: 10px;
-  padding: 10px 14px;
-  border-bottom: 1px solid rgba(255,255,255,0.03);
-  transition: background 0.1s;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--c-border-subtle);
+  transition: background 0.13s ease;
+  min-height: 48px;
+  position: relative;
 }
 .setting-row:last-child { border-bottom: none; }
-.setting-row:hover { background: rgba(255,255,255,0.02); }
-.setting-row.is-changed { background: rgba(255,46,99,0.05); }
+.setting-row:hover { background: var(--c-bg-raised); }
+.setting-row.is-changed {
+  background: var(--c-accent-muted);
+  border-left: 3px solid var(--c-accent);
+  padding-left: 13px;
+}
+.setting-row.is-changed .setting-label > div > .slt {
+  color: color-mix(in srgb, var(--c-text-primary) 90%, var(--c-accent));
+}
 .setting-label {
   font-size: 11px; font-weight: 500;
   color: var(--white);
   display: flex; flex-direction: column; gap: 2px;
 }
-.setting-label small { font-size: 9px; color: #383838; font-weight: 400; }
+.setting-label small { font-size: 9px; color: var(--muted); font-weight: 400; }
 .setting-label .missing-tag {
-  font-size: 9px; color: #5a2a2a;
+  font-size: 9px; color: var(--danger);
   background: rgba(231,76,60,0.1);
   border: 1px solid rgba(231,76,60,0.2);
   border-radius: 3px; padding: 1px 5px;
@@ -212,31 +302,37 @@ html, body {
 }
 .setting-control select {
   width: 100%;
-  background: #0f0f0f;
-  border: 1px solid #222;
-  border-radius: 6px;
-  padding: 5px 8px;
+  background: var(--c-bg-base);
+  border: 1px solid var(--c-border-default);
+  border-radius: var(--r-sm);
+  padding: 6px 8px;
   color: var(--white);
   font-size: 11px;
   cursor: pointer;
   outline: none;
-  transition: border-color 0.12s;
+  transition: border-color 0.13s ease, box-shadow 0.13s ease;
 }
-.setting-control select:focus { border-color: rgba(255,46,99,0.5); }
-.setting-control select.is-rec { border-color: rgba(46,204,113,0.35); }
+.setting-control select:focus {
+  border-color: var(--c-accent);
+  box-shadow: 0 0 0 2px var(--c-accent-ring);
+}
+.setting-control select.is-rec {
+  border-color: rgba(46,204,113,0.40);
+  box-shadow: 0 0 0 1px rgba(46,204,113,0.15);
+}
 .impact-pill {
   display: inline-flex; align-items: center; justify-content: center;
-  border-radius: 20px;
+  border-radius: var(--r-pill);
   padding: 2px 8px;
   font-size: 9px; font-weight: 700;
   letter-spacing: 0.04em;
   text-transform: uppercase;
   white-space: nowrap;
 }
-.imp-low       { background: rgba(74,222,128,0.1);  color: #4ade80; border: 1px solid rgba(74,222,128,0.25); }
-.imp-medium    { background: rgba(250,204,21,0.1);  color: #facc15; border: 1px solid rgba(250,204,21,0.25); }
-.imp-high      { background: rgba(249,115,22,0.1);  color: #f97316; border: 1px solid rgba(249,115,22,0.25); }
-.imp-very-high { background: rgba(239,68,68,0.12);  color: #ef4444; border: 1px solid rgba(239,68,68,0.3); }
+.imp-low       { background: rgba(74,222,128,0.14); color: #4ade80; border: 1px solid rgba(74,222,128,0.35); }
+.imp-medium    { background: rgba(250,204,21,0.14); color: #fde047; border: 1px solid rgba(250,204,21,0.35); }
+.imp-high      { background: rgba(249,115,22,0.14); color: #fb923c; border: 1px solid rgba(249,115,22,0.35); }
+.imp-very-high { background: rgba(239,68,68,0.18);  color: #f87171; border: 1px solid rgba(239,68,68,0.40); }
 
 /* ── Footer action bar ── */
 #footer {
@@ -245,73 +341,374 @@ html, body {
   align-items: center;
   gap: 8px;
   padding: 10px 16px;
-  background: var(--bg-dark);
-  border-top: 1px solid var(--border);
+  background: var(--c-bg-base);
+  border-top: 1px solid var(--c-border-subtle);
+  position: relative;
+}
+#footer::before {
+  content: '';
+  position: absolute; top: 0; left: 0; right: 0; height: 1px;
+  background: linear-gradient(90deg, transparent, var(--c-accent-ring), transparent);
+  pointer-events: none;
 }
 #footer-info {
   flex: 1;
-  font-size: 10px; color: #383838;
+  font-size: 10px; color: var(--muted);
   line-height: 1.5;
 }
-#footer-info span { color: #555; }
+#footer-info span { color: var(--gray); }
 #changes-count {
   font-size: 10px;
-  color: var(--pink);
-  background: var(--pink-dim);
-  border: 1px solid rgba(255,46,99,0.3);
-  border-radius: 20px;
-  padding: 2px 9px;
-  font-weight: 600;
+  color: var(--c-accent);
+  background: var(--c-accent-muted);
+  border: 1px solid var(--c-accent-ring);
+  border-radius: var(--r-pill);
+  padding: 3px 10px;
+  font-weight: 700;
   display: none;
+  box-shadow: 0 0 8px var(--c-accent-glow);
 }
 
 /* ── Preset bar ── */
 #preset-bar {
   display: none;
-  align-items: center;
-  gap: 8px;
+  flex-direction: column;
+  gap: 6px;
 }
-.preset-label {
-  font-size: 10px; font-weight: 600;
-  color: #444;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  white-space: nowrap;
-  margin-right: 2px;
+
+/* 3-column card grid */
+.preset-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
 }
-.preset-btn {
-  display: inline-flex; align-items: center; gap: 6px;
-  border-radius: 8px;
-  padding: 7px 14px;
-  font-size: 11px; font-weight: 600;
-  cursor: pointer; transition: all 0.12s;
-  border: 1px solid transparent;
-  white-space: nowrap;
+.preset-card {
+  display: flex; flex-direction: column; align-items: flex-start;
+  gap: 3px;
+  padding: 10px 12px;
+  border-radius: var(--r-md);
+  border: 1px solid var(--c-border-default);
+  background: var(--c-bg-elevated);
+  cursor: pointer;
+  transition: background 0.13s ease, border-color 0.13s ease,
+              transform 0.15s ease, box-shadow 0.13s ease;
+  -webkit-app-region: no-drag;
+  position: relative; overflow: hidden;
+  text-align: left;
 }
-.preset-btn:hover { transform: translateY(-1px); }
-.preset-btn:active { transform: translateY(0); }
-.preset-quality {
-  background: rgba(52,152,219,0.1);
-  border-color: rgba(52,152,219,0.3);
-  color: #3498DB;
+.preset-card:hover { transform: translateY(-2px); }
+.preset-card:active { transform: scale(0.97); }
+.preset-card-icon {
+  width: 26px; height: 26px; border-radius: var(--r-sm);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; flex-shrink: 0;
+  margin-bottom: 3px;
+}
+.preset-card-name {
+  font-size: 11px; font-weight: 700; color: var(--white); line-height: 1.2;
+}
+.preset-card-hint {
+  font-size: 9px; color: var(--muted); font-weight: 400; line-height: 1.3;
+}
+
+/* Per-preset color theming */
+.preset-quality { border-color: rgba(52,152,219,0.25); }
+.preset-quality .preset-card-icon {
+  background: rgba(52,152,219,0.12); color: #3498DB;
+  border: 1px solid rgba(52,152,219,0.25);
 }
 .preset-quality:hover {
-  background: rgba(52,152,219,0.18);
-  border-color: rgba(52,152,219,0.55);
+  background: rgba(52,152,219,0.06);
+  border-color: rgba(52,152,219,0.5);
+  box-shadow: 0 4px 16px rgba(52,152,219,0.14);
 }
-.preset-performance {
-  background: rgba(255,46,99,0.1);
-  border-color: rgba(255,46,99,0.3);
-  color: var(--pink);
+
+.preset-balanced { border-color: rgba(46,204,113,0.25); }
+.preset-balanced .preset-card-icon {
+  background: rgba(46,204,113,0.12); color: #2ECC71;
+  border: 1px solid rgba(46,204,113,0.25);
+}
+.preset-balanced:hover {
+  background: rgba(46,204,113,0.06);
+  border-color: rgba(46,204,113,0.5);
+  box-shadow: 0 4px 16px rgba(46,204,113,0.14);
+}
+
+.preset-performance { border-color: var(--c-accent-ring); }
+.preset-performance .preset-card-icon {
+  background: var(--c-accent-muted); color: var(--c-accent);
+  border: 1px solid var(--c-accent-ring);
 }
 .preset-performance:hover {
-  background: rgba(255,46,99,0.18);
-  border-color: rgba(255,46,99,0.55);
+  background: var(--c-accent-muted);
+  border-color: var(--c-accent);
+  box-shadow: 0 4px 16px var(--c-accent-glow);
 }
-.preset-divider {
-  width: 1px; height: 20px;
-  background: #222;
-  margin: 0 2px;
+
+/* Smart Recommend — featured full-width */
+.preset-smart-btn {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  padding: 10px 16px;
+  border-radius: var(--r-md);
+  border: 1px solid var(--c-accent-ring);
+  background: var(--c-accent-muted);
+  color: var(--c-accent);
+  font-size: 12px; font-weight: 700;
+  cursor: pointer;
+  transition: background 0.13s ease, border-color 0.13s ease, box-shadow 0.13s ease;
+  position: relative; overflow: hidden;
+  -webkit-app-region: no-drag;
+}
+.preset-smart-btn::before {
+  content: ''; position: absolute; top: 0; left: -100%; width: 60%; height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.08), transparent);
+  transform: skewX(-20deg);
+  transition: left 0.5s ease;
+  pointer-events: none;
+}
+.preset-smart-btn:hover {
+  background: color-mix(in srgb, var(--c-accent-muted) 70%, var(--c-accent));
+  border-color: var(--c-accent);
+  box-shadow: 0 0 0 1px var(--c-accent-ring), 0 4px 20px var(--c-accent-glow);
+}
+.preset-smart-btn:hover::before { left: 160%; }
+.preset-smart-btn:active { transform: scale(0.98); }
+
+/* Utility row (Recommended + Undo) */
+.preset-utility-row {
+  display: flex; align-items: center; gap: 6px;
+}
+
+/* ── Search bar ── */
+#search-bar {
+  display: none;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 10px;
+  background: var(--c-bg-elevated);
+  border: 1px solid var(--c-border-default);
+  border-radius: var(--r-md);
+  transition: border-color 0.13s ease, box-shadow 0.13s ease;
+}
+#search-bar:focus-within {
+  border-color: var(--c-accent);
+  box-shadow: 0 0 0 3px var(--c-accent-ring);
+}
+#search-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  padding: 3px 4px;
+  color: var(--white);
+  font-size: 11px;
+  outline: none;
+}
+#search-clear {
+  background: none; border: none; color: var(--muted); cursor: pointer; font-size: 14px; padding: 2px 4px; line-height: 1;
+}
+#search-clear:hover { color: var(--pink); }
+.search-hidden { display: none !important; }
+mark.sh { background: var(--c-accent-muted); color: var(--c-accent); border-radius: 2px; padding: 0 1px; }
+
+/* ── Profile bar ── */
+#profile-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: var(--c-bg-elevated);
+  border: 1px solid var(--c-border-subtle);
+  border-radius: var(--r-md);
+}
+#profile-bar .profile-label {
+  font-size: 9px; font-weight: 800;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+#profile-select {
+  flex: 1;
+  padding: 5px 8px;
+  border-radius: var(--r-sm);
+  border: 1px solid var(--c-border-default);
+  background: var(--c-bg-base);
+  color: var(--white);
+  font-size: 11px;
+  outline: none;
+  transition: border-color 0.13s ease, box-shadow 0.13s ease;
+}
+#profile-select:focus {
+  border-color: var(--c-accent);
+  box-shadow: 0 0 0 2px var(--c-accent-ring);
+}
+.btn-profile-save {
+  font-size: 10px; padding: 4px 12px;
+  background: var(--c-accent-muted);
+  border: 1px solid var(--c-accent-ring);
+  color: var(--c-accent);
+  border-radius: var(--r-sm);
+  cursor: pointer; font-weight: 700;
+  transition: background 0.13s ease, box-shadow 0.13s ease;
+  white-space: nowrap;
+}
+.btn-profile-save:hover {
+  background: var(--c-accent); color: white;
+  box-shadow: 0 0 0 1px var(--c-accent-ring);
+}
+.btn-profile-delete {
+  font-size: 10px; padding: 4px 10px;
+  background: transparent;
+  border: none;
+  color: var(--danger);
+  cursor: pointer;
+  border-radius: var(--r-sm);
+  transition: background 0.13s ease;
+  white-space: nowrap;
+}
+.btn-profile-delete:hover { background: var(--danger-bg); }
+
+/* ── Performance budget meter ── */
+#perf-budget-bar {
+  display: none;
+  padding: 4px 2px 2px;
+}
+#perf-budget-track {
+  height: 8px;
+  background: var(--c-bg-raised);
+  border: 1px solid var(--c-border-subtle);
+  border-radius: var(--r-pill);
+  overflow: hidden;
+  margin-bottom: 4px;
+  position: relative;
+}
+#perf-budget-fill {
+  height: 100%;
+  border-radius: var(--r-pill);
+  transition: width 0.35s ease, background 0.35s ease;
+  position: relative;
+}
+#perf-budget-fill::after {
+  content: '';
+  position: absolute; top: 0; right: 0; bottom: 0; width: 30px;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.18));
+  border-radius: 0 var(--r-pill) var(--r-pill) 0;
+  pointer-events: none;
+}
+#perf-budget-label {
+  font-size: 9px;
+  color: var(--c-accent);
+  font-weight: 600;
+  text-align: right;
+  letter-spacing: 0.02em;
+}
+
+/* ── Collapsible category ── */
+.cat-header:hover .cat-name { color: var(--white); }
+.cat-chevron { margin-left: auto; color: var(--muted); font-size: 11px; transition: transform 0.2s ease; flex-shrink: 0; }
+.cat-collapsed .cat-chevron { transform: rotate(-90deg); }
+.cat-rows { overflow: hidden; transition: max-height 0.22s ease; }
+
+/* ── Tooltip ── */
+#tt-popup {
+  position: fixed;
+  z-index: 7000;
+  max-width: 240px;
+  background: var(--c-bg-elevated);
+  border: 1px solid var(--c-border-default);
+  border-radius: var(--r-sm);
+  padding: 8px 10px;
+  font-size: 10px;
+  color: var(--gray);
+  line-height: 1.5;
+  pointer-events: none;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+  display: none;
+}
+.tt-icon { color: var(--muted); cursor: help; margin-left: 5px; font-size: 10px; vertical-align: middle; transition: color 0.1s; }
+.tt-icon:hover { color: var(--gray); }
+
+/* ── Split export button ── */
+#export-split { position: relative; display: none; }
+#export-split.loaded { display: flex; }
+#btn-export-caret {
+  padding: 5px 7px;
+  font-size: 10px;
+  border-left: 1px solid rgba(255,255,255,0.08) !important;
+  border-radius: 0 7px 7px 0 !important;
+}
+#btn-export-main { border-radius: 7px 0 0 7px !important; }
+#export-menu {
+  position: absolute;
+  bottom: calc(100% + 4px);
+  right: 0;
+  background: var(--c-bg-elevated);
+  border: 1px solid var(--c-border-default);
+  border-radius: var(--r-md);
+  padding: 4px;
+  min-width: 140px;
+  display: none;
+  z-index: 6500;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.6), 0 2px 8px rgba(0,0,0,0.4);
+}
+#export-menu.open { display: block; }
+.export-menu-item {
+  padding: 6px 10px;
+  font-size: 10px;
+  color: var(--gray);
+  border-radius: 5px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.export-menu-item:hover { background: rgba(255,255,255,0.06); color: var(--white); }
+
+/* ── Undo button in preset bar ── */
+#btn-undo { opacity: 0.3; pointer-events: none; }
+#btn-undo.active { opacity: 1; pointer-events: auto; }
+
+/* ── Reset button in footer ── */
+#btn-reset { display: none; }
+#btn-reset.visible { display: inline-flex; }
+
+/* ── Keyboard hint in footer ── */
+#kb-hints { font-size: 9px; color: var(--muted); }
+
+@keyframes save-nudge {
+  0%   { box-shadow: 0 0 0 0   rgba(var(--pink-rgb,124,110,248), 0.7); }
+  50%  { box-shadow: 0 0 0 8px rgba(var(--pink-rgb,124,110,248), 0.25); }
+  100% { box-shadow: 0 0 0 0   rgba(var(--pink-rgb,124,110,248), 0); }
+}
+#btn-save.save-nudge { animation: save-nudge 0.55s ease-out 2; }
+
+/* ── FiveM toast ── */
+#fivem-settings-toast {
+  position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%);
+  background: var(--c-bg-elevated);
+  border: 1px solid var(--c-border-default);
+  color: var(--white);
+  padding: 9px 18px;
+  border-radius: var(--r-md);
+  font-size: 11px;
+  z-index: 8500;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+  white-space: nowrap;
+  pointer-events: none;
+}
+#fivem-settings-toast.toast-hidden {
+  opacity: 0;
+  transform: translateX(-50%) translateY(6px);
+}
+
+/* ── FiveM running warning banner ── */
+#fivem-warn-banner {
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 16px;
+  background: rgba(230,126,34,0.08);
+  border-top: 1px solid var(--warning-bd);
+  flex-shrink: 0;
 }
 
 </style>
@@ -323,7 +720,7 @@ html, body {
     <div class="tb-icon"><i class="fa fa-sliders"></i></div>
     <div style="flex:1">
       <div class="tb-title">FiveM <span>Graphics</span> Settings</div>
-      <div class="tb-subtitle">gta5_settings.xml editor</div>
+      <div class="tb-subtitle" id="lbl-title-sub">gta5_settings.xml editor</div>
     </div>
     <button class="tb-close" onclick="window.api.closeFivemSettings()"><i class="fa fa-xmark"></i></button>
   </div>
@@ -335,111 +732,319 @@ html, body {
     <div>
       <div id="path-row">
         <input id="manual-path" type="text" placeholder="Optional: paste full path to gta5_settings.xml if auto-detect fails" spellcheck="false">
-        <button class="btn btn-ghost" id="btn-load" onclick="loadSettings()"><i class="fa fa-rotate"></i> Load</button>
+        <button class="btn btn-ghost" id="btn-load" onclick="loadSettings()"><i class="fa fa-rotate"></i> <span id="lbl-load-btn">Load</span></button>
       </div>
       <div id="path-status"></div>
     </div>
 
     <!-- Preset bar -->
     <div id="preset-bar">
-      <span class="preset-label"><i class="fa fa-wand-magic-sparkles"></i> Presets</span>
-      <div class="preset-divider"></div>
-      <button class="preset-btn preset-quality" onclick="applyPreset('quality')">
-        <i class="fa fa-gem"></i> Quality
+      <!-- 3-column card grid -->
+      <div class="preset-grid">
+        <button class="preset-card preset-quality" onclick="applyPreset('quality')">
+          <div class="preset-card-icon"><i class="fa fa-gem"></i></div>
+          <div class="preset-card-name" id="lbl-preset-quality">Quality</div>
+          <div class="preset-card-hint" id="lbl-preset-quality-hint">Best visuals</div>
+        </button>
+        <button class="preset-card preset-balanced" onclick="applyPreset('balanced')">
+          <div class="preset-card-icon"><i class="fa fa-gauge-high"></i></div>
+          <div class="preset-card-name" id="lbl-preset-balanced">Balanced</div>
+          <div class="preset-card-hint" id="lbl-preset-balanced-hint">Best all-round</div>
+        </button>
+        <button class="preset-card preset-performance" onclick="applyPreset('performance')">
+          <div class="preset-card-icon"><i class="fa fa-bolt"></i></div>
+          <div class="preset-card-name" id="lbl-preset-performance">Performance</div>
+          <div class="preset-card-hint" id="lbl-preset-performance-hint">Max FPS</div>
+        </button>
+      </div>
+      <!-- Smart Recommend — featured full-width -->
+      <button class="preset-smart-btn" onclick="applySmartPreset()" id="btn-smart-recommend">
+        <i class="fa fa-microchip"></i>
+        <span id="lbl-smart-recommend">Smart Recommend</span>
+        <span id="lbl-smart-recommend-sub" style="font-size:9px;font-weight:400;color:var(--muted);margin-left:4px">— detects your GPU tier</span>
       </button>
-      <button class="preset-btn preset-performance" onclick="applyPreset('performance')">
-        <i class="fa fa-bolt"></i> Performance
-      </button>
-      <div class="preset-divider"></div>
-      <button class="btn btn-ghost" style="font-size:10px;padding:5px 10px;" onclick="applyRecommended()">
-        <i class="fa fa-wand-sparkles"></i> Recommended
-      </button>
+      <!-- Utility row -->
+      <div class="preset-utility-row">
+        <button class="btn btn-ghost" style="font-size:10px;padding:4px 10px" onclick="applyRecommended()">
+          <i class="fa fa-wand-sparkles"></i> <span id="lbl-preset-recommended">Recommended</span>
+        </button>
+        <button class="btn btn-ghost" id="btn-undo" style="font-size:10px;padding:4px 10px;margin-left:auto" onclick="undoLast()" title="Undo last preset/profile">
+          <i class="fa fa-rotate-left"></i> <span id="lbl-undo-btn">Undo</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Hardware info strip (shown after Smart Recommend) -->
+    <div id="smart-hw-info" style="display:none;font-size:10px;color:var(--muted);padding:3px 2px 0;text-align:left"></div>
+
+    <!-- Performance budget meter -->
+    <div id="perf-budget-bar">
+      <div id="perf-budget-track"><div id="perf-budget-fill"></div></div>
+      <div id="perf-budget-label"></div>
+    </div>
+
+    <!-- Search bar -->
+    <div id="search-bar">
+      <i class="fa fa-magnifying-glass" style="color:var(--muted);font-size:11px;flex-shrink:0"></i>
+      <input id="search-input" type="text" spellcheck="false" oninput="filterSettings(this.value)" onkeydown="if(event.key==='Escape'){clearSearch();event.stopPropagation()}" placeholder="Search settings…">
+      <button id="search-clear" onclick="clearSearch()" title="Clear search" style="display:none"><i class="fa fa-xmark"></i></button>
+    </div>
+
+    <!-- Profile toolbar -->
+    <div id="profile-bar" style="display:flex">
+      <span class="profile-label" id="lbl-profiles">Profiles</span>
+      <select id="profile-select" onchange="loadProfileOnChange()">
+        <option value="" id="opt-profile-placeholder">— Select profile —</option>
+      </select>
+      <button class="btn-profile-save" onclick="saveProfile()" id="btn-profile-save"><span id="lbl-profile-save-btn">Save</span></button>
+      <button class="btn-profile-delete" onclick="deleteProfile()" id="btn-profile-delete"><span id="lbl-profile-delete-btn">Delete</span></button>
     </div>
 
     <!-- Settings body (populated by JS) -->
     <div id="settings-body">
       <div id="empty-state">
-        <i class="fa fa-sliders"></i>
-        <p>Load your FiveM graphics settings to get started.</p>
-        <small>File: %APPDATA%\CitizenFX\gta5_settings.xml<br>If the file doesn't exist, open FiveM → Settings → Graphics, change any option, then close FiveM.</small>
+        <div class="es-icon-wrap"><i class="fa fa-sliders"></i></div>
+        <div class="es-title" id="lbl-empty-title">Load your FiveM graphics settings to get started.</div>
+        <div class="es-body" id="lbl-empty-body">Auto-detection reads from <code style="color:var(--gray);font-family:'Geist Mono',monospace">%APPDATA%\CitizenFX\gta5_settings.xml</code></div>
+        <div class="es-steps">
+          <div class="es-step"><span class="es-step-num">1</span><span id="lbl-empty-step1">Click Load to auto-detect the file</span></div>
+          <div class="es-step"><span class="es-step-num">2</span><span id="lbl-empty-step2">Adjust settings using the dropdowns</span></div>
+          <div class="es-step"><span class="es-step-num">3</span><span id="lbl-empty-step3">Save — then relaunch FiveM</span></div>
+        </div>
+        <small id="lbl-empty-small">If the file doesn't exist, open FiveM → Settings → Graphics, change any option, then close FiveM.</small>
       </div>
     </div>
 
   </div>
 
   <!-- FiveM running warning banner (shown before first save) -->
-  <div id="fivem-warn-banner" style="display:none;align-items:flex-start;gap:12px;padding:12px 16px;background:rgba(230,126,34,0.08);border-top:1px solid rgba(230,126,34,0.25);flex-shrink:0">
+  <div id="fivem-warn-banner" style="display:none">
     <i class="fa fa-triangle-exclamation" style="color:#e67e22;font-size:16px;margin-top:1px;flex-shrink:0"></i>
     <div style="flex:1">
-      <div style="font-size:12px;font-weight:700;color:#e67e22;margin-bottom:3px">Make sure FiveM is fully closed before saving</div>
-      <div style="font-size:10px;color:#8a8a9a;line-height:1.5">FiveM writes back to <code style="color:#aaa">gta5_settings.xml</code> when you exit the graphics menu or quit the game — this will overwrite your saved settings. Close FiveM completely first, then save here, then relaunch FiveM without opening Graphics Settings.</div>
+      <div id="lbl-warn-title" style="font-size:12px;font-weight:700;color:#e67e22;margin-bottom:3px">Make sure FiveM is fully closed before saving</div>
+      <div id="lbl-warn-body" style="font-size:10px;color:#8a8a9a;line-height:1.5">FiveM writes back to <code style="color:#aaa">gta5_settings.xml</code> when you exit the graphics menu or quit the game — this will overwrite your saved settings. Close FiveM completely first, then save here, then relaunch FiveM without opening Graphics Settings.</div>
     </div>
     <div style="display:flex;gap:6px;flex-shrink:0;align-items:center">
-      <button class="btn btn-ghost" style="font-size:10px;padding:5px 10px" onclick="document.getElementById('fivem-warn-banner').style.display='none'">Cancel</button>
-      <button class="btn btn-primary" style="font-size:10px;padding:5px 12px;background:#e67e22;border-color:#e67e22" onclick="confirmSaveAnyway()"><i class="fa fa-floppy-disk"></i> Save Anyway</button>
+      <button class="btn btn-ghost" id="lbl-warn-cancel" style="font-size:10px;padding:5px 10px" onclick="document.getElementById('fivem-warn-banner').style.display='none'">Cancel</button>
+      <button class="btn btn-primary" style="font-size:10px;padding:5px 12px;background:#e67e22;border-color:#e67e22" onclick="confirmSaveAnyway()"><i class="fa fa-floppy-disk"></i> <span id="lbl-warn-save-anyway">Save Anyway</span></button>
     </div>
   </div>
 
   <!-- Footer -->
   <div id="footer">
     <div id="footer-info">
-      <span id="path-display">No file loaded</span>
+      <span id="path-display"><!-- set by JS --></span>
+      <span id="kb-hints" style="display:block;margin-top:2px">Ctrl+S save · Ctrl+R reload · Ctrl+Z undo · / search</span>
     </div>
     <span id="changes-count">0 changes</span>
-    <button class="btn btn-primary" id="btn-save" onclick="saveSettings()" disabled><i class="fa fa-floppy-disk"></i> Save Settings</button>
+    <button class="btn btn-ghost" id="btn-reset" onclick="resetToFileValues()" style="padding:5px 10px;font-size:10px;color:var(--pink);border-color:rgba(255,46,99,0.35)"><i class="fa fa-rotate-left"></i> <span id="lbl-reset-btn">Reset to file</span></button>
+    <!-- Split export button -->
+    <div id="export-split">
+      <button class="btn btn-ghost" id="btn-export-main" onclick="exportFormat('text')" style="padding:5px 10px;font-size:10px"><i class="fa fa-copy"></i> <span id="lbl-export-btn">Export</span></button>
+      <button class="btn btn-ghost" id="btn-export-caret" onclick="toggleExportMenu(event)"><i class="fa fa-caret-up"></i></button>
+      <div id="export-menu">
+        <div class="export-menu-item" onclick="exportFormat('text')"><i class="fa fa-align-left" style="width:14px"></i> <span id="lbl-export-text">Export as text</span></div>
+        <div class="export-menu-item" onclick="exportFormat('json')"><i class="fa fa-code" style="width:14px"></i> <span id="lbl-export-json">Export as JSON</span></div>
+        <div class="export-menu-item" onclick="exportFormat('xml')"><i class="fa fa-file-code" style="width:14px"></i> <span id="lbl-export-xml">Export as XML</span></div>
+      </div>
+    </div>
+    <button class="btn btn-primary" id="btn-save" onclick="saveSettings()" disabled><i class="fa fa-floppy-disk"></i> <span id="lbl-save-btn">Save Settings</span></button>
   </div>
 </div>
 
 <script>
+// ─── i18n ─────────────────────────────────────────────────────────────────────
+const LANG_FIVEM = {
+  en: {
+    titleSub: 'gta5_settings.xml editor',
+    loadBtn: 'Load',
+    loadingFile: 'Reading settings file…',
+    noFile: 'No file loaded',
+    presetsLabel: 'Presets',
+    presetQuality: 'Quality',
+    presetBalanced: 'Balanced',
+    presetPerformance: 'Performance',
+    presetRecommended: 'Recommended',
+    presetApplied: 'Applied',
+    exportBtn: 'Export',
+    exportCopied: 'Copied!',
+    saveBtn: 'Save Settings',
+    savingBtn: 'Saving…',
+    savedBtn: 'Saved!',
+    saveError: 'Error',
+    emptyTitle: 'Load your FiveM graphics settings to get started.',
+    emptySmall: 'File: %APPDATA%\\CitizenFX\\gta5_settings.xml\nIf the file doesn\'t exist, open FiveM → Settings → Graphics, change any option, then close FiveM.',
+    pathPlaceholder: 'Optional: paste full path to gta5_settings.xml if auto-detect fails',
+    warnTitle: 'Make sure FiveM is fully closed before saving',
+    warnBody: 'FiveM writes back to gta5_settings.xml when you exit the graphics menu or quit the game — this will overwrite your saved settings. Close FiveM completely first, then save here, then relaunch FiveM without opening Graphics Settings.',
+    warnCancel: 'Cancel',
+    warnSaveAnyway: 'Save Anyway',
+    saveSuccess: 'Settings saved successfully.',
+    saveSuccessNote: 'Close FiveM completely (not just the game), then relaunch it. Do not open Graphics Settings in FiveM after relaunching — it will overwrite these values.',
+    missingTag: 'not in file — will be added on save',
+    changes: '{n} change',
+    changesPlural: '{n} changes',
+    // Category names & descs
+    catLod: 'Level of Detail', catLodDesc: 'Distance & object detail',
+    catShadows: 'Shadows', catShadowsDesc: 'Shadow quality & cost',
+    catAa: 'Anti-Aliasing', catAaDesc: 'Edge smoothing options',
+    catEnv: 'Environment', catEnvDesc: 'World detail & density',
+    catRendering: 'Rendering', catRenderingDesc: 'GPU shading & effects',
+    catEffects: 'Visual Effects', catEffectsDesc: 'DoF, blur & depth effects',
+    impLow: 'Low', impMed: 'Med', impHigh: 'High', impVeryHigh: 'Very High',
+    smartRecommendBtn: 'Smart Recommend',
+    smartHwLabel: 'Hardware detected:',
+    smartPresetApplied: 'Smart preset applied',
+    profileSelect: '— Select profile —',
+    profileSaveBtn: 'Save',
+    profileDeleteBtn: 'Delete',
+    profileNamePrompt: 'Profile name:',
+    profileSaved: 'Profile saved',
+    profileLoaded: 'Profile loaded',
+    profileDeleted: 'Profile deleted',
+    profilesLabel: 'Profiles',
+    searchPlaceholder: 'Search settings…',
+    searchClearTitle: 'Clear search',
+    resetToFile: 'Reset to file',
+    undoBtn: 'Undo',
+    exportAsText: 'Export as text',
+    exportAsJson: 'Export as JSON',
+    exportAsXml: 'Export as XML',
+    perfBudgetLight: 'Light GPU load',
+    perfBudgetMedium: 'Moderate GPU load',
+    perfBudgetHeavy: 'Heavy GPU load',
+    perfBudgetExtreme: 'Extreme GPU load',
+    perfBudgetLabel: 'Performance budget',
+    presetQualityHint: 'Best visuals',
+    presetBalancedHint: 'Best all-round',
+    presetPerformanceHint: 'Max FPS',
+    smartRecommendSub: '— detects your GPU tier',
+    emptyBody: 'Auto-detection reads from %APPDATA%\\CitizenFX\\gta5_settings.xml',
+    emptyStep1: 'Click Load to auto-detect the file',
+    emptyStep2: 'Adjust settings using the dropdowns',
+    emptyStep3: 'Save — then relaunch FiveM',
+  },
+  fi: {
+    titleSub: 'gta5_settings.xml -muokkain',
+    loadBtn: 'Lataa',
+    loadingFile: 'Luetaan asetustiedostoa…',
+    noFile: 'Ei tiedostoa ladattu',
+    presetsLabel: 'Esiasetukset',
+    presetQuality: 'Laatu',
+    presetBalanced: 'Tasapainoinen',
+    presetPerformance: 'Suorituskyky',
+    presetRecommended: 'Suositeltu',
+    presetApplied: 'Käytetty',
+    exportBtn: 'Vie',
+    exportCopied: 'Kopioitu!',
+    saveBtn: 'Tallenna asetukset',
+    savingBtn: 'Tallennetaan…',
+    savedBtn: 'Tallennettu!',
+    saveError: 'Virhe',
+    emptyTitle: 'Lataa FiveM-grafiikka-asetuksesi aloittaaksesi.',
+    emptySmall: 'Tiedosto: %APPDATA%\\CitizenFX\\gta5_settings.xml\nJos tiedostoa ei ole, avaa FiveM → Asetukset → Grafiikka, muuta jotain asetusta ja sulje FiveM.',
+    pathPlaceholder: 'Valinnainen: liitä koko polku gta5_settings.xml-tiedostoon, jos automaattinen haku epäonnistuu',
+    warnTitle: 'Varmista, että FiveM on täysin suljettu ennen tallentamista',
+    warnBody: 'FiveM kirjoittaa gta5_settings.xml-tiedoston uudelleen, kun poistut grafiikka-valikosta tai suljet pelin — tämä ylikirjoittaa tallennetut asetuksesi. Sulje FiveM ensin kokonaan, tallenna sitten täällä ja käynnistä FiveM uudelleen avaamatta grafiikka-asetuksia.',
+    warnCancel: 'Peruuta',
+    warnSaveAnyway: 'Tallenna silti',
+    saveSuccess: 'Asetukset tallennettu onnistuneesti.',
+    saveSuccessNote: 'Sulje FiveM kokonaan (ei vain peliä), käynnistä sitten uudelleen. Älä avaa FiveMin grafiikka-asetuksia uudelleenkäynnistyksen jälkeen — se ylikirjoittaa arvot.',
+    missingTag: 'ei tiedostossa — lisätään tallennettaessa',
+    changes: '{n} muutos',
+    changesPlural: '{n} muutosta',
+    catLod: 'Yksityiskohtien taso', catLodDesc: 'Etäisyys & objektien taso',
+    catShadows: 'Varjot', catShadowsDesc: 'Varjojen laatu & kustannus',
+    catAa: 'Anti-Aliasing', catAaDesc: 'Reunojen tasoitus',
+    catEnv: 'Ympäristö', catEnvDesc: 'Maailman taso & tiheys',
+    catRendering: 'Renderöinti', catRenderingDesc: 'GPU-varjostimet & efektit',
+    catEffects: 'Visuaaliset efektit', catEffectsDesc: 'DoF, blur & syvyysefektit',
+    impLow: 'Matala', impMed: 'Keski', impHigh: 'Korkea', impVeryHigh: 'Erittäin korkea',
+    smartRecommendBtn: 'Älykäs suositus',
+    smartHwLabel: 'Laitteisto havaittu:',
+    smartPresetApplied: 'Älykäs esiasetus käytetty',
+    profileSelect: '— Valitse profiili —',
+    profileSaveBtn: 'Tallenna',
+    profileDeleteBtn: 'Poista',
+    profileNamePrompt: 'Profiilin nimi:',
+    profileSaved: 'Profiili tallennettu',
+    profileLoaded: 'Profiili ladattu',
+    profileDeleted: 'Profiili poistettu',
+    profilesLabel: 'Profiilit',
+    searchPlaceholder: 'Etsi asetuksia…',
+    searchClearTitle: 'Tyhjennä haku',
+    resetToFile: 'Palauta tiedostosta',
+    undoBtn: 'Kumoa',
+    exportAsText: 'Vie tekstinä',
+    exportAsJson: 'Vie JSON:na',
+    exportAsXml: 'Vie XML:nä',
+    perfBudgetLight: 'Kevyt GPU-kuorma',
+    perfBudgetMedium: 'Kohtalainen GPU-kuorma',
+    perfBudgetHeavy: 'Raskas GPU-kuorma',
+    perfBudgetExtreme: 'Äärimmäinen GPU-kuorma',
+    perfBudgetLabel: 'Suorituskykybudjetti',
+    presetQualityHint: 'Parhaat visuaalit',
+    presetBalancedHint: 'Paras yleissuorituskyky',
+    presetPerformanceHint: 'Maksimi FPS',
+    smartRecommendSub: '— tunnistaa GPU-tason',
+    emptyBody: 'Automaattinen haku lukee tiedoston %APPDATA%\\CitizenFX\\gta5_settings.xml',
+    emptyStep1: 'Klikkaa Lataa automaattista hakua varten',
+    emptyStep2: 'Muuta asetuksia pudotusvalikoilla',
+    emptyStep3: 'Tallenna — käynnistä sitten FiveM uudelleen',
+  }
+}
+let _langF = 'en'
+function tF(key) { return (LANG_FIVEM[_langF] || LANG_FIVEM.en)[key] || LANG_FIVEM.en[key] || key }
+
 // ─── Category definitions ─────────────────────────────────────────────────────
 const CATEGORIES = [
   {
     id: 'lod',
-    name: 'Level of Detail',
+    get name() { return tF('catLod') },
     icon: '<i class="fa fa-layer-group"></i>',
     color: '#f97316',
-    desc: 'Distance & object detail',
+    get desc() { return tF('catLodDesc') },
     keys: ['LodScale', 'PedLodBias', 'VehicleLodBias', 'HdStreamingInFlight']
   },
   {
     id: 'shadows',
-    name: 'Shadows',
+    get name() { return tF('catShadows') },
     icon: '<i class="fa fa-moon"></i>',
     color: '#9B59B6',
-    desc: 'Shadow quality & cost',
+    get desc() { return tF('catShadowsDesc') },
     keys: ['ShadowQuality', 'Shadow_Distance', 'Shadow_SoftShadows', 'UltraShadows_Enabled', 'Shadow_ParticleShadows', 'Shadow_LongShadows']
   },
   {
     id: 'aa',
-    name: 'Anti-Aliasing',
+    get name() { return tF('catAa') },
     icon: '<i class="fa fa-border-all"></i>',
     color: '#3498DB',
-    desc: 'Edge smoothing options',
+    get desc() { return tF('catAaDesc') },
     keys: ['MSAA', 'FXAA_Enabled', 'TXAA_Enabled', 'ReflectionMSAA']
   },
   {
     id: 'env',
-    name: 'Environment',
+    get name() { return tF('catEnv') },
     icon: '<i class="fa fa-tree"></i>',
     color: '#2ECC71',
-    desc: 'World detail & density',
+    get desc() { return tF('catEnvDesc') },
     keys: ['GrassQuality', 'WaterQuality', 'ParticleQuality', 'Lighting_FogVolumes', 'CityDensity', 'VehicleVarietyMultiplier', 'PedVarietyMultiplier']
   },
   {
     id: 'rendering',
-    name: 'Rendering',
+    get name() { return tF('catRendering') },
     icon: '<i class="fa fa-microchip"></i>',
     color: '#FF2E63',
-    desc: 'GPU shading & effects',
-    keys: ['ShaderQuality', 'ReflectionQuality', 'SSAO', 'Tessellation', 'AnisotropicFiltering', 'PostFX']
+    get desc() { return tF('catRenderingDesc') },
+    keys: ['ShaderQuality', 'ReflectionQuality', 'TextureQuality', 'SSAO', 'Tessellation', 'AnisotropicFiltering', 'PostFX']
   },
   {
     id: 'effects',
-    name: 'Visual Effects',
+    get name() { return tF('catEffects') },
     icon: '<i class="fa fa-wand-sparkles"></i>',
     color: '#F39C12',
-    desc: 'DoF, blur & depth effects',
-    keys: ['DoF', 'MotionBlurStrength']
+    get desc() { return tF('catEffectsDesc') },
+    keys: ['DoF', 'MotionBlurStrength', 'ScaleformQuality']
   }
 ]
 
@@ -475,6 +1080,8 @@ const PRESETS = {
     MotionBlurStrength:        '0.000000',  // Off — cleaner aiming
     Tessellation:              '1',         // Normal — subtle geometry detail
     AnisotropicFiltering:      '16',        // 16x — textures sharp at all angles, free
+    TextureQuality:            '2',         // High — recommended, good VRAM balance
+    ScaleformQuality:          '2',         // High — UI/minimap quality
     SSAO:                      '1',         // Normal — ambient occlusion, nice depth
     Lighting_FogVolumes:       'false',     // Off — volumetric fog is a GPU hog
     HdStreamingInFlight:       'false',     // Off — only matters if flying constantly
@@ -508,12 +1115,49 @@ const PRESETS = {
     MotionBlurStrength:        '0.000000',  // Off
     Tessellation:              '0',         // Off — no geometry subdivision
     AnisotropicFiltering:      '16',        // 16x — essentially free, keep it
+    TextureQuality:            '1',         // Normal — reduces VRAM load from server assets
+    ScaleformQuality:          '1',         // Normal — UI quality drop barely noticeable
     SSAO:                      '0',         // Off — skip ambient occlusion
     Lighting_FogVolumes:       'false',     // Off
     HdStreamingInFlight:       'false',     // Off
   },
+
+  // Balanced — solid 60+ FPS with decent visuals; good all-rounder for RP servers
+  balanced: {
+    LodScale:                  '0.750000',  // 0.75 — decent draw distance
+    PedLodBias:                '0.100000',  // slight bias
+    VehicleLodBias:            '0.100000',  // slight bias
+    ShadowQuality:             '2',         // High — noticeable visual improvement
+    ReflectionQuality:         '1',         // Normal — some reflections
+    ReflectionMSAA:            '0',         // Off
+    MSAA:                      '0',         // Off
+    FXAA_Enabled:              'true',      // On — cheap edge smoothing
+    TXAA_Enabled:              'false',     // Off
+    ParticleQuality:           '1',         // Normal
+    WaterQuality:              '1',         // Normal
+    GrassQuality:              '0',         // Off — biggest open-world FPS gain
+    ShaderQuality:             '2',         // High
+    Shadow_Distance:           '0.600000',  // mid-range
+    Shadow_SoftShadows:        '1',         // Softer
+    UltraShadows_Enabled:      'false',     // Off
+    Shadow_ParticleShadows:    'false',     // Off
+    Shadow_LongShadows:        'false',     // Off
+    CityDensity:               '0.250000',  // Low — some life but not CPU-heavy
+    VehicleVarietyMultiplier:  '0.250000',  // Low
+    PedVarietyMultiplier:      '0.250000',  // Low
+    PostFX:                    '1',         // Normal
+    DoF:                       'false',     // Off
+    MotionBlurStrength:        '0.000000',  // Off
+    Tessellation:              '0',         // Off
+    AnisotropicFiltering:      '16',        // 16x — free
+    TextureQuality:            '2',         // High — good balance
+    ScaleformQuality:          '2',         // High
+    SSAO:                      '0',         // Off
+    Lighting_FogVolumes:       'false',     // Off
+    HdStreamingInFlight:       'false',     // Off
+  },
 }
-const IMPACT_LABEL = { low: 'Low', medium: 'Med', high: 'High', 'very high': 'Very High' }
+const IMPACT_LABEL = { get low() { return tF('impLow') }, get medium() { return tF('impMed') }, get high() { return tF('impHigh') }, get 'very high'() { return tF('impVeryHigh') } }
 
 let currentDefs = []
 let currentVals = {}
@@ -530,18 +1174,18 @@ async function loadSettings() {
   const pathStatus = document.getElementById('path-status')
 
   btn.disabled = true
-  btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Loading…'
-  body.innerHTML = `<div id="empty-state"><i class="fa fa-spinner fa-spin" style="font-size:28px;color:#333"></i><p style="color:#333">Reading settings file…</p></div>`
+  btn.innerHTML = `<i class="fa fa-spinner fa-spin"></i> ${tF('loadBtn')}`
+  body.innerHTML = `<div id="empty-state"><div class="es-icon-wrap"><i class="fa fa-spinner fa-spin"></i></div><div class="es-title" style="color:var(--muted)">${tF('loadingFile')}</div></div>`
 
   const r = await window.api.fivemReadSettings(getManualPath())
   btn.disabled = false
-  btn.innerHTML = '<i class="fa fa-rotate"></i> Load'
+  btn.innerHTML = `<i class="fa fa-rotate"></i> ${tF('loadBtn')}`
 
   if (!r.ok) {
-    pathStatus.innerHTML = `<i class="fa fa-triangle-exclamation" style="color:#E74C3C"></i> ${r.reason}`
+    pathStatus.innerHTML = `<i class="fa fa-triangle-exclamation" style="color:var(--danger)"></i> ${r.reason}`
     body.innerHTML = `<div id="empty-state">
-      <i class="fa fa-triangle-exclamation" style="color:#E74C3C;font-size:32px"></i>
-      <p style="color:#555">${r.reason}</p>
+      <div class="es-icon-wrap" style="border-color:var(--danger-bd);background:var(--danger-bg);color:var(--danger);box-shadow:0 0 20px rgba(231,76,60,0.15)"><i class="fa fa-triangle-exclamation"></i></div>
+      <div class="es-title" style="color:var(--danger)">${r.reason}</div>
       ${r.hint ? `<small>${r.hint}</small>` : ''}
     </div>`
     return
@@ -550,18 +1194,27 @@ async function loadSettings() {
   currentDefs = r.defs
   currentVals = r.vals
   currentPath = r.path
-  pathStatus.innerHTML = `<i class="fa fa-check" style="color:#2ECC71"></i> ${r.path}`
-  document.getElementById('path-display').textContent = r.path
+  const srcNote = r.source === 'secondary' ? ' (secondary location)' : ''
+  pathStatus.innerHTML = `<i class="fa fa-check" style="color:var(--success)"></i> ${r.path}${srcNote}`
+  const pd = document.getElementById('path-display'); if (pd) { pd.textContent = r.path; pd._set = true }
   document.getElementById('btn-save').disabled = false
+  document.getElementById('export-split').classList.add('loaded')
   document.getElementById('preset-bar').style.display = 'flex'
+  document.getElementById('search-bar').style.display = 'flex'
+  document.getElementById('perf-budget-bar').style.display = 'block'
+  _undoStack = []
+  updateUndoButton()
 
   renderSettings()
   trackChanges()
+  updatePerfBudget()
 }
 
 function renderSettings() {
   const body = document.getElementById('settings-body')
   body.innerHTML = ''
+
+  const collapsed = (() => { try { return JSON.parse(localStorage.getItem('fivem_gfx_collapsed') || '[]') } catch { return [] } })()
 
   // Build key→def lookup
   const defMap = {}
@@ -571,20 +1224,31 @@ function renderSettings() {
     const catDefs = cat.keys.map(k => defMap[k]).filter(Boolean)
     if (!catDefs.length) continue
 
+    const isCollapsed = collapsed.includes(cat.id)
+
     const group = document.createElement('div')
     group.className = 'cat-group'
+    group.dataset.catId = cat.id
 
-    // Header
+    // Header (clickable to collapse)
     const header = document.createElement('div')
-    header.className = 'cat-header'
+    header.className = 'cat-header' + (isCollapsed ? ' cat-collapsed' : '')
     header.innerHTML = `
       <div class="cat-icon" style="background:${cat.color}18;border:1px solid ${cat.color}33;color:${cat.color}">${cat.icon}</div>
       <div class="cat-name">${cat.name}</div>
       <div class="cat-desc">${cat.desc}</div>
+      <i class="fa fa-chevron-down cat-chevron"></i>
     `
+    header.addEventListener('click', () => toggleCatCollapse(cat.id, group, header))
     group.appendChild(header)
 
-    // Rows
+    // Rows container (for collapse animation)
+    const rowsEl = document.createElement('div')
+    rowsEl.className = 'cat-rows'
+    rowsEl.id = `cat-rows-${cat.id}`
+    if (isCollapsed) rowsEl.style.maxHeight = '0'
+    else rowsEl.style.maxHeight = '2000px'
+
     for (const def of catDefs) {
       const curVal = currentVals[def.key]
       const isRec = curVal !== null && String(curVal) === String(def.rec)
@@ -605,10 +1269,14 @@ function renderSettings() {
         optionsHtml += `<option value="${v}" ${sel}>${label}</option>`
       }
 
+      const ttHtml = def.tooltip ? `<i class="fa fa-circle-info tt-icon" data-tip="${def.tooltip.replace(/"/g,'&quot;')}"></i>` : ''
+
       row.innerHTML = `
         <div class="setting-label">
-          ${def.label}
-          ${isMissing ? '<span class="missing-tag"><i class="fa fa-circle-exclamation"></i> not in file — will be added on save</span>' : ''}
+          <div style="display:flex;align-items:center;gap:0">
+            <span class="slt">${def.label}</span>${ttHtml}
+          </div>
+          ${isMissing ? `<span class="missing-tag"><i class="fa fa-circle-exclamation"></i> ${tF('missingTag')}</span>` : ''}
         </div>
         <div class="setting-control">
           <select id="sval-${def.key}" onchange="onSettingChange('${def.key}')" class="${isRec ? 'is-rec' : ''}">
@@ -617,14 +1285,21 @@ function renderSettings() {
         </div>
         <div><span class="impact-pill ${impCls}">${impLbl}</span></div>
       `
-      group.appendChild(row)
+      rowsEl.appendChild(row)
     }
 
+    group.appendChild(rowsEl)
     body.appendChild(group)
   }
 }
 
+// 3a: debounce — collect rapid dropdown changes into a single write
+let _saveDebounceTimer = null
+// 3c: guard against concurrent XML writes
+let _saving = false
+
 function onSettingChange(key) {
+  if (_saving) return  // 3c: ignore changes while a save is in flight
   const el = document.getElementById(`sval-${key}`)
   const def = currentDefs.find(d => d.key === key)
   if (!def || !el) return
@@ -633,28 +1308,46 @@ function onSettingChange(key) {
   el.classList.toggle('is-rec', isRec)
 
   const origVal = currentVals[key]
-  const isChanged = origVal !== null && String(el.value) !== String(origVal)
+  const isChanged = origVal !== null
+    ? String(el.value) !== String(origVal)
+    : String(el.value) !== String(def.rec)
   document.getElementById(`srow-${key}`)?.classList.toggle('is-changed', isChanged)
 
   trackChanges()
+  updatePerfBudget()
 }
 
 function trackChanges() {
   if (!currentDefs.length) return
   let count = 0
+  const catCounts = {}
   for (const def of currentDefs) {
     const el = document.getElementById(`sval-${def.key}`)
     if (!el) continue
     const orig = currentVals[def.key]
-    if (orig !== null && String(el.value) !== String(orig)) count++
+    const changed = orig !== null
+      ? String(el.value) !== String(orig)
+      : String(el.value) !== String(def.rec)
+    if (changed) {
+      count++
+      for (const cat of CATEGORIES) {
+        if (cat.keys.includes(def.key)) { catCounts[cat.name] = (catCounts[cat.name] || 0) + 1; break }
+      }
+    }
   }
   pendingChanges = count
   const badge = document.getElementById('changes-count')
+  const resetBtn = document.getElementById('btn-reset')
   if (count > 0) {
     badge.style.display = 'inline-block'
-    badge.textContent = `${count} change${count !== 1 ? 's' : ''}`
+    badge.textContent = (count !== 1 ? tF('changesPlural') : tF('changes')).replace('{n}', count)
+    const breakdown = Object.entries(catCounts).map(([c,n]) => `${c} (${n})`).join(', ')
+    badge.title = breakdown
+    if (resetBtn) resetBtn.classList.add('visible')
   } else {
     badge.style.display = 'none'
+    badge.title = ''
+    if (resetBtn) resetBtn.classList.remove('visible')
   }
 }
 
@@ -662,6 +1355,7 @@ function applyPreset(presetId) {
   if (!currentDefs.length) return
   const values = PRESETS[presetId]
   if (!values) return
+  snapshotState()
   for (const def of currentDefs) {
     const el = document.getElementById(`sval-${def.key}`)
     if (!el) continue
@@ -670,18 +1364,57 @@ function applyPreset(presetId) {
       onSettingChange(def.key)
     }
   }
-  // Visual feedback on the button
+  // Visual feedback on the preset button
   const btn = document.querySelector(`.preset-${presetId}`)
   if (btn) {
     const orig = btn.innerHTML
-    btn.innerHTML = '<i class="fa fa-check"></i> Applied'
+    btn.innerHTML = `<i class="fa fa-check"></i> ${tF('presetApplied')}`
     btn.style.opacity = '0.7'
     setTimeout(() => { btn.innerHTML = orig; btn.style.opacity = '' }, 1800)
   }
+  // Nudge save button so user knows they still need to save
+  const saveBtn = document.getElementById('btn-save')
+  if (saveBtn && !saveBtn.disabled) {
+    saveBtn.classList.remove('save-nudge')
+    void saveBtn.offsetWidth // force reflow to restart animation
+    saveBtn.classList.add('save-nudge')
+    setTimeout(() => saveBtn.classList.remove('save-nudge'), 1200)
+  }
 }
+
+let _lastExportFormat = 'text'
+function exportFormat(fmt) {
+  closeExportMenu()
+  if (!currentDefs.length) return
+  _lastExportFormat = fmt
+  const entries = currentDefs.map(def => {
+    const el = document.getElementById(`sval-${def.key}`)
+    return { key: def.key, val: el ? el.value : (currentVals[def.key] ?? def.rec) }
+  })
+  let text = ''
+  if (fmt === 'json') {
+    const obj = {}; entries.forEach(({ key, val }) => { obj[key] = val }); text = JSON.stringify(obj, null, 2)
+  } else if (fmt === 'xml') {
+    const lines = entries.map(({ key, val }) => `  <${key} value="${val}" />`).join('\n')
+    text = `<!-- Jylli Tool — GTA5 Settings (changes only, not a full file) -->\n<graphics>\n${lines}\n</graphics>`
+  } else {
+    text = entries.map(({ key, val }) => `${key}: ${val}`).join('\n')
+  }
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.getElementById('btn-export-main')
+    if (!btn) return
+    const orig = btn.innerHTML
+    btn.innerHTML = `<i class="fa fa-check"></i> ${tF('exportCopied')}`
+    setTimeout(() => { btn.innerHTML = orig }, 1800)
+  }).catch(() => showToastFivem('Copy failed'))
+}
+function toggleExportMenu(e) { e.stopPropagation(); document.getElementById('export-menu')?.classList.toggle('open') }
+function closeExportMenu() { document.getElementById('export-menu')?.classList.remove('open') }
+document.addEventListener('click', closeExportMenu)
 
 function applyRecommended() {
   if (!currentDefs.length) return
+  snapshotState()
   for (const def of currentDefs) {
     const el = document.getElementById(`sval-${def.key}`)
     if (!el) continue
@@ -690,7 +1423,153 @@ function applyRecommended() {
   }
 }
 
+async function applySmartPreset() {
+  const btn = document.getElementById('btn-smart-recommend')
+  if (btn) { btn.disabled = true }
+  let si = null
+  try { si = await window.api.getSystemInfo() } catch (e) { si = null }
+  if (btn) btn.disabled = false
+
+  const vram  = si ? (si.vramGB || 0) : 0
+  const ram   = si ? (si.ramGB  || si.totalRamGB || 0) : 0
+  const cores = si ? (si.cpuCores || si.cores || 0) : 0
+  const vendor = si ? (si.gpuVendor || 'unknown') : 'unknown'
+  const isAmd = vendor === 'amd'
+
+  // 4-tier hardware classifier
+  // tier 3 = ultra, tier 2 = high, tier 1 = mid, tier 0 = low
+  const tier = (vram >= 12 && ram >= 32 && (cores === 0 || cores >= 8)) ? 3
+             : (vram >= 8  && ram >= 16 && (cores === 0 || cores >= 6)) ? 2
+             : (vram >= 4  && ram >= 8  && (cores === 0 || cores >= 4)) ? 1
+             : 0
+
+  // Per-setting value tables [tier0, tier1, tier2, tier3]
+  const SMART_VALUES = {
+    LodScale:                  ['0.500000','0.750000','1.000000','1.500000'],
+    PedLodBias:                ['0.000000','0.000000','0.000000','0.200000'],
+    VehicleLodBias:            ['0.000000','0.000000','0.000000','0.200000'],
+    ShadowQuality:             ['1','1','2','3'],
+    Shadow_Distance:           ['0.250000','0.500000','0.750000','1.000000'],
+    Shadow_SoftShadows:        isAmd ? ['0','3','3','3'] : ['0','1','1','2'],
+    UltraShadows_Enabled:      ['false','false','false','true'],
+    Shadow_ParticleShadows:    ['false','false','false','false'],
+    Shadow_LongShadows:        ['false','false','false','false'],
+    GrassQuality:              ['0','0','0','0'],  // always Off — biggest FPS cost in FiveM
+    WaterQuality:              ['0','0','1','2'],
+    ParticleQuality:           ['0','1','1','2'],
+    Lighting_FogVolumes:       ['false','false','false','true'],
+    CityDensity:               ['0.000000','0.000000','0.250000','0.500000'],
+    VehicleVarietyMultiplier:  ['0.000000','0.000000','0.250000','0.500000'],
+    PedVarietyMultiplier:      ['0.000000','0.000000','0.000000','0.500000'],
+    ShaderQuality:             ['2','2','2','3'],
+    ReflectionQuality:         ['0','1','1','2'],
+    TextureQuality:            ['1','2','2','3'],
+    SSAO:                      ['0','0','1','1'],
+    Tessellation:              ['0','0','1','2'],
+    AnisotropicFiltering:      ['16','16','16','16'],
+    PostFX:                    ['1','1','2','2'],
+    MSAA:                      ['0','0','0','2'],
+    FXAA_Enabled:              ['false','true','true','true'],
+    TXAA_Enabled:              ['false','false','false','false'],
+    ReflectionMSAA:            ['0','0','0','0'],
+    DoF:                       ['false','false','false','false'],
+    MotionBlurStrength:        ['0.000000','0.000000','0.000000','0.000000'],
+    HdStreamingInFlight:       ['false','false','false','false'],
+    ScaleformQuality:          ['0','1','1','1'],
+  }
+
+  snapshotState()
+  for (const def of currentDefs) {
+    const el = document.getElementById(`sval-${def.key}`)
+    if (!el) continue
+    const vals = SMART_VALUES[def.key]
+    if (vals) { el.value = vals[tier]; onSettingChange(def.key) }
+  }
+
+  const tierLabels = ['Low-end', 'Mid-range', 'High-end', 'Ultra']
+  const strip = document.getElementById('smart-hw-info')
+  if (strip) {
+    const coreStr = cores ? ` · ${cores} cores` : ''
+    const vendorStr = vendor !== 'unknown' ? ` (${vendor.toUpperCase()})` : ''
+    strip.textContent = `${tF('smartHwLabel')} ${si?.cpu || 'Unknown CPU'}${vendorStr} | ${vram}GB VRAM | ${ram}GB RAM${coreStr} → Tier ${tier + 1}: ${tierLabels[tier]}`
+    strip.style.display = 'block'
+  }
+}
+
+// ─── Profile system ───────────────────────────────────────────────────────────
+function getGtaProfiles() {
+  try { return JSON.parse(localStorage.getItem('fivem_gta_profiles') || '{}') } catch { return {} }
+}
+function populateProfileSelect() {
+  const sel = document.getElementById('profile-select')
+  if (!sel) return
+  const saved = sel.value
+  const profiles = getGtaProfiles()
+  sel.innerHTML = `<option value="" id="opt-profile-placeholder">${tF('profileSelect')}</option>`
+  Object.keys(profiles).forEach(name => {
+    const opt = document.createElement('option')
+    opt.value = name; opt.textContent = name
+    sel.appendChild(opt)
+  })
+  if (saved && profiles[saved]) sel.value = saved
+}
+function saveProfile() {
+  const name = prompt(tF('profileNamePrompt'))
+  if (!name) return
+  const snapshot = {}
+  currentDefs.forEach(def => {
+    const el = document.getElementById(`sval-${def.key}`)
+    if (el) snapshot[def.key] = el.value
+  })
+  const profiles = getGtaProfiles()
+  profiles[name] = snapshot
+  localStorage.setItem('fivem_gta_profiles', JSON.stringify(profiles))
+  populateProfileSelect()
+  const sel = document.getElementById('profile-select')
+  if (sel) sel.value = name
+  showToastFivem(tF('profileSaved') + ': ' + name)
+}
+function loadProfileOnChange() {
+  const sel = document.getElementById('profile-select')
+  if (!sel || !sel.value) return
+  const snapshot = getGtaProfiles()[sel.value]
+  if (!snapshot) return
+  snapshotState()
+  currentDefs.forEach(def => {
+    if (snapshot[def.key] !== undefined) {
+      const el = document.getElementById(`sval-${def.key}`)
+      if (el) { el.value = snapshot[def.key]; onSettingChange(def.key) }
+    }
+  })
+  showToastFivem(tF('profileLoaded') + ': ' + sel.value)
+}
+function deleteProfile() {
+  const sel = document.getElementById('profile-select')
+  if (!sel || !sel.value) return
+  const name = sel.value
+  const profiles = getGtaProfiles()
+  delete profiles[name]
+  localStorage.setItem('fivem_gta_profiles', JSON.stringify(profiles))
+  populateProfileSelect()
+  if (sel) sel.value = ''
+  showToastFivem(tF('profileDeleted') + ': ' + name)
+}
+function showToastFivem(msg) {
+  let t = document.getElementById('fivem-settings-toast')
+  if (!t) {
+    t = document.createElement('div')
+    t.id = 'fivem-settings-toast'
+    t.className = 'toast-hidden'
+    document.body.appendChild(t)
+  }
+  t.textContent = msg
+  t.classList.remove('toast-hidden')
+  clearTimeout(t._timer)
+  t._timer = setTimeout(() => t.classList.add('toast-hidden'), 2500)
+}
+
 async function saveSettings() {
+  if (_saving) return  // 3c: prevent concurrent saves
   const btn = document.getElementById('btn-save')
   if (!currentDefs.length) return
 
@@ -709,25 +1588,42 @@ async function saveSettings() {
     else if (el && currentVals[def.key] === null) changedCount++ // missing key being injected
   }
 
-  // Warn if FiveM might be running
+  // Warn only if FiveM is actually running (live check)
   const warnBanner = document.getElementById('fivem-warn-banner')
   if (warnBanner && !warnBanner.dataset.confirmed) {
-    warnBanner.style.display = 'flex'
-    warnBanner.dataset.pendingChanges = JSON.stringify(changes)
-    return
+    let fivemLive = false
+    try { const cr = await window.api.fivemRunningCheck(); fivemLive = !!cr?.running } catch {}
+    if (fivemLive) {
+      warnBanner.style.display = 'flex'
+      return
+    }
   }
 
+  _saving = true  // 3c: lock
   btn.disabled = true
-  btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Saving…'
+  btn.innerHTML = `<i class="fa fa-spinner fa-spin"></i> ${tF('savingBtn')}`
 
-  const r = await window.api.fivemWriteSettings(changes, getManualPath())
-  btn.disabled = false
+  let r
+  try {
+    r = await window.api.fivemWriteSettings(changes, getManualPath())
+  } catch {
+    r = { ok: false, reason: 'ipc_error' }
+  } finally {
+    _saving = false  // 3c: unlock
+    btn.disabled = false
+  }
 
+  if (!r.ok && r.reason === 'fivem_running') {
+    btn.innerHTML = `<i class="fa fa-floppy-disk"></i> ${tF('saveBtn')}`
+    if (warnBanner) { warnBanner.style.display = 'flex' }
+    return
+  }
   if (r.ok) {
-    btn.innerHTML = '<i class="fa fa-check"></i> Saved!'
+    btn.innerHTML = `<i class="fa fa-check"></i> ${tF('savedBtn')}`
     if (warnBanner) { warnBanner.style.display = 'none'; delete warnBanner.dataset.confirmed }
+    const chLabel = (changedCount !== 1 ? tF('changesPlural') : tF('changes')).replace('{n}', changedCount)
     document.getElementById('path-status').innerHTML =
-      `<i class="fa fa-check" style="color:#2ECC71"></i> Saved ${changedCount} change${changedCount !== 1 ? 's' : ''} → ${r.path}`
+      `<i class="fa fa-check" style="color:var(--success)"></i> ${chLabel} → ${r.path}`
     showSaveConfirmBanner(r.path)
     // Sync currentVals
     for (const def of currentDefs) {
@@ -736,12 +1632,12 @@ async function saveSettings() {
     }
     for (const def of currentDefs) document.getElementById(`srow-${def.key}`)?.classList.remove('is-changed')
     trackChanges()
-    setTimeout(() => { btn.innerHTML = '<i class="fa fa-floppy-disk"></i> Save Settings'; btn.disabled = false }, 2500)
+    setTimeout(() => { btn.innerHTML = `<i class="fa fa-floppy-disk"></i> ${tF('saveBtn')}`; btn.disabled = false }, 2500)
   } else {
-    btn.innerHTML = '<i class="fa fa-xmark"></i> Error'
+    btn.innerHTML = `<i class="fa fa-xmark"></i> ${tF('saveError')}`
     document.getElementById('path-status').innerHTML =
-      `<i class="fa fa-triangle-exclamation" style="color:#E74C3C"></i> ${r.reason || 'Save failed'}`
-    setTimeout(() => { btn.innerHTML = '<i class="fa fa-floppy-disk"></i> Save Settings'; btn.disabled = false }, 2500)
+      `<i class="fa fa-triangle-exclamation" style="color:var(--danger)"></i> ${r.reason || 'Save failed'}`
+    setTimeout(() => { btn.innerHTML = `<i class="fa fa-floppy-disk"></i> ${tF('saveBtn')}`; btn.disabled = false }, 2500)
   }
 }
 
@@ -750,14 +1646,14 @@ function showSaveConfirmBanner(filePath) {
   if (existing) existing.remove()
   const banner = document.createElement('div')
   banner.id = 'save-confirm-banner'
-  banner.style.cssText = 'background:rgba(46,204,113,0.08);border:1px solid rgba(46,204,113,0.25);border-radius:8px;padding:10px 14px;display:flex;align-items:center;gap:10px;font-size:11px;color:#c0c0cc'
+  banner.style.cssText = 'background:var(--success-bg);border:1px solid var(--success-bd);border-radius:var(--r-md);padding:10px 14px;display:flex;align-items:center;gap:10px;font-size:11px;color:var(--gray)'
   banner.innerHTML = `
-    <i class="fa fa-circle-check" style="color:#2ECC71;font-size:14px;flex-shrink:0"></i>
+    <i class="fa fa-circle-check" style="color:var(--success);font-size:14px;flex-shrink:0"></i>
     <div style="flex:1;line-height:1.5">
-      <strong style="color:#2ECC71">Settings saved successfully.</strong><br>
-      <span style="color:#8a8a9a">Close FiveM completely (not just the game), then relaunch it. Do not open Graphics Settings in FiveM after relaunching — it will overwrite these values.</span>
+      <strong style="color:var(--success)">${tF('saveSuccess')}</strong><br>
+      <span style="color:var(--muted)">${tF('saveSuccessNote')}</span>
     </div>
-    <button onclick="this.closest('#save-confirm-banner').remove()" style="background:none;border:none;color:#555;cursor:pointer;font-size:13px;flex-shrink:0;padding:0 4px">✕</button>
+    <button onclick="this.closest('#save-confirm-banner').remove()" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:13px;flex-shrink:0;padding:0 4px">✕</button>
   `
   document.getElementById('content').insertBefore(banner, document.getElementById('settings-body'))
 }
@@ -771,9 +1667,251 @@ function confirmSaveAnyway() {
   saveSettings()
 }
 
+// ─── i18n apply ───────────────────────────────────────────────────────────────
+function applyTranslationsF() {
+  const t = (id, key) => { const el = document.getElementById(id); if (el) el.textContent = tF(key) }
+  t('lbl-title-sub', 'titleSub')
+  t('lbl-load-btn', 'loadBtn')
+  t('lbl-presets', 'presetsLabel')
+  t('lbl-preset-quality', 'presetQuality')
+  t('lbl-preset-balanced', 'presetBalanced')
+  t('lbl-preset-performance', 'presetPerformance')
+  t('lbl-preset-recommended', 'presetRecommended')
+  t('lbl-smart-recommend', 'smartRecommendBtn')
+  t('lbl-profiles', 'profilesLabel')
+  t('lbl-profile-save-btn',   'profileSaveBtn')
+  t('lbl-profile-delete-btn', 'profileDeleteBtn')
+  t('lbl-export-btn', 'exportBtn')
+  t('lbl-empty-title', 'emptyTitle')
+  t('lbl-empty-small', 'emptySmall')
+  t('lbl-warn-title', 'warnTitle')
+  t('lbl-warn-body', 'warnBody')
+  t('lbl-warn-cancel', 'warnCancel')
+  t('lbl-warn-save-anyway', 'warnSaveAnyway')
+  t('lbl-save-btn', 'saveBtn')
+  t('lbl-undo-btn', 'undoBtn')
+  t('lbl-reset-btn', 'resetToFile')
+  t('lbl-export-text', 'exportAsText')
+  t('lbl-export-json', 'exportAsJson')
+  t('lbl-export-xml', 'exportAsXml')
+  t('lbl-preset-quality-hint',     'presetQualityHint')
+  t('lbl-preset-balanced-hint',    'presetBalancedHint')
+  t('lbl-preset-performance-hint', 'presetPerformanceHint')
+  t('lbl-smart-recommend-sub',     'smartRecommendSub')
+  t('lbl-empty-body',              'emptyBody')
+  t('lbl-empty-step1',             'emptyStep1')
+  t('lbl-empty-step2',             'emptyStep2')
+  t('lbl-empty-step3',             'emptyStep3')
+  const pd = document.getElementById('path-display'); if (pd && !pd._set) pd.textContent = tF('noFile')
+  const mp = document.getElementById('manual-path'); if (mp) mp.placeholder = tF('pathPlaceholder')
+  const si = document.getElementById('search-input'); if (si) si.placeholder = tF('searchPlaceholder')
+  const sc = document.getElementById('search-clear'); if (sc) sc.title = tF('searchClearTitle')
+}
+
+// ─── Undo stack ───────────────────────────────────────────────────────────────
+let _undoStack = []
+function snapshotState() {
+  if (!currentDefs.length) return
+  const snap = {}
+  currentDefs.forEach(d => { const el = document.getElementById(`sval-${d.key}`); if (el) snap[d.key] = el.value })
+  _undoStack.push(snap)
+  if (_undoStack.length > 20) _undoStack.shift()
+  updateUndoButton()
+}
+function undoLast() {
+  const snap = _undoStack.pop()
+  if (!snap) return
+  currentDefs.forEach(def => {
+    if (snap[def.key] !== undefined) {
+      const el = document.getElementById(`sval-${def.key}`)
+      if (el) { el.value = snap[def.key]; onSettingChange(def.key) }
+    }
+  })
+  updateUndoButton()
+}
+function updateUndoButton() {
+  const btn = document.getElementById('btn-undo')
+  if (!btn) return
+  if (_undoStack.length > 0) btn.classList.add('active'); else btn.classList.remove('active')
+}
+
+// ─── Reset to file values ─────────────────────────────────────────────────────
+function resetToFileValues() {
+  if (!currentDefs.length) return
+  snapshotState()
+  currentDefs.forEach(def => {
+    const el = document.getElementById(`sval-${def.key}`)
+    if (!el) return
+    el.value = currentVals[def.key] !== null ? currentVals[def.key] : def.rec
+    onSettingChange(def.key)
+  })
+}
+
+// ─── Search / filter ──────────────────────────────────────────────────────────
+function filterSettings(query) {
+  const q = query.trim().toLowerCase()
+  const clearBtn = document.getElementById('search-clear')
+  if (clearBtn) clearBtn.style.display = q ? 'inline' : 'none'
+  const groups = document.querySelectorAll('.cat-group')
+  groups.forEach(group => {
+    let anyVisible = false
+    group.querySelectorAll('.setting-row').forEach(row => {
+      const label = row.querySelector('.setting-label')?.textContent?.toLowerCase() || ''
+      const match = !q || label.includes(q)
+      row.classList.toggle('search-hidden', !match)
+      if (match) anyVisible = true
+      // Highlight matched text — target only .slt to preserve sibling tooltip icon
+      const labelSpan = row.querySelector('.slt')
+      if (labelSpan) {
+        if (q && match) {
+          const rx = new RegExp(`(${q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')})`, 'gi')
+          labelSpan.innerHTML = labelSpan.textContent.replace(rx, '<mark class="sh">$1</mark>')
+        } else {
+          labelSpan.innerHTML = labelSpan.textContent
+        }
+      }
+    })
+    group.classList.toggle('search-hidden', !anyVisible)
+  })
+}
+function clearSearch() {
+  const inp = document.getElementById('search-input')
+  if (inp) { inp.value = ''; filterSettings('') }
+}
+
+// ─── Collapsible categories ───────────────────────────────────────────────────
+function toggleCatCollapse(catId, group, header) {
+  const rowsEl = document.getElementById(`cat-rows-${catId}`)
+  if (!rowsEl) return
+  const isNowCollapsed = !header.classList.contains('cat-collapsed')
+  header.classList.toggle('cat-collapsed', isNowCollapsed)
+  rowsEl.style.maxHeight = isNowCollapsed ? '0' : '2000px'
+  // Persist
+  let collapsed = (() => { try { return JSON.parse(localStorage.getItem('fivem_gfx_collapsed') || '[]') } catch { return [] } })()
+  if (isNowCollapsed) { if (!collapsed.includes(catId)) collapsed.push(catId) }
+  else { collapsed = collapsed.filter(id => id !== catId) }
+  localStorage.setItem('fivem_gfx_collapsed', JSON.stringify(collapsed))
+}
+
+// ─── Tooltip ──────────────────────────────────────────────────────────────────
+function handleTooltip(e) {
+  const icon = e.target.closest('.tt-icon')
+  if (!icon) return
+  const tip = icon.getAttribute('data-tip')
+  if (!tip) return
+  const popup = document.getElementById('tt-popup')
+  if (!popup) return
+  popup.textContent = tip
+  popup.style.display = 'block'
+  const r = icon.getBoundingClientRect()
+  const popupW = popup.offsetWidth || parseInt(getComputedStyle(popup).maxWidth) || 240
+  let left = r.right + 8
+  let top = r.top - 4
+  if (left + popupW > window.innerWidth) left = r.left - popupW - 8
+  if (top + popup.offsetHeight > window.innerHeight) top = window.innerHeight - popup.offsetHeight - 8
+  popup.style.left = Math.max(4, left) + 'px'
+  popup.style.top = Math.max(4, top) + 'px'
+}
+function hideTooltip(e) {
+  if (!e.target.closest('.tt-icon')) {
+    const popup = document.getElementById('tt-popup')
+    if (popup) popup.style.display = 'none'
+  }
+}
+
+// ─── Performance budget meter ─────────────────────────────────────────────────
+const PERF_WEIGHTS = {
+  GrassQuality:              { '0':0, '1':8, '2':14, '3':20 },
+  ShadowQuality:             { '0':0, '1':6, '2':10, '3':16, '4':22 },
+  Shadow_Distance:           { '0.250000':0, '0.500000':3, '0.750000':6, '1.000000':10 },
+  CityDensity:               { '0.000000':0, '0.500000':8, '1.000000':15, '1.500000':22 },
+  VehicleVarietyMultiplier:  { '0.000000':0, '0.500000':6, '1.000000':12, '1.500000':18 },
+  LodScale:                  { '0.500000':0, '0.750000':2, '1.000000':4, '1.500000':8, '2.000000':14 },
+  MSAA:                      { '0':0, '2':6, '4':12, '8':20 },
+  ReflectionQuality:         { '0':0, '1':3, '2':6, '3':10, '4':16 },
+  TextureQuality:            { '0':1, '1':2, '2':3, '3':5, '4':8 },
+  ShaderQuality:             { '0':2, '1':4, '2':5, '3':8, '4':12 },
+  SSAO:                      { '0':0, '1':3, '2':6 },
+  PostFX:                    { '0':0, '1':1, '2':2, '3':3, '4':5 },
+  Tessellation:              { '0':0, '1':2, '2':4, '3':7 },
+  AnisotropicFiltering:      { '0':1, '2':1, '4':1, '8':1, '16':1 },
+  WaterQuality:              { '0':0, '1':1, '2':2, '3':3, '4':5 },
+  ParticleQuality:           { '0':1, '1':2, '2':4, '3':6, '4':9 },
+  UltraShadows_Enabled:      { 'false':0, 'true':5 },
+  Shadow_SoftShadows:        { '0':0, '1':2, '2':3, '3':4 },
+  Lighting_FogVolumes:       { 'false':0, 'true':6 },
+  TXAA_Enabled:              { 'false':0, 'true':5 },
+  PedLodBias:                { '0.000000':0, '0.200000':2, '0.500000':4, '1.000000':7 },
+  VehicleLodBias:            { '0.000000':0, '0.200000':2, '0.500000':4, '1.000000':7 },
+  PedVarietyMultiplier:      { '0.000000':0, '0.500000':3, '1.000000':6 },
+  ReflectionMSAA:            { '0':0, '2':3, '4':6, '8':10 },
+}
+const PERF_MAX = 200
+
+function updatePerfBudget() {
+  const bar = document.getElementById('perf-budget-bar')
+  if (!bar || bar.style.display === 'none') return
+  let total = 0
+  for (const def of currentDefs) {
+    const el = document.getElementById(`sval-${def.key}`)
+    if (!el) continue
+    const w = PERF_WEIGHTS[def.key]
+    if (w) total += (w[el.value] ?? 0)
+  }
+  const pct = Math.min(100, Math.round(total / PERF_MAX * 100))
+  const fill = document.getElementById('perf-budget-fill')
+  const label = document.getElementById('perf-budget-label')
+  const color = pct < 40
+    ? 'linear-gradient(90deg, #2ECC71, #27ae60)'
+    : pct < 65
+    ? 'linear-gradient(90deg, #facc15, #f59e0b)'
+    : pct < 80
+    ? 'linear-gradient(90deg, #f97316, #ea580c)'
+    : 'linear-gradient(90deg, #ef4444, #dc2626)'
+  const desc = pct < 40 ? tF('perfBudgetLight') : pct < 65 ? tF('perfBudgetMedium') : pct < 80 ? tF('perfBudgetHeavy') : tF('perfBudgetExtreme')
+  if (fill) {
+    if (!fill._animated) {
+      fill.style.transition = 'none'
+      fill.style.width = '0%'
+      fill._animated = true
+      requestAnimationFrame(() => { fill.style.transition = ''; fill.style.width = pct + '%'; fill.style.background = color })
+    } else {
+      fill.style.width = pct + '%'
+      fill.style.background = color
+    }
+  }
+  if (label) label.textContent = `${pct} / 100 — ${desc}`
+}
+
+// ─── Keyboard shortcuts ───────────────────────────────────────────────────────
+window.addEventListener('keydown', e => {
+  if (e.ctrlKey && e.key === 's') { e.preventDefault(); saveSettings() }
+  else if (e.ctrlKey && e.key === 'z') { e.preventDefault(); undoLast() }
+  else if (e.ctrlKey && e.key === 'r') { e.preventDefault(); loadSettings() }
+  else if (e.ctrlKey && e.key === 'e') { e.preventDefault(); exportFormat(_lastExportFormat) }
+  else if (e.key === '/' && document.activeElement?.tagName !== 'INPUT') {
+    e.preventDefault()
+    const inp = document.getElementById('search-input')
+    if (inp) inp.focus()
+  } else if (e.key === 'Escape') {
+    closeExportMenu()
+    const inp = document.getElementById('search-input')
+    if (inp && inp.value) { clearSearch(); return }
+  }
+})
+
 // Auto-load on open
-window.addEventListener('DOMContentLoaded', () => {
+window.addEventListener('DOMContentLoaded', async () => {
+  try { const s = await window.api.getSettings(); _langF = s?.language || 'en' } catch {}
+  applyTranslationsF()
+  populateProfileSelect()
   loadSettings()
+  // Tooltip popup element + listeners — registered once here, not inside renderSettings
+  const tt = document.createElement('div')
+  tt.id = 'tt-popup'
+  document.body.appendChild(tt)
+  document.body.addEventListener('mouseover', handleTooltip)
+  document.body.addEventListener('mouseout', hideTooltip)
 })
 </script>
 </body>

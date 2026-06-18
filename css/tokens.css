@@ -1,0 +1,196 @@
+/* ─── Design Tokens — shared across all windows ──────────────────────────── */
+:root {
+  /* ── Surfaces: deep velvet purple-black ── */
+  --c-bg-base:        #0D0B14;
+  --c-bg-elevated:    #17131F;
+  --c-bg-raised:      #211C2E;
+  --c-bg-glass:       rgba(23,19,31,0.62);
+
+  /* ── Text ── */
+  --c-text-primary:   #ECEEF2;
+  --c-text-secondary: rgba(236,238,242,0.52);
+  --c-text-tertiary:  rgba(236,238,242,0.32);
+
+  /* ── Accent: deep royal purple (Jylli default — overridden at runtime by applyTheme) ── */
+  --c-accent:         #7C3AED;
+  --c-accent-muted:   rgba(124,58,237,0.10);
+  --c-accent-ring:    rgba(124,58,237,0.22);
+  --c-accent-glow:    rgba(124,58,237,0.12);
+
+  /* ── Borders ── */
+  --c-border-subtle:  rgba(255,255,255,0.05);
+  --c-border-default: rgba(255,255,255,0.09);
+  --c-border-strong:  rgba(255,255,255,0.14);
+
+  /* ── Overlay ── */
+  --c-overlay:        rgba(0,0,0,0.78);
+
+  /* ── Per-page identity (used ONLY for .section-accent stripe, not sidebar) ── */
+  --c-page-accent:    var(--c-accent);
+
+  /* ── Spacing (8px grid) ── */
+  --sp-0-5: 4px;
+  --sp-1:   8px;  --sp-2: 16px; --sp-3: 24px;
+  --sp-1-5: 12px;
+  --sp-4:   32px; --sp-5: 48px; --sp-6: 64px;
+  --sp-2-5: 20px;
+
+  /* ── Radius ── */
+  --r-sm:   7px;
+  --r-md:   10px;
+  --r-lg:   14px;
+  --r-xl:   18px;
+  --r-pill: 9999px;
+
+  /* ── Shadows: pure depth, accent only in shadow-3 hairline ── */
+  --shadow-1: 0 1px 4px rgba(0,0,0,0.40);
+  --shadow-2: 0 4px 16px rgba(0,0,0,0.55);
+  --shadow-3: 0 8px 32px rgba(0,0,0,0.75), 0 0 0 1px rgba(124,58,237,0.06);
+
+  /* ── Easing ── */
+  --ease-default:   cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  --ease-spring:    cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-snap:      cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-out-expo:  cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-back:   cubic-bezier(0.36, 0, 0.66, -0.56);
+  --ease-fluid:     cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* ── Duration ── */
+  --dur-micro:  80ms;
+  --dur-short:  150ms;
+  --dur-medium: 280ms;
+  --dur-long:   450ms;
+
+  /* ── Semantic motion tokens (reference --dur-* so they follow motion mode) ── */
+  --motion-enter:       var(--dur-medium) var(--ease-spring);
+  --motion-exit:        var(--dur-short)  var(--ease-snap);
+  --motion-interaction: var(--dur-micro)  var(--ease-default);
+  --motion-reveal:      var(--dur-long)   var(--ease-spring);
+  --motion-hover:       var(--dur-short)  var(--ease-fluid);
+  --motion-press:       60ms              linear;
+  --motion-page:        var(--dur-medium) var(--ease-out-expo);
+  --motion-page-exit:   var(--dur-short)  var(--ease-in-back);
+  --motion-lift:        var(--dur-short)  var(--ease-out-expo);
+
+  /* ── Z-index layers ── */
+  --z-tooltip:          7000;
+  --z-modal-backdrop:   8000;
+  --z-modal:            8100;
+  --z-toast:            8500;
+  --z-command-palette:  9000;
+  --z-critical:         9999;
+
+  /* ── Pulse hardware metric colors ── */
+  --disk-color: #F39C12;
+
+  /* ── Extended surfaces ── */
+  --c-bg-deep:    #090711;
+  --c-bg-overlay: rgba(0,0,0,0.82);
+
+  /* ── Missing tokens referenced in style.css (bug fixes) ── */
+  --c-bg-card:    var(--c-bg-elevated);
+  --c-bg-hover:   rgba(255,255,255,0.05);
+  --c-text-muted: var(--c-text-tertiary);
+
+  /* ── Neutral scale (dark-mode rgba overlays, gray-50..gray-950) ── */
+  --gray-50:  rgba(255,255,255,0.97);
+  --gray-100: rgba(255,255,255,0.88);
+  --gray-200: rgba(255,255,255,0.72);
+  --gray-300: rgba(255,255,255,0.54);
+  --gray-400: rgba(255,255,255,0.38);
+  --gray-500: rgba(255,255,255,0.26);
+  --gray-600: rgba(255,255,255,0.16);
+  --gray-700: rgba(255,255,255,0.10);
+  --gray-800: rgba(255,255,255,0.06);
+  --gray-900: rgba(255,255,255,0.03);
+  --gray-950: rgba(255,255,255,0.015);
+
+  /* ── Semantic status tokens (--c-* namespace, parallel to legacy --success etc.) ── */
+  --c-success:        #2ECC71;
+  --c-success-muted:  rgba(46,204,113,0.10);
+  --c-success-ring:   rgba(46,204,113,0.25);
+  --c-warning:        #F39C12;
+  --c-warning-muted:  rgba(243,156,18,0.10);
+  --c-warning-ring:   rgba(243,156,18,0.25);
+  --c-danger:         #E74C3C;
+  --c-danger-muted:   rgba(231,76,60,0.10);
+  --c-danger-ring:    rgba(231,76,60,0.25);
+  --c-info:           #3498DB;
+  --c-info-muted:     rgba(52,152,219,0.10);
+  --c-info-ring:      rgba(52,152,219,0.25);
+
+  /* ── Per-hardware semantic colors ── */
+  --c-hw-cpu:      #3498DB;   --c-hw-cpu-bg:   rgba(52,152,219,0.10);
+  --c-hw-gpu:      #9B59B6;   --c-hw-gpu-bg:   rgba(155,89,182,0.10);
+  --c-hw-ram:      #2ECC71;   --c-hw-ram-bg:   rgba(46,204,113,0.10);
+  --c-hw-net:      #00D4AA;   --c-hw-net-bg:   rgba(0,212,170,0.10);
+  --c-hw-disk:     #F39C12;   --c-hw-disk-bg:  rgba(243,156,18,0.10);
+
+  /* ── Typography scale ── */
+  --font-size-xs:   9.5px;
+  --font-size-sm:   11px;
+  --font-size-md:   12px;
+  --font-size-base: 13px;
+  --font-size-lg:   15px;
+  --font-size-xl:   18px;
+  --font-size-2xl:  20px;
+  --font-size-3xl:  24px;
+
+  /* ── Typography line-heights ── */
+  --lh-tight:   1.2;
+  --lh-snug:    1.35;
+  --lh-base:    1.55;
+  --lh-relaxed: 1.7;
+
+  /* ── Letter-spacing scale ── */
+  --ls-tight:   -0.04em;
+  --ls-snug:    -0.02em;
+  --ls-normal:  0em;
+  --ls-wide:    0.04em;
+  --ls-wider:   0.08em;
+  --ls-widest:  0.12em;
+
+  /* ── Enhanced shadows ── */
+  --shadow-modal:       0 24px 80px rgba(0,0,0,0.85), 0 0 0 1px rgba(124,58,237,0.10);
+  --shadow-card:        0 2px 8px rgba(0,0,0,0.40), inset 0 1px 0 rgba(255,255,255,0.03);
+  --shadow-lifted:      0 8px 24px rgba(0,0,0,0.55), 0 0 0 1px rgba(255,255,255,0.05);
+  --shadow-glow-accent: 0 0 0 1px rgba(var(--pink-rgb),0.25), 0 0 14px rgba(var(--pink-rgb),0.15);
+
+  /* ── Risk tier colors for tweak safety badges ── */
+  --c-tier-1:     #2ECC71;   --c-tier-1-bg: rgba(46,204,113,0.12);
+  --c-tier-2:     #F39C12;   --c-tier-2-bg: rgba(243,156,18,0.12);
+  --c-tier-3:     #E74C3C;   --c-tier-3-bg: rgba(231,76,60,0.12);
+
+  /* ── Backward-compat aliases — canvas code reads --pink-rgb at runtime ── */
+  --pink:       var(--c-accent);
+  --pink-hover: color-mix(in srgb, var(--c-accent) 82%, #fff);
+  --pink-dim:   var(--c-accent-muted);
+  --pink-glow:  var(--c-accent-ring);
+  --pink-rgb:   124,58,237;
+  --cyan:       var(--c-accent);
+  --cyan-rgb:   124,58,237;
+  --cyan-glow:  var(--c-accent-ring);
+  --cyan-dim:   var(--c-accent-muted);
+}
+
+/* ── Motion speed modes — toggled via body class from Settings ── */
+body.motion-snappy {
+  --dur-micro:  40ms;
+  --dur-short:  80ms;
+  --dur-medium: 130ms;
+  --dur-long:   200ms;
+}
+body.motion-smooth {
+  --dur-micro:  120ms;
+  --dur-short:  220ms;
+  --dur-medium: 400ms;
+  --dur-long:   620ms;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}

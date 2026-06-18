@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline';">
+<title>FPS Overlay Settings</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body {
+  background: #0d0d0d; color: #e0e0e0;
+  font-family: 'Segoe UI', system-ui, sans-serif; font-size: 13px;
+  height: 100%; overflow: hidden; user-select: none; -webkit-app-region: no-drag;
+}
+#root { display: flex; flex-direction: column; height: 100vh; }
+#titlebar {
+  display: flex; align-items: center; height: 40px;
+  background: #111; border-bottom: 1px solid #1e1e1e;
+  padding: 0 14px; -webkit-app-region: drag; flex-shrink: 0; gap: 8px;
+}
+.tb-icon {
+  width: 26px; height: 26px; border-radius: 7px;
+  background: rgba(46,204,113,0.12); border: 1px solid rgba(46,204,113,0.25);
+  display: flex; align-items: center; justify-content: center;
+  color: #2ecc71; font-size: 12px; flex-shrink: 0;
+}
+.tb-title { flex: 1; font-size: 12px; font-weight: 700; color: #ddd; }
+.tb-close {
+  -webkit-app-region: no-drag; width: 26px; height: 26px; border-radius: 5px;
+  border: none; background: transparent; color: #555; cursor: pointer; font-size: 14px;
+  display: flex; align-items: center; justify-content: center; transition: background 0.12s, color 0.12s;
+}
+.tb-close:hover { background: #c0392b; color: #fff; }
+#content { flex: 1; overflow-y: auto; padding: 14px 16px; display: flex; flex-direction: column; gap: 14px; }
+#content::-webkit-scrollbar { width: 4px; }
+#content::-webkit-scrollbar-thumb { background: #222; border-radius: 2px; }
+.scard { background: #111; border: 1px solid #1e1e1e; border-radius: 9px; overflow: hidden; }
+.scard-header {
+  padding: 8px 14px; background: rgba(255,255,255,0.025); border-bottom: 1px solid #1a1a1a;
+  font-size: 10px; font-weight: 700; color: #666; text-transform: uppercase; letter-spacing: 0.06em;
+}
+.scard-body { padding: 12px 14px; }
+.color-row { display: flex; align-items: center; gap: 10px; }
+#color-picker { width: 36px; height: 28px; border: none; background: none; cursor: pointer; padding: 0; border-radius: 4px; flex-shrink: 0; }
+.swatches { display: flex; gap: 6px; flex-wrap: wrap; }
+.swatch { width: 22px; height: 22px; border-radius: 5px; cursor: pointer; border: 2px solid transparent; transition: border-color 0.12s, transform 0.1s; flex-shrink: 0; }
+.swatch:hover { transform: scale(1.15); }
+.swatch.active { border-color: #fff; }
+#hex-preview { font-size: 11px; font-family: 'Cascadia Code', 'Consolas', monospace; color: #666; margin-left: auto; }
+.size-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.size-btn { border: 1px solid #222; border-radius: 7px; background: #0d0d0d; color: #777; cursor: pointer; padding: 8px 4px; font-size: 11px; font-weight: 600; text-align: center; transition: all 0.12s; }
+.size-btn:hover { background: #161616; color: #bbb; border-color: #333; }
+.size-btn.active { background: rgba(46,204,113,0.12); border-color: rgba(46,204,113,0.45); color: #2ecc71; }
+.corner-grid { display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 6px; width: 160px; margin: 0 auto; }
+.corner-btn { border: 1px solid #222; border-radius: 7px; background: #0d0d0d; color: #666; cursor: pointer; padding: 10px 6px; font-size: 10px; font-weight: 600; text-align: center; transition: all 0.12s; line-height: 1.4; }
+.corner-btn:hover { background: #161616; color: #bbb; border-color: #333; }
+.corner-btn.active { background: rgba(46,204,113,0.12); border-color: rgba(46,204,113,0.45); color: #2ecc71; }
+#footer-note { font-size: 10px; color: #383838; text-align: center; padding: 8px 0 4px; line-height: 1.6; }
+</style>
+</head>
+<body>
+<div id="root">
+  <div id="titlebar">
+    <div class="tb-icon">
+      <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor">
+        <rect x="2" y="2" width="5" height="5" rx="1"/><rect x="9" y="2" width="5" height="5" rx="1"/>
+        <rect x="2" y="9" width="5" height="5" rx="1"/><rect x="9" y="9" width="5" height="5" rx="1"/>
+      </svg>
+    </div>
+    <span class="tb-title">FPS Overlay Settings</span>
+    <button class="tb-close" onclick="_alive=false;api.closeFpsHudSettings()">&#x2715;</button>
+  </div>
+  <div id="content">
+    <div class="scard">
+      <div class="scard-header">Number Color</div>
+      <div class="scard-body">
+        <div class="color-row">
+          <input type="color" id="color-picker" value="#ffffff">
+          <div class="swatches" id="swatches"></div>
+          <span id="hex-preview">#ffffff</span>
+        </div>
+      </div>
+    </div>
+    <div class="scard">
+      <div class="scard-header">Size</div>
+      <div class="scard-body">
+        <div class="size-grid">
+          <button class="size-btn" data-size="sm" onclick="setSize('sm')">Small</button>
+          <button class="size-btn" data-size="md" onclick="setSize('md')">Medium</button>
+          <button class="size-btn" data-size="lg" onclick="setSize('lg')">Large</button>
+          <button class="size-btn" data-size="xl" onclick="setSize('xl')">XL</button>
+        </div>
+      </div>
+    </div>
+    <div class="scard">
+      <div class="scard-header">Placement</div>
+      <div class="scard-body">
+        <div class="corner-grid">
+          <button class="corner-btn" data-corner="tl" onclick="setCorner('tl')">&#x2196; Top<br>Left</button>
+          <button class="corner-btn" data-corner="tr" onclick="setCorner('tr')">&#x2197; Top<br>Right</button>
+          <button class="corner-btn" data-corner="bl" onclick="setCorner('bl')">&#x2199; Bottom<br>Left</button>
+          <button class="corner-btn" data-corner="br" onclick="setCorner('br')">&#x2198; Bottom<br>Right</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div id="footer-note">Changes apply instantly &middot; Overlay only shows during gameplay</div>
+</div>
+<script>
+const SWATCHES = [
+  { hex: '#ffffff', label: 'White'  },
+  { hex: '#2ecc71', label: 'Green'  },
+  { hex: '#00bcd4', label: 'Cyan'   },
+  { hex: '#f39c12', label: 'Orange' },
+  { hex: '#e74c3c', label: 'Red'    },
+]
+let _color = '#ffffff', _size = 'md', _corner = 'br', _alive = true
+
+function buildSwatches() {
+  const container = document.getElementById('swatches')
+  container.innerHTML = ''
+  SWATCHES.forEach(({ hex, label }) => {
+    const el = document.createElement('div')
+    el.className = 'swatch' + (hex.toLowerCase() === _color.toLowerCase() ? ' active' : '')
+    el.title = label; el.style.background = hex; el.dataset.hex = hex
+    el.addEventListener('click', () => { pickColor(hex); document.getElementById('color-picker').value = hex })
+    container.appendChild(el)
+  })
+}
+function pickColor(hex) {
+  _color = hex
+  document.getElementById('hex-preview').textContent = hex
+  document.querySelectorAll('.swatch').forEach(s => s.classList.toggle('active', s.dataset.hex.toLowerCase() === hex.toLowerCase()))
+  api.setFpsHudColor(hex).catch(() => {})
+}
+function setSize(key) {
+  _size = key
+  document.querySelectorAll('.size-btn').forEach(b => b.classList.toggle('active', b.dataset.size === key))
+  api.setFpsHudSize(key).catch(() => {})
+}
+function setCorner(key) {
+  _corner = key
+  document.querySelectorAll('.corner-btn').forEach(b => b.classList.toggle('active', b.dataset.corner === key))
+  api.setFpsHudCorner(key).catch(() => {})
+}
+document.getElementById('color-picker').addEventListener('input', e => pickColor(e.target.value))
+window.addEventListener('DOMContentLoaded', () => {
+  api.loadSettings().then(s => {
+    if (!_alive) return
+    _color  = s.ariaFpsHudColor  || '#ffffff'
+    _size   = s.ariaFpsHudSize   || 'md'
+    _corner = s.ariaFpsHudCorner || 'br'
+    document.getElementById('color-picker').value = _color
+    document.getElementById('hex-preview').textContent = _color
+    buildSwatches()
+    document.querySelectorAll('.size-btn').forEach(b => b.classList.toggle('active', b.dataset.size === _size))
+    document.querySelectorAll('.corner-btn').forEach(b => b.classList.toggle('active', b.dataset.corner === _corner))
+  }).catch(() => { if (_alive) buildSwatches() })
+})
+</script>
+</body>
+</html>
