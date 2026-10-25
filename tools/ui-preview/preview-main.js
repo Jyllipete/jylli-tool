@@ -93,7 +93,8 @@ async function main() {
     }
     for (const [oname, js] of OVERLAYS) {
       logs.length = 0
-      await win.webContents.executeJavaScript(js).catch(e => logs.push('[overlay] ' + e.message))
+      const out = await win.webContents.executeJavaScript(js).catch(e => { logs.push('[overlay] ' + e.message) })
+      if (typeof out === 'string' || typeof out === 'number') report.push(`${name}/overlay-${oname} => ${out}`)
       await sleep(900)
       await shot(win, path.join(OUT, name, `overlay-${oname}.png`))
       if (logs.length) { report.push(`${name}/overlay-${oname}:`); logs.forEach(l => report.push('   ' + l)) }

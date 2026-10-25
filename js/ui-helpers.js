@@ -313,3 +313,26 @@ function toast(title, msg = '', type = 'ok', duration = 3500) {
     setTimeout(() => t.remove(), 160)
   }, duration)
 }
+
+// Icon-only buttons get an accessible name from their tooltip (title) so screen readers don't announce a bare "button".
+function _labelIconButtons(root) {
+  const scope = root && root.querySelectorAll ? root : document
+  // Known handlers get a translated name; anything else falls back to its tooltip (title).
+  scope.querySelectorAll('button:not([aria-label]), button[data-auto-label], a.btn[title]:not([aria-label])').forEach(b => {
+    if (b.textContent.trim()) return
+    const h = (b.getAttribute('onclick') || '') + ' ' + b.id
+    const key = /Close|closeBugReport|tweak-diff-modal/.test(h) ? 'abClose' : /toggleAdvancedMode/.test(h) ? 'abAdvanced' : /showWhatsNew/.test(h) ? 'abWhatsNew'
+      : /showBugReport/.test(h) ? 'abBugReport' : /toggleLogPane/.test(h) ? 'abToggleLog' : /DeleteBundle/.test(h) ? 'abDelete' : /genRebootNow/.test(h) ? 'abRebootNow' : null
+    const label = key ? tUI(key) : b.getAttribute('title')
+    if (label) { b.setAttribute('aria-label', label); b.setAttribute('data-auto-label', '1') }
+  })
+}
+document.addEventListener('DOMContentLoaded', () => {
+  _labelIconButtons(document)
+  let queued = false
+  new MutationObserver(() => {
+    if (queued) return
+    queued = true
+    requestAnimationFrame(() => { queued = false; _labelIconButtons(document) })
+  }).observe(document.body, { childList: true, subtree: true })
+})
