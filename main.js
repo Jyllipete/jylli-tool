@@ -465,6 +465,8 @@ app.on('web-contents-created', (_, contents) => {
   contents.on('will-attach-webview', e => e.preventDefault())
 })
 const { createAuth } = require('./lib/auth')
+const { createSnapshotStore } = require('./lib/snapshot')
+let snapshots = null   // per-tweak 'before' values (created at startup, once userData is known)
 const V = require('./lib/validate')
 const Ini = require('./lib/ini')
 const { isStrictSubpath, topFolderUnder } = require('./lib/paths')
@@ -1109,6 +1111,7 @@ app.whenReady().then(() => {
   CLEANUP_HISTORY_PATH = path.join(userData, 'jt_cleanup_history.json')
   APP_VERSION    = app.getVersion()
   auth = createAuth({ BOT_URL, userDataDir: userData, safeStorage, userAgent: 'jylli-tool/' + APP_VERSION })
+  snapshots = createSnapshotStore(path.join(userData, 'snapshots'))
   startupTrace('createWindow starting')
   createWindow(); createTray()
   startupTrace('createWindow done')
@@ -3734,6 +3737,63 @@ async function invokeTweak(id, action = 'apply', send) {
   return TWEAKS[id][action](log, runPS, runCmd, regAdd, regDelete)
 }
 
+// ─── Power plan helpers (Intel/AMD Max Performance) ────────────────────────────────────────────────
+const POWER_GUID_RX = /([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i
+const BALANCED_SCHEME = '381b4222-f694-41f0-9685-ff5bb260df2e'
+async function listPowerSchemes(cmd) {
+  const r = await cmd('powercfg /list')
+  const out = []
+  for (const line of String(r.out || '').split(/\r?\n/)) {
+    const m = line.match(/GUID:\s*(\S+)\s+\((.*?)\)(\s*\*)?/i)
+    if (m && POWER_GUID_RX.test(m[1])) out.push({ guid: m[1], name: m[2], active: !!m[3] })
+  }
+  return out
+}
+// Creates (or re-uses) ONE plan per vendor — earlier versions duplicated a new plan on every apply.
+async function applyMaxPerfPlan({ vendor, label, vendorSetting, s, ps, cmd }) {
+  const cpuName = String((await ps('(Get-CimInstance Win32_Processor | Select-Object -First 1).Name')).out || '').trim()
+  if (!cpuName.toLowerCase().includes(vendor)) { s(`CPU detected: ${cpuName} — this plan is for ${label} CPUs.`, 'warn'); return }
+  s(`${label} CPU: ${cpuName}`, 'info')
+  const planName = `${label} Max Performance`
+  const schemes = await listPowerSchemes(cmd)
+  const active = schemes.find(x => x.active)
+  let ours = schemes.find(x => x.name === planName)
+  if (!ours) {
+    let guid = null
+    for (const base of ['e9a42b02-d5df-448d-aa00-03f14749eb61', '8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c', active?.guid].filter(Boolean)) {
+      const r = await cmd(`powercfg -duplicatescheme ${base}`)
+      const m = String(r.out || '').match(POWER_GUID_RX)
+      if (m) { guid = m[1]; break }
+    }
+    // NEVER fall back to 'powercfg /restoredefaultschemes' — that deletes every custom plan the user has.
+    if (!guid) { s('Could not create a power plan (locked by group policy, or plan templates are missing). Nothing was changed.', 'warn'); return }
+    await cmd(`powercfg /changename ${guid} "${planName}" "Jylli Tool - ${label}-optimised max performance plan"`)
+    ours = { guid, name: planName }
+  }
+  if (active && active.guid.toLowerCase() !== ours.guid.toLowerCase()) snapshots.merge('power-plan', { prevActive: active.guid })
+  const g = ours.guid
+  const set = (sub, setting, v) => cmd(`powercfg /setacvalueindex ${g} ${sub} ${setting} ${v}`)
+  await set('SUB_PROCESSOR', vendorSetting.name, vendorSetting.value)
+  for (const [setting, v] of [['PERFBOOSTMODE', 2], ['PERFEPP', 0], ['PERFBOOSTPOL', 100], ['SCHEDPOL', 0], ['PROCTHROTTLEMIN', 100], ['PROCTHROTTLEMAX', 100],
+                              ['IDLEPROMOTE', 0], ['IDLEDEMOTE', 0], ['IDLETIME', 0], ['CPMINCORES', 100]]) await set('SUB_PROCESSOR', setting, v)
+  await set('SUB_SLEEP', 'STANDBYIDLE', 0)
+  await set('SUB_SLEEP', 'HYBRIDSLEEP', 0)
+  await set('501a4d13-42af-4429-9ac1-df54c6bf3fc2', 'ee12f906-d277-404b-b6da-e5fa1a576df5', 0)
+  await set('2a737441-1930-4402-8d77-b2bebba308a3', '48e6b7a6-50f5-4782-a5d4-53bb8f07e226', 0)
+  await cmd(`powercfg -setactive ${g}`)
+  s(`${planName} plan activated — EPP=0, full boost policy, no idle/sleep. Reboot recommended.`, 'ok')
+}
+async function restoreMaxPerfPlan({ s, cmd }) {
+  const snap = snapshots.load('power-plan')
+  const schemes = await listPowerSchemes(cmd)
+  const mine = schemes.filter(x => /^(Intel|AMD) Max Performance$/.test(x.name))
+  const prev = schemes.find(x => x.guid.toLowerCase() === String(snap?.prevActive || '').toLowerCase() && !mine.includes(x))
+  await cmd(`powercfg -setactive ${prev ? prev.guid : BALANCED_SCHEME}`)
+  for (const m of mine) await cmd(`powercfg -delete ${m.guid}`)
+  snapshots.remove('power-plan')
+  s(prev ? `Previous power plan "${prev.name}" restored.` : 'Balanced power plan restored.', 'ok')
+}
+
 // Actions rather than persistent tweaks, or choices that belong to the user (which DNS provider, wiping logs/history,
 // deleting Windows.old, resetting the network stack, rebooting). They are NEVER part of an automatic plan, in any mode.
 const PLAN_EXCLUDED_IDS = new Set(['reboot-now', 'winsock-reset', 'disable-ipv6', 'clean-browser-history', 'clean-eventlogs', 'clean-old-windows', 'clean-winsxs'])
@@ -3900,16 +3960,16 @@ async function runAutoOptiInner(sysInfo) {
     send('  [warn] Using legacy optimizer path — selectedTweaks was empty', 'warn')
     const steps = buildAutoOptiSteps(sysInfo)
     for (let i = 0; i < steps.length; i++) {
-      const { label, fn } = steps[i]
-      progress(i + 1, steps.length, label, '', 'running')
+      const { label, fn, id: stepId = '' } = steps[i]
+      progress(i + 1, steps.length, label, stepId, 'running')
       send(`  [${i+1}/${steps.length}] ${label}`, 'info')
       try {
         await runTask(() => fn(send, runPS, runCmd, regAdd, regDelete), label)
-        progress(i + 1, steps.length, label, '', 'ok')
+        progress(i + 1, steps.length, label, stepId, 'ok')
       } catch (e) {
         send(`    Skipped: ${e.message}`, 'warn')
-        progress(i + 1, steps.length, label, '', 'failed')
-        failedTasks.push({ id: label, reason: e.message })
+        progress(i + 1, steps.length, label, stepId, 'failed')
+        failedTasks.push({ id: stepId || label, reason: e.message })
       }
     }
   }
@@ -3974,293 +4034,26 @@ async function createRestorePointInternal(send) {
   return { ok: false, reason }
 }
 
+// Curated baseline used when no explicit tweak list is passed. Ids only: every step runs through invokeTweak(), i.e. exactly the same
+// (fixed, snapshot-aware) code as the manual Apply buttons — the old inline copies had their own bugs.
 function buildAutoOptiSteps(si) {
-  const steps = []
-  const add = (label, fn) => steps.push({ label, fn })
-
-  add('Disable Game DVR / Xbox recording', async (s, ps) => {
-    await ps('Set-ItemProperty -Path "HKCU:\\System\\GameConfigStore" -Name GameDVR_Enabled -Value 0 -Force')
-    await ps('New-Item -Path "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\GameDVR" -Force | Out-Null; Set-ItemProperty -Path "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\GameDVR" -Name AllowGameDVR -Value 0 -Force')
-    s('Game DVR disabled.', 'ok')
-  })
-
-  add('Set Visual Effects → Best Performance', async (s, ps) => {
-    await ps('Set-ItemProperty -Path "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\VisualEffects" -Name VisualFXSetting -Value 2 -Force')
-    s('Visual effects minimised.', 'ok')
-  })
-
-  add('MMCSS GPU Priority=8, Games scheduling=High', async (s, ps) => {
-    const base = 'HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Multimedia\\SystemProfile'
-    // 10, not 0 — value 0 starves USB HID interrupts (causes ghost mouse clicks and audio beeps)
-    await ps(`Set-ItemProperty -Path "${base}" -Name SystemResponsiveness -Value 10 -Force`)
-    await ps(`Set-ItemProperty -Path "${base}\\Tasks\\Games" -Name "GPU Priority" -Value 8 -Force`)
-    await ps(`Set-ItemProperty -Path "${base}\\Tasks\\Games" -Name "Priority" -Value 6 -Force`)
-    await ps(`Set-ItemProperty -Path "${base}\\Tasks\\Games" -Name "Scheduling Category" -Value "High" -Force`)
-    s('MMCSS applied.', 'ok')
-  })
-
-  const gpuLower = (si?.gpu || '').toLowerCase()
-  const hwschedSafe = gpuLower.includes('nvidia') || gpuLower.includes('rtx') || gpuLower.includes('gtx') ||
-                      gpuLower.includes('rx 6') || gpuLower.includes('rx 7') || gpuLower.includes('rx 9') ||
-                      gpuLower.includes('arc')
-  if (hwschedSafe) {
-    add('Enable GPU Hardware Scheduling', async (s, ps) => {
-      await ps('Set-ItemProperty -Path "HKLM:\\SYSTEM\\CurrentControlSet\\Control\\GraphicsDrivers" -Name HwSchMode -Value 2 -Force')
-      s('GPU HW Scheduling enabled. Reboot required.', 'ok')
-    })
-  }
-
-  add('Disable CPU core parking', async (s, _, cmd) => {
-    await cmd('powercfg /setacvalueindex SCHEME_CURRENT SUB_PROCESSOR CPMINCORES 100')
-    await cmd('powercfg /setactive SCHEME_CURRENT')
-    s('CPU core parking disabled.', 'ok')
-  })
-
-  add('NTFS: disable 8.3 names + last-access timestamps', async (s, _, cmd) => {
-    await cmd('fsutil behavior set disable8dot3 1')
-    await cmd('fsutil behavior set disablelastaccess 1')
-    s('NTFS tweaks applied.', 'ok')
-  })
-
-  add('Enable MSI Interrupt Mode for PCI devices', async (s, ps) => {
-    await ps(`
-      $base = "HKLM:\\SYSTEM\\CurrentControlSet\\Enum\\PCI"
-      $netGuid  = '{4d36e972-e325-11ce-bfc1-08002be10318}'
-      $count = 0; $skipped = 0
-      Get-ChildItem $base -EA SilentlyContinue | ForEach-Object {
-        Get-ChildItem $_.PSPath -EA SilentlyContinue | ForEach-Object {
-          $props   = Get-ItemProperty -Path $_.PSPath -EA SilentlyContinue
-          $classGuid = $props.ClassGUID
-          $service   = $props.Service
-          $isNet   = $classGuid -eq $netGuid
-          $isWifi  = $service -match 'iwifi|netathr|bcmwl|rt[l6]8|rtswlan|Netwtw|IntelWifi|netrtwlane|RtlW|mrvlpcie|rtwlane'
-          if ($isNet -or $isWifi) { $skipped++; return }
-          $msi = "$($_.PSPath)\\Device Parameters\\Interrupt Management\\MessageSignaledInterruptProperties"
-          New-Item -Path $msi -Force -EA SilentlyContinue | Out-Null
-          Set-ItemProperty -Path $msi -Name MSISupported -Value 1 -Force -EA SilentlyContinue
-          $count++
-        }
-      }
-      Write-Output "MSI set on $count devices, skipped $skipped network adapters"
-    `)
-    s('MSI mode applied to PCI devices (network adapters excluded).', 'ok')
-  })
-
-  add('Disable WPAD (Web Proxy Auto-Discovery)', async (s, _, cmd) => {
-    await cmd('sc config WinHttpAutoProxySvc start= disabled')
-    await cmd('sc stop WinHttpAutoProxySvc')
-    s('WPAD disabled.', 'ok')
-  })
-
-  add('Disable NetBIOS over TCP/IP', async (s, ps) => {
-    await ps('Set-ItemProperty -Path "HKLM:\\SYSTEM\\CurrentControlSet\\Services\\NetBT\\Parameters" -Name NetbiosOptions -Value 2 -Force')
-    s('NetBIOS disabled.', 'ok')
-  })
-
-  if (!si?.isWifi) {
-    add('Disable network throttling', async (s, ps) => {
-      await ps('Set-ItemProperty -Path "HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Multimedia\\SystemProfile" -Name NetworkThrottlingIndex -Value 0xFFFFFFFF -Force')
-      s('Network throttling disabled.', 'ok')
-    })
-
-    add('Optimise TCP stack', async (s, _, cmd) => {
-      await cmd('netsh int tcp set global autotuninglevel=normal')
-      await cmd('netsh int tcp set global rss=enabled')
-      await cmd('netsh int tcp set global chimney=disabled')
-      await cmd('netsh int tcp set global ecncapability=disabled')
-      await cmd('netsh int tcp set global timestamps=disabled')
-      s('TCP stack optimised.', 'ok')
-    })
-
-    add('Remove QoS 20% bandwidth reservation', async (s, ps) => {
-      await ps('New-Item -Path "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\Psched" -Force | Out-Null; Set-ItemProperty -Path "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\Psched" -Name NonBestEffortLimit -Value 0 -Force')
-      s('QoS reservation removed.', 'ok')
-    })
-  }
-
-  add('Disable startup app delay', async (s, ps) => {
-    await ps('New-Item -Path "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Serialize" -Force | Out-Null; Set-ItemProperty -Path "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Serialize" -Name StartupDelayInMSec -Value 0 -Force')
-    s('Startup delay removed.', 'ok')
-  })
-
-  add('Disable Windows tips & suggestions', async (s, ps) => {
-    await ps('Set-ItemProperty -Path "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\ContentDeliveryManager" -Name SoftLandingEnabled -Value 0 -Force -ErrorAction SilentlyContinue')
-    await ps('Set-ItemProperty -Path "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\ContentDeliveryManager" -Name "SubscribedContent-338389Enabled" -Value 0 -Force -ErrorAction SilentlyContinue')
-    s('Windows tips disabled.', 'ok')
-  })
-
-  add('Set foreground process priority boost', async (s, ps) => {
-    await ps('Set-ItemProperty -Path "HKLM:\\SYSTEM\\CurrentControlSet\\Control\\PriorityControl" -Name Win32PrioritySeparation -Value 38 -Force')
-    s('Priority separation set.', 'ok')
-  })
-
-  if (!si?.isLaptop) {
-    add('Apply CPU-specific max performance power plan', async (s, ps, cmd) => {
-      const cpuR = await ps('(Get-CimInstance Win32_Processor | Select-Object -First 1).Name')
-      const cpuName = cpuR.out.trim()
-      const isAMD = cpuName.toLowerCase().includes('amd')
-      const isIntel = cpuName.toLowerCase().includes('intel')
-      if (!isAMD && !isIntel) { s(`Unknown CPU: ${cpuName} — skipping power plan.`, 'warn'); return }
-      const GUID_RX = /([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i
-      let r, m
-      for (const scheme of ['e9a42b02-d5df-448d-aa00-03f14749eb61', '8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c']) {
-        r = await cmd(`powercfg -duplicatescheme ${scheme}`)
-        m = r.out.match(GUID_RX)
-        if (m) break
-      }
-      if (!m) {
-        const active = await cmd('powercfg /getactivescheme')
-        const activeGuid = active.out.match(GUID_RX)?.[1]
-        if (activeGuid) { r = await cmd(`powercfg -duplicatescheme ${activeGuid}`); m = r.out.match(GUID_RX) }
-      }
-      if (!m) {
-        await cmd('powercfg /restoredefaultschemes')
-        r = await cmd('powercfg -duplicatescheme e9a42b02-d5df-448d-aa00-03f14749eb61')
-        m = r.out.match(GUID_RX)
-      }
-      if (!m) { s('Could not create power plan — power settings may be locked by group policy.', 'warn'); return }
-      const g = m[1]
-      if (isIntel) {
-        await cmd(`powercfg /changename ${g} "Intel Max Performance" "Jylli Tool - Intel-optimised max performance plan"`)
-        await cmd(`powercfg /setacvalueindex ${g} SUB_PROCESSOR PERFAUTONOMOUS 1`)
-      } else {
-        await cmd(`powercfg /changename ${g} "AMD Max Performance" "Jylli Tool - AMD-optimised max performance plan"`)
-        await cmd(`powercfg /setacvalueindex ${g} SUB_PROCESSOR CPPCENABLED 1`)
-      }
-      await cmd(`powercfg /setacvalueindex ${g} SUB_PROCESSOR PERFBOOSTMODE 2`)
-      await cmd(`powercfg /setacvalueindex ${g} SUB_PROCESSOR PERFEPP 0`)
-      await cmd(`powercfg /setacvalueindex ${g} SUB_PROCESSOR PERFBOOSTPOL 100`)
-      await cmd(`powercfg /setacvalueindex ${g} SUB_PROCESSOR SCHEDPOL 0`)
-      await cmd(`powercfg /setacvalueindex ${g} SUB_PROCESSOR PROCTHROTTLEMIN 100`)
-      await cmd(`powercfg /setacvalueindex ${g} SUB_PROCESSOR PROCTHROTTLEMAX 100`)
-      await cmd(`powercfg /setacvalueindex ${g} SUB_PROCESSOR IDLEPROMOTE 0`)
-      await cmd(`powercfg /setacvalueindex ${g} SUB_PROCESSOR IDLEDEMOTE 0`)
-      await cmd(`powercfg /setacvalueindex ${g} SUB_PROCESSOR IDLETIME 0`)
-      await cmd(`powercfg /setacvalueindex ${g} SUB_PROCESSOR CPMINCORES 100`)
-      await cmd(`powercfg /setacvalueindex ${g} SUB_SLEEP STANDBYIDLE 0`)
-      await cmd(`powercfg /setacvalueindex ${g} SUB_SLEEP HYBRIDSLEEP 0`)
-      await cmd(`powercfg /setacvalueindex ${g} 501a4d13-42af-4429-9ac1-df54c6bf3fc2 ee12f906-d277-404b-b6da-e5fa1a576df5 0`)
-      await cmd(`powercfg /setacvalueindex ${g} 2a737441-1930-4402-8d77-b2bebba308a3 48e6b7a6-50f5-4782-a5d4-53bb8f07e226 0`)
-      await cmd(`powercfg -setactive ${g}`)
-      s(`${isIntel ? 'Intel' : 'AMD'} Max Performance plan activated — EPP=0, full boost, no idle/sleep.`, 'ok')
-    })
-  }
-
-  if (si?.nvme) {
-    add('NVMe StorPort latency tweak', async (s, ps) => {
-      await ps('Set-ItemProperty -Path "HKLM:\\SYSTEM\\CurrentControlSet\\Control\\StorPort" -Name TelemetryPerformanceHighResolutionTimer -Value 0 -Force -ErrorAction SilentlyContinue')
-      await ps('Set-ItemProperty -Path "HKLM:\\SYSTEM\\CurrentControlSet\\Control\\StorPort" -Name BusyPauseTime -Value 0 -Force -ErrorAction SilentlyContinue')
-      s('NVMe StorPort tweak applied.', 'ok')
-    })
-  }
-
-  if (si?.ramGB >= 16) {
-    add('Disable SysMain (SuperFetch)', async (s, _, cmd) => {
-      await cmd('sc stop SysMain')
-      await cmd('sc config SysMain start= disabled')
-      s('SysMain disabled.', 'ok')
-    })
-  }
-
-  add('Disable telemetry & DiagTrack service', async (s, ps, cmd) => {
-    await ps('New-Item -Path "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\DataCollection" -Force -EA SilentlyContinue | Out-Null')
-    await ps('Set-ItemProperty -Path "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\DataCollection" -Name AllowTelemetry -Value 0 -Force')
-    await cmd('sc config DiagTrack start= disabled')
-    await cmd('sc stop DiagTrack')
-    await cmd('sc config dmwappushservice start= disabled')
-    await cmd('sc stop dmwappushservice')
-    s('Telemetry & DiagTrack disabled.', 'ok')
-  })
-
-  if (!si?.isLaptop) {
-    add('Disable Power Throttling', async (s, ps) => {
-      await ps('New-Item -Path "HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Power\\PowerThrottling" -Force -EA SilentlyContinue | Out-Null')
-      await ps('Set-ItemProperty -Path "HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Power\\PowerThrottling" -Name PowerThrottlingOff -Value 1 -Force')
-      s('Power Throttling disabled.', 'ok')
-    })
-  }
-
-  add('Disable UWP background apps', async (s, ps) => {
-    await ps('New-Item -Path "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\BackgroundAccessApplications" -Force -EA SilentlyContinue | Out-Null')
-    await ps('Set-ItemProperty -Path "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\BackgroundAccessApplications" -Name GlobalUserDisabled -Value 1 -Force')
-    s('UWP background apps disabled.', 'ok')
-  })
-
-  add('Disable mouse acceleration', async (s, ps) => {
-    await ps('Set-ItemProperty -Path "HKCU:\\Control Panel\\Mouse" -Name MouseSpeed -Value "0" -Force')
-    await ps('Set-ItemProperty -Path "HKCU:\\Control Panel\\Mouse" -Name MouseThreshold1 -Value "0" -Force')
-    await ps('Set-ItemProperty -Path "HKCU:\\Control Panel\\Mouse" -Name MouseThreshold2 -Value "0" -Force')
-    s('Mouse acceleration disabled.', 'ok')
-  })
-
-  add('Disable Windows Update P2P delivery optimization', async (s, ps) => {
-    await ps('New-Item -Path "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\DeliveryOptimization" -Force -EA SilentlyContinue | Out-Null')
-    await ps('Set-ItemProperty -Path "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\DeliveryOptimization" -Name DODownloadMode -Value 0 -Force')
-    s('Delivery Optimization disabled.', 'ok')
-  })
-
-  add('Disable automatic maintenance', async (s, ps, cmd) => {
-    await ps('New-Item -Path "HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Schedule\\Maintenance" -Force -EA SilentlyContinue | Out-Null')
-    await ps('Set-ItemProperty -Path "HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Schedule\\Maintenance" -Name MaintenanceDisabled -Value 1 -Force')
-    await cmd('schtasks /Change /TN "\\Microsoft\\Windows\\TaskScheduler\\Regular Maintenance" /Disable 2>nul')
-    s('Automatic maintenance disabled.', 'ok')
-  })
-
-  if (!si?.isLaptop) {
-    add('Disable USB Selective Suspend', async (s, _, cmd) => {
-      await cmd('powercfg /setacvalueindex SCHEME_CURRENT 2a737441-1930-4402-8d77-b2bebba308a3 48e6b7a6-50f5-4782-a5d4-53bb8f07e226 0')
-      await cmd('powercfg /setdcvalueindex SCHEME_CURRENT 2a737441-1930-4402-8d77-b2bebba308a3 48e6b7a6-50f5-4782-a5d4-53bb8f07e226 0')
-      await cmd('powercfg /setactive SCHEME_CURRENT')
-      s('USB Selective Suspend disabled.', 'ok')
-    })
-
-    add('Disable PCIe Link State Power Management', async (s, _, cmd) => {
-      await cmd('powercfg /setacvalueindex SCHEME_CURRENT 501a4d13-42af-4429-9ac1-df54c6bf3fc2 ee12f906-d277-404b-b6da-e5fa1a576df5 0')
-      await cmd('powercfg /setdcvalueindex SCHEME_CURRENT 501a4d13-42af-4429-9ac1-df54c6bf3fc2 ee12f906-d277-404b-b6da-e5fa1a576df5 0')
-      await cmd('powercfg /setactive SCHEME_CURRENT')
-      s('PCIe power management disabled.', 'ok')
-    })
-  }
-
-  const ethernetFilter = `$_.Status -eq 'Up' -and $_.PhysicalMediaType -ne 'Native 802.11' -and $_.PhysicalMediaType -ne 'Wireless LAN' -and $_.InterfaceDescription -notlike '*Wireless*' -and $_.InterfaceDescription -notlike '*Wi-Fi*' -and $_.InterfaceDescription -notlike '*802.11*' -and $_.InterfaceDescription -notlike '*Virtual*' -and $_.InterfaceDescription -notlike '*Loopback*'`
-
-  add('Disable NIC interrupt moderation (Ethernet only)', async (s, ps) => {
-    await ps(`
-      Get-NetAdapter | Where-Object {${ethernetFilter}} | ForEach-Object {
-        $n = $_.Name
-        foreach ($prop in @("Interrupt Moderation","InterruptModeration","Interrupt Moderation Rate")) {
-          try { Set-NetAdapterAdvancedProperty -Name $n -DisplayName $prop -DisplayValue "Disabled" -EA Stop; break } catch {}
-        }
-      }
-    `)
-    s('NIC interrupt moderation disabled.', 'ok')
-  })
-
-  add('Disable NIC flow control (Ethernet only)', async (s, ps) => {
-    await ps(`
-      Get-NetAdapter | Where-Object {${ethernetFilter}} | ForEach-Object {
-        $n = $_.Name
-        foreach ($prop in @("Flow Control","FlowControl")) {
-          try { Set-NetAdapterAdvancedProperty -Name $n -DisplayName $prop -DisplayValue "Disabled" -EA Stop; break } catch {}
-        }
-      }
-    `)
-    s('NIC flow control disabled.', 'ok')
-  })
-
-  add('Disable Energy Efficient Ethernet (Ethernet only)', async (s, ps) => {
-    await ps(`
-      Get-NetAdapter | Where-Object {${ethernetFilter}} | ForEach-Object {
-        $n = $_.Name
-        foreach ($prop in @("Energy Efficient Ethernet","EEE","Green Ethernet","Energy-Efficient Ethernet")) {
-          try { Set-NetAdapterAdvancedProperty -Name $n -DisplayName $prop -DisplayValue "Disabled" -EA Stop; break } catch {}
-        }
-      }
-    `)
-    s('Energy Efficient Ethernet disabled.', 'ok')
-  })
-
-  return steps
+  const gpu = (si?.gpu || '').toLowerCase()
+  const hwschedSafe = ['nvidia', 'rtx', 'gtx', 'rx 6', 'rx 7', 'rx 9', 'arc'].some(k => gpu.includes(k))
+  const cpu = (si?.cpu || '').toLowerCase()
+  const ids = ['game-dvr', 'visual-effects', 'mmcss']
+  if (hwschedSafe) ids.push('gpu-hwsch')
+  ids.push('cpu-parking', 'ntfs', 'msi-mode', 'disable-wpad', 'disable-netbios')
+  if (!si?.isWifi) ids.push('net-throttling', 'tcp-stack', 'qos-reserve')
+  ids.push('explorer-perf', 'win-tips', 'priority-sep')
+  if (!si?.isLaptop) ids.push(...(cpu.includes('amd') ? ['amd-power-plan'] : cpu.includes('intel') ? ['intel-power-plan'] : []))
+  if (si?.nvme) ids.push('nvme-latency')
+  if (si?.ramGB >= 16) ids.push('sysmain')
+  ids.push('telemetry')
+  if (!si?.isLaptop) ids.push('power-throttling')
+  ids.push('disable-background-apps', 'disable-mouse-accel', 'disable-delivery-opt', 'disable-auto-maintenance')
+  if (!si?.isLaptop) ids.push('usb-suspend', 'pcie-power')
+  ids.push('nic-interrupt-mod', 'nic-flow-control', 'nic-energy-efficient')
+  return ids.filter(id => hasTweak(id)).map(id => ({ id, label: TWEAKS[id].name || id, fn: send => invokeTweak(id, 'apply', send) }))
 }
 
 // ─── Individual tweak registry ────────────────────────────────────────────────
@@ -4320,7 +4113,7 @@ const TWEAKS = {
       await cmd('reg add "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced" /v TaskbarAnimations /t REG_DWORD /d 0 /f')
       // Keep smooth fonts, drag-full-windows, and thumbnails on despite Best Performance mode
       await cmd('reg add "HKCU\\Control Panel\\Desktop" /v FontSmoothing /t REG_SZ /d 2 /f')
-      await cmd('reg add "HKCU\\Control Panel\\Desktop" /v FontSmoothingType /t REG_SZ /d 2 /f')
+      await cmd('reg add "HKCU\\Control Panel\\Desktop" /v FontSmoothingType /t REG_DWORD /d 2 /f')
       await cmd('reg add "HKCU\\Control Panel\\Desktop" /v DragFullWindows /t REG_SZ /d 1 /f')
       await cmd('reg add "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced" /v IconsOnly /t REG_DWORD /d 0 /f')
       s('Visual effects → Best Performance (fonts, drag, thumbnails kept on).', 'ok')
@@ -4328,10 +4121,11 @@ const TWEAKS = {
     restore: async (s, ps, cmd) => {
       await ps('Set-ItemProperty -Path "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\VisualEffects" -Name VisualFXSetting -Value 0 -Force')
       await cmd('reg add "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced" /v TaskbarAnimations /t REG_DWORD /d 1 /f')
-      await ps('Remove-ItemProperty -Path "HKCU:\\Control Panel\\Desktop" -Name FontSmoothing -EA SilentlyContinue')
-      await ps('Remove-ItemProperty -Path "HKCU:\\Control Panel\\Desktop" -Name FontSmoothingType -EA SilentlyContinue')
-      await ps('Remove-ItemProperty -Path "HKCU:\\Control Panel\\Desktop" -Name DragFullWindows -EA SilentlyContinue')
-      await ps('Remove-ItemProperty -Path "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced" -Name IconsOnly -EA SilentlyContinue')
+      // Deleting these values breaks ClearType / window dragging — put the Windows defaults back instead.
+      await cmd('reg add "HKCU\\Control Panel\\Desktop" /v FontSmoothing /t REG_SZ /d 2 /f')
+      await cmd('reg add "HKCU\\Control Panel\\Desktop" /v FontSmoothingType /t REG_DWORD /d 2 /f')
+      await cmd('reg add "HKCU\\Control Panel\\Desktop" /v DragFullWindows /t REG_SZ /d 1 /f')
+      await cmd('reg add "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced" /v IconsOnly /t REG_DWORD /d 0 /f')
       s('Visual effects restored.', 'ok')
     }
   },
@@ -4342,8 +4136,9 @@ const TWEAKS = {
     gamerImpact: 'high',
     check: async (ps) => {
       const base = 'HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Multimedia\\SystemProfile'
-      const r = await ps(`(Get-ItemProperty -Path "${base}\\Tasks\\Games" -Name "GPU Priority" -EA SilentlyContinue)."GPU Priority"`, 3000)
-      return r.ok && r.out.trim() === '8'
+      // GPU Priority 8 is already the Windows default, so test the values this tweak actually changes
+      const r = await ps(`(Get-ItemProperty -Path "${base}\\Tasks\\Games" -EA SilentlyContinue | ForEach-Object { "$($_.Priority)|$($_.'Scheduling Category')" })`, 3000)
+      return r.ok && r.out.trim() === '6|High'
     },
     apply: async (s, ps) => {
       const base = 'HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Multimedia\\SystemProfile'
@@ -4359,7 +4154,7 @@ const TWEAKS = {
     restore: async (s, ps) => {
       const base = 'HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Multimedia\\SystemProfile'
       await ps(`Set-ItemProperty -Path "${base}" -Name SystemResponsiveness -Value 20 -Force`)
-      await ps(`Set-ItemProperty -Path "${base}\\Tasks\\Games" -Name "GPU Priority" -Value 2 -Force`)
+      await ps(`Set-ItemProperty -Path "${base}\\Tasks\\Games" -Name "GPU Priority" -Value 8 -Force`)   // Windows default
       await ps(`Set-ItemProperty -Path "${base}\\Tasks\\Games" -Name "Priority" -Value 2 -Force`)
       await ps(`Set-ItemProperty -Path "${base}\\Tasks\\Games" -Name "Scheduling Category" -Value "Medium" -Force`)
       await ps(`Set-ItemProperty -Path "${base}\\Tasks\\Games" -Name "SFIO Priority" -Value "Normal" -Force`)
@@ -4422,7 +4217,7 @@ const TWEAKS = {
       s('HPET disabled. Reboot required.', 'ok')
     },
     restore: async (s, _, cmd) => {
-      await cmd('bcdedit /set useplatformclock true')
+      await cmd('bcdedit /deletevalue useplatformclock')   // Windows default = value absent (forcing it to 'true' would FORCE HPET on)
       await cmd('bcdedit /deletevalue disabledynamictick')
       await cmd('bcdedit /deletevalue useplatformtick')
       s('HPET restored. Reboot required.', 'ok')
@@ -4456,9 +4251,9 @@ const TWEAKS = {
       s('NTFS performance tweaks applied.', 'ok')
     },
     restore: async (s, _, cmd) => {
-      await cmd('fsutil behavior set disable8dot3 0')
-      await cmd('fsutil behavior set disablelastaccess 0')
-      await cmd('fsutil behavior set encryptpagingfile 1')
+      await cmd('fsutil behavior set disable8dot3 2')        // 2 = system managed (default)
+      await cmd('fsutil behavior set disablelastaccess 2')   // 2 = system managed (default)
+      await cmd('fsutil behavior set encryptpagingfile 0')   // pagefile encryption is off by default — never switch it on as a side effect
       s('NTFS defaults restored.', 'ok')
     }
   },
@@ -4468,49 +4263,43 @@ const TWEAKS = {
     safetyTier: 2,
     gamerImpact: 'medium',
     apply: async (s, ps) => {
-      await ps(`
+      const r = await ps(`
         $base = "HKLM:\\SYSTEM\\CurrentControlSet\\Enum\\PCI"
-        $count = 0; $skipped = 0
+        # network adapters (Wi-Fi/NIC drivers drop out with forced MSI) and storage controllers (can make Windows unbootable) are never touched
+        $skipClasses = @('{4d36e972-e325-11ce-bfc1-08002be10318}','{4d36e97b-e325-11ce-bfc1-08002be10318}','{4d36e96a-e325-11ce-bfc1-08002be10318}','{4d36e967-e325-11ce-bfc1-08002be10318}')
         Get-ChildItem $base -EA SilentlyContinue | ForEach-Object {
           Get-ChildItem $_.PSPath -EA SilentlyContinue | ForEach-Object {
             $devPath = $_.PSPath
-            # Skip network/Wi-Fi adapters — Intel/Qualcomm/Realtek Wi-Fi drivers
-            # do not support MSI correctly and will drop the adapter after reboot
-            $classGuid = (Get-ItemProperty -Path $devPath -EA SilentlyContinue).ClassGUID
-            $service   = (Get-ItemProperty -Path $devPath -EA SilentlyContinue).Service
-            $isNet = $classGuid -eq '{4d36e972-e325-11ce-bfc1-08002be10318}'
-            $isWifi = $service -match 'iwifi|netathr|bcmwl|rt[l6]8|rtswlan|netadap|Netwtw|netrtwlane|RtlW|IntelWifi|Netwtw0[2-9]|mrvlpcie|rtwlane'
-            if ($isNet -or $isWifi) { $skipped++; return }
+            $props = Get-ItemProperty -Path $devPath -EA SilentlyContinue
+            if ($skipClasses -contains $props.ClassGUID) { return }
+            if ($props.Service -match 'iwifi|netathr|bcmwl|rt[l6]8|rtswlan|netadap|Netwtw|netrtwlane|RtlW|IntelWifi|mrvlpcie|rtwlane|stornvme|storahci|iaStor|nvme') { return }
             $p = "$devPath\\Device Parameters\\Interrupt Management\\MessageSignaledInterruptProperties"
+            $old = (Get-ItemProperty -Path $p -Name MSISupported -EA SilentlyContinue).MSISupported
+            if ($old -eq 1) { return }
+            Write-Output ("SNAP|" + $devPath + "|" + $old)
             New-Item -Path $p -Force -EA SilentlyContinue | Out-Null
-            Set-ItemProperty -Path $p -Name MSISupported -Value 1 -Force -EA SilentlyContinue
-            $count++
+            Set-ItemProperty -Path $p -Name MSISupported -Value 1 -Type DWord -Force -EA SilentlyContinue
           }
         }
-        Write-Output "Set on $count devices, skipped $skipped network adapters"
       `)
-      s('MSI Interrupt Mode applied to PCI devices (Wi-Fi/NICs excluded). Reboot required.', 'ok')
+      const snap = {}
+      for (const line of String(r.out || '').split(/\r?\n/)) {
+        const m = /^SNAP\|(.+)\|(\d*)$/.exec(line.trim())
+        if (m) snap[m[1]] = m[2] === '' ? null : Number(m[2])
+      }
+      snapshots.merge('msi-mode', snap)
+      s(`MSI interrupt mode applied to ${Object.keys(snap).length} PCI device(s) (network and storage controllers excluded). Reboot required.`, 'ok')
     },
     restore: async (s, ps) => {
-      await ps(`
-        $base = "HKLM:\\SYSTEM\\CurrentControlSet\\Enum\\PCI"
-        $count = 0; $skipped = 0
-        Get-ChildItem $base -EA SilentlyContinue | ForEach-Object {
-          Get-ChildItem $_.PSPath -EA SilentlyContinue | ForEach-Object {
-            $devPath = $_.PSPath
-            $classGuid = (Get-ItemProperty -Path $devPath -EA SilentlyContinue).ClassGUID
-            $service   = (Get-ItemProperty -Path $devPath -EA SilentlyContinue).Service
-            $isNet = $classGuid -eq '{4d36e972-e325-11ce-bfc1-08002be10318}'
-            $isWifi = $service -match 'iwifi|netathr|bcmwl|rt[l6]8|rtswlan|netadap|Netwtw|netrtwlane|RtlW|IntelWifi|Netwtw0[2-9]|mrvlpcie|rtwlane'
-            if ($isNet -or $isWifi) { $skipped++; return }
-            $p = "$devPath\\Device Parameters\\Interrupt Management\\MessageSignaledInterruptProperties"
-            Set-ItemProperty -Path $p -Name MSISupported -Value 0 -Force -EA SilentlyContinue
-            $count++
-          }
-        }
-        Write-Output "MSI reverted on $count devices, skipped $skipped network adapters"
-      `)
-      s('MSI Interrupt Mode reverted — devices restored to INTx mode. Reboot required.', 'ok')
+      const snap = snapshots.load('msi-mode')
+      if (!snap) { s('No MSI snapshot found (applied by an older version) — leaving device settings unchanged. Use System Restore if a device misbehaves.', 'warn'); return }
+      const entries = Object.entries(snap).filter(([p]) => /^Microsoft\.PowerShell\.Core\\Registry::HKEY_LOCAL_MACHINE\\SYSTEM\\CurrentControlSet\\Enum\\PCI\\[\w&.#{}\-\\]+$/.test(p) || /^HKEY_LOCAL_MACHINE\\SYSTEM\\CurrentControlSet\\Enum\\PCI\\[\w&.#{}\-\\]+$/.test(p))
+      for (const [devPath, old] of entries) {
+        const p = V.psQuote(devPath + '\\Device Parameters\\Interrupt Management\\MessageSignaledInterruptProperties')
+        await ps(old === null ? `Remove-ItemProperty -Path ${p} -Name MSISupported -EA SilentlyContinue` : `Set-ItemProperty -Path ${p} -Name MSISupported -Value ${Number(old)} -Type DWord -Force -EA SilentlyContinue`)
+      }
+      snapshots.remove('msi-mode')
+      s(`MSI interrupt mode restored on ${entries.length} device(s) to their previous values. Reboot required.`, 'ok')
     }
   },
   'memory-compression': {
@@ -4846,102 +4635,16 @@ const TWEAKS = {
     category: 'cpu',
     safetyTier: 1,
     gamerImpact: 'high',
-    apply: async (s, ps, cmd) => {
-      s('Detecting CPU…', 'info')
-      const cpuR = await ps('(Get-CimInstance Win32_Processor | Select-Object -First 1).Name')
-      const cpuName = cpuR.out.trim()
-      if (!cpuName.toLowerCase().includes('intel')) { s(`CPU detected: ${cpuName} — this plan is for Intel CPUs.`, 'warn'); return }
-      s(`Intel CPU: ${cpuName}`, 'info')
-      const GUID_RX_I = /([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i
-      let r, m
-      for (const scheme of ['e9a42b02-d5df-448d-aa00-03f14749eb61', '8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c']) {
-        r = await cmd(`powercfg -duplicatescheme ${scheme}`)
-        m = r.out.match(GUID_RX_I)
-        if (m) break
-      }
-      if (!m) {
-        const active = await cmd('powercfg /getactivescheme')
-        const activeGuid = active.out.match(GUID_RX_I)?.[1]
-        if (activeGuid) { r = await cmd(`powercfg -duplicatescheme ${activeGuid}`); m = r.out.match(GUID_RX_I) }
-      }
-      if (!m) {
-        await cmd('powercfg /restoredefaultschemes')
-        r = await cmd('powercfg -duplicatescheme e9a42b02-d5df-448d-aa00-03f14749eb61')
-        m = r.out.match(GUID_RX_I)
-      }
-      if (!m) { s('Could not create power plan — your power settings may be locked by group policy.', 'warn'); return }
-      const g = m[1]
-      await cmd(`powercfg /changename ${g} "Intel Max Performance" "Jylli Tool - Intel-optimised max performance plan"`)
-      await cmd(`powercfg /setacvalueindex ${g} SUB_PROCESSOR PERFBOOSTMODE 2`)
-      await cmd(`powercfg /setacvalueindex ${g} SUB_PROCESSOR PERFAUTONOMOUS 1`)
-      await cmd(`powercfg /setacvalueindex ${g} SUB_PROCESSOR PERFEPP 0`)
-      await cmd(`powercfg /setacvalueindex ${g} SUB_PROCESSOR PERFBOOSTPOL 100`)
-      await cmd(`powercfg /setacvalueindex ${g} SUB_PROCESSOR SCHEDPOL 0`)
-      await cmd(`powercfg /setacvalueindex ${g} SUB_PROCESSOR PROCTHROTTLEMIN 100`)
-      await cmd(`powercfg /setacvalueindex ${g} SUB_PROCESSOR PROCTHROTTLEMAX 100`)
-      await cmd(`powercfg /setacvalueindex ${g} SUB_PROCESSOR IDLEPROMOTE 0`)
-      await cmd(`powercfg /setacvalueindex ${g} SUB_PROCESSOR IDLEDEMOTE 0`)
-      await cmd(`powercfg /setacvalueindex ${g} SUB_PROCESSOR IDLETIME 0`)
-      await cmd(`powercfg /setacvalueindex ${g} SUB_PROCESSOR CPMINCORES 100`)
-      await cmd(`powercfg /setacvalueindex ${g} SUB_SLEEP STANDBYIDLE 0`)
-      await cmd(`powercfg /setacvalueindex ${g} SUB_SLEEP HYBRIDSLEEP 0`)
-      await cmd(`powercfg /setacvalueindex ${g} 501a4d13-42af-4429-9ac1-df54c6bf3fc2 ee12f906-d277-404b-b6da-e5fa1a576df5 0`)
-      await cmd(`powercfg /setacvalueindex ${g} 2a737441-1930-4402-8d77-b2bebba308a3 48e6b7a6-50f5-4782-a5d4-53bb8f07e226 0`)
-      await cmd(`powercfg -setactive ${g}`)
-      s('Intel Max Performance plan activated — Speed Shift on, EPP=0, full boost policy, no idle/sleep. Reboot recommended.', 'ok')
-    },
-    restore: async (s, _, cmd) => { await cmd('powercfg -setactive 381b4222-f694-41f0-9685-ff5bb260df2e'); s('Balanced power plan restored.', 'ok') }
+    apply: async (s, ps, cmd) => applyMaxPerfPlan({ vendor: 'intel', label: 'Intel', vendorSetting: { name: 'PERFAUTONOMOUS', value: 1 }, s, ps, cmd }),
+    restore: async (s, _, cmd) => restoreMaxPerfPlan({ s, cmd })
   },
   'amd-power-plan': {
     name: 'AMD Max Performance Power Plan',
     category: 'cpu',
     safetyTier: 1,
     gamerImpact: 'high',
-    apply: async (s, ps, cmd) => {
-      s('Detecting CPU…', 'info')
-      const cpuR = await ps('(Get-CimInstance Win32_Processor | Select-Object -First 1).Name')
-      const cpuName = cpuR.out.trim()
-      if (!cpuName.toLowerCase().includes('amd')) { s(`CPU detected: ${cpuName} — this plan is for AMD CPUs.`, 'warn'); return }
-      s(`AMD CPU: ${cpuName}`, 'info')
-      const GUID_RX_A = /([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i
-      let r, m
-      for (const scheme of ['e9a42b02-d5df-448d-aa00-03f14749eb61', '8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c']) {
-        r = await cmd(`powercfg -duplicatescheme ${scheme}`)
-        m = r.out.match(GUID_RX_A)
-        if (m) break
-      }
-      if (!m) {
-        const active = await cmd('powercfg /getactivescheme')
-        const activeGuid = active.out.match(GUID_RX_A)?.[1]
-        if (activeGuid) { r = await cmd(`powercfg -duplicatescheme ${activeGuid}`); m = r.out.match(GUID_RX_A) }
-      }
-      if (!m) {
-        await cmd('powercfg /restoredefaultschemes')
-        r = await cmd('powercfg -duplicatescheme e9a42b02-d5df-448d-aa00-03f14749eb61')
-        m = r.out.match(GUID_RX_A)
-      }
-      if (!m) { s('Could not create power plan — your power settings may be locked by group policy.', 'warn'); return }
-      const g = m[1]
-      await cmd(`powercfg /changename ${g} "AMD Max Performance" "Jylli Tool - AMD-optimised max performance plan"`)
-      await cmd(`powercfg /setacvalueindex ${g} SUB_PROCESSOR PERFBOOSTMODE 2`)
-      await cmd(`powercfg /setacvalueindex ${g} SUB_PROCESSOR CPPCENABLED 1`)
-      await cmd(`powercfg /setacvalueindex ${g} SUB_PROCESSOR PERFEPP 0`)
-      await cmd(`powercfg /setacvalueindex ${g} SUB_PROCESSOR PERFBOOSTPOL 100`)
-      await cmd(`powercfg /setacvalueindex ${g} SUB_PROCESSOR SCHEDPOL 0`)
-      await cmd(`powercfg /setacvalueindex ${g} SUB_PROCESSOR PROCTHROTTLEMIN 100`)
-      await cmd(`powercfg /setacvalueindex ${g} SUB_PROCESSOR PROCTHROTTLEMAX 100`)
-      await cmd(`powercfg /setacvalueindex ${g} SUB_PROCESSOR IDLEPROMOTE 0`)
-      await cmd(`powercfg /setacvalueindex ${g} SUB_PROCESSOR IDLEDEMOTE 0`)
-      await cmd(`powercfg /setacvalueindex ${g} SUB_PROCESSOR IDLETIME 0`)
-      await cmd(`powercfg /setacvalueindex ${g} SUB_PROCESSOR CPMINCORES 100`)
-      await cmd(`powercfg /setacvalueindex ${g} SUB_SLEEP STANDBYIDLE 0`)
-      await cmd(`powercfg /setacvalueindex ${g} SUB_SLEEP HYBRIDSLEEP 0`)
-      await cmd(`powercfg /setacvalueindex ${g} 501a4d13-42af-4429-9ac1-df54c6bf3fc2 ee12f906-d277-404b-b6da-e5fa1a576df5 0`)
-      await cmd(`powercfg /setacvalueindex ${g} 2a737441-1930-4402-8d77-b2bebba308a3 48e6b7a6-50f5-4782-a5d4-53bb8f07e226 0`)
-      await cmd(`powercfg -setactive ${g}`)
-      s('AMD Max Performance plan activated — CPPC on, EPP=0, full boost policy, no idle/sleep. Reboot recommended.', 'ok')
-    },
-    restore: async (s, _, cmd) => { await cmd('powercfg -setactive 381b4222-f694-41f0-9685-ff5bb260df2e'); s('Balanced power plan restored.', 'ok') }
+    apply: async (s, ps, cmd) => applyMaxPerfPlan({ vendor: 'amd', label: 'AMD', vendorSetting: { name: 'CPPCENABLED', value: 1 }, s, ps, cmd }),
+    restore: async (s, _, cmd) => restoreMaxPerfPlan({ s, cmd })
   },
   'cpu-parking': {
     name: 'Disable CPU Core Parking',
@@ -5025,7 +4728,6 @@ const TWEAKS = {
     apply: async (s, _, cmd) => {
       await cmd('netsh int tcp set global autotuninglevel=normal')
       await cmd('netsh int tcp set global rss=enabled')
-      await cmd('netsh int tcp set global chimney=disabled')
       await cmd('netsh int tcp set global ecncapability=disabled')
       await cmd('netsh int tcp set global timestamps=disabled')
       await cmd('netsh int tcp set global maxsynretransmissions=2')
@@ -5035,11 +4737,10 @@ const TWEAKS = {
     restore: async (s, _, cmd) => {
       await cmd('netsh int tcp set global autotuninglevel=normal')
       await cmd('netsh int tcp set global rss=enabled')
-      await cmd('netsh int tcp set global chimney=enabled')
-      await cmd('netsh int tcp set global ecncapability=enabled')
-      await cmd('netsh int tcp set global timestamps=enabled')
-      await cmd('netsh int tcp set global maxsynretransmissions=5')
-      await cmd('netsh int tcp set global initialrto=3000')
+      await cmd('netsh int tcp set global ecncapability=disabled')    // Windows 10/11 default: disabled (chimney no longer exists)
+      await cmd('netsh int tcp set global timestamps=disabled')       // default: disabled
+      await cmd('netsh int tcp set global maxsynretransmissions=2')   // default: 2
+      await cmd('netsh int tcp set global initialrto=1000')           // default: 1000 ms
       s('TCP stack restored to Windows defaults.', 'ok')
     }
   },
@@ -5223,8 +4924,35 @@ const TWEAKS = {
     category: 'network',
     safetyTier: 1,
     gamerImpact: 'medium',
-    apply: async (s, ps) => { await ps('Set-ItemProperty -Path "HKLM:\\SYSTEM\\CurrentControlSet\\Services\\NetBT\\Parameters" -Name NetbiosOptions -Value 2 -Force'); s('NetBIOS over TCP/IP disabled.', 'ok') },
-    restore: async (s, ps) => { await ps('Set-ItemProperty -Path "HKLM:\\SYSTEM\\CurrentControlSet\\Services\\NetBT\\Parameters" -Name NetbiosOptions -Value 0 -Force'); s('NetBIOS restored.', 'ok') }
+    apply: async (s, ps) => {
+      const r = await ps(`
+        Get-ChildItem 'HKLM:\\SYSTEM\\CurrentControlSet\\Services\\NetBT\\Parameters\\Interfaces' -EA SilentlyContinue | ForEach-Object {
+          $old = (Get-ItemProperty -Path $_.PSPath -Name NetbiosOptions -EA SilentlyContinue).NetbiosOptions
+          Write-Output ("SNAP|" + $_.PSChildName + "|" + $old)
+          Set-ItemProperty -Path $_.PSPath -Name NetbiosOptions -Value 2 -Type DWord -Force -EA SilentlyContinue
+        }
+      `)
+      const snap = {}
+      for (const line of String(r.out || '').split(/\r?\n/)) {
+        const m = /^SNAP\|(Tcpip_\{[0-9A-Fa-f-]{36}\})\|(\d*)$/.exec(line.trim())
+        if (m) snap[m[1]] = m[2] === '' ? 0 : Number(m[2])
+      }
+      snapshots.merge('netbios', snap)
+      s(`NetBIOS over TCP/IP disabled on ${Object.keys(snap).length} interface(s).`, 'ok')
+    },
+    restore: async (s, ps) => {
+      const snap = snapshots.load('netbios')
+      const names = snap ? Object.keys(snap).filter(k => /^Tcpip_\{[0-9A-Fa-f-]{36}\}$/.test(k)) : []
+      if (!names.length) {   // applied by an older version: 0 = "use setting from DHCP", the Windows default
+        await ps(`Get-ChildItem 'HKLM:\\SYSTEM\\CurrentControlSet\\Services\\NetBT\\Parameters\\Interfaces' -EA SilentlyContinue | ForEach-Object { Set-ItemProperty -Path $_.PSPath -Name NetbiosOptions -Value 0 -Type DWord -Force -EA SilentlyContinue }`)
+      }
+      for (const n of names) {
+        const v = [0, 1, 2].includes(snap[n]) ? snap[n] : 0
+        await ps(`Set-ItemProperty -Path ${V.psQuote('HKLM:\\SYSTEM\\CurrentControlSet\\Services\\NetBT\\Parameters\\Interfaces\\' + n)} -Name NetbiosOptions -Value ${v} -Type DWord -Force -EA SilentlyContinue`)
+      }
+      snapshots.remove('netbios')
+      s('NetBIOS restored to each interface\'s previous setting.', 'ok')
+    }
   },
   'disable-ipv6': {
     name: 'Disable IPv6',
@@ -5270,20 +4998,22 @@ const TWEAKS = {
     safetyTier: 1,
     gamerImpact: 'medium',
     apply: async (s, ps) => {
-      const base = 'HKLM:\\SYSTEM\\CurrentControlSet\\Services\\Tcpip\\Parameters'
-      await ps(`Set-ItemProperty -Path "${base}" -Name GlobalMaxTcpWindowSize -Value 65535 -Force`)
-      await ps(`Set-ItemProperty -Path "${base}" -Name TcpWindowSize -Value 65535 -Force`)
-      await ps(`Set-ItemProperty -Path "${base}" -Name Tcp1323Opts -Value 1 -Force`)
-      await ps(`Set-ItemProperty -Path "${base}" -Name SackOpts -Value 1 -Force`)
-      await ps(`Set-ItemProperty -Path "${base}" -Name DefaultTTL -Value 64 -Force`)
-      await ps(`Set-ItemProperty -Path "${base}" -Name TcpAckFrequency -Value 1 -Force`)
-      await ps(`Set-ItemProperty -Path "${base}" -Name TCPNoDelay -Value 1 -Force`)
-      s('TCP buffers + Nagle disabled applied.', 'ok')
+      // TcpWindowSize / GlobalMaxTcpWindowSize=65535 are legacy values that CAP the receive window at 64 KB — dropped.
+      await ps(`Get-ChildItem 'HKLM:\\SYSTEM\\CurrentControlSet\\Services\\Tcpip\\Parameters\\Interfaces' -EA SilentlyContinue | ForEach-Object {
+        Set-ItemProperty -Path $_.PSPath -Name TcpAckFrequency -Value 1 -Type DWord -Force -EA SilentlyContinue
+        Set-ItemProperty -Path $_.PSPath -Name TCPNoDelay -Value 1 -Type DWord -Force -EA SilentlyContinue
+      }`)
+      await ps(`Set-ItemProperty -Path 'HKLM:\\SYSTEM\\CurrentControlSet\\Services\\Tcpip\\Parameters' -Name DefaultTTL -Value 64 -Type DWord -Force`)
+      s('Nagle algorithm off and ACK frequency 1 applied on every network interface.', 'ok')
     },
     restore: async (s, ps) => {
+      await ps(`Get-ChildItem 'HKLM:\\SYSTEM\\CurrentControlSet\\Services\\Tcpip\\Parameters\\Interfaces' -EA SilentlyContinue | ForEach-Object {
+        Remove-ItemProperty -Path $_.PSPath -Name TcpAckFrequency -EA SilentlyContinue
+        Remove-ItemProperty -Path $_.PSPath -Name TCPNoDelay -EA SilentlyContinue
+      }`)
       const base = 'HKLM:\\SYSTEM\\CurrentControlSet\\Services\\Tcpip\\Parameters'
       for (const n of ['GlobalMaxTcpWindowSize','TcpWindowSize','Tcp1323Opts','SackOpts','DefaultTTL','TcpAckFrequency','TCPNoDelay']) await ps(`Remove-ItemProperty -Path "${base}" -Name ${n} -EA SilentlyContinue`)
-      s('TCP buffer tweaks removed.', 'ok')
+      s('TCP buffer / Nagle tweaks removed.', 'ok')
     }
   },
   'nic-offloads': {
@@ -5615,9 +5345,9 @@ const TWEAKS = {
     safetyTier: 1,
     gamerImpact: 'medium',
     apply: async (s, _, cmd) => {
-      await cmd('netsh int ipv4 set dynamicport tcp start=1025 num=64510')
-      await cmd('netsh int ipv4 set dynamicport udp start=1025 num=64510')
-      s('Dynamic port range extended to 64510 ports (start=1025).', 'ok')
+      await cmd('netsh int ipv4 set dynamicport tcp start=10000 num=55535')
+      await cmd('netsh int ipv4 set dynamicport udp start=10000 num=55535')
+      s('Dynamic port range extended to 55535 ports (10000–65534) — well-known service ports stay free.', 'ok')
     },
     restore: async (s, _, cmd) => {
       await cmd('netsh int ipv4 set dynamicport tcp start=49152 num=16384')
@@ -7427,7 +7157,7 @@ if ($r.Count -eq 0) { Write-Output "NONE_FOUND" } else { foreach ($x in $r) { Wr
       await ps(`
         $path = 'HKLM:\\SYSTEM\\CurrentControlSet\\Services\\mouclass\\Parameters'
         New-Item -Path $path -Force -EA SilentlyContinue | Out-Null
-        Set-ItemProperty -Path $path -Name MouseDataQueueSize -Value 20 -Force
+        Set-ItemProperty -Path $path -Name MouseDataQueueSize -Value 300 -Type DWord -Force
         Set-ItemProperty -Path $path -Name HIDDeviceInputProcessingMode -Value 0 -Force
       `)
       s('Mouse input queue enlarged + unified HID input thread enabled. Fixes multi-monitor pointer flicking. Reboot required.', 'ok')
@@ -8343,7 +8073,7 @@ ipcMain.handle('run-preflight-scan', async () => {
     $r['visual-effects']         = (gp 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\VisualEffects' 'VisualFXSetting') -eq 2
     $r['hibernate']              = -not (Test-Path 'C:\\hiberfil.sys')
     $r['disable-mouse-accel']    = (gp 'HKCU:\\Control Panel\\Mouse' 'MouseSpeed') -eq '0'
-    $r['mmcss']                  = (gp 'HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Multimedia\\SystemProfile\\Tasks\\Games' 'GPU Priority') -ge 8
+    $r['mmcss']                  = (gp 'HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Multimedia\\SystemProfile\\Tasks\\Games' 'Scheduling Category') -eq 'High'
     $r['sysmain']                = (svc 'SysMain') -eq 'Disabled'
     $r['power-throttling']       = (gp 'HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Power\\PowerThrottling' 'PowerThrottlingOff') -eq 1
     $r['hpet']                   = $bcd -match 'useplatformtick.*Yes'
@@ -8357,16 +8087,16 @@ ipcMain.handle('run-preflight-scan', async () => {
       $tcpGlobal = (netsh int tcp show global 2>$null) -join ' '
       ($tcpGlobal -imatch 'autotuninglevel\s*[=:]\s*normal') -and
       ($tcpGlobal -imatch 'timestamps\s*[=:]\s*disabled') -and
-      ($tcpGlobal -imatch 'maxsynretransmissions\s*[=:]\s*2')
+      ($tcpGlobal -imatch 'initial\s*rto\s*[=:]\s*2000')
     }
-    $r['tcp-buffers']            = (gp $tcpP 'TcpAckFrequency') -eq 1
+    $r['tcp-buffers']            = ((@(Get-ChildItem (Join-Path $tcpP 'Interfaces') -EA SilentlyContinue | ForEach-Object { gp $_.PSPath 'TcpAckFrequency' }) | Where-Object { $_ -eq 1 }).Count -gt 0)
     $r['tcp-keepalive']          = (gp $tcpP 'KeepAliveTime') -eq 30000
     $r['tcp-retransmit']         = (gp $tcpP 'TcpMaxDataRetransmissions') -eq 3
     $r['tcp-ctcp']               = (netsh int tcp show supplemental template=internet 2>$null) -imatch 'congestionprovider.*ctcp'
     $r['tcp-task-offload']       = (gp $tcpP 'DisableTaskOffload') -eq 0
     $r['tcp-timedwait']          = (gp $tcpP 'TcpTimedWaitDelay') -eq 30
     $r['net-del-ack']            = (gp $tcpP 'TcpDelAckTicks') -eq 0
-    $r['net-max-ports']          = ((netsh int ipv4 show dynamicport tcp) -join ' ') -imatch 'start\s*:\s*1025'
+    $r['net-max-ports']          = ((netsh int ipv4 show dynamicport tcp) -join ' ') -imatch 'start\s*(port)?\s*:\s*10000'
     $r['usb-suspend']            = (gp 'HKLM:\\SYSTEM\\CurrentControlSet\\Services\\USB' 'DisableSelectiveSuspend') -eq 1
     $r['disable-background-apps']    = (gp 'HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\AppPrivacy' 'LetAppsRunInBackground') -eq 2
     $r['disable-auto-maintenance']   = (gp 'HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Schedule\\Maintenance' 'MaintenanceDisabled') -eq 1
@@ -8403,10 +8133,10 @@ ipcMain.handle('run-preflight-scan', async () => {
     $r['capability-ruleset']     = (gp 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Privacy' 'TailoredExperiencesWithDiagnosticDataEnabled') -eq 0
     $r['diag-tasks-off']         = (task '\\Microsoft\\Windows\\Diagnosis\\' 'Scheduled') -eq 'Disabled'
     $r['compat-tasks-off']       = (task '\\Microsoft\\Windows\\Application Experience\\' 'StartupAppTask') -eq 'Disabled'
-    $r['cursor-max-rate']        = (gp 'HKLM:\\SYSTEM\\CurrentControlSet\\Services\\mouclass\\Parameters' 'MouseDataQueueSize') -eq 20
+    $r['cursor-max-rate']        = (gp 'HKLM:\\SYSTEM\\CurrentControlSet\\Services\\mouclass\\Parameters' 'MouseDataQueueSize') -eq 300
     $r['cpu-focus-bias']         = (gp 'HKLM:\\SYSTEM\\CurrentControlSet\\Control\\PriorityControl' 'Win32PrioritySeparation') -eq 38
     $r['net-throttling']         = (gp 'HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Multimedia\\SystemProfile' 'NetworkThrottlingIndex') -eq 0xFFFFFFFF
-    $r['disable-netbios']        = (gp 'HKLM:\\SYSTEM\\CurrentControlSet\\Services\\NetBT\\Parameters' 'NetbiosOptions') -eq 2
+    $r['disable-netbios']        = ((@(Get-ChildItem 'HKLM:\\SYSTEM\\CurrentControlSet\\Services\\NetBT\\Parameters\\Interfaces' -EA SilentlyContinue | ForEach-Object { gp $_.PSPath 'NetbiosOptions' }) | Where-Object { $_ -ne 2 }).Count -eq 0)
     $r['disable-ipv6']           = (gp 'HKLM:\\SYSTEM\\CurrentControlSet\\Services\\Tcpip6\\Parameters' 'DisabledComponents') -eq 255
     $r['disable-wpad']           = (svc 'WinHttpAutoProxySvc') -eq 'Disabled'
     $r['disable-autoproxy']      = (gp 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Internet Settings' 'AutoDetect') -eq 0
@@ -9425,7 +9155,6 @@ const TWEAK_VERIFY = {
   'win-tips':              { hive: 'HKLM', path: 'SOFTWARE\\Policies\\Microsoft\\Windows\\CloudContent',                           name: 'DisableSoftLanding',       expect: 1 },
   'telemetry':             { hive: 'HKLM', path: 'SOFTWARE\\Policies\\Microsoft\\Windows\\DataCollection',                         name: 'AllowTelemetry',           expect: 0 },
   'disable-delivery-opt':  { hive: 'HKLM', path: 'SOFTWARE\\Policies\\Microsoft\\Windows\\DeliveryOptimization',                   name: 'DODownloadMode',           expect: 0 },
-  'disable-netbios':       { hive: 'HKLM', path: 'SYSTEM\\CurrentControlSet\\Services\\NetBT\\Parameters',                        name: 'NetbiosOptions',           expect: 2 },
   'qos-reserve':           { hive: 'HKLM', path: 'SOFTWARE\\Policies\\Microsoft\\Windows\\Psched',                                 name: 'NonBestEffortLimit',       expect: 0 },
   'disable-mouse-accel':   { hive: 'HKCU', path: 'Control Panel\\Mouse',                                                          name: 'MouseSpeed',               expect: '0' },
   'disable-background-apps':{ hive: 'HKCU', path: 'Software\\Microsoft\\Windows\\CurrentVersion\\BackgroundAccessApplications',    name: 'GlobalUserDisabled',       expect: 1 },
