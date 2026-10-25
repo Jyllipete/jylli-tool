@@ -253,3 +253,13 @@ input[type="range"] { accent-color: var(--c-accent); }
 @media (max-width: 1380px) { .hud-chip .hud-sub { display: none; } }
 @media (max-width: 1180px) { #hud-storage { display: none; } }
 @media (max-width: 1040px) { #hud-ram { display: none; } }
+
+/* ── Tweak cards: flat surfaces, applied state shown by a thin accent edge instead of a green gradient ── */
+.tweak-card, .tweak-card.tc-applied, .tweak-card.tc-preapplied { background: var(--c-bg-elevated); box-shadow: none; }
+.tweak-card { border: 1px solid var(--c-border-subtle); }
+.tweak-card:hover { transform: none; border-color: var(--c-border-strong, rgba(255,255,255,0.16)); box-shadow: none; }
+.tweak-card::before, .tweak-card.tc-applied::before { background: none; }
+.tweak-card.tc-applied { border-color: rgba(46,204,113,0.32); }
+.qw-card, .qw-card.qw-done { background: var(--c-bg-elevated); box-shadow: none; border: 1px solid var(--c-border-subtle); }
+.qw-card:hover { transform: none; box-shadow: none; border-color: var(--c-border-strong); }
+.qw-card.qw-done { border-left: 3px solid rgba(46,204,113,0.55); }

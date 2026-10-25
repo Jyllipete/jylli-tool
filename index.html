@@ -1776,7 +1776,7 @@ const LANG = {
       genSecPrivacyExt:'Privacy & Telemetry (Extended)',
       genSecSecurity:'Security Services (Advanced)',
       genSecCpuSched:'CPU Scheduling',
-      genSearchPlaceholder:'Search tweaks…', genSafeDefaults:'Safe Defaults',
+      genSearchPlaceholder:'Search tweaks…', startupSearchPh:'Search startup items…', genSafeDefaults:'Safe Defaults',
       genSafeDefaultsConfirm:'Apply safe tweaks with no danger flags or reboot required?',
       genSafeDefaultsDone:'Safe defaults applied!', genSafeDefaultsAlreadyDone:'All safe defaults are already applied!',
       genRestoreAll:'Restore All', genRestoreAllConfirm:'Restore all {n} applied tweaks to defaults?', genRestoreAllDone:'All tweaks restored!',
@@ -4125,7 +4125,7 @@ const LANG = {
       genSecPrivacyExt:'Yksityisyys & telemetria (laajennettu)',
       genSecSecurity:'Tietoturvapalvelut (lisäasetukset)',
       genSecCpuSched:'CPU-ajoitus',
-      genSearchPlaceholder:'Hae säätöjä…', genSafeDefaults:'Turvalliset oletukset',
+      genSearchPlaceholder:'Hae säätöjä…', startupSearchPh:'Hae käynnistyskohteita…', genSafeDefaults:'Turvalliset oletukset',
       genSafeDefaultsConfirm:'Käytetäänkö turvalliset säädöt ilman vaaralippuja tai uudelleenkäynnistystä?',
       genSafeDefaultsDone:'Turvalliset oletukset käytetty!', genSafeDefaultsAlreadyDone:'Kaikki turvalliset oletukset on jo käytetty!',
       genRestoreAll:'Palauta kaikki', genRestoreAllConfirm:'Palautetaanko kaikki {n} käytössä olevaa säätöä oletuksiin?', genRestoreAllDone:'Kaikki säädöt palautettu!',
@@ -9085,7 +9085,7 @@ function buildStartupManager(c) {
   searchWrap.id = 'startup-search-wrap'
   searchWrap.innerHTML = `
     <i class="fa fa-magnifying-glass search-icon"></i>
-    <input class="startup-search-input" id="startup-search" placeholder="${tUI('genSearchPlaceholder')}"
+    <input class="startup-search-input" id="startup-search" placeholder="${tUI('startupSearchPh')}"
       oninput="startupFilter(this.value)"
       onkeydown="if(event.key==='Escape'){startupClearSearch()}">
     <span class="startup-search-count" id="startup-search-count"></span>

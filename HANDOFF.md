@@ -21,7 +21,7 @@ Phase 0 secrets rotated by user. Phase 1: no secrets/webhook in client, Ed25519 
 Phase 4 harness done. Phase 5 started: `css/tokens.css` re-tokened (graphite + accent #8B7CF6, contrast fixed), themes are accent-only, Geist bundled (`css/fonts.css`, `assets/fonts`), **`css/pro.css`** (design-system layer, linked after style.css in index.html) restyles shell/cards/buttons/switches/tabs/inputs/dialogs; title bar + SVG window buttons fixed.
 
 ## NEXT
-1. Capture all pages with pro.css (`--tag pro3`) and fix what looks off (known: tweak-card green gradients, Quick Wins card, "Search tweaks…" placeholder on Startups page, `[object Object]` in What's New is only a fixture bug).
+1. DONE: pro3 capture reviewed; flat tweak/quick-win cards, Startups placeholder fixed (pro5). Remaining visual checks: other pages in shots/pro3 (bios-tuner, fivem, network, pulse, settings, scheduler…); Gaming fixture gaps (scan result, bundles show "undefined") are fixture bugs.
 2. Dashboard hero/tiles polish; premium-lock card; boot/lock/language-picker screens; command palette; Auto-Optimize + SPW dialogs; pages one by one.
 3. Phase 7: link `css/tokens.css` + `css/pro.css` + `css/fonts.css` in pulse/fivem-settings/arma-settings/fps-hud-settings/HUD windows, theme broadcast.
 4. Phase 8: move hard-coded English toasts/confirm titles into LANG (EN+FI), fix `premiumLockDesc` (EN string is Finnish), missing FI `vbs-disable`, `<html lang>`, a11y labels, drop `'unsafe-inline'` only if inline handlers are gone (they are not — keep).
