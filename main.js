@@ -743,34 +743,42 @@ function _processSensorFrame(chunk) {
 }
 let _sensorFrame = null
 
+// Connects to the sensor helper's named pipe. The handshake line is parsed on raw Buffers (decoding binary float frames as UTF-8 corrupts
+// them and misaligns every later frame), and a failed attempt retries a few times instead of leaving the bridge dead for the session.
+function connectSensorPipe(attempt) {
+  if (_sensorSocket || attempt > 10) return
+  const sock = _net.connect('\\\\.\\pipe\\JylliSensor')
+  _sensorSocket = sock
+  let hs = Buffer.alloc(0), hsDone = false
+  const retry = () => { if (!hsDone) setTimeout(() => connectSensorPipe(attempt + 1), 1500) }
+  sock.on('connect', () => startupTrace('SensorBridge: pipe connected'))
+  sock.on('error',   (e) => { startupTrace(`SensorBridge: pipe error ${e.code}`); if (_sensorSocket === sock) _sensorSocket = null; retry() })
+  sock.on('close',   ()  => { if (_sensorSocket === sock) { _sensorSocket = null; _sensorHz = 0 } })
+  sock.on('data',    (chunk) => {
+    if (!hsDone) {
+      hs = Buffer.concat([hs, chunk])
+      const nl = hs.indexOf(0x0A)
+      if (nl === -1) return
+      try { _sensorSchema = JSON.parse(hs.slice(0, nl).toString('utf8')) } catch (e) {
+        startupTrace(`SensorBridge: bad handshake ${e.message}`); sock.destroy(); return
+      }
+      hsDone = true
+      _sensorFrame = null
+      startupTrace(`SensorBridge: schema ok (${_sensorSchema.length} sensors)`)
+      const rem = hs.slice(nl + 1)
+      if (rem.length) _processSensorFrame(rem)
+      return
+    }
+    _processSensorFrame(chunk)
+  })
+}
+
 function startSensorBridge() {
   if (!fs.existsSync(SENSOR_EXE)) { startupTrace('SensorBridge: exe not found, using WMI fallback'); return }
   _sensorProcess = spawn(SENSOR_EXE, [], { windowsHide: true, stdio: 'ignore', detached: false })
   _sensorProcess.on('error', () => { _sensorProcess = null })
   _sensorProcess.unref()
-  setTimeout(() => {
-    if (_sensorSocket) return
-    _sensorSocket = _net.connect('\\\\.\\pipe\\JylliSensor')
-    let _hsBuf = ''
-    let _hsDone = false
-    _sensorSocket.on('connect', () => startupTrace('SensorBridge: pipe connected'))
-    _sensorSocket.on('error',   (e) => { startupTrace(`SensorBridge: pipe error ${e.code}`); _sensorSocket = null })
-    _sensorSocket.on('close',   ()  => { _sensorSocket = null; _sensorHz = 0 })
-    _sensorSocket.on('data',    (chunk) => {
-      if (!_hsDone) {
-        _hsBuf += chunk.toString('utf8')
-        const nl = _hsBuf.indexOf('\n')
-        if (nl === -1) return
-        try { _sensorSchema = JSON.parse(_hsBuf.slice(0, nl)) } catch (e) { startupTrace(`SensorBridge: bad handshake ${e.message}`); return }
-        _hsDone = true
-        startupTrace(`SensorBridge: schema ok (${_sensorSchema.length} sensors)`)
-        const rem = Buffer.from(_hsBuf.slice(nl + 1), 'utf8')
-        if (rem.length) _processSensorFrame(rem)
-        return
-      }
-      _processSensorFrame(chunk)
-    })
-  }, 800)
+  setTimeout(() => connectSensorPipe(0), 800)
   _sensorHzTimer = setInterval(() => {
     _sensorHz = _sensorHzCounter
     _sensorHzCounter = 0
