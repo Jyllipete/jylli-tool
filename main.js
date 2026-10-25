@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, dialog, shell, Tray, Menu, nativeImage, Notification } = require('electron')
+const { app, BrowserWindow, ipcMain, dialog, shell, Tray, Menu, nativeImage, Notification, safeStorage } = require('electron')
 const path = require('path')
 const { exec, execFile, spawn } = require('child_process')
 const fs = require('fs')
@@ -444,10 +444,12 @@ async function destroyDiscordRPC() {
 }
 
 // ─── Analytics ───────────────────────────────────────────────────────────────
-const BUG_WEBHOOK_URL = 'https://discord.com/api/webhooks/1505200051280936981/XdFEtv10IH-B9ZSIVkfW0cBOkGx0DcOf71YrnbUVgggjYnwGHmdZEcm_CKG-U8hNPmZV'
+// The app ships NO secrets. Identity/premium come from Discord OAuth + a bot-signed entitlement (lib/auth.js);
+// telemetry and bug reports go to the bot's rate-limited public endpoints, which hold the Discord webhooks.
 const BOT_URL         = 'https://jylli-bot-production.up.railway.app'
-const BOT_SECRET      = 'lq2f0j2vkYkolkTLo9ejqU5Z+FeyfhU6Mude0KZYrLg='
 const PREMIUM_STORE_URL = 'https://jyllitool.netlify.app/'
+const { createAuth } = require('./lib/auth')
+let auth = null   // created once userData is known (app ready)
 let ANALYTICS_PATH = null
 let APP_VERSION    = null
 
@@ -465,46 +467,33 @@ function saveAnalytics(data) {
   try { fs.writeFileSync(ANALYTICS_PATH, JSON.stringify(data, null, 2)) } catch {}
 }
 
-function sendWebhook(payload, targetUrl) {
-  try {
-    const https = require('https')
-    const body = JSON.stringify(payload)
-    const url = new URL(targetUrl)
-    const req = https.request({
-      hostname: url.hostname, path: url.pathname + url.search,
-      method: 'POST', headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) }
-    })
-    req.on('error', () => {})
-    req.write(body)
-    req.end()
-  } catch {}
-}
+const { scrubPaths } = require('./lib/privacy')
 
-function notifyBot(event, extra = {}) {
+// Telemetry is opt-in (settings.analyticsConsent === true). Bug reports are an explicit user action and are
+// always sent, but only with the fields shown in the bug-report dialog.
+function notifyBot(event, extra = {}, { force = false } = {}) {
   debugLog('[notifyBot] called: ' + event)
   return new Promise((resolve) => {
     try {
-      const optOut = loadSettings().analyticsOptOut
-      debugLog('[notifyBot] optOut: ' + optOut)
-      if (optOut) return resolve()
-      const { winVer, cpu, ram, gpu, isLaptop, isWifi, hasFiveM } = getSystemFields()
+      if (!force && loadSettings().analyticsConsent !== true) return resolve()
+      const { winVer, osBuild, cpu, ram, gpu, isLaptop, isWifi, hasFiveM, diskType } = getSystemFields()
       const analytics = loadAnalytics()
-      const discordUserId = loadSettings().discordUserId || null
       const payload = JSON.stringify({
-        secret: BOT_SECRET, event, version: APP_VERSION,
-        userId: analytics.userId, discordUserId,
+        event, version: APP_VERSION,
+        userId: analytics.userId,
         sessions: analytics.sessions,
         totalTweaks: analytics.totalTweaksApplied || 0,
-        cpu, ram, gpu, winVer, isLaptop, isWifi, hasFiveM,
+        cpu, ram, gpu, winVer, osBuild, diskType, isLaptop, isWifi, hasFiveM,
         ...extra
       })
-      debugLog('[notifyBot] sending to: ' + BOT_URL)
       const url = new URL(BOT_URL)
+      const path_ = event === 'bug_report' ? '/v2/bug' : '/v2/events'
       const req = require('https').request({
-        hostname: url.hostname, path: '/',
-        method: 'POST', headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(payload) }
+        hostname: url.hostname, path: path_, method: 'POST', timeout: 8000,
+        headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(payload), 'User-Agent': 'jylli-tool/' + APP_VERSION }
       })
-      req.on('response', r => { debugLog('[notifyBot] response: ' + r.statusCode); resolve() })
+      req.on('response', r => { r.resume(); debugLog('[notifyBot] response: ' + r.statusCode); resolve() })
+      req.on('timeout', () => req.destroy())
       req.on('error', e => { debugLog('[notifyBot] error: ' + e.message); resolve() })
       req.write(payload)
       req.end()
@@ -609,52 +598,25 @@ function webhookError(type, err) {
 
     const crashCount = (analytics.crashCount || 0) + 1
     analytics.crashCount = crashCount
-    try { require('fs').writeFileSync(require('path').join(app.getPath('userData'), 'analytics.json'), JSON.stringify(analytics)) } catch {}
+    saveAnalytics(analytics)
     const uptimeMs = Date.now() - sessionStartTime
-    notifyBot('crash', { type, errorMsg: msg.slice(0, 800), stack: stack.slice(0, 800), lastAction: _lastAction, crashCount, uptimeMs })
+    notifyBot('crash', { type, errorMsg: scrubPaths(msg).slice(0, 800), stack: scrubPaths(stack).slice(0, 800), lastAction: _lastAction, crashCount, uptimeMs })
   } catch {}
 }
 
 function webhookBugReport({ title, description, steps, page }) {
   try {
     const analytics = loadAnalytics()
-    const userId = analytics.userId || 'unknown'
-    const { winVer, cpu, ram, gpu, isLaptop, isWifi, hasFiveM } = getSystemFields()
-    const ts = Math.floor(Date.now() / 1000)
-    const deviceType = isLaptop ? '💻 Laptop' : '🖥️ Desktop'
-    const netType    = isWifi   ? '📶 Wi-Fi'  : '🔌 Ethernet'
-    const bugPayload = {
-      username: 'Jylli Tool — Bug Report',
-      embeds: [{
-        color: 0xE74C3C,
-        title: `🐛  Bug Report — ${title.slice(0, 80)}`,
-        description: description.slice(0, 1800),
-        fields: [
-          { name: '🪪  User ID',      value: `\`${userId}\``,                                                inline: true },
-          { name: '📦  Version',      value: `**v${APP_VERSION}**`,                                         inline: true },
-          { name: '📅  Time',         value: `<t:${ts}:f>`,                                                 inline: true },
-          { name: '📄  Page',         value: page || '—',                                                   inline: true },
-          { name: '🖱️  Device',        value: deviceType,                                                   inline: true },
-          { name: '🌐  Network',      value: netType,                                                       inline: true },
-          { name: '🖥️  OS',           value: winVer,                                                        inline: true },
-          { name: '⚙️  CPU',          value: `\`${(cpu||'?').slice(0, 50)}\``,                              inline: true },
-          ...(gpu ? [{ name: '🎮  GPU', value: `\`${gpu.slice(0, 50)}\``,                                   inline: true }] : []),
-          ...(steps ? [{ name: '📋  Steps to Reproduce', value: steps.slice(0, 900) }] : []),
-        ],
-        footer: { text: `Jylli Tool  ·  v${APP_VERSION}  ·  Bug Report` },
-        timestamp: new Date().toISOString(),
-      }]
-    }
-    if (BUG_WEBHOOK_URL) sendWebhook(bugPayload, BUG_WEBHOOK_URL)
+    const { hasFiveM } = getSystemFields()
     notifyBot('bug_report', {
-      bugTitle:       title.slice(0, 80),
-      bugDescription: description.slice(0, 900),
-      bugSteps:       steps ? steps.slice(0, 500) : null,
-      bugPage:        page || null,
+      bugTitle:       String(title || '').slice(0, 80),
+      bugDescription: String(description || '').slice(0, 900),
+      bugSteps:       steps ? String(steps).slice(0, 500) : null,
+      bugPage:        page ? String(page).slice(0, 60) : null,
       sessions:       analytics.sessions || null,
       totalTweaks:    analytics.totalTweaksApplied || 0,
       hasFiveM:       hasFiveM,
-    })
+    }, { force: true })
   } catch {}
 }
 
@@ -940,41 +902,18 @@ function createWindow() {
     // Auth gate: verify from main process so renderer can't bypass via DevTools
     ;(async () => {
       try {
-        const s = loadSettings()
-        const hasToken  = !!s.authToken
-        const notExpired = s.authExpiry && Date.now() < s.authExpiry
-        startupTrace(`main auth gate: hasToken=${hasToken} notExpired=${notExpired}`)
-        if (!hasToken || !notExpired) {
-          startupTrace('main auth gate: sending auth-required (no/expired token)')
+        if (!auth.hasSession()) {
+          startupTrace('main auth gate: no session → auth-required')
           mainWindow?.webContents.send('auth-required')
           return
         }
-        startupTrace('main auth gate: calling botGet to verify token')
-        const result = await botGet(`/auth/verify?token=${encodeURIComponent(s.authToken)}&secret=${encodeURIComponent(BOT_SECRET)}`)
-        startupTrace(`main auth gate: botGet result ok=${result?.ok} isPremium=${result?.isPremium}`)
-        if (!result?.ok) {
-          mainWindow?.webContents.send('auth-required')
-        } else {
-          const prev = s.isPremium === true
-          s.isPremium = result.isPremium === true
-          saveSettingsWithHmac(s)
-          if (prev !== s.isPremium) mainWindow?.webContents.send('tier-update', { isPremium: s.isPremium })
-          startTierRefresh()
-        }
+        const result = await refreshAuth()
+        startupTrace(`main auth gate: ok=${result?.ok} reason=${result?.reason} isPremium=${result?.isPremium}`)
+        if (!result.ok) mainWindow?.webContents.send('auth-required')
+        else startTierRefresh()
       } catch (e) {
-        startupTrace(`main auth gate: error code=${e?.code} msg=${e?.message}`)
-        const isNetErr = e.code && (e.code.startsWith('E') || e.code === 'ETIMEDOUT')
-        if (isNetErr) {
-          // Offline: only allow through if cached token is not expired and HMAC is intact
-          const s2 = loadSettings()
-          const notExpired = s2.authExpiry && Date.now() < s2.authExpiry
-          const hmacOk = s2.settingsHmac === _settingsHmac(s2)
-          startupTrace(`main auth gate offline: notExpired=${notExpired} hmacOk=${hmacOk}`)
-          if (!notExpired || !hmacOk) mainWindow?.webContents.send('auth-required')
-          else startTierRefresh()
-        } else {
-          mainWindow?.webContents.send('auth-required')
-        }
+        startupTrace(`main auth gate: error ${e?.message}`)
+        mainWindow?.webContents.send('auth-required')
       }
     })()
   })
@@ -1067,7 +1006,7 @@ function updateTrayMenu() {
     },
     {
       label: pulseOn ? '⏹  Stop Pulse' : '⚡ Start Pulse (auto-detect)',
-      enabled: (() => { const s = loadSettings(); return s.isPremium === true })(),
+      enabled: !!auth && auth.isPremium(),
       click: async () => {
         if (!requiresPremium('tray-pulse')) return
         const send = (msg, level) => mainWindow?.webContents.send('log', { msg, level, ts: new Date().toLocaleTimeString() })
@@ -1156,6 +1095,7 @@ app.whenReady().then(() => {
   BIOS_PROFILES_PATH   = path.join(userData, 'bios_profiles.json')
   CLEANUP_HISTORY_PATH = path.join(userData, 'jt_cleanup_history.json')
   APP_VERSION    = app.getVersion()
+  auth = createAuth({ BOT_URL, userDataDir: userData, safeStorage, userAgent: 'jylli-tool/' + APP_VERSION })
   startupTrace('createWindow starting')
   createWindow(); createTray()
   startupTrace('createWindow done')
@@ -1931,8 +1871,30 @@ ipcMain.handle('get-tweak-states', async () => {
   return out
 })
 
-ipcMain.handle('load-settings', () => { startupTrace('IPC load-settings handler called'); return loadSettings() })
-ipcMain.handle('save-settings', (_, data) => { saveSettings(data); return true })
+// Credentials and the premium flag never travel through settings: premium is derived from the signed entitlement
+// (lib/auth.js) and these legacy keys are stripped in both directions so a compromised renderer can neither
+// read tokens nor write a premium flag.
+const PROTECTED_SETTINGS = ['authToken', 'hmacSecret', 'discordUserId', 'authExpiry', 'isPremium', 'settingsHmac']
+// Written by the main process itself; a stale copy held by the renderer must never overwrite them.
+const MAIN_OWNED_SETTINGS = ['lastAutoSnapshot', 'thermalLastAudit', 'aria_insights']
+ipcMain.handle('load-settings', () => {
+  startupTrace('IPC load-settings handler called')
+  const s = { ...loadSettings() }
+  for (const k of PROTECTED_SETTINGS) delete s[k]
+  s.isPremium = !!auth && auth.isPremium()
+  return s
+})
+ipcMain.handle('save-settings', (_, data) => {
+  if (!data || typeof data !== 'object' || Array.isArray(data)) return false
+  let clean
+  try { clean = JSON.parse(JSON.stringify(data)) } catch { return false }
+  if (JSON.stringify(clean).length > 2 * 1024 * 1024) return false
+  for (const k of PROTECTED_SETTINGS) delete clean[k]
+  const current = loadSettings()
+  for (const k of MAIN_OWNED_SETTINGS) { if (k in current) clean[k] = current[k]; else delete clean[k] }
+  saveSettings(clean)
+  return true
+})
 ipcMain.handle('set-startup', (_, enabled) => {
   return setStartupTask(!!enabled)
 })
@@ -8574,59 +8536,33 @@ try {
   // electron-updater not available
 }
 
-// ─── Auth IPC ─────────────────────────────────────────────────────────────────
-function botGet(urlPath) {
-  return new Promise((resolve, reject) => {
-    // AbortController gives a hard wall-clock timeout that fires even during DNS resolution.
-    // The legacy `timeout` socket option only starts after the socket is open — useless for DNS hangs.
-    const controller = new AbortController()
-    const timer = setTimeout(() => {
-      controller.abort()
-      reject(Object.assign(new Error('timeout'), { code: 'ETIMEDOUT' }))
-    }, 7000)
-    const url = new URL(BOT_URL + urlPath)
-    const req = require('https').get({
-      hostname: url.hostname, path: url.pathname + url.search,
-      headers: { 'User-Agent': 'jylli-tool/1.0' },
-      signal: controller.signal,
-    }, res => {
-      let data = ''
-      res.on('data', d => data += d)
-      res.on('end', () => { clearTimeout(timer); try { resolve(JSON.parse(data)) } catch { reject(new Error('parse fail')) } })
-    })
-    req.on('error', e => { clearTimeout(timer); reject(e) })
-  })
-}
-
-// ─── Premium helpers ──────────────────────────────────────────────────────────
-function _settingsHmac(s) {
-  if (!s.hmacSecret) return 'no-secret'
-  const key  = s.hmacSecret
-  const data = `${s.isPremium}:${s.discordUserId}:${s.authToken}`
-  return require('crypto').createHmac('sha256', key).update(data).digest('hex')
-}
-
-function saveSettingsWithHmac(s) {
-  s.settingsHmac = _settingsHmac(s)
-  saveSettings(s)
-}
-
+// ─── Auth IPC (v2: Discord OAuth + bot-signed entitlement — see lib/auth.js) ───
+// Premium is decided ONLY by a verified, unexpired Ed25519 entitlement held in memory by lib/auth.js.
+// Nothing in settings.json can grant it.
 function requiresPremium(handlerName) {
-  const s = loadSettings()
-  if (!s.hmacSecret) return false
-  const expected = _settingsHmac(s)
-  const hmacOk = s.settingsHmac === expected
-  const isPremium = s.isPremium === true && hmacOk
-  if (isPremium) return true
-  const userId = s.discordUserId || 'unknown'
-  const hmacNote = !hmacOk ? ' reason=hmac_mismatch' : ''
-  const line = `[${new Date().toISOString()}] PREMIUM_REJECT user=${userId} endpoint=${handlerName}${hmacNote}\n`
-  try { fs.appendFileSync(LOG_PATH, line) } catch {}
-  if (!hmacOk && s.authToken) {
-    // Report mismatch to server for alerting — fire and forget
-    botGet(`/auth/verify?token=${encodeURIComponent(s.authToken)}&secret=${encodeURIComponent(BOT_SECRET)}&hmac_mismatch=1`).catch(() => {})
-  }
+  if (auth && auth.isPremium()) return true
+  try { fs.appendFileSync(LOG_PATH, `[${new Date().toISOString()}] PREMIUM_REJECT endpoint=${handlerName || 'unknown'}\n`) } catch {}
   return false
+}
+
+let _lastTier = null
+let _refreshPromise = null
+let _refreshAt = 0
+let _lastRefresh = null
+// Coalesces the boot-time gate, the renderer's auth-verify and the periodic refresh into one request.
+function refreshAuth({ force = false } = {}) {
+  if (_refreshPromise) return _refreshPromise
+  if (!force && _lastRefresh && Date.now() - _refreshAt < 15000) return Promise.resolve(_lastRefresh)
+  _refreshPromise = auth.refresh().then(r => {
+    _lastRefresh = r; _refreshAt = Date.now()
+    if (r.ok) {
+      const prev = _lastTier
+      _lastTier = r.isPremium === true
+      if (prev !== null && prev !== _lastTier) mainWindow?.webContents.send('tier-update', { isPremium: _lastTier })
+    }
+    return r
+  }).finally(() => { _refreshPromise = null })
+  return _refreshPromise
 }
 
 let _tierRefreshInterval = null
@@ -8634,54 +8570,33 @@ function startTierRefresh() {
   if (_tierRefreshInterval) return
   _tierRefreshInterval = setInterval(async () => {
     try {
-      const s = loadSettings()
-      if (!s.authToken || !s.authExpiry || Date.now() > s.authExpiry) return
-      const result = await botGet(`/auth/verify?token=${encodeURIComponent(s.authToken)}&secret=${encodeURIComponent(BOT_SECRET)}`)
-      if (typeof result?.ok !== 'boolean') return
-      const prev = s.isPremium === true
-      const next = result.isPremium === true
-      if (prev !== next) {
-        s.isPremium = next
-        saveSettingsWithHmac(s)
-        mainWindow?.webContents.send('tier-update', { isPremium: next })
-        startupTrace(`tier refresh: isPremium changed ${prev} → ${next}`)
-      }
+      const r = await refreshAuth({ force: true })
+      if (!r.ok) mainWindow?.webContents.send('auth-required')
     } catch {}
-  }, 5 * 60 * 1000)
+  }, 15 * 60 * 1000)
 }
 
 ipcMain.handle('auth-start', async () => {
   try {
-    const analytics = loadAnalytics()
-    const userId = analytics.userId || 'unknown'
-    const result = await botGet(`/auth/start?userId=${encodeURIComponent(userId)}&secret=${encodeURIComponent(BOT_SECRET)}`)
-    if (!result.state || !result.url) return { ok: false }
+    const r = await auth.start()
+    if (!r) return { ok: false }
     let browserFailed = false
-    try { await require('electron').shell.openExternal(result.url) } catch { browserFailed = true }
-    return { ok: true, state: result.state, url: result.url, browserFailed }
+    try {
+      if (new URL(r.url).hostname !== 'discord.com') return { ok: false }
+      await shell.openExternal(r.url)
+    } catch { browserFailed = true }
+    return { ok: true, state: r.state, url: r.url, browserFailed }
   } catch (e) { return { ok: false, error: e.message } }
 })
 
 ipcMain.handle('auth-poll', async (_, state) => {
   try {
-    const result = await botGet(`/auth/poll?state=${encodeURIComponent(state)}&secret=${encodeURIComponent(BOT_SECRET)}`)
+    if (typeof state !== 'string' || !/^[0-9a-f]{48}$/.test(state)) return { status: 'denied' }
+    const result = await auth.poll(state)
     if (result.status === 'ok') {
-      const s = loadSettings()
-      s.authToken     = result.token
-      s.hmacSecret    = result.hmacSecret
-      s.discordUserId = result.discordUserId
-      s.authExpiry    = Date.now() + 7 * 86400000
-      s.isPremium     = false
-      saveSettingsWithHmac(s)
-      // Verify tier authoritatively — don't trust the poll response's isPremium field
-      try {
-        const verify = await botGet(`/auth/verify?token=${encodeURIComponent(result.token)}&secret=${encodeURIComponent(BOT_SECRET)}`)
-        if (verify?.ok) {
-          s.isPremium = verify.isPremium === true
-          saveSettingsWithHmac(s)
-          result.isPremium = s.isPremium
-        }
-      } catch {}
+      _lastTier = result.isPremium === true
+      _lastRefresh = { ok: true, reason: 'ok', isPremium: _lastTier }; _refreshAt = Date.now()
+      startTierRefresh()
     }
     return result
   } catch (e) { return { status: 'pending' } }
@@ -8689,41 +8604,23 @@ ipcMain.handle('auth-poll', async (_, state) => {
 
 ipcMain.handle('auth-verify', async () => {
   startupTrace('IPC auth-verify handler entered')
-  let s
   try {
-    s = loadSettings()
-    if (!s.authToken) { startupTrace('auth-verify: no token → returning {ok:false}'); return { ok: false, reason: 'no_token' } }
-    // Require expiry to always be present and valid — missing expiry = reject
-    if (!s.authExpiry || Date.now() > s.authExpiry) { startupTrace('auth-verify: token expired → returning {ok:false}'); return { ok: false, reason: 'expired' } }
-    startupTrace('auth-verify: calling botGet to verify token')
-    const result = await botGet(`/auth/verify?token=${encodeURIComponent(s.authToken)}&secret=${encodeURIComponent(BOT_SECRET)}`)
-    startupTrace(`auth-verify: botGet returned ok=${result?.ok} reason=${result?.reason}`)
-    if (typeof result?.ok !== 'boolean') return { ok: false, reason: 'bad_response' }
-    if (result.ok) {
-      s.isPremium = result.isPremium === true
-      saveSettingsWithHmac(s)
-    }
-    return result
+    const r = await refreshAuth()
+    startupTrace(`auth-verify: ok=${r?.ok} reason=${r?.reason}`)
+    if (r.ok) startTierRefresh()
+    return r
   } catch (e) {
-    startupTrace(`auth-verify: error code=${e?.code} msg=${e?.message}`)
-    // Only allow through on actual network errors (ENOTFOUND, ECONNREFUSED, etc.)
-    const isNetErr = e.code && (e.code.startsWith('E') || e.code === 'ETIMEDOUT')
-    if (isNetErr && s) {
-      const hmacOk = s.settingsHmac === _settingsHmac(s)
-      return { ok: true, reason: 'offline', isPremium: s.isPremium === true && hmacOk }
-    }
+    startupTrace(`auth-verify: error ${e?.message}`)
     return { ok: false, reason: 'error' }
   }
 })
 
 ipcMain.handle('auth-logout', async () => {
+  auth.logout()
+  _lastTier = null; _lastRefresh = null
+  // purge any credentials left behind by pre-1.6 versions
   const s = loadSettings()
-  delete s.authToken
-  delete s.hmacSecret
-  delete s.discordUserId
-  delete s.authExpiry
-  delete s.isPremium
-  delete s.settingsHmac
+  for (const k of ['authToken', 'hmacSecret', 'discordUserId', 'authExpiry', 'isPremium', 'settingsHmac']) delete s[k]
   saveSettings(s)
   if (_tierRefreshInterval) { clearInterval(_tierRefreshInterval); _tierRefreshInterval = null }
   return { ok: true }
@@ -8731,13 +8628,8 @@ ipcMain.handle('auth-logout', async () => {
 
 ipcMain.handle('get-premium-url', () => PREMIUM_STORE_URL)
 
-// Returns cached isPremium only if HMAC is intact and token is not expired — used by offline boot fallback
-ipcMain.handle('get-cached-tier', () => {
-  const s = loadSettings()
-  if (!s.hmacSecret || !s.authToken || !s.authExpiry || Date.now() > s.authExpiry) return false
-  const hmacOk = s.settingsHmac === _settingsHmac(s)
-  return s.isPremium === true && hmacOk
-})
+// Premium state for the offline boot fallback — true only for a verified, unexpired entitlement.
+ipcMain.handle('get-cached-tier', () => !!auth && auth.hasSession() && auth.isPremium())
 
 ipcMain.handle('check-update', async () => {
   if (!autoUpdater) return { ok: false, reason: 'electron-updater not installed' }

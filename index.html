@@ -1419,7 +1419,10 @@ const LANG = {
       advIntroBiosWarning:'BIOS Tuner requires care — incorrect settings can prevent your PC from booting.',
       advIntroDontShow:'Don\'t show this again',
       settingsAnalytics:'Anonymous Usage Stats',
-      settingsAnalyticsDesc:'Send anonymous session data to help improve Jylli Tool',
+      settingsAnalyticsDesc:'Send anonymous session data to help improve Jylli Tool (off by default)',
+      analyticsConsentTitle:'Help improve Jylli Tool?',
+      analyticsConsentBody:'Share anonymous usage stats — app version, PC specs (CPU, GPU, RAM, Windows build), session length and crash reports. No names, no file paths, no account info. You can change this any time in Settings. Choose Cancel to keep it off.',
+      analyticsConsentAllow:'Share stats',
       settingsStartup:'Start at Windows Startup',
       settingsStartupDesc:'Launch Jylli Tool automatically when Windows starts',
       startupTaskFailed:'Failed to update startup task',
@@ -3722,7 +3725,10 @@ const LANG = {
       advIntroBiosWarning:'BIOS-säätäjä vaatii huolellisuutta — väärät asetukset voivat estää PC:n käynnistymisen.',
       advIntroDontShow:'Älä näytä tätä uudelleen',
       settingsAnalytics:'Anonyymi käyttötilasto',
-      settingsAnalyticsDesc:'Lähetä anonyymiä istuntodataa Jylli Toolin kehittämisen tueksi',
+      settingsAnalyticsDesc:'Lähetä anonyymiä istuntodataa Jylli Toolin kehittämisen tueksi (oletuksena pois)',
+      analyticsConsentTitle:'Auta kehittämään Jylli Toolia?',
+      analyticsConsentBody:'Jaa anonyymit käyttötilastot — sovellusversio, tietokoneen tiedot (CPU, GPU, RAM, Windows-versio), istunnon kesto ja kaatumisraportit. Ei nimiä, tiedostopolkuja eikä tilitietoja. Voit muuttaa valintaa milloin tahansa Asetuksissa. Valitse Peruuta pitääksesi sen pois päältä.',
+      analyticsConsentAllow:'Jaa tilastot',
       settingsStartup:'Käynnistä Windowsin käynnistyksessä',
       settingsStartupDesc:'Käynnistä Jylli Tool automaattisesti Windowsin käynnistyessä',
       startupTaskFailed:'Käynnistystehtävän päivitys epäonnistui',
@@ -6295,6 +6301,9 @@ async function init(isPremium = false) {
     }, 800)
   }
 
+  // Existing installs: ask once about opt-in telemetry
+  if (settings.onboardingDone && settings.analyticsConsent === undefined) setTimeout(askAnalyticsConsent, 2500)
+
   // AV tip — shown once if a known aggressive AV is detected
   if (!settings.avTipDismissed) {
     api.detectAv?.().then(av => {
@@ -7165,7 +7174,7 @@ function buildSettings(c) {
   const advCheck = document.getElementById('settings-adv-check')
   if (advCheck) advCheck.checked = !!settings.advancedMode
   const analyticsCheck = document.getElementById('settings-analytics-check')
-  if (analyticsCheck) analyticsCheck.checked = !settings.analyticsOptOut
+  if (analyticsCheck) analyticsCheck.checked = settings.analyticsConsent === true
   const startupCheck = document.getElementById('settings-startup-check')
   if (startupCheck) startupCheck.checked = !!settings.startAtLogin
 
@@ -7402,8 +7411,20 @@ function gwStripStopAll() {
   toast(tUI('nowGamingStopAll'), '', 'info', 3000)
 }
 
+// Telemetry is opt-in: nothing is sent until the user says yes (first run, or once for existing installs).
+async function askAnalyticsConsent() {
+  if (settings.analyticsConsent !== undefined) return
+  let allow = false
+  try {
+    await showConfirm({ title: tUI('analyticsConsentTitle'), body: tUI('analyticsConsentBody'), okText: tUI('analyticsConsentAllow'), okStyle: 'info', icon: 'fa-chart-simple' })
+    allow = true
+  } catch {}
+  settings.analyticsConsent = allow
+  api.saveSettings(settings)
+}
+
 function settingsToggleAnalytics(on) {
-  settings.analyticsOptOut = !on
+  settings.analyticsConsent = !!on
   api.saveSettings(settings)
   toast(tUI('settingsAnalytics') + tUI(on ? 'featureEnabled' : 'featureDisabled'), '', on ? 'ok' : 'info')
 }
@@ -8107,20 +8128,21 @@ async function runWizardStep(step) {
   }
 }
 
-function wizardFinish() {
+async function wizardFinish() {
   document.getElementById('onboarding-overlay').style.display = 'none'
   settings.onboardingDone = true
   api.saveSettings(settings)
   toast(tWizard('welcomeTitle'), `Setup complete — enjoy Jylli Tool v${appVersion}`, 'ok', 4000)
+  await askAnalyticsConsent()
 }
 
-function wizardChooseAutoOpti() {
-  wizardFinish()
+async function wizardChooseAutoOpti() {
+  await wizardFinish()
   setTimeout(() => runAutoOpti(), 300)
 }
 
-function wizardChooseManual() {
-  wizardFinish()
+async function wizardChooseManual() {
+  await wizardFinish()
   toast(tWizard('exploreTitle'), tWizard('exploreSub'), 'info', 4000)
 }
 
