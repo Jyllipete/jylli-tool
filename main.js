@@ -450,6 +450,8 @@ const BOT_URL         = 'https://jylli-bot-production.up.railway.app'
 const PREMIUM_STORE_URL = 'https://jyllitool.netlify.app/'
 const { createAuth } = require('./lib/auth')
 const V = require('./lib/validate')
+const Ini = require('./lib/ini')
+const { isStrictSubpath, topFolderUnder } = require('./lib/paths')
 // DNS helpers — argument arrays only, so an adapter name or address can never be interpreted by a shell.
 const dnsSetDhcp   = a => runFile('netsh.exe', ['interface', 'ip', 'set', 'dns', `name=${a}`, 'dhcp'])
 const dnsSetStatic = (a, ip) => V.isIp(ip) ? runFile('netsh.exe', ['interface', 'ip', 'set', 'dns', `name=${a}`, 'static', ip, 'primary']) : Promise.resolve({ ok: false })
@@ -2058,7 +2060,7 @@ ipcMain.handle('load-game-bundle', async (_, name) => {
     try {
       const content = readCitizenFXIni()
       if (content !== null) {
-        const updated = applyIniChanges(content, bundle.citizenfxIniSnapshot)
+        const updated = applyIniChanges(content, bundle.citizenfxIniSnapshot, { restrict: true })
         writeCitizenFXIni(updated)
         results.citizenfxIni = { ok: true }
       } else {
@@ -2093,7 +2095,15 @@ ipcMain.handle('open-external', (_, url) => {
   } catch {}
   debugLog(`[open-external] blocked URL with disallowed protocol: ${url}`)
 })
-ipcMain.handle('open-path', (_, p) => shell.openPath(p))
+ipcMain.handle('open-path', async (_, p) => {
+  try {
+    if (typeof p !== 'string' || p.length > 520 || !path.win32.isAbsolute(p) || /[*?<>|"\0]/.test(p)) return ''
+    const st = fs.statSync(p)
+    if (st.isDirectory()) return await shell.openPath(p)
+    shell.showItemInFolder(p)   // never shell.openPath() on a file: that would execute it
+    return ''
+  } catch { return '' }
+})
 
 // ─── Discord RPC update handlers ──────────────────────────────────────────────
 ipcMain.handle('set-discord-rpc', async (_, enabled) => {
@@ -2992,8 +3002,11 @@ const _fivemSettingsRegexMap = new Map(
 
 // gta5_settings.xml finder — primary path is %APPDATA%\CitizenFX\gta5_settings.xml
 function findFivemSettings(manualPath) {
-  if (manualPath && manualPath.trim()) {
-    try { require('fs').accessSync(manualPath.trim()); return manualPath.trim() } catch {}
+  if (manualPath && typeof manualPath === 'string' && manualPath.trim()) {
+    const p = manualPath.trim()
+    // only the real settings file, wherever the user keeps it — never an arbitrary file
+    if (!path.win32.isAbsolute(p) || path.win32.basename(p).toLowerCase() !== 'gta5_settings.xml') return null
+    try { require('fs').accessSync(p); return p } catch {}
     return null
   }
   const primary = path.join(process.env.APPDATA || '', 'CitizenFX', 'gta5_settings.xml')
@@ -3044,13 +3057,15 @@ ipcMain.handle('fivem-write-settings', async (_, changes, manualPath) => {
     fs.renameSync(settingsPath + '.bak.tmp', settingsPath + '.bak')
   } catch (_) {}
 
+  if (!changes || typeof changes !== 'object' || Array.isArray(changes)) return { ok: false, reason: 'invalid_request' }
+  let changedCount = 0
   for (const [key, val] of Object.entries(changes)) {
     const rx = _fivemSettingsRegexMap.get(key)
-    if (rx && rx.replace.test(content)) {
-      content = content.replace(rx.replace, `$1${val}$2`)
-    } else {
-      content = content.replace(/(<\/graphics>)/i, `    <${key} value="${val}" />\n  $1`)
-    }
+    if (!rx || !Ini.isSafeXmlValue(val)) continue          // unknown key or unsafe value: ignored, never written
+    const v = String(val)
+    if (rx.replace.test(content)) content = content.replace(rx.replace, (_, a, b) => a + v + b)
+    else content = content.replace(/(<\/graphics>)/i, (_, close) => `    <${key} value="${v}" />\n  ${close}`)
+    changedCount++
   }
 
   // 4a: atomic write — tmp → rename (NTFS guarantees the rename is atomic)
@@ -3082,7 +3097,7 @@ ipcMain.handle('fivem-write-settings', async (_, changes, manualPath) => {
     }
   } catch (_) {}
 
-  return { ok: true, path: settingsPath, changed: Object.keys(changes).length }
+  return { ok: true, path: settingsPath, changed: changedCount }
 })
 
 // ─── CitizenFX.ini batch read/write helper ────────────────────────────────────
@@ -3106,17 +3121,11 @@ function writeCitizenFXIni(content) {
   } catch { try { fs.unlinkSync(tmp) } catch {} return false }
 }
 
-function applyIniChanges(content, changes) {
-  let c = content || ''
-  for (const [key, val] of Object.entries(changes)) {
-    const rex = new RegExp(`${key}\\s*=\\s*[^\\r\\n]*`, 'i')
-    if (rex.test(c)) {
-      c = c.replace(rex, `${key}=${val}`)
-    } else {
-      c = c.trimEnd() + `\n${key}=${val}\n`
-    }
-  }
-  return c
+// Keys the visual editor knows about (CITIZENFX_INI_DEFS is declared below; resolved lazily at call time) + keys used by built-in tweaks.
+const INI_EXTRA_KEYS = ['DisableSteamAchievements', 'MaxObjectLodDistance']
+function applyIniChanges(content, changes, { restrict = false } = {}) {
+  const allowed = restrict ? new Set([...CITIZENFX_INI_DEFS.map(d => d.key), ...INI_EXTRA_KEYS]) : undefined
+  return Ini.applyIniChanges(content, changes, allowed).content
 }
 
 // IPC: batch-apply multiple CitizenFX.ini changes in a single read→write
@@ -3124,12 +3133,13 @@ ipcMain.handle('fivem-ini-batch', async (_, changes) => {
   if (!requiresPremium('fivem-ini-batch')) return { ok: false, reason: 'premium_required' }
   const p = CITIZENFX_INI_PATH()
   if (!fs.existsSync(p)) return { ok: false, reason: 'CitizenFX.ini not found — is FiveM installed?' }
+  if (!changes || typeof changes !== 'object' || Array.isArray(changes)) return { ok: false, reason: 'invalid_request' }
   const content = readCitizenFXIni()
   if (content === null) return { ok: false, reason: 'Could not read CitizenFX.ini' }
   // Atomic backup before writing — matches the safety pattern used by fivem-write-settings
   const bakPath = p + '.bak'
   try { fs.writeFileSync(bakPath + '.tmp', content, 'utf8'); fs.renameSync(bakPath + '.tmp', bakPath) } catch {}
-  const updated = applyIniChanges(content, changes)
+  const updated = applyIniChanges(content, changes, { restrict: true })
   return writeCitizenFXIni(updated) ? { ok: true } : { ok: false, reason: 'Could not write CitizenFX.ini' }
 })
 
@@ -3213,7 +3223,15 @@ ipcMain.handle('fivem-ini-read-all', async () => {
 ipcMain.handle('fivem-ini-write-key', async (_, { key, value, force = false }) => {
   if (!requiresPremium('fivem-ini-write-key')) return { ok: false, reason: 'premium_required' }
   const def = CITIZENFX_INI_DEFS.find(d => d.key === key)
-  if (!def) return { ok: false, reason: `Unknown key: ${key}` }
+  if (!def) return { ok: false, reason: 'Unknown key' }
+  if (def.type === 'number') {
+    const n = V.inRange(value, def.min ?? -Infinity, def.max ?? Infinity)
+    if (n === null) return { ok: false, reason: `Value must be a number between ${def.min} and ${def.max}` }
+    value = n
+  } else if (def.type === 'boolean') {
+    if (!(value === 0 || value === 1 || value === true || value === false || value === '0' || value === '1')) return { ok: false, reason: 'Value must be 0 or 1' }
+    value = (value === 1 || value === true || value === '1') ? 1 : 0
+  } else if (!Ini.isSafeValue(value)) return { ok: false, reason: 'Invalid value' }
   const ramMB = Math.floor(require('os').totalmem() / (1024 * 1024))
   if (!force && def.danger) {
     const warning = def.danger(value, ramMB)
@@ -3221,7 +3239,7 @@ ipcMain.handle('fivem-ini-write-key', async (_, { key, value, force = false }) =
   }
   const content = readCitizenFXIni()
   if (content === null) return { ok: false, reason: 'CitizenFX.ini not found — is FiveM installed?' }
-  const updated = applyIniChanges(content, { [key]: value })
+  const updated = applyIniChanges(content, { [key]: value }, { restrict: true })
   return writeCitizenFXIni(updated) ? { ok: true } : { ok: false, reason: 'Could not write CitizenFX.ini' }
 })
 
@@ -3531,38 +3549,41 @@ ipcMain.handle('fivem-import-pack', async () => {
       properties: ['openFile'],
     })
     if (canceled || !filePaths.length) return { ok: false, canceled: true }
+    if (fs.statSync(filePaths[0]).size > 1024 * 1024) return { ok: false, error: 'file_too_large' }
     const pack = JSON.parse(fs.readFileSync(filePaths[0], 'utf8'))
-    if (pack.schema !== 'jylli-fivem-pack-v1') return { ok: false, error: 'invalid_schema' }
+    if (!pack || pack.schema !== 'jylli-fivem-pack-v1') return { ok: false, error: 'invalid_schema' }
 
     const results = { tweaks: [], ini: false, xml: false }
 
-    // Apply tweaks
-    for (const id of (pack.appliedTweaks || [])) {
-      if (!TWEAKS[id]) continue
+    // Apply tweaks — a shared pack file is untrusted: only FiveM tweaks, only ones that exist, bounded count
+    const packIds = Array.isArray(pack.appliedTweaks) ? pack.appliedTweaks.slice(0, 100) : []
+    for (const id of packIds) {
+      if (typeof id !== 'string' || !id.startsWith('fivem-') || !Object.prototype.hasOwnProperty.call(TWEAKS, id) || !TWEAKS[id].apply) continue
       try {
         const msgs = []
-        const ps = (script, timeout) => runPS(script, timeout)
-        await TWEAKS[id].apply(m => msgs.push(m), ps)
+        await TWEAKS[id].apply(m => msgs.push(m), runPS, runCmd, regAdd, regDelete)
         const s = loadSettings(); s[`tweak_${id}`] = 'applied'; saveSettings(s)
         results.tweaks.push(id)
       } catch {}
     }
 
     // Write CitizenFX.ini
-    if (pack.citizenFxIni) {
+    if (typeof pack.citizenFxIni === 'string' && pack.citizenFxIni.length <= 64 * 1024 && !pack.citizenFxIni.includes('\0')) {
       try {
         const iniPath = path.join(process.env.LOCALAPPDATA || '', 'FiveM', 'FiveM.app', 'CitizenFX.ini')
         fs.mkdirSync(path.dirname(iniPath), { recursive: true })
+        if (fs.existsSync(iniPath)) fs.copyFileSync(iniPath, iniPath + '.bak')   // never overwrite without a way back
         fs.writeFileSync(iniPath, pack.citizenFxIni, 'utf8')
         results.ini = true
       } catch {}
     }
 
     // Write gta5_settings.xml
-    if (pack.gta5SettingsXml) {
+    if (typeof pack.gta5SettingsXml === 'string' && pack.gta5SettingsXml.length <= 256 * 1024 && /<graphics>/i.test(pack.gta5SettingsXml) && /<\/graphics>/i.test(pack.gta5SettingsXml)) {
       try {
         const xmlPath = path.join(process.env.APPDATA || '', 'CitizenFX', 'gta5_settings.xml')
         fs.mkdirSync(path.dirname(xmlPath), { recursive: true })
+        if (fs.existsSync(xmlPath)) fs.copyFileSync(xmlPath, xmlPath + '.bak')
         fs.writeFileSync(xmlPath, pack.gta5SettingsXml, 'utf8')
         results.xml = true
       } catch {}
@@ -10122,7 +10143,12 @@ function armaConfSet(raw, key, value) {
 }
 
 function findArmaSettingsDir(manualDir) {
-  if (manualDir && fs.existsSync(manualDir)) return manualDir
+  if (manualDir && typeof manualDir === 'string') {
+    // a user-picked folder is accepted only if it really is an Arma Reforger settings folder
+    const d = manualDir.trim()
+    if (path.win32.isAbsolute(d) && fs.existsSync(path.join(d, 'ReforgerEngineSettings.conf'))) return d
+    return null
+  }
   const docs = path.join(os.homedir(), 'Documents', 'My Games', 'ArmaReforger', 'profile', '.save')
   if (!fs.existsSync(docs)) return null
   // Find any app1874880_user* folder
@@ -10203,17 +10229,19 @@ ipcMain.handle('arma-write-settings', async (_, changes, manualDir) => {
   try { fs.writeFileSync(engineFile + '.bak', engineRaw, 'utf8') } catch (_) {}
   try { fs.writeFileSync(gameFile   + '.bak', gameRaw,   'utf8') } catch (_) {}
 
+  if (!changes || typeof changes !== 'object' || Array.isArray(changes)) return { ok: false, reason: 'invalid_request' }
   for (const [key, value] of Object.entries(changes)) {
     const mapping = ARMA_KEY_MAP[key]
-    if (!mapping) continue
+    if (!mapping || !Ini.isSafeXmlValue(value)) continue   // known key + plain token/number only (no newlines or markup)
     if (mapping.file === 'engine') engineRaw = armaConfSet(engineRaw, mapping.confKey, value)
     else                            gameRaw   = armaConfSet(gameRaw,   mapping.confKey, value)
   }
 
-  try { fs.writeFileSync(engineFile, engineRaw, 'utf8') } catch (e) {
+  const atomicWrite = (file, text) => { const tmp = file + '.tmp'; fs.writeFileSync(tmp, text, 'utf8'); fs.renameSync(tmp, file) }
+  try { atomicWrite(engineFile, engineRaw) } catch (e) {
     return { ok: false, reason: `Could not write ReforgerEngineSettings.conf: ${e.message}` }
   }
-  try { fs.writeFileSync(gameFile, gameRaw, 'utf8') } catch (e) {
+  try { atomicWrite(gameFile, gameRaw) } catch (e) {
     return { ok: false, reason: `Could not write ReforgerGameSettings.conf: ${e.message}` }
   }
 
@@ -13792,17 +13820,22 @@ ipcMain.handle('scan-phantom-apps', async () => {
   } catch { return [] }
 })
 
+// Application folders that must never be removed even if they look empty of executables.
+const PHANTOM_PROTECTED = new Set(['microsoft', 'windows', 'windowsapps', 'modifiablewindowsapps', 'common files', 'windows defender', 'windows nt', 'windows mail',
+  'windows media player', 'windows photo viewer', 'windows security', 'windowspowershell', 'internet explorer', 'dotnet', 'reference assemblies', 'msbuild', 'nvidia corporation',
+  'nvidia', 'amd', 'intel', 'realtek', 'packages', 'programs', 'temp', 'google', 'mozilla', 'discord', 'steam', 'epic games', 'jylli tool', 'jylli-tool'])
 ipcMain.handle('delete-phantom-folder', async (_, folderPath) => {
   if (!requiresPremium('delete-phantom-folder')) return { ok: false, reason: 'premium_required' }
-  if (!folderPath || typeof folderPath !== 'string') return { ok: false, error: 'invalid_path' }
-  // Safety: only allow deletion under known user-writable directories
-  const allowed = [app.getPath('appData'), app.getPath('localAppData'), 'C:\\Program Files', 'C:\\Program Files (x86)']
-  const normalized = path.normalize(folderPath)
-  if (!allowed.some(a => normalized.toLowerCase().startsWith(a.toLowerCase()))) {
-    return { ok: false, error: 'path_not_allowed' }
-  }
+  if (!folderPath || typeof folderPath !== 'string' || folderPath.length > 520 || /[*?<>|"\0]/.test(folderPath)) return { ok: false, error: 'invalid_path' }
+  const roots = [app.getPath('appData'), app.getPath('localAppData'), process.env.ProgramFiles, process.env['ProgramFiles(x86)']].filter(Boolean)
+  const normalized = path.win32.resolve(folderPath)
+  const root = roots.find(r => isStrictSubpath(r, normalized))
+  if (!root) return { ok: false, error: 'path_not_allowed' }
+  if (PHANTOM_PROTECTED.has(topFolderUnder(root, normalized))) return { ok: false, error: 'protected_folder' }
   try {
-    fs.rmSync(normalized, { recursive: true, force: true })
+    const st = fs.lstatSync(normalized)
+    if (st.isSymbolicLink() || !st.isDirectory()) return { ok: false, error: 'not_a_plain_folder' }
+    await shell.trashItem(normalized)   // Recycle Bin, so a wrong guess is recoverable
     return { ok: true }
   } catch (e) { return { ok: false, error: e.message } }
 })
