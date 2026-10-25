@@ -1837,7 +1837,7 @@ ipcMain.handle('window-maximize', (e) => {
   else win?.maximize()
 })
 ipcMain.handle('window-close', (e) => BrowserWindow.fromWebContents(e.sender)?.close())
-ipcMain.handle('reboot', async () => { const { exec } = require('child_process'); exec('shutdown /r /t 5') })
+ipcMain.handle('reboot', async () => { const r = await runFile('shutdown.exe', ['/r', '/t', '10', '/c', 'Jylli Tool: restarting to finish applying changes']); return { ok: r.ok } })
 ipcMain.handle('get-boot-time', async () => {
   try {
     const r = await runPS(
@@ -2394,17 +2394,21 @@ ipcMain.handle('create-restore-point', async (_, desc) => {
   )
 
   await ensureSREnabled(send)
+  try {
+    const r = await runPS(`Checkpoint-Computer -Description '${safeDesc}' -RestorePointType MODIFY_SETTINGS -ErrorAction Stop`)
+    if (r.ok) { send('✓ Restore Point created!', 'ok'); return { ok: true } }
 
-  const r = await runPS(`Checkpoint-Computer -Description '${safeDesc}' -RestorePointType MODIFY_SETTINGS -ErrorAction Stop`)
-  if (r.ok) { send('✓ Restore Point created!', 'ok'); return { ok: true } }
+    // WMI fallback
+    const r2 = await runPS(`(Get-WmiObject -Class SystemRestore -Namespace root\\default).CreateRestorePoint('${safeDesc}',12,100)`)
+    if (r2.ok) { send('✓ Restore Point created (WMI)!', 'ok'); return { ok: true } }
 
-  // WMI fallback
-  const r2 = await runPS(`(Get-WmiObject -Class SystemRestore -Namespace root\\default).CreateRestorePoint('${safeDesc}',12,100)`)
-  if (r2.ok) { send('✓ Restore Point created (WMI)!', 'ok'); return { ok: true } }
-
-  send(`Restore Point failed: ${r.err}`, 'err')
-  send('Tip: Run as Admin and ensure C:\\ drive protection is ON.', 'info')
-  return { ok: false, error: r.err }
+    send(`Restore Point failed: ${r.err}`, 'err')
+    send('Tip: Run as Admin and ensure C:\\ drive protection is ON.', 'info')
+    return { ok: false, error: r.err }
+  } finally {
+    // ensureSREnabled lifts Windows' "one restore point per 24h" limit only for the duration of this request
+    await regDelete('HKLM', 'SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\SystemRestore', 'SystemRestorePointCreationFrequency').catch(() => {})
+  }
 })
 
 ipcMain.handle('list-restore-points', async () => {
@@ -2443,11 +2447,14 @@ $ErrorActionPreference = 'Stop'
 $rp = Get-ComputerRestorePoint | Where-Object { $_.SequenceNumber -eq ${n} }
 if (-not $rp) { throw "Restore point ${n} not found" }
 $rpTime = $rp.ConvertToDateTime($rp.CreationTime)
-$sc = Get-WmiObject -Class Win32_ShadowCopy | Where-Object {
+$cands = @(Get-WmiObject -Class Win32_ShadowCopy | Where-Object {
     $scTime = [Management.ManagementDateTimeConverter]::ToDateTime($_.InstallDate)
-    [Math]::Abs(($scTime - $rpTime).TotalSeconds) -lt 60
-} | Select-Object -First 1
-if (-not $sc) { throw "No shadow copy found matching restore point ${n}" }
+    [Math]::Abs(($scTime - $rpTime).TotalSeconds) -lt 10
+})
+if ($cands.Count -eq 0) { throw "No shadow copy found matching restore point ${n}" }
+# Never guess: if two snapshots were taken within seconds of each other, deleting the wrong one cannot be undone.
+if ($cands.Count -gt 1) { throw "More than one shadow copy matches restore point ${n} - refusing to delete" }
+$sc = $cands[0]
 $id = $sc.ID
 $sc.Delete()
 Write-Output "deleted:$id"
@@ -2460,7 +2467,7 @@ Write-Output "deleted:$id"
   // vssadmin fallback: extract shadow ID from output if WMI .Delete() threw but printed the ID
   const idMatch = (r.out || '').match(/\{[0-9a-fA-F-]{36}\}/)
   if (idMatch) {
-    const r2 = await runPS(`vssadmin delete shadows /Shadow="${idMatch[0]}" /Quiet`)
+    const r2 = await runFile('vssadmin.exe', ['delete', 'shadows', `/Shadow=${idMatch[0]}`, '/Quiet'])
     if (r2.ok) { send(`✓ Restore point #${n} deleted (vssadmin).`, 'ok'); return { ok: true } }
   }
   send(`Failed to delete restore point #${n}: ${r.err}`, 'err')
@@ -10116,43 +10123,42 @@ let lastUsedPulsePreset = null       // remembered for tray "Start Pulse" shortc
 let pulseStartTimestamp = null       // set when Pulse activates, cleared on restore
 
 
+const PCI_PATH_RX = /^(?:Microsoft\.PowerShell\.Core\\Registry::)?HKEY_LOCAL_MACHINE\\SYSTEM\\CurrentControlSet\\Enum\\PCI\\[\w&.#{}\-\\]+$/
+const PULSE_PARK_GUID = '0cc5b647-c1df-4637-891a-dec35c318583'
+const PULSE_BOOST_GUID = 'be337238-0d82-4146-a960-4f3749d470c7'
+const PULSE_SUB_PROCESSOR = '54533251-82be-4824-96c1-47b60b740d00'
+let _pulseDeprioritised = []   // [{ id, name, orig }] — only processes Pulse itself lowered, so Stop can put exactly those back
+
 async function pulseRestoreAll(send) {
-  // Restore interrupt affinity — remove DevicePolicy + AssignmentSetOverride so Windows
-  // resumes automatic interrupt routing (must run first, before reboot clears handles)
-  await runPS(`
-    $pciBase  = 'HKLM:\\SYSTEM\\CurrentControlSet\\Enum\\PCI'
-    $netGuid  = '{4d36e972-e325-11ce-bfc1-08002be10318}'
-    $dispGuid = '{4d36e968-e325-11ce-bfc1-08002be10318}'
-    Get-ChildItem $pciBase -EA SilentlyContinue | ForEach-Object {
-      Get-ChildItem $_.PSPath -EA SilentlyContinue | ForEach-Object {
-        $props = Get-ItemProperty -Path $_.PSPath -EA SilentlyContinue
-        $cg = $props.ClassGUID
-        if ($cg -eq $dispGuid -or ($cg -eq $netGuid -and $props.Service -notmatch 'iwifi|netathr|bcmwl|Netwtw|IntelWifi|rt[l6]8|rtswlan')) {
-          $affPath = "$($_.PSPath)\\Device Parameters\\Interrupt Management\\Affinity Policy"
-          Remove-ItemProperty -Path $affPath -Name DevicePolicy           -EA SilentlyContinue
-          Remove-ItemProperty -Path $affPath -Name AssignmentSetOverride   -EA SilentlyContinue
-        }
-      }
+  // Restore interrupt affinity exactly as it was before Pulse changed it
+  {
+    const snap = snapshots.load('pulse-affinity') || {}
+    for (const [devPath, v] of Object.entries(snap)) {
+      if (!PCI_PATH_RX.test(devPath)) continue
+      const p = V.psQuote(devPath + '\\Device Parameters\\Interrupt Management\\Affinity Policy')
+      const one = (name, val) => (val === null || val === undefined)
+        ? `Remove-ItemProperty -Path ${p} -Name ${name} -EA SilentlyContinue`
+        : `Set-ItemProperty -Path ${p} -Name ${name} -Value ${Number(val)} -Type DWord -Force -EA SilentlyContinue`
+      await runPS(one('DevicePolicy', v.p) + '; ' + one('AssignmentSetOverride', v.m), 8000).catch(() => {})
     }
-  `, 20000).catch(() => {})
+    snapshots.remove('pulse-affinity')
+  }
   send('  Interrupt affinity restored to Windows defaults.', 'ok')
 
-  // Re-enable CPU core parking — powercfg writes persist across reboots and must be explicitly reversed
-  await runPS(`
-    $parkGuid  = '0cc5b647-c1df-4637-891a-dec35c318583'
-    $perfBoost = 'be337238-0d82-4146-a960-4f3749d470c7'
-    $subPower  = '54533251-82be-4824-96c1-47b60b740d00'
-    $active    = (powercfg /getactivescheme) -replace '.*GUID:\\s+(\\S+).*','$1'
-    $schemes   = powercfg /list | Select-String 'Power Scheme GUID' | ForEach-Object { ($_ -split ':\\s+')[1].Split(' ')[0] }
-    foreach ($s in $schemes) {
-      powercfg /setacvalueindex  $s $subPower $parkGuid  1   2>$null
-      powercfg /setdcvalueindex  $s $subPower $parkGuid  1   2>$null
-      powercfg /setacvalueindex  $s $subPower $perfBoost 2   2>$null
-      powercfg /setdcvalueindex  $s $subPower $perfBoost 2   2>$null
+  // Put the power-plan values Pulse changed back to what that plan had before (absent value = the plan's own default)
+  {
+    const snap = snapshots.load('pulse-power')
+    if (snap?.guid && /^[0-9a-f-]{36}$/i.test(snap.guid)) {
+      for (const [key, val] of Object.entries(snap.values || {})) {
+        const m = /^([0-9a-f-]{36})\|(ACSettingIndex|DCSettingIndex)$/i.exec(key)
+        if (!m) continue
+        const p = V.psQuote(`HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Power\\User\\PowerSchemes\\${snap.guid}\\${PULSE_SUB_PROCESSOR}\\${m[1]}`)
+        await runPS(val === null ? `Remove-ItemProperty -Path ${p} -Name ${m[2]} -EA SilentlyContinue` : `Set-ItemProperty -Path ${p} -Name ${m[2]} -Value ${Number(val)} -Type DWord -Force -EA SilentlyContinue`, 8000).catch(() => {})
+      }
+      await runPS('powercfg /update-settings 2>$null', 8000).catch(() => {})
     }
-    powercfg /setactive $active 2>$null
-    Write-Output "PARK_OK"
-  `, 20000).catch(() => {})
+    snapshots.remove('pulse-power')
+  }
   send('  CPU core parking restored.', 'ok')
 
   // Restore timer resolution — just release our request; Windows reverts automatically
@@ -10173,13 +10179,17 @@ public class TimerRes { [DllImport("ntdll.dll")] public static extern int NtSetT
     pulseOrigMmcssResponsiveness = null
   }
 
-  // Restore MMCSS Tasks\\Games to safe defaults
-  await runPS(`
-    $base = 'HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Multimedia\\SystemProfile\\Tasks\\Games'
-    Set-ItemProperty -Path $base -Name 'GPU Priority'          -Value 8     -Force -EA SilentlyContinue
-    Set-ItemProperty -Path $base -Name 'Priority'              -Value 2     -Force -EA SilentlyContinue
-    Set-ItemProperty -Path $base -Name 'Scheduling Category'   -Value 'Medium' -Force -EA SilentlyContinue
-  `)
+  // Restore MMCSS Tasks\\Games to the values it had before Pulse
+  {
+    const snap = snapshots.load('pulse-mmcss-games')
+    const games = 'HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Multimedia\\SystemProfile\\Tasks\\Games'
+    const orig = { 'GPU Priority': 8, 'Priority': 2, 'Scheduling Category': 'Medium', ...(snap || {}) }   // Windows defaults when nothing was recorded
+    for (const [name, v] of Object.entries(orig)) {
+      if (!['GPU Priority', 'Priority', 'Scheduling Category'].includes(name)) continue
+      await runPS(`Set-ItemProperty -Path '${games}' -Name ${V.psQuote(name)} -Value ${typeof v === 'number' ? v : V.psQuote(v)} -Force -EA SilentlyContinue`, 8000).catch(() => {})
+    }
+    snapshots.remove('pulse-mmcss-games')
+  }
 
   // Restore power plan
   if (pulseOrigPowerPlan) {
@@ -10187,12 +10197,18 @@ public class TimerRes { [DllImport("ntdll.dll")] public static extern int NtSetT
     pulseOrigPowerPlan = null
   }
 
-  // Restore all process priorities to Normal (skip critical system procs)
-  await runPS(`
-    Get-Process -EA SilentlyContinue | Where-Object {
-      $_.Name -notmatch '^(System|Idle|Registry|smss|csrss|wininit|lsass|services|svchost)$'
-    } | ForEach-Object { try { $_.PriorityClass = 'Normal' } catch {} }
-  `, 15000)
+  // Restore priorities of exactly the processes Pulse lowered (and only if they still carry the lowered class)
+  if (_pulseDeprioritised.length) {
+    const items = JSON.stringify(_pulseDeprioritised.slice(0, 400).map(x => ({ Id: Number(x.id) || 0, Name: String(x.name || ''), Class: String(x.orig || 'Normal') })))
+    await runPS(`
+      $items = ConvertFrom-Json ${V.psQuote(items)}
+      foreach ($i in $items) {
+        $p = Get-Process -Id $i.Id -EA SilentlyContinue
+        if ($p -and $p.ProcessName -eq $i.Name -and $p.PriorityClass -eq 'BelowNormal') { try { $p.PriorityClass = $i.Class } catch {} }
+      }
+    `, 15000).catch(() => {})
+    _pulseDeprioritised = []
+  }
 
   pulseStartTimestamp = null
   send('◆ Pulse deactivated — all settings restored.', 'ok')
@@ -10243,24 +10259,31 @@ public class TimerRes { [DllImport("ntdll.dll")] public static extern int NtSetT
   await delay(50)
 
   // ── 2. CPU core unparking ─────────────────────────────────────────────────────
-  // Parked cores take ~1ms to wake — causes micro-stutters when game bursts load
-  // Skipped on laptops: causes heat spikes and accelerated battery drain
+  // Parked cores take ~1ms to wake — causes micro-stutters when game bursts load.
+  // Applied ONLY to the plan Pulse activates (never the user's other plans), with the previous values recorded for an exact undo.
+  // Skipped on laptops: causes heat spikes and accelerated battery drain.
   if (!isLaptop) {
-    await runPS(`
-      $parkGuid  = '0cc5b647-c1df-4637-891a-dec35c318583'
-      $perfBoost = 'be337238-0d82-4146-a960-4f3749d470c7'
-      $subPower  = '54533251-82be-4824-96c1-47b60b740d00'
-      $schemes = powercfg /list | Select-String 'Power Scheme GUID' | ForEach-Object { ($_ -split ':\s+')[1].Split(' ')[0] }
-      foreach ($s in $schemes) {
-        powercfg /setacvalueindex  $s $subPower $parkGuid  0   2>$null
-        powercfg /setdcvalueindex  $s $subPower $parkGuid  0   2>$null
-        powercfg /setacvalueindex  $s $subPower $perfBoost 3   2>$null
+    const r = await runPS(`
+      $sub = '${PULSE_SUB_PROCESSOR}'; $g = '${powerPlanGuid}'
+      foreach ($sg in @('${PULSE_PARK_GUID}','${PULSE_BOOST_GUID}')) {
+        foreach ($n in @('ACSettingIndex','DCSettingIndex')) {
+          $v = (Get-ItemProperty -Path "HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Power\\User\\PowerSchemes\\$g\\$sub\\$sg" -Name $n -EA SilentlyContinue).$n
+          Write-Output ("SNAP|" + $sg + "|" + $n + "|" + $v)
+        }
       }
+      powercfg /setacvalueindex $g $sub ${PULSE_PARK_GUID}  0   2>$null
+      powercfg /setdcvalueindex $g $sub ${PULSE_PARK_GUID}  0   2>$null
+      powercfg /setacvalueindex $g $sub ${PULSE_BOOST_GUID} 3   2>$null
       powercfg /update-settings 2>$null
       Write-Output "UNPARK_OK"
-    `, 20000).then(r => {
-      if (r.out.includes('UNPARK_OK')) send('  CPU core parking disabled', 'ok')
-    })
+    `, 20000)
+    const values = {}
+    for (const line of String(r.out || '').split(/\r?\n/)) {
+      const m = /^SNAP\|([0-9a-f-]{36})\|(ACSettingIndex|DCSettingIndex)\|(\d*)$/i.exec(line.trim())
+      if (m) values[`${m[1]}|${m[2]}`] = m[3] === '' ? null : Number(m[3])
+    }
+    if (!snapshots.load('pulse-power')) snapshots.save('pulse-power', { guid: powerPlanGuid, values })
+    if (r.out.includes('UNPARK_OK')) send('  CPU core parking disabled', 'ok')
   } else {
     send('  Core unparking skipped (laptop — battery/heat safety)', 'info')
   }
@@ -10279,6 +10302,15 @@ public class TimerRes { [DllImport("ntdll.dll")] public static extern int NtSetT
   // Save current value so we can restore it exactly
   const mmcssR = await runPS(`(Get-ItemProperty -Path 'HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Multimedia\\SystemProfile' -EA SilentlyContinue).SystemResponsiveness`)
   pulseOrigMmcssResponsiveness = parseInt(mmcssR.out.trim()) || 20
+  if (!snapshots.load('pulse-mmcss-games')) {
+    const g = await runPS(`(Get-ItemProperty -Path 'HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Multimedia\\SystemProfile\\Tasks\\Games' -EA SilentlyContinue | ForEach-Object { "$($_.'GPU Priority')|$($_.Priority)|$($_.'Scheduling Category')" })`)
+    const [gp, pr, sc] = String(g.out || '').trim().split('|')
+    const snapGames = {}
+    if (gp !== undefined && gp !== '' && !isNaN(Number(gp))) snapGames['GPU Priority'] = Number(gp)
+    if (pr !== undefined && pr !== '' && !isNaN(Number(pr))) snapGames['Priority'] = Number(pr)
+    if (sc) snapGames['Scheduling Category'] = sc
+    snapshots.save('pulse-mmcss-games', snapGames)
+  }
   await runPS(`
     $base = 'HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Multimedia\\SystemProfile'
     Set-ItemProperty -Path $base -Name SystemResponsiveness -Value ${sysResponsiveness} -Force
@@ -10310,6 +10342,9 @@ public class TimerRes { [DllImport("ntdll.dll")] public static extern int NtSetT
           $isEthernet = $cg -eq $netGuid -and $props.Service -notmatch 'iwifi|netathr|bcmwl|Netwtw|IntelWifi|rt[l6]8|rtswlan'
           if ($isDisplay -or $isEthernet) {
             $affPath = "$($_.PSPath)\\Device Parameters\\Interrupt Management\\Affinity Policy"
+            $oldP = (Get-ItemProperty -Path $affPath -Name DevicePolicy -EA SilentlyContinue).DevicePolicy
+            $oldM = (Get-ItemProperty -Path $affPath -Name AssignmentSetOverride -EA SilentlyContinue).AssignmentSetOverride
+            Write-Output ("AFF|" + $_.PSPath + "|" + $oldP + "|" + $oldM)
             New-Item -Path $affPath -Force -EA SilentlyContinue | Out-Null
             Set-ItemProperty -Path $affPath -Name DevicePolicy     -Value 4 -Force -EA SilentlyContinue
             Set-ItemProperty -Path $affPath -Name AssignmentSetOverride -Value $mask -Force -EA SilentlyContinue
@@ -10319,6 +10354,12 @@ public class TimerRes { [DllImport("ntdll.dll")] public static extern int NtSetT
       }
       Write-Output "AFFINITY_OK:$moved"
     `, 20000).then(r => {
+      const aff = {}
+      for (const line of String(r.out || '').split(/\r?\n/)) {
+        const am = /^AFF\|(.+)\|(\d*)\|(\d*)$/.exec(line.trim())
+        if (am) aff[am[1]] = { p: am[2] === '' ? null : Number(am[2]), m: am[3] === '' ? null : Number(am[3]) }
+      }
+      snapshots.merge('pulse-affinity', aff)
       const m = r.out.match(/AFFINITY_OK:(\d+)/)
       if (m) send(`  Interrupt affinity routed for ${m[1]} device(s) → CPU 3`, 'ok')
     })
@@ -10361,14 +10402,23 @@ public class TimerRes { [DllImport("ntdll.dll")] public static extern int NtSetT
   await delay(50)
 
   // ── 8. Background process deprioritisation ────────────────────────────────────
-  await runPS(`
-    $gamePid = (Get-Process -EA SilentlyContinue | Where-Object { $_.Name -like '${exePattern}' } | Select-Object -First 1)?.Id
-    Get-Process -EA SilentlyContinue | Where-Object {
-      $_.Id -ne $gamePid -and
-      $_.Name -notmatch '^(System|Idle|Registry|smss|csrss|wininit|lsass|services|svchost|MsMpEng|audiodg|dwm)$'
-    } | ForEach-Object { try { $_.PriorityClass = 'BelowNormal' } catch {} }
-  `, 15000)
-  send(`  Background processes deprioritised`, 'ok')
+  // Only processes currently at Normal priority are lowered, and each one is recorded so Stop restores exactly those.
+  _pulseDeprioritised = []
+  const lowerR = await runPS(`
+    $gamePid = (Get-Process -EA SilentlyContinue | Where-Object { $_.Name -like ${V.psQuote(exePattern)} } | Select-Object -First 1).Id
+    $skip = '^(System|Idle|Registry|smss|csrss|wininit|winlogon|lsass|lsm|services|svchost|MsMpEng|NisSrv|audiodg|dwm|explorer|ctfmon|conhost|sihost|taskhostw|fontdrvhost|RuntimeBroker|SearchHost|StartMenuExperienceHost|ShellExperienceHost|TextInputHost|WmiPrvSE|Memory Compression|electron|Jylli.*|PresentMon.*|JylliSensor)$'
+    Get-Process -EA SilentlyContinue | Where-Object { $_.Id -ne $gamePid -and $_.ProcessName -notmatch $skip } | ForEach-Object {
+      try {
+        $orig = $_.PriorityClass
+        if ($orig -eq 'Normal') { $_.PriorityClass = 'BelowNormal'; Write-Output ("PRIO|" + $_.Id + "|" + $_.ProcessName + "|" + $orig) }
+      } catch {}
+    }
+  `, 20000)
+  for (const line of String(lowerR.out || '').split(/\r?\n/)) {
+    const pm = /^PRIO\|(\d+)\|([^|]+)\|(\w+)$/.exec(line.trim())
+    if (pm) _pulseDeprioritised.push({ id: Number(pm[1]), name: pm[2], orig: pm[3] })
+  }
+  send(`  ${_pulseDeprioritised.length} background process(es) deprioritised`, 'ok')
 
   send(`◆ Pulse active — ${preset.name}`, 'head')
   discordPulseGame = preset.name
@@ -10433,19 +10483,6 @@ ipcMain.handle('pulse-fix-mouse', async () => {
         }
       }
     }
-  `, 20000).catch(() => {})
-  // Re-enable CPU core parking (persists across reboots — must explicitly reverse)
-  await runPS(`
-    $parkGuid  = '0cc5b647-c1df-4637-891a-dec35c318583'
-    $perfBoost = 'be337238-0d82-4146-a960-4f3749d470c7'
-    $subPower  = '54533251-82be-4824-96c1-47b60b740d00'
-    $schemes = powercfg /list | Select-String 'Power Scheme GUID' | ForEach-Object { ($_ -split ':\\s+')[1].Split(' ')[0] }
-    foreach ($s in $schemes) {
-      powercfg /setacvalueindex  $s $subPower $parkGuid  1   2>$null
-      powercfg /setdcvalueindex  $s $subPower $parkGuid  1   2>$null
-      powercfg /setacvalueindex  $s $subPower $perfBoost 0   2>$null
-    }
-    powercfg /update-settings 2>$null
   `, 20000).catch(() => {})
   return { ok: true }
 })
