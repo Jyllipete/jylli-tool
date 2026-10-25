@@ -1001,7 +1001,6 @@ async function init(isPremium = false) {
 
   initUiSounds()
   showPage('dashboard')
-  requestAnimationFrame(() => requestAnimationFrame(() => initNavPill()))
   // Populate AOM last-run badge + sparkline from changelog
   api.getChangelog?.().then(cl => {
     const allRuns = (cl || []).filter(e => e.type === 'aom-run')
@@ -1053,8 +1052,6 @@ async function init(isPremium = false) {
     }
   }).catch(() => {})
   startMetrics()
-  setTimeout(() => { addRippleToButtons(); initMagneticButtons() }, 200)
-  setTimeout(() => { addRippleToButtons(); initMagneticButtons() }, 400) // catch static modal buttons rendered at page load
 
   // Delegated toggle bounce — fires once on any .toggle-switch input change
   document.addEventListener('change', function(e) {
@@ -1690,15 +1687,6 @@ const _NAV_ORDER = [
   'restore-points','fixes','windows-opti','debloater','hardware','game-opti','app-optimizer','cleanup'
 ]
 
-const _PAGE_HUE = {
-  'dashboard': 0, 'preflight': 35,
-  'performance': 10, 'gaming': -10, 'network': -20, 'privacy-cleanup': 45,
-  'startup-manager': 25, 'process-manager': -25, 'latency-monitor': -30, 'bios-tuner': 20,
-  'pulse': -35, 'fivem': 30, 'scheduler': 15, 'changelog': 0, 'settings': 0,
-  'restore-points': 20, 'fixes': -15, 'windows-opti': 10,
-  'debloater': 45, 'hardware': 15, 'game-opti': -10, 'app-optimizer': -5, 'fivem': 30, 'cleanup': 40,
-}
-
 function showPage(page, tabId) {
   const leavingPage = currentPage
   // ROUTES: every legacy page id is a tab of a section (js/routes.js). Without an explicit tab, reopen the one last used in that section.
@@ -1799,7 +1787,7 @@ function showPage(page, tabId) {
     if (_navDir === -1) c.classList.add('dir-up')
     void c.offsetWidth
     c.classList.add('page-enter')
-    setTimeout(() => { addRippleToButtons(); initMagneticButtons(); staggerTweakRows(); initCardGlow() }, 50)
+    setTimeout(() => { staggerTweakRows() }, 50)
   }, _exitDur)
 }
 
@@ -3137,7 +3125,6 @@ async function runWizardStep(step) {
 
   if (s.extra && result.status !== 'ok') {
     statusEl.insertAdjacentHTML('afterend', s.extra())
-    setTimeout(() => { addRippleToButtons(); initMagneticButtons() }, 50)
   }
 
   const nextBtn = document.getElementById('wizard-next-btn')
@@ -9422,39 +9409,6 @@ async function importProfile() {
   loadProfilesList()
 }
 
-// ─── Sliding nav pill ────────────────────────────────────────────────────────
-function initNavPill() {
-  const sidebar = document.getElementById('sidebar')
-  if (!sidebar || document.getElementById('nav-pill')) return
-  const pill = document.createElement('div')
-  pill.id = 'nav-pill'
-  sidebar.prepend(pill)
-  // Position pill on the initial active button
-  const active = sidebar.querySelector('.nav-btn.active')
-  if (active) slideNavPill(active)
-  // Re-position pill on sidebar scroll (pill is absolute so it drifts otherwise)
-  let _pillScrollTimer = null
-  sidebar.addEventListener('scroll', () => {
-    const activeBtn = sidebar.querySelector('.nav-btn.active')
-    if (!activeBtn) return
-    pill.classList.add('is-scrolling')
-    slideNavPill(activeBtn)
-    clearTimeout(_pillScrollTimer)
-    _pillScrollTimer = setTimeout(() => pill.classList.remove('is-scrolling'), 150)
-  }, { passive: true })
-}
-function slideNavPill(newBtn) {
-  const pill = document.getElementById('nav-pill')
-  const sidebar = document.getElementById('sidebar')
-  if (!pill || !newBtn || !sidebar) return
-  const top    = newBtn.offsetTop
-  const height = newBtn.offsetHeight
-  if (!height) return
-  pill.style.top    = `${top}px`
-  pill.style.height = `${height}px`
-  pill.style.opacity = '1'
-}
-
 function updateAomNavBadges(appliedIds) {
   document.querySelectorAll('.nav-aom-badge').forEach(el => el.remove())
   if (!appliedIds || appliedIds.length === 0) return
@@ -9468,88 +9422,6 @@ function updateAomNavBadges(appliedIds) {
     const btn = document.querySelector(`.j-nav-item[data-section="${pg}"]`)
     if (btn) btn.insertAdjacentHTML('beforeend', `<span class="nav-aom-badge">${n}</span>`)
   }
-}
-
-// ─── Magnetic button hover ────────────────────────────────────────────────────
-function initMagneticButtons() {
-  document.querySelectorAll('.btn-primary:not([data-magnetic])').forEach(btn => {
-    btn.setAttribute('data-magnetic', '1')
-    btn.addEventListener('mousemove', function(e) {
-      if (this.disabled) return
-      const r = this.getBoundingClientRect()
-      const dx = ((e.clientX - r.left) / r.width  - 0.5) * 6
-      const dy = ((e.clientY - r.top)  / r.height - 0.5) * 4
-      this.style.transform = `translate(${dx}px, ${dy}px)`
-    })
-    btn.addEventListener('mouseleave', function() {
-      this.style.transform = ''
-    })
-  })
-}
-
-// ─── Staggered tweak row entrance ────────────────────────────────────────────
-function staggerTweakRows(container) {
-  const rows = (container || document.getElementById('page-content'))?.querySelectorAll('.tweak-row:not(.tweak-row-enter)')
-  if (!rows) return
-  rows.forEach((row, i) => {
-    row.style.animationDelay = `${Math.min(i, 10) * 20}ms`
-    row.classList.add('tweak-row-enter')
-  })
-}
-
-// ─── Cursor-follow glow on cards ─────────────────────────────────────────────
-let _cardGlowInit = false
-let _cardGlowRafId = null
-let _cardGlowTarget = null
-function initCardGlow() {
-  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
-  if (_cardGlowInit) return
-  _cardGlowInit = true
-  document.addEventListener('mousemove', e => {
-    const card = e.target.closest('.db-panel, .section-card')
-    if (!card) return
-    if (_cardGlowRafId) return
-    _cardGlowRafId = requestAnimationFrame(() => {
-      const r = card.getBoundingClientRect()
-      if (_cardGlowTarget && _cardGlowTarget !== card) {
-        _cardGlowTarget.style.removeProperty('--glow-x')
-        _cardGlowTarget.style.removeProperty('--glow-y')
-      }
-      card.style.setProperty('--glow-x', `${e.clientX - r.left}px`)
-      card.style.setProperty('--glow-y', `${e.clientY - r.top}px`)
-      _cardGlowTarget = card
-      _cardGlowRafId = null
-    })
-  })
-  document.addEventListener('mouseleave', e => {
-    const card = e.target.closest?.('.db-panel, .section-card')
-    if (!card) return
-    if (_cardGlowRafId) { cancelAnimationFrame(_cardGlowRafId); _cardGlowRafId = null }
-    card.style.removeProperty('--glow-x')
-    card.style.removeProperty('--glow-y')
-    if (_cardGlowTarget === card) _cardGlowTarget = null
-  }, true)
-}
-
-// ─── Ripple effect ────────────────────────────────────────────────────────────
-function addRippleToButtons() {
-  document.querySelectorAll('.btn:not([data-ripple]), .nav-btn:not([data-ripple])').forEach(btn => {
-    btn.setAttribute('data-ripple', '1')
-    let _rippleEl = null, _rippleTimer = null
-    btn.addEventListener('click', function(e) {
-      const rect = this.getBoundingClientRect()
-      const isNav = this.classList.contains('nav-btn')
-      const size = Math.max(rect.width, rect.height) * (isNav ? 1 : 2)
-      const x = e.clientX - rect.left - size / 2
-      const y = e.clientY - rect.top - size / 2
-      if (!_rippleEl) { _rippleEl = document.createElement('span'); _rippleEl.className = 'ripple' }
-      clearTimeout(_rippleTimer)
-      _rippleEl.remove()
-      _rippleEl.style.cssText = `width:${size}px;height:${size}px;left:${x}px;top:${y}px`
-      this.appendChild(_rippleEl)
-      _rippleTimer = setTimeout(() => { _rippleEl?.remove() }, 520)
-    })
-  })
 }
 
 // ─── Log ──────────────────────────────────────────────────────────────────────
@@ -16485,7 +16357,6 @@ function renderGPDetail(g) {
         <div class="gp-feature-card cat-sys"><span class="gp-feature-icon"><i class="fa fa-bullseye"></i></span><span class="gp-feature-text">${tUI('gpWhatDvr')}</span></div>
       </div>
     </div>`
-  setTimeout(() => { addRippleToButtons(); initMagneticButtons() }, 50)
   // Populate per-game profile assignment select (async — must be awaited internally)
   ;(async () => { await populateGameProfileSelect(g.id) })()
 }
