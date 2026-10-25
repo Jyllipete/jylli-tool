@@ -1,9 +1,9 @@
 /* ─── Design Tokens — shared across all windows ──────────────────────────── */
 :root {
   /* ── Surfaces: deep velvet purple-black ── */
-  --c-bg-base:        #0A0A0D;
-  --c-bg-elevated:    #111115;
-  --c-bg-raised:      #18181D;
+  --c-bg-base:        #09090B;
+  --c-bg-elevated:    #111113;
+  --c-bg-raised:      #17171A;
   --c-bg-glass:       rgba(17,17,21,0.72);
 
   /* ── Text ── */
@@ -14,9 +14,9 @@
   /* ── Accent: deep royal purple (Jylli default — overridden at runtime by applyTheme) ── */
   --c-accent:         #8B7CF6;
   --c-accent-rgb:     139,124,246;
-  --c-accent-muted:   rgba(139,124,246,0.12);
-  --c-accent-ring:    rgba(139,124,246,0.28);
-  --c-accent-glow:    rgba(139,124,246,0.16);
+  --c-accent-muted:   rgba(var(--c-accent-rgb),0.12);
+  --c-accent-ring:    rgba(var(--c-accent-rgb),0.28);
+  --c-accent-glow:    rgba(var(--c-accent-rgb),0.16);
 
   /* ── Borders ── */
   --c-border-subtle:  rgba(255,255,255,0.06);
@@ -46,7 +46,7 @@
   /* ── Shadows: pure depth, accent only in shadow-3 hairline ── */
   --shadow-1: 0 1px 2px rgba(0,0,0,0.45);
   --shadow-2: 0 4px 16px rgba(0,0,0,0.5), 0 1px 0 rgba(255,255,255,0.03) inset;
-  --shadow-3: 0 12px 40px rgba(0,0,0,0.6), 0 0 0 1px rgba(139,124,246,0.08);
+  --shadow-3: 0 12px 40px rgba(0,0,0,0.6), 0 0 0 1px rgba(var(--c-accent-rgb),0.08);
 
   /* ── Easing ── */
   --ease-default:   cubic-bezier(0.25, 0.46, 0.45, 0.94);
@@ -110,15 +110,15 @@
   --c-success:        #3DD68C;
   --c-success-muted:  rgba(61,214,140,0.12);
   --c-success-ring:   rgba(61,214,140,0.28);
-  --c-warning:        #F5B544;
-  --c-warning-muted:  rgba(245,181,68,0.12);
-  --c-warning-ring:   rgba(245,181,68,0.28);
+  --c-warning:        #F5A524;
+  --c-warning-muted:  rgba(245,165,36,0.12);
+  --c-warning-ring:   rgba(245,165,36,0.28);
   --c-danger:         #F2555A;
   --c-danger-muted:   rgba(242,85,90,0.12);
   --c-danger-ring:    rgba(242,85,90,0.28);
-  --c-info:           #5AA9FF;
-  --c-info-muted:     rgba(90,169,255,0.12);
-  --c-info-ring:      rgba(90,169,255,0.28);
+  --c-info:           #4C9EFF;
+  --c-info-muted:     rgba(76,158,255,0.12);
+  --c-info-ring:      rgba(76,158,255,0.28);
 
   /* ── Per-hardware semantic colors ── */
   --c-hw-cpu:      #3498DB;   --c-hw-cpu-bg:   rgba(52,152,219,0.10);
@@ -172,6 +172,36 @@
   --cyan-rgb:   139,124,246;
   --cyan-glow:  var(--c-accent-ring);
   --cyan-dim:   var(--c-accent-muted);
+}
+
+/* ── v2 tokens (Quiet precision) — used by css/ui.css and js/ui.js components ── */
+:root {
+  --font:       'Geist', 'Segoe UI Variable', 'Segoe UI', system-ui, sans-serif;
+  --font-mono:  'Geist Mono', ui-monospace, 'Cascadia Mono', Consolas, monospace;
+
+  --surface-0:  #09090B;   /* app background */
+  --surface-1:  #111113;   /* cards, sidebar */
+  --surface-2:  #17171A;   /* raised: inputs, hovered rows, popovers */
+  --surface-3:  #1E1E22;   /* pressed / selected */
+  --surface-sunken: #070708;
+
+  --hairline:        rgba(255,255,255,0.06);
+  --hairline-strong: rgba(255,255,255,0.10);
+  --hairline-top:    inset 0 1px 0 rgba(255,255,255,0.04);
+
+  --fs-1: 11px;  --fs-2: 12px;  --fs-3: 13px;  --fs-4: 14px;
+  --fs-5: 16px;  --fs-6: 20px;  --fs-7: 28px;  --fs-8: 40px;
+
+  --sp-px4: 4px; --sp-px8: 8px; --sp-px12: 12px; --sp-px16: 16px; --sp-px20: 20px; --sp-px24: 24px; --sp-px32: 32px;
+
+  --ease-out:   cubic-bezier(.16, 1, .3, 1);
+  --dur-fast:   120ms;
+  --dur-base:   180ms;
+
+  --shell-sidebar-w: 216px;
+  --shell-rail-w:    56px;
+  --shell-titlebar-h: 40px;
+  --shell-statusbar-h: 24px;
 }
 
 /* ── Motion speed modes — toggled via body class from Settings ── */
