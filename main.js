@@ -1112,6 +1112,7 @@ app.whenReady().then(() => {
   APP_VERSION    = app.getVersion()
   auth = createAuth({ BOT_URL, userDataDir: userData, safeStorage, userAgent: 'jylli-tool/' + APP_VERSION })
   snapshots = createSnapshotStore(path.join(userData, 'snapshots'))
+  if (snapshots.load('update-guard')) setUpdateGuard(false).catch(() => {})   // Windows Update must never stay disabled after Jylli Tool is gone
   startupTrace('createWindow starting')
   createWindow(); createTray()
   startupTrace('createWindow done')
@@ -1195,7 +1196,7 @@ app.on('will-quit', (e) => {
   const sessionEndPromise = duration > 10000
     ? webhookSessionEnd(duration, sessionPageVisits, sessionTweaksCount)
     : Promise.resolve()
-  const cleanup = Promise.all([(sessionEndPromise || Promise.resolve()).finally(() => destroyDiscordRPC().catch(() => {})), resumeAllFrozen()])
+  const cleanup = Promise.all([(sessionEndPromise || Promise.resolve()).finally(() => destroyDiscordRPC().catch(() => {})), resumeAllFrozen(), snapshots?.load('update-guard') ? setUpdateGuard(false) : null])
   const timeout = new Promise(resolve => setTimeout(resolve, 6500))
   Promise.race([cleanup, timeout]).finally(() => app.exit(0))
 })
@@ -10724,28 +10725,33 @@ ipcMain.handle('get-boot-impact', async () => {
 
 // Delay a startup item using a Scheduled Task that runs it N seconds after logon.
 // The original registry Run entry is removed so the app does not launch twice.
-ipcMain.handle('delay-startup-item', async (_, { name, command, delaySec, key }) => {
+ipcMain.handle('delay-startup-item', async (_, req) => {
+  const { name, command, delaySec, key } = req || {}
   const send = (msg, level) => mainWindow?.webContents.send('log', { msg, level, ts: new Date().toLocaleTimeString() })
-  const safeName    = escapePSSingleQuote(String(name || ''))
-  const safeCommand = escapePSSingleQuote(String(command || ''))
-  const safeDelay   = assertPositiveInt(delaySec || 60, 'delaySec')
-  const taskName    = `JylliDelay_${name.replace(/[^\w]/g, '_').slice(0, 40)}`
-  const safeTask    = escapePSSingleQuote(taskName)
+  if (typeof name !== 'string' || !name || name.length > 260 || typeof command !== 'string' || !command.trim() || command.length > 1000) return { ok: false, error: 'invalid_request' }
+  // A scheduled delay runs for the CURRENT user only, so machine-wide (HKLM) entries must not be moved into it.
+  if (key !== 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Run') return { ok: false, error: 'only_current_user_items' }
+  const safeDelay = Math.min(600, Math.max(5, assertPositiveInt(delaySec || 60, 'delaySec')))
+  const taskName = `JylliDelay_${name.replace(/[^\w]/g, '_').slice(0, 40)}`
+
+  // Split "C:\Program Files\App\app.exe" --flag  into executable + arguments so quoted paths and arguments survive.
+  const cmdTrim = command.trim()
+  let exe, args = ''
+  const q = /^"([^"]+)"\s*(.*)$/.exec(cmdTrim)
+  if (q) { exe = q[1]; args = q[2] } else { const sp = cmdTrim.search(/\s/); exe = sp < 0 ? cmdTrim : cmdTrim.slice(0, sp); args = sp < 0 ? '' : cmdTrim.slice(sp + 1) }
 
   const r = await runPS(`
-    $trigger  = New-ScheduledTaskTrigger -AtLogOn
+    $trigger  = New-ScheduledTaskTrigger -AtLogOn -User $env:USERNAME
     $trigger.Delay = 'PT${safeDelay}S'
-    $action   = New-ScheduledTaskAction -Execute 'cmd.exe' -Argument '/c start "" "${safeCommand}"'
+    $action   = New-ScheduledTaskAction -Execute ${V.psQuote(exe)} ${args ? '-Argument ' + V.psQuote(args) : ''}
     $settings = New-ScheduledTaskSettingsSet -ExecutionTimeLimit (New-TimeSpan -Hours 1)
-    Register-ScheduledTask -TaskName '${safeTask}' -Trigger $trigger -Action $action -Settings $settings -RunLevel Limited -Force -EA Stop | Out-Null
+    Register-ScheduledTask -TaskName ${V.psQuote(taskName)} -Trigger $trigger -Action $action -Settings $settings -RunLevel Limited -Force -EA Stop | Out-Null
+    if (Get-ScheduledTask -TaskName ${V.psQuote(taskName)} -EA SilentlyContinue) { Write-Output 'TASK_OK' }
   `, 15000)
 
-  if (r.ok) {
-    // Remove the original registry Run entry so the app does not launch twice at boot.
-    if (key && key.includes('\\Run')) {
-      const safeKey = escapePSSingleQuote(String(key))
-      await runPS(`Remove-ItemProperty -Path '${safeKey}' -Name '${safeName}' -Force -EA SilentlyContinue`)
-    }
+  if (r.ok && /TASK_OK/.test(r.out)) {
+    // Remove the original Run entry only AFTER the replacement task is confirmed to exist, so nothing is ever lost.
+    await runPS(`Remove-ItemProperty -Path ${V.psQuote(key)} -Name ${V.psQuote(name)} -Force -EA SilentlyContinue`)
     send(`✓ Startup delayed ${safeDelay}s: ${name}`, 'ok')
     return { ok: true, taskName }
   }
@@ -10797,15 +10803,17 @@ ipcMain.handle('get-startup-items', async () => {
   } catch { return [] }
 })
 
-ipcMain.handle('toggle-startup-item', async (_, { name, source, key, enable }) => {
+const STARTUP_RUN_KEYS = new Set(['HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Run', 'HKLM:\\Software\\Microsoft\\Windows\\CurrentVersion\\Run'])
+ipcMain.handle('toggle-startup-item', async (_, req) => {
+  const { name, source, key, enable } = req || {}
   const send = (msg, level) => mainWindow?.webContents.send('log', { msg, level, ts: new Date().toLocaleTimeString() })
-  const safeName = escapePSSingleQuote(String(name || ''))
-  const safeKey  = escapePSSingleQuote(String(key  || ''))
+  if (typeof name !== 'string' || !name || name.length > 260) return { ok: false, error: 'invalid_name' }
+  const qName = V.psQuote(name)
 
   if (source === 'Task Scheduler') {
     const cmd = enable
-      ? `Enable-ScheduledTask -TaskName '${safeName}' -EA Stop`
-      : `Disable-ScheduledTask -TaskName '${safeName}' -EA Stop`
+      ? `Enable-ScheduledTask -TaskName ${qName} -EA Stop`
+      : `Disable-ScheduledTask -TaskName ${qName} -EA Stop`
     const r = await runPS(cmd)
     if (!r.ok) {
       send(`✗ Failed to ${enable ? 'enable' : 'disable'} task: ${name} — ${r.err}`, 'err')
@@ -10813,39 +10821,28 @@ ipcMain.handle('toggle-startup-item', async (_, { name, source, key, enable }) =
     }
     send(`${enable ? 'Enabled' : 'Disabled'} task: ${name}`, 'ok')
   } else {
-    // Build the AutorunsDisabled subkey path entirely inside PowerShell from the
-    // canonical run-key path — avoids JS string-replace bugs with backslash escaping.
-    if (!enable) {
-      const r = await runPS(`
-        $runKey      = '${safeKey}'
-        $disabledKey = $runKey + '\\AutorunsDisabled'
-        $val = (Get-ItemProperty -Path $runKey -Name '${safeName}' -EA SilentlyContinue).'${safeName}'
-        if ($null -eq $val) { Write-Error 'VALUE_NOT_FOUND'; exit 1 }
-        New-Item -Path $disabledKey -Force -EA Stop | Out-Null
-        New-ItemProperty -Path $disabledKey -Name '${safeName}' -Value $val -PropertyType String -Force -EA Stop | Out-Null
-        Remove-ItemProperty -Path $runKey -Name '${safeName}' -Force -EA SilentlyContinue
-        $verify = (Get-ItemProperty -Path $disabledKey -Name '${safeName}' -EA SilentlyContinue).'${safeName}'
-        if ($null -eq $verify) { Write-Error 'WRITE_VERIFY_FAILED'; exit 1 }
-      `)
-      if (!r.ok) {
-        send(`✗ Failed to disable startup item: ${name} — ${r.err}`, 'err')
-        return { ok: false, error: r.err }
-      }
-    } else {
-      const r = await runPS(`
-        $runKey      = '${safeKey}'
-        $disabledKey = $runKey + '\\AutorunsDisabled'
-        $val = (Get-ItemProperty -Path $disabledKey -Name '${safeName}' -EA SilentlyContinue).'${safeName}'
-        if ($null -eq $val) { Write-Error 'VALUE_NOT_FOUND'; exit 1 }
-        New-ItemProperty -Path $runKey -Name '${safeName}' -Value $val -PropertyType String -Force -EA Stop | Out-Null
-        Remove-ItemProperty -Path $disabledKey -Name '${safeName}' -Force -EA SilentlyContinue
-        $verify = (Get-ItemProperty -Path $runKey -Name '${safeName}' -EA SilentlyContinue).'${safeName}'
-        if ($null -eq $verify) { Write-Error 'WRITE_VERIFY_FAILED'; exit 1 }
-      `)
-      if (!r.ok) {
-        send(`✗ Failed to enable startup item: ${name} — ${r.err}`, 'err')
-        return { ok: false, error: r.err }
-      }
+    // Only the two real Run keys may be touched (the renderer used to pass any path here).
+    if (typeof key !== 'string' || !STARTUP_RUN_KEYS.has(key)) return { ok: false, error: 'invalid_key' }
+    const qKey = V.psQuote(key)
+    // The value is moved between Run and Run\AutorunsDisabled with its ORIGINAL registry type — REG_EXPAND_SZ entries
+    // (%ProgramFiles%\… paths) used to be flattened to REG_SZ and then failed to launch.
+    const move = (fromKey, toKey) => `
+        $from = ${fromKey}; $to = ${toKey}; $n = ${qName}
+        $src = Get-Item -Path $from -EA SilentlyContinue
+        if ($null -eq $src -or $null -eq $src.GetValue($n, $null)) { Write-Error 'VALUE_NOT_FOUND'; exit 1 }
+        $val  = $src.GetValue($n, $null, 'DoNotExpandEnvironmentNames')
+        $kind = $src.GetValueKind($n).ToString()
+        New-Item -Path $to -Force -EA Stop | Out-Null
+        New-ItemProperty -Path $to -Name $n -Value $val -PropertyType $kind -Force -EA Stop | Out-Null
+        Remove-ItemProperty -Path $from -Name $n -Force -EA SilentlyContinue
+        if ($null -eq (Get-Item -Path $to).GetValue($n, $null)) { Write-Error 'WRITE_VERIFY_FAILED'; exit 1 }
+      `
+    const r = await runPS(enable
+      ? move(`(${qKey} + '\\AutorunsDisabled')`, qKey)
+      : move(qKey, `(${qKey} + '\\AutorunsDisabled')`))
+    if (!r.ok) {
+      send(`✗ Failed to ${enable ? 'enable' : 'disable'} startup item: ${name} — ${r.err}`, 'err')
+      return { ok: false, error: r.err }
     }
     send(`${enable ? 'Enabled' : 'Disabled'} startup item: ${name}`, 'ok')
   }
@@ -12023,7 +12020,8 @@ ipcMain.handle('export-report', async () => {
 })
 
 ipcMain.handle('clean-ram', async () => {
-  // Empty standby list + working sets via RAMMap-style PowerShell C# call
+  // Empty the standby list + trim background working sets. The foreground program (usually the game) is never trimmed —
+  // that would force it to page everything back in and cause exactly the stutter this is meant to remove.
   const r = await runPS(`
     Add-Type @"
     using System;
@@ -12031,16 +12029,23 @@ ipcMain.handle('clean-ram', async () => {
     public class RamCleaner {
       [DllImport("psapi.dll")] public static extern bool EmptyWorkingSet(IntPtr hProcess);
       [DllImport("ntdll.dll")] public static extern uint NtSetSystemInformation(int InfoClass, IntPtr Info, int Length);
+      [DllImport("ntdll.dll")] public static extern uint RtlAdjustPrivilege(int Privilege, bool Enable, bool CurrentThread, out bool Previous);
+      [DllImport("user32.dll")] public static extern IntPtr GetForegroundWindow();
+      [DllImport("user32.dll")] public static extern uint GetWindowThreadProcessId(IntPtr h, out uint pid);
+      public static uint ForegroundPid() { uint pid; GetWindowThreadProcessId(GetForegroundWindow(), out pid); return pid; }
       public static void ClearStandby() {
+        bool prev;
+        RtlAdjustPrivilege(20, true, false, out prev);   // SeProfileSingleProcessPrivilege — without it the purge silently does nothing
         IntPtr buf = Marshal.AllocHGlobal(4);
-        Marshal.WriteInt32(buf, 0, 4);
+        Marshal.WriteInt32(buf, 0, 4);                   // MemoryPurgeStandbyList
         NtSetSystemInformation(80, buf, 4);
         Marshal.FreeHGlobal(buf);
       }
     }
 "@
+    $fg = [RamCleaner]::ForegroundPid()
     [RamCleaner]::ClearStandby()
-    Get-Process | ForEach-Object { try { [RamCleaner]::EmptyWorkingSet($_.Handle) } catch {} }
+    Get-Process | Where-Object { $_.Id -ne $fg -and $_.Id -ne $PID } | ForEach-Object { try { [RamCleaner]::EmptyWorkingSet($_.Handle) | Out-Null } catch {} }
     $mem = Get-CimInstance Win32_OperatingSystem
     $freeMB = [math]::Round($mem.FreePhysicalMemory / 1024)
     Write-Output "FREE_MB=$freeMB"
@@ -13462,13 +13467,27 @@ ipcMain.handle('fivem-running-check', async () => {
 })
 
 // ─── Game Shield / Update Guard ───────────────────────────────────────────────
+let _updateGuardTimer = null
+async function setUpdateGuard(on) {
+  if (on) {
+    const cur = String((await runPS(`(Get-Service -Name wuauserv).StartType.ToString()`, 5000)).out || '').trim()
+    if (!snapshots.load('update-guard')) snapshots.save('update-guard', { prev: ['Automatic', 'Manual', 'Disabled'].includes(cur) ? cur : 'Manual' })
+    const r = await runPS(`Set-Service -Name wuauserv -StartupType Disabled -EA SilentlyContinue; Stop-Service -Name wuauserv -Force -EA SilentlyContinue`)
+    clearTimeout(_updateGuardTimer)
+    _updateGuardTimer = setTimeout(() => { setUpdateGuard(false).catch(() => {}); mainWindow?.webContents.send('update-guard-expired') }, 8 * 3600 * 1000)
+    return r.ok
+  }
+  clearTimeout(_updateGuardTimer); _updateGuardTimer = null
+  const snap = snapshots.load('update-guard')
+  const prev = ['Automatic', 'Manual'].includes(snap?.prev) ? snap.prev : 'Manual'
+  const r = await runPS(`Set-Service -Name wuauserv -StartupType ${prev} -EA SilentlyContinue; Start-Service -Name wuauserv -EA SilentlyContinue`)
+  snapshots.remove('update-guard')
+  return r.ok
+}
 ipcMain.handle('toggle-update-guard', async (_, on) => {
   if (!requiresPremium('toggle-update-guard')) return { ok: false, reason: 'premium_required' }
-  const r = await runPS(on
-    ? `Set-Service -Name wuauserv -StartupType Disabled -EA SilentlyContinue; Stop-Service -Name wuauserv -Force -EA SilentlyContinue`
-    : `Set-Service -Name wuauserv -StartupType Manual -EA SilentlyContinue; Start-Service -Name wuauserv -EA SilentlyContinue`
-  )
-  return { ok: r.ok, active: !!on }
+  const ok = await setUpdateGuard(!!on)
+  return { ok, active: !!on }
 })
 
 ipcMain.handle('toggle-game-shield', async (_, on) => {
@@ -13861,11 +13880,21 @@ ipcMain.handle('aria-get-session-coach', () => {
 
 // ─── Focus Assist / Priority / Suppression ────────────────────────────────────
 ipcMain.handle('set-focus-assist', async (_, on) => {
-  const r = await runPS(on
-    ? `Set-ItemProperty -Path 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\CloudStore\\Store\\DefaultAccount\\Current\\default$windows.data.notifications.quiethourssettings\\windows.data.notifications.quiethourssettings' -Name Data -Value ([byte[]](0x02,0x00,0x00,0x00)) -Type Binary -EA SilentlyContinue`
-    : `Remove-ItemProperty -Path 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\CloudStore\\Store\\DefaultAccount\\Current\\default$windows.data.notifications.quiethourssettings\\windows.data.notifications.quiethourssettings' -Name Data -EA SilentlyContinue`
-  , 8000)
-  return { ok: r.ok, active: !!on }
+  // Uses the documented master switch for app toasts (Settings → System → Notifications) instead of the undocumented blob.
+  const key = "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\PushNotifications"
+  if (on) {
+    const cur = await runPS(`(Get-ItemProperty -Path '${key}' -Name ToastEnabled -EA SilentlyContinue).ToastEnabled`, 5000)
+    snapshots.merge('focus-assist', { toastEnabled: cur.out.trim() === '' ? null : Number(cur.out.trim()) })
+    const r = await runPS(`New-Item -Path '${key}' -Force -EA SilentlyContinue | Out-Null; Set-ItemProperty -Path '${key}' -Name ToastEnabled -Value 0 -Type DWord -Force`, 8000)
+    return { ok: r.ok, active: true }
+  }
+  const snap = snapshots.load('focus-assist')
+  const prev = snap && snap.toastEnabled !== null && snap.toastEnabled !== undefined ? Number(snap.toastEnabled) : null
+  const r = await runPS(prev === null
+    ? `Remove-ItemProperty -Path '${key}' -Name ToastEnabled -EA SilentlyContinue`
+    : `Set-ItemProperty -Path '${key}' -Name ToastEnabled -Value ${prev === 0 ? 0 : 1} -Type DWord -Force`, 8000)
+  snapshots.remove('focus-assist')
+  return { ok: r.ok, active: false }
 })
 
 ipcMain.handle('set-self-priority', async (_, on) => {

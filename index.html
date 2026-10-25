@@ -9274,7 +9274,7 @@ function renderStartupRow(item) {
 
   // Delay button: only for registry items (not task scheduler), only when enabled
   const isRegistry = item.Source !== 'Task Scheduler'
-  const delayBtn = isRegistry && item.Enabled
+  const delayBtn = isRegistry && item.Enabled && item.Source === 'HKCU Registry'   // a per-user delay task can't stand in for a machine-wide entry
     ? `<button class="btn btn-ghost btn-sm" style="padding:2px 6px;font-size:10px;opacity:0.6" title="${tUI('startupDelayTitle')}" onclick="delayStartup(this)"><i class="fa fa-clock"></i></button>`
     : ''
 
