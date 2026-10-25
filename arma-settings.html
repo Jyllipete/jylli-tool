@@ -200,7 +200,7 @@ const LANG_ARMA = {
   }
 }
 function getLangA() {
-  try { return JSON.parse(localStorage.getItem('jylli-settings') || '{}').language || 'en' } catch { return 'en' }
+  return new URLSearchParams(location.search).get('lang') === 'fi' ? 'fi' : 'en'
 }
 function tA(key) { const l = getLangA(); return (LANG_ARMA[l] || LANG_ARMA.en)[key] || LANG_ARMA.en[key] || key }
 

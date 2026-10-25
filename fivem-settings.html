@@ -994,7 +994,7 @@ const LANG_FIVEM = {
     emptyStep3: 'Tallenna — käynnistä sitten FiveM uudelleen',
   }
 }
-let _langF = 'en'
+let _langF = new URLSearchParams(location.search).get('lang') === 'fi' ? 'fi' : 'en'
 function tF(key) { return (LANG_FIVEM[_langF] || LANG_FIVEM.en)[key] || LANG_FIVEM.en[key] || key }
 
 // ─── Category definitions ─────────────────────────────────────────────────────

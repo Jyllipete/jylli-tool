@@ -14535,6 +14535,7 @@ function appendLog(msg, level = 'info', ts = null) {
   line.className = `log-line ${level}`
   line.textContent = `[${time}] ${prefixes[level]||'  '}${msg}`
   out.appendChild(line)
+  while (out.childElementCount > 1000) out.firstElementChild.remove()   // the log pane used to grow without limit
   out.scrollTop = out.scrollHeight
   const dot = document.getElementById('log-dot')
   if (dot) {
@@ -14598,7 +14599,7 @@ const SMART_CONFLICT_RULES = [
   {
     ids: ['xbox-gamebar','game-dvr'],
     check: () => {
-      try { const s = JSON.parse(localStorage.getItem('jylli-settings') || '{}'); return !!s.pulseEnabled } catch { return false }
+      return !!(settings.autoPulseEnabled || settings.pulseEnabled)
     },
     title: () => tUI('conflictEngineGameBarPulseTitle'),
     body: () => tUI('conflictEngineGameBarPulseBody'),

@@ -9892,7 +9892,7 @@ ipcMain.handle('open-pulse-window', () => {
       devTools: false
     }
   })
-  pulseWindow.loadFile('pulse.html')
+  pulseWindow.loadFile('pulse.html', { query: { lang: windowLang() } })
   pulseWindow.once('ready-to-show', () => pulseWindow.show())
   pulseWindow.on('closed', () => { pulseWindow = null })
 })
@@ -9993,7 +9993,7 @@ ipcMain.handle('open-fivem-settings', () => {
       devTools: false
     }
   })
-  fivemSettingsWindow.loadFile('fivem-settings.html')
+  fivemSettingsWindow.loadFile('fivem-settings.html', { query: { lang: windowLang() } })
   fivemSettingsWindow.once('ready-to-show', () => fivemSettingsWindow.show())
   fivemSettingsWindow.on('closed', () => { fivemSettingsWindow = null })
 })
@@ -10032,7 +10032,7 @@ ipcMain.handle('open-arma-settings', () => {
       devTools: false
     }
   })
-  armaSettingsWindow.loadFile('arma-settings.html')
+  armaSettingsWindow.loadFile('arma-settings.html', { query: { lang: windowLang() } })
   armaSettingsWindow.once('ready-to-show', () => armaSettingsWindow.show())
   armaSettingsWindow.on('closed', () => { armaSettingsWindow = null })
 })
@@ -12286,6 +12286,8 @@ ipcMain.handle('bios-scewin-read', async () => {
   return { ok: true, entries, dumpPath }
 })
 
+// Language handed to secondary windows through the page URL (they used to read a localStorage key nothing ever wrote → always English)
+const windowLang = () => (loadSettings().language === 'fi' ? 'fi' : 'en')
 const biosDumpPath = () => path.join(app.getPath('userData'), 'bios_dump.txt')
 const escRx = x => x.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 

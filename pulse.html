@@ -1248,7 +1248,7 @@ const LANG_PULSE = {
   }
 }
 function getLang() {
-  try { return JSON.parse(localStorage.getItem('jylli-settings') || '{}').language || 'en' } catch { return 'en' }
+  return new URLSearchParams(location.search).get('lang') === 'fi' ? 'fi' : 'en'
 }
 function tP(key) { const l = getLang(); return (LANG_PULSE[l] || LANG_PULSE.en)[key] || LANG_PULSE.en[key] || key }
 
