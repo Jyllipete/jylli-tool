@@ -563,9 +563,6 @@
       <button class="nav-btn" data-page="fivem" data-label="FiveM" onclick="showPage('fivem')">
         <span class="nav-icon"><i class="fa fa-car-side"></i></span><span class="nav-label" data-i18n-title="fivem">FiveM</span>
       </button>
-      <button class="nav-btn" data-page="cs2" data-label="CS2" onclick="showPage('cs2')">
-        <span class="nav-icon"><i class="fa fa-burst"></i></span><span class="nav-label" data-i18n-title="cs2">CS2</span>
-      </button>
       <button class="nav-btn" data-page="scheduler" data-label="Scheduler" onclick="showPage('scheduler')">
         <span class="nav-icon"><i class="fa fa-clock"></i></span><span class="nav-label" data-i18n-title="scheduler">Scheduler</span>
       </button>
@@ -5518,6 +5515,15 @@ function invalidatePageCache(...pages) {
 
 // ─── Init ─────────────────────────────────────────────────────────────────────
 async function init(isPremium = false) {
+  // init() can be reached more than once (slow auth timeout, then lock screen, then sign-in). A second full init would double every
+  // listener and timer, so later calls only refresh the plan state.
+  if (window._inited) {
+    settings.isPremium = isPremium === true
+    try { applyTierToNav() } catch {}
+    if (currentPage) showPage(currentPage)
+    return
+  }
+  window._inited = true
   api.startupTrace?.('init() entered')
   settings = await api.loadSettings() || {}
   window._verifiedThisBoot = new Set()
@@ -6523,7 +6529,7 @@ document.addEventListener('keydown', e => {
 })
 
 // ─── Premium tier helpers ──────────────────────────────────────────────────────
-const PREMIUM_PAGES = ['hardware','fivem','cs2','pulse','latency-monitor','game-opti','scheduler','bios-tuner']
+const PREMIUM_PAGES = ['hardware','fivem','pulse','latency-monitor','game-opti','scheduler','bios-tuner']
 
 const PREMIUM_TAB_NAMES = {
   en: { hardware:'Advanced', fivem:'FiveM', cs2:'Counter-Strike 2', pulse:'Pulse', 'latency-monitor':'Latency Monitor', 'game-opti':'Game Profiles', scheduler:'Scheduler' },
@@ -6667,7 +6673,9 @@ function showPage(page) {
 
   const _exitDur = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 130
   if (window._navTimeout) clearTimeout(window._navTimeout)
+  const navToken = (window._navToken = (window._navToken || 0) + 1)
   window._navTimeout = setTimeout(async () => {
+    if (window._navToken !== navToken) return
     c.classList.remove('page-exit')
     // Run any registered cleanup for the page we just left
     if (leavingPage && leavingPage !== page && _pageCleanupFns[leavingPage]) {
@@ -6704,21 +6712,21 @@ function showPage(page) {
       'game-opti':      (c) => buildGaming(c),
       'app-optimizer':  (c) => buildGaming(c),
       fivem:            buildFiveM,
-      cs2:              typeof buildCS2 === 'function' ? buildCS2 : null,
     }
 
-    const canCache = !_PAGE_CACHE_NO_STORE.has(page)
+    // Page HTML caching is disabled: pages that fill in asynchronously were cached half-built ("Loading…" forever) and lost their event wiring.
+    const canCache = false
     if (canCache && _PAGE_CACHE.has(page)) {
       // Restore cached HTML — avoids full DOM rebuild on revisit
       c.innerHTML = _PAGE_CACHE.get(page)
       // Re-wire page-specific closures lost when HTML was serialised into the cache
       if (page === 'startup-manager') _startupRewireAfterCacheRestore(c)
-      if (page === 'cs2' && typeof cs2RefreshScore === 'function') setTimeout(() => cs2RefreshScore(typeof _cs2Sections !== 'undefined' ? _cs2Sections : []), 50)
     } else {
       try {
         await builders[page]?.(c)
       } catch (e) {
-        c.innerHTML = `<div class="empty-state"><i class="fa fa-triangle-exclamation" style="color:var(--danger);font-size:28px;margin-bottom:10px"></i><p style="color:var(--muted)">${e.message || tUI('pageLoadFailed')}</p><button class="btn btn-ghost btn-sm" onclick="showPage('${page}')"><i class="fa fa-rotate-right"></i> ${tUI('pageRetry')}</button></div>`
+        if (window._navToken !== navToken) return   // the user already moved on; don't paint an error onto another page
+        c.innerHTML = `<div class="empty-state"><i class="fa fa-triangle-exclamation" style="color:var(--danger);font-size:28px;margin-bottom:10px"></i><p style="color:var(--muted)">${escHtml(e.message || tUI('pageLoadFailed'))}</p><button class="btn btn-ghost btn-sm" onclick="showPage(${jsArg(page)})"><i class="fa fa-rotate-right"></i> ${tUI('pageRetry')}</button></div>`
         appendLog(`Page build failed: ${page} — ${e.message}`, 'err')
       }
       if (canCache && c.innerHTML) _PAGE_CACHE.set(page, c.innerHTML)

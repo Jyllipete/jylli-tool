@@ -146,7 +146,8 @@ function showLockScreen(deniedMsg) {
             if (p.discordUserId) settings.discordUserId = p.discordUserId
             // Avatar reveal — use Discord's default avatar via userId % 6
             const uid = p.discordUserId || settings.discordUserId
-            const avatarIdx = uid ? Number(BigInt(uid) % 6n) : 0
+            let avatarIdx = 0
+            try { avatarIdx = uid ? Number(BigInt(uid) % 6n) : 0 } catch {}   // a malformed id must not leave the lock screen stuck
             const avatarUrl = `https://cdn.discordapp.com/embed/avatars/${avatarIdx}.png`
             const card = document.getElementById('lock-card')
             if (card) {
@@ -199,7 +200,8 @@ function showLockScreen(deniedMsg) {
 // The renderer starts locked and only unlocks when main says ok.
 let _authCleared = false
 api.onAuthRequired(() => {
-  if (!_authCleared && !document.getElementById('lock-screen')) showLockScreen()
+  // Always honour the main process: a session that expires or is revoked while the app is open must lock it again.
+  if (!document.getElementById('lock-screen')) showLockScreen()
 })
 
 async function _bootAuth() {
