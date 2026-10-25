@@ -23,11 +23,15 @@ Phase 4 harness done. Phase 5 started: `css/tokens.css` re-tokened (graphite + a
 ## DONE since last handoff
 Phase 5 page review (all 17 pages captured and checked; flat tweak/quick-win cards, Pulse legibility, BIOS recovery guide on tokens, scheduler/startup placeholders). Phase 7 (tokens+fonts linked in secondary windows, `js/theme-sync.js` applies saved accent at window load; no live broadcast; fps-hud-settings uses preload-overlay so it keeps defaults). Phase 8 (67 toasts moved into LANG via `tUIf`, premiumLockDesc EN, html lang; a few dynamic error toasts like ``Failed: ${tweakId}`` remain English). Phase 10: CHANGELOG + WHATS_NEW 1.6.0 (EN+FI); `electron-builder --dir` packs OK (output to scratchpad), asar has no secrets/private key.
 
+## DONE (later in the same session)
+Dashboard fixtures + sparkline on accent; Premium lock card, Smart Profile Wizard, language picker, lock screen restyled on tokens (legacy #9b59b6 purple retired from css/style.css; flag emoji replaced by EN/FI chips); `--c-accent-rgb` default added to tokens.css; a11y: icon-only buttons get translated aria-labels (`_labelIconButtons` in js/ui-helpers.js); Update Guard/Game Shield toasts translated; hog rail no longer stacks scans; Privacy page tolerates `{ok:false}` from history/regrets. Harness: `--overlay "name=js"` opens dialogs before shooting (a string/number result is written to report.txt).
+
 ## NEXT
-1. Dashboard hero/tiles polish (health score shows 0 and charts empty only because fixtures are empty — add fixtures first); premium-lock card; boot/lock/language-picker screens; command palette; Auto-Optimize + SPW dialogs.
-2. Phase 8 leftovers: a11y labels (icon-only buttons), remaining English toasts/confirm titles.
-3. Phase 3 leftovers: JylliSensor.cs improvements (needs rebuild, skipped), missing bridge APIs (fixtures list in harness report), process-manager polling.
-4. User: copy Ed25519 key + TOKEN_KEY to Railway (jylli-bot/RAILWAY_ENV.md), push, release, deploy bot.
+1. **Decision needed (product):** Game Shield's "kill background processes" is not implemented in main.js (`toggle-game-shield` only disables Edge/Google updater tasks; `set-game-shield-exclusions`, `onGameShieldEvent`, `onUnknownGameCandidate`, `onUpdateGuardStatus/Warning`, `onPulseCooldownTick`, `autodetectAomAnswers`, `onBudgetSessionReport`, `pulseGetHistory/CoreLoads` are called by the renderer behind `?.` guards but are not exposed in preload). Either implement them or remove the UI.
+2. Remaining visual polish: Auto-Optimize later steps, SPW later steps, Gaming/Network pages with real data; fps-hud-settings/HUD windows keep their own hard-coded palette and English strings.
+3. Remaining English strings: dynamic error toasts (`Failed: ${tweakId}`), confirm titles.
+4. JylliSensor.cs improvements (needs rebuild, skipped).
+5. User: copy Ed25519 key + TOKEN_KEY to Railway (jylli-bot/RAILWAY_ENV.md), push, release, deploy bot.
 
 ## Known limits to tell the user
 Nothing has been run on real Windows (no launching allowed): fixes are verified by syntax checks, unit tests, scans and screenshots only. v1.5.9 clients cannot sign in until 1.6.0 + new bot are deployed. Inline-style purge and full per-page component rebuild are only partly done (pro.css layer restyles instead).

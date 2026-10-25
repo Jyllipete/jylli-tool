@@ -22408,7 +22408,7 @@ async function _loadCleanupRegrets() {
   if (!slot) return
   const dismissed = settings.cleanupRegretDismissedTs || 0
   const regrets = await api.getCleanupRegrets().catch(() => [])
-  if (!regrets || regrets.length === 0) {
+  if (!Array.isArray(regrets) || regrets.length === 0) {
     const existing = document.getElementById('cleanup-regret-banner')
     if (existing) existing.remove()
     return
@@ -22865,7 +22865,7 @@ async function loadCleanupTimeline(btn) {
     </div>`
   }
 
-  if (!history || history.length === 0) {
+  if (!Array.isArray(history) || history.length === 0) {
     html += `<div style="color:#7a7a8a;font-size:11px;text-align:center;padding:6px">${tUI('timelineNoHistory')}</div>`
   } else {
     const newest = history[0]
