@@ -8,6 +8,7 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-src 'none'; img-src 'self' data: https://cdn.discordapp.com; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; font-src 'self';">
 <title>Jylli Tool</title>
 <link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="css/pro.css">
 </head>
 <body>
 
@@ -502,9 +503,9 @@
     </div>
     <div style="-webkit-app-region:no-drag;display:flex;align-items:center;gap:5px;margin-left:8px;padding-right:6px">
       <div id="admin-badge" class="admin"><i class="fa fa-lock"></i> <span data-i18n="topAdmin">ADMIN</span></div>
-      <button class="win-btn" id="btn-minimize" onclick="api.minimize()" data-i18n-tooltip="winMinimize" data-tooltip="Minimize">─</button>
-      <button class="win-btn" id="btn-maximize" onclick="api.maximize()" data-i18n-tooltip="winMaximize" data-tooltip="Maximize">□</button>
-      <button class="win-btn" id="btn-close" onclick="api.close()" data-i18n-tooltip="winClose" data-tooltip="Close"><i class="fa fa-xmark"></i></button>
+      <button class="win-btn" id="btn-minimize" onclick="api.minimize()" data-i18n-tooltip="winMinimize" data-tooltip="Minimize" aria-label="Minimize"><svg width="11" height="11" viewBox="0 0 11 11" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" aria-hidden="true"><path d="M1.5 5.5h8"/></svg></button>
+      <button class="win-btn" id="btn-maximize" onclick="api.maximize()" data-i18n-tooltip="winMaximize" data-tooltip="Maximize" aria-label="Maximize"><svg width="11" height="11" viewBox="0 0 11 11" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" aria-hidden="true"><rect x="1.5" y="1.5" width="8" height="8" rx="1.6"/></svg></button>
+      <button class="win-btn" id="btn-close" onclick="api.close()" data-i18n-tooltip="winClose" data-tooltip="Close" aria-label="Close"><svg width="11" height="11" viewBox="0 0 11 11" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" aria-hidden="true"><path d="M2 2l7 7M9 2L2 9"/></svg></button>
     </div>
   </div>
   <!-- HUD popover (shared, repositioned by JS) -->
@@ -6747,7 +6748,7 @@ function showPage(page) {
 const THEMES = {
   jylli:   { label: 'Jylli',        desc: 'The signature — near-black with electric indigo accent',
     bg: '#0c0c10', panel: '#0f0f14', card: '#141419', card2: '#18181f', dark: '#09090d', sidebar: '#0b0b0f', border: '#1c1c24',
-    accent: '#6C63FF', accentHover: '#5A52E8', accentDim: 'rgba(108,99,255,0.12)', accentGlow: 'rgba(108,99,255,0.20)', accentRgb: '108,99,255' },
+    accent: '#8B7CF6', accentHover: '#7A6AEE', accentDim: 'rgba(139,124,246,0.12)', accentGlow: 'rgba(139,124,246,0.20)', accentRgb: '139,124,246' },
   midnight: { label: 'Midnight Blue', desc: 'Dark blue tones with electric blue accent',
     bg: '#0a0d14', panel: '#0d1018', card: '#111520', card2: '#151924', dark: '#080b10', sidebar: '#090c14', border: '#1a1f2e',
     accent: '#3B82F6', accentHover: '#2563EB', accentDim: 'rgba(59,130,246,0.12)', accentGlow: 'rgba(59,130,246,0.18)', accentRgb: '59,130,246' },
@@ -6779,28 +6780,8 @@ function applyTheme(themeKey, { animate = true } = {}) {
     document.body.style.opacity = '0.7'
     setTimeout(() => { document.body.style.opacity = ''; setTimeout(() => { document.body.style.transition = '' }, 130) }, 60)
   }
-  const root = document.documentElement
-  root.style.setProperty('--bg',              t.bg)
-  root.style.setProperty('--bg-panel',        t.panel)
-  root.style.setProperty('--bg-card',         t.card)
-  root.style.setProperty('--bg-card2',        t.card2)
-  root.style.setProperty('--bg-dark',         t.dark)
-  root.style.setProperty('--bg-sidebar',      t.sidebar)
-  root.style.setProperty('--border',          t.border)
-  root.style.setProperty('--pink',            t.accent)
-  root.style.setProperty('--pink-hover',      t.accentHover)
-  root.style.setProperty('--pink-dim',        t.accentDim)
-  root.style.setProperty('--pink-glow',       t.accentGlow)
-  root.style.setProperty('--pink-rgb',        t.accentRgb)
-  root.style.setProperty('--c-accent',        t.accent)
-  root.style.setProperty('--c-accent-muted',  t.accentDim)
-  root.style.setProperty('--c-accent-ring',   `rgba(${t.accentRgb},0.22)`)
-  root.style.setProperty('--c-accent-glow',   t.accentGlow)
-  root.style.setProperty('--c-accent-rgb',    t.accentRgb)
-  root.style.setProperty('--cyan',            t.accent)
-  root.style.setProperty('--cyan-rgb',        t.accentRgb)
-  root.style.setProperty('--shadow-3',        `0 8px 32px rgba(0,0,0,0.75), 0 0 0 1px rgba(${t.accentRgb},0.06)`)
-  root.style.setProperty('--shadow-modal',    `0 24px 80px rgba(0,0,0,0.85), 0 0 0 1px rgba(${t.accentRgb},0.10)`)
+  // Themes only change the accent: surfaces come from one neutral system (css/tokens.css) so every page and window matches.
+  applyAccentColor(t.accent)
 }
 
 function applyAccentColor(hex) {

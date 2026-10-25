@@ -30,23 +30,23 @@
   --pink-hover:   color-mix(in srgb, var(--c-accent) 82%, #fff);
   --pink-dim:     var(--c-accent-muted);
   --pink-glow:    var(--c-accent-ring);
-  --pink-rgb:     124,58,237;
+  --pink-rgb:     139,124,246;
   --cyan:         var(--c-accent);
-  --cyan-rgb:     124,58,237;
+  --cyan-rgb:     139,124,246;
   --cyan-glow:    var(--c-accent-ring);
   --cyan-dim:     var(--c-accent-muted);
 
   /* ── Status colors — unchanged ── */
-  --success:      #2ECC71;
+  --success:      #3DD68C;
   --success-bg:   #0a1f12;
   --success-bd:   #1a5c35;
-  --warning:      #F39C12;
+  --warning:      #F5B544;
   --warning-bg:   #1f1400;
   --warning-bd:   #5a3800;
-  --danger:       #E74C3C;
+  --danger:       #F2555A;
   --danger-bg:    #1f0808;
   --danger-bd:    #5c1a14;
-  --info:         #3498DB;
+  --info:         #5AA9FF;
   --info-bg:      #081520;
   --info-bd:      #0d2a45;
   --purple:       #9B59B6;
@@ -54,10 +54,10 @@
   --orange:       #E67E22;
 
   /* ── Status RGB (for JS rgba() construction) ── */
-  --success-rgb:  46,204,113;
-  --warning-rgb:  243,156,18;
-  --danger-rgb:   231,76,60;
-  --info-rgb:     52,152,219;
+  --success-rgb:  61,214,140;
+  --warning-rgb:  245,181,68;
+  --danger-rgb:   242,85,90;
+  --info-rgb:     90,169,255;
 
   /* ── Layout — unchanged ── */
   --sidebar-w:    200px;
