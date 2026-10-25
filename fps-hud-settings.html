@@ -9,8 +9,8 @@
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 html, body {
-  background: #0d0d0d; color: #e0e0e0;
-  font-family: 'Segoe UI', system-ui, sans-serif; font-size: 13px;
+  background: var(--c-bg-base, #0d0d0d); color: var(--c-text-primary, #e0e0e0);
+  font-family: "Geist", "Segoe UI", system-ui, sans-serif; font-size: 13px;
   height: 100%; overflow: hidden; user-select: none; -webkit-app-region: no-drag;
 }
 #root { display: flex; flex-direction: column; height: 100vh; }
@@ -21,9 +21,9 @@ html, body {
 }
 .tb-icon {
   width: 26px; height: 26px; border-radius: 7px;
-  background: rgba(46,204,113,0.12); border: 1px solid rgba(46,204,113,0.25);
+  background: rgba(var(--c-accent-rgb),0.12); border: 1px solid rgba(var(--c-accent-rgb),0.25);
   display: flex; align-items: center; justify-content: center;
-  color: #2ecc71; font-size: 12px; flex-shrink: 0;
+  color: var(--c-accent); font-size: 12px; flex-shrink: 0;
 }
 .tb-title { flex: 1; font-size: 12px; font-weight: 700; color: #ddd; }
 .tb-close {
@@ -51,11 +51,11 @@ html, body {
 .size-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
 .size-btn { border: 1px solid #222; border-radius: 7px; background: #0d0d0d; color: #777; cursor: pointer; padding: 8px 4px; font-size: 11px; font-weight: 600; text-align: center; transition: all 0.12s; }
 .size-btn:hover { background: #161616; color: #bbb; border-color: #333; }
-.size-btn.active { background: rgba(46,204,113,0.12); border-color: rgba(46,204,113,0.45); color: #2ecc71; }
+.size-btn.active { background: rgba(var(--c-accent-rgb),0.12); border-color: rgba(var(--c-accent-rgb),0.45); color: var(--c-accent); }
 .corner-grid { display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 6px; width: 160px; margin: 0 auto; }
 .corner-btn { border: 1px solid #222; border-radius: 7px; background: #0d0d0d; color: #666; cursor: pointer; padding: 10px 6px; font-size: 10px; font-weight: 600; text-align: center; transition: all 0.12s; line-height: 1.4; }
 .corner-btn:hover { background: #161616; color: #bbb; border-color: #333; }
-.corner-btn.active { background: rgba(46,204,113,0.12); border-color: rgba(46,204,113,0.45); color: #2ecc71; }
+.corner-btn.active { background: rgba(var(--c-accent-rgb),0.12); border-color: rgba(var(--c-accent-rgb),0.45); color: var(--c-accent); }
 #footer-note { font-size: 10px; color: #383838; text-align: center; padding: 8px 0 4px; line-height: 1.6; }
 </style>
 </head>
