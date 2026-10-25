@@ -11496,6 +11496,20 @@ ipcMain.handle('detect-games', async () => {
     epicPath.out.trim() || '',
   ].filter(Boolean)
 
+  // Two PowerShell calls for ALL games (it used to be two per game: ~23 s for 18 games). Windows PowerShell 5.1 has no `??` operator.
+  const runningSet = new Set(String((await runPS('Get-Process | Select-Object -ExpandProperty Name')).out || '').split(/\r?\n/).map(x => x.trim().toLowerCase()).filter(Boolean))
+  const regNames = [...new Set(GAME_DEFINITIONS.flatMap(g => g.searchNames))]
+  const regScript = [
+    '$names = @(' + regNames.map(n => "'" + n.replace(/'/g, "''") + "'").join(',') + ')',
+    'foreach ($n in $names) { foreach ($b in @("HKLM:\\SOFTWARE","HKLM:\\SOFTWARE\\WOW6432Node","HKCU:\\SOFTWARE")) {',
+    '  try { $p = Get-ItemProperty ("$b\\$n") -EA SilentlyContinue; $d = $null; if ($p.InstallLocation) { $d = $p.InstallLocation } elseif ($p.InstallDir) { $d = $p.InstallDir }',
+    '    if ($d) { Write-Output ("$n|$d"); break } } catch {} } }',
+  ].join('\n')
+  const regMap = {}
+  for (const line of String((await runPS(regScript, 20000)).out || '').split(/\r?\n/)) {
+    const i = line.indexOf('|')
+    if (i > 0) regMap[line.slice(0, i)] = line.slice(i + 1).trim()
+  }
   const found = []
   for (const game of GAME_DEFINITIONS) {
     let installPath = null
@@ -11518,21 +11532,13 @@ ipcMain.handle('detect-games', async () => {
       if (installPath) break
     }
 
-    // Registry check for any exe path
+    // Registry fallback (looked up in one batch above)
     if (!installPath) {
-      const regCheck = await runPS(`
-        @('HKLM:\\SOFTWARE','HKLM:\\SOFTWARE\\WOW6432Node','HKCU:\\SOFTWARE') | ForEach-Object {
-          $base = $_
-          ${game.searchNames.map(n => `
-          try { $p = Get-ItemProperty "$base\\${n}" -EA SilentlyContinue; if ($p.InstallLocation -or $p.InstallDir) { Write-Output ($p.InstallLocation ?? $p.InstallDir); return } } catch {}
-          `).join('')}
-        }
-      `)
-      if (regCheck.out.trim()) { installPath = regCheck.out.trim().split('\n')[0].trim() }
+      for (const n of game.searchNames) { if (regMap[n]) { installPath = regMap[n]; break } }
     }
 
     // Check if exe is currently in process list (game is running)
-    const isRunning = await runPS(`if (Get-Process -Name '${game.exe.replace('.exe','')}' -EA SilentlyContinue) { Write-Output 'yes' } else { Write-Output 'no' }`)
+    const isRunning = { out: runningSet.has(game.exe.replace(/\.exe$/i, '').toLowerCase()) ? 'yes' : 'no' }
 
     found.push({
       ...game,

@@ -15932,7 +15932,7 @@ function buildDashboard(c) {
           <span style="font-size:9px;font-weight:700;color:var(--muted);background:var(--bg-card2);padding:1px 6px;border-radius:4px;border:1px solid var(--border)">v${wn.version}</span>
         </div>
         <div style="display:flex;flex-wrap:wrap;gap:4px">
-          ${wn.items.slice(0,4).map(item => { const t = item.length > 52 ? item.slice(0,50)+'…' : item; return `<span style="font-size:10px;color:var(--gray);background:var(--bg-card2);border:1px solid var(--border);border-radius:5px;padding:2px 8px">${t}</span>` }).join('')}
+          ${wn.items.slice(0,4).map(item => { const body = String(item).replace(/^[A-Za-zÄÖäö]+ — /, ''); const t = body.length > 52 ? body.slice(0,50)+'…' : body; return `<span style="font-size:10px;color:var(--gray);background:var(--bg-card2);border:1px solid var(--border);border-radius:5px;padding:2px 8px">${t}</span>` }).join('')}
           ${wn.items.length > 4 ? `<span style="font-size:10px;color:var(--muted);padding:2px 4px">+${wn.items.length - 4} more</span>` : ''}
         </div>
       </div>
