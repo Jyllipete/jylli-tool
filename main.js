@@ -8639,6 +8639,25 @@ ipcMain.handle('clean-power-plans', async () => {
 
 // What's New content
 const WHATS_NEW = [
+  { version: '1.6.0', date: 'Oct 2026', items: [
+    'New — Redesigned interface: graphite surfaces, one accent colour, Geist font; themes now change only the accent',
+    'Security — Sign-in and Premium status are now verified with signed tokens; no secrets or webhooks are stored in the app',
+    'Security — Telemetry is opt-in with a consent dialog; settings, paths and commands are validated before use',
+    'Security — Windows and secondary windows are sandboxed; external navigation is blocked',
+    'Fix — Tweaks that change the registry, power plans, MSI mode and NetBIOS take a snapshot first, so Restore returns your real previous values',
+    'Fix — Game Boost, process freeze and CPU pinning restore correctly; BIOS values are re-read before writing',
+    'Improved — The app quits cleanly and installs updates on exit; Electron updated to v45',
+    'Improved — Toasts and messages are translated (EN/FI); the accent colour carries over to Pulse, FiveM and Arma windows',
+  ], items_fi: [
+    'Uusi — Uudistettu käyttöliittymä: grafiitin sävyiset pinnat, yksi korostusväri ja Geist-fontti; teemat vaihtavat nyt vain korostusvärin',
+    'Tietoturva — Kirjautuminen ja Premium-tila varmennetaan allekirjoitetuilla tokeneilla; sovellukseen ei tallenneta salaisuuksia tai webhookeja',
+    'Tietoturva — Telemetria on vapaaehtoinen ja siitä kysytään suostumus; asetukset, polut ja komennot validoidaan ennen käyttöä',
+    'Tietoturva — Ikkunat on eristetty (sandbox) ja ulkoinen navigointi estetty',
+    'Korjaus — Rekisteriä, virrankäyttösuunnitelmia, MSI-tilaa ja NetBIOSia muuttavat säädöt ottavat ensin tilannekuvan, joten Palauta tuo oikeat aiemmat arvot',
+    'Korjaus — Game Boost, prosessin jäädytys ja CPU-kiinnitys palautuvat oikein; BIOS-arvot luetaan uudelleen ennen kirjoitusta',
+    'Parannus — Sovellus sulkeutuu siististi ja asentaa päivitykset suljettaessa; Electron päivitetty versioon 45',
+    'Parannus — Ilmoitukset ja viestit on käännetty (EN/FI); korostusväri siirtyy Pulse-, FiveM- ja Arma-ikkunoihin',
+  ]},
   { version: '1.5.9', date: 'Jun 2026', items: [
     // Hardware Detection
     'New — CPU/GPU brand detection (Intel/AMD/NVIDIA) runs automatically — no extra processes',

@@ -1,6 +1,27 @@
 # Changelog
 
-## v1.5.9 (nykyinen)
+## v1.6.0 (nykyinen)
+
+### 🎨 Uusi ulkoasu
+- **Grafiitti + yksi korostusväri (#8B7CF6)**, Geist-fontti paketoituna sovellukseen
+- **Teemat vaihtavat vain korostusvärin** — pinnat ovat samat joka sivulla ja ikkunassa
+- Säätökortit ja Quick Wins -kortit litistetty; Pulse-säännöt ja BIOS-palautusohje luettavammiksi
+- Pulse-, FiveM- ja Arma-ikkunat käyttävät samaa korostusväriä kuin pääikkuna
+
+### 🔐 Tietoturva
+- **Ei salaisuuksia tai webhookeja asiakasohjelmassa**; Premium-oikeudet allekirjoitettu (Ed25519) ja varmennettu paikallisesti
+- **Telemetria vapaaehtoinen** suostumusikkunalla
+- Komentoinjektiokorjaukset (`lib/validate.js`, `lib/shell.js`), turvalliset polku-, ini-, xml- ja BIOS-kirjoittajat
+- XSS-korjaukset, sandboxatut ikkunat, navigoinnin esto, yksi instanssi, CSP
+- **Huom:** v1.5.9-asiakkaat eivät voi kirjautua ennen kuin 1.6.0 ja uusi botti on julkaistu
+
+### 🛠️ Korjaukset
+- Kaikki säädöt luokiteltu tasoihin (fail-closed); tilannekuvat MSI-, NetBIOS-, virrankäyttö- ja Pulse-säädöille → Palauta toimii oikein
+- Game Boost, prosessin jäädytys ja CPU-kiinnitys korjattu; BIOS-arvot luetaan uudelleen ennen kirjoitusta
+- Sovellus sulkeutuu siististi, päivitys asentuu suljettaessa; Electron 33 → 45, turhat riippuvuudet pois
+- Ilmoitukset ja viestit käännetty (EN/FI), `<html lang>` seuraa kieltä, Premium-lukon englanninkielinen teksti korjattu
+
+## v1.5.9
 
 ### 🔍 Laitteistontunnistus — Älykkäämpi kuin koskaan
 - **CPU/GPU-merkit** tunnistetaan automaattisesti (Intel/AMD/NVIDIA) — ei ylimääräisiä prosesseja
