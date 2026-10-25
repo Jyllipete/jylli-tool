@@ -89,7 +89,6 @@ const GAME_DATABASE = [
   { exe: 'dayz.exe',                   name: 'DayZ',                     genre: 'casual'      },
   { exe: 'minecraft.exe',              name: 'Minecraft',                genre: 'casual'      },
   { exe: 'minecraftlauncher.exe',      name: 'Minecraft',                genre: 'casual'      },
-  { exe: 'javaw.exe',                  name: 'Minecraft (Java)',          genre: 'casual'      },
   { exe: 'eldenring.exe',              name: 'Elden Ring',               genre: 'singleplayer' },
   { exe: 'darksoulsiii.exe',           name: 'Dark Souls III',           genre: 'singleplayer' },
   { exe: 'baldursgate3.exe',           name: "Baldur's Gate 3",          genre: 'singleplayer' },
@@ -2703,7 +2702,7 @@ ipcMain.handle('get-unused-devices', async () => {
     Get-PnpDevice -ErrorAction SilentlyContinue | Where-Object {
       ($_.Status -eq 'Error' -or $_.Status -eq 'Unknown' -or $_.Present -eq $false) -and
       $_.FriendlyName -ne $null -and $_.FriendlyName -ne '' -and
-      $_.Class -notin @('Volume','DiskDrive','CDRom','Processor','Computer','System')
+      $_.Class -notin @('Volume','DiskDrive','CDRom','Processor','Computer','System','HDC','SCSIAdapter','Firmware','SecurityDevices','Battery','Bluetooth')
     } | ForEach-Object {
       Write-Output "NAME=$($_.FriendlyName)|ID=$($_.InstanceId)|STATUS=$($_.Status)|CLASS=$($_.Class)|PRESENT=$($_.Present)"
     }
@@ -2880,8 +2879,8 @@ foreach ($clsid in $approved.Keys) {
     $dllPath = (Get-ItemPropertyValue "Registry::$regPath" '(default)' -EA SilentlyContinue)
   } catch {}
   $exists = if ($dllPath -and (Test-Path $dllPath -EA SilentlyContinue)) { '1' } else { '0' }
-  $safeName = ($approved[$clsid] -replace '\\|', '|')
-  $safeDll  = ($dllPath -replace '\\|', '|')
+  $safeName = ($approved[$clsid] -replace '\\|', '/')
+  $safeDll  = ($dllPath -replace '\\|', '/')
   Write-Host "EXT|$clsid|$safeName|$safeDll|$exists"
 }
 `, 20000)
@@ -2896,20 +2895,30 @@ foreach ($clsid in $approved.Keys) {
   return exts
 })
 
-ipcMain.handle('remove-shell-extension', async (_, { clsid, regPath }) => {
+ipcMain.handle('remove-shell-extension', async (_, req) => {
+  const clsid = req?.clsid
   const send = (msg, level) => mainWindow?.webContents.send('log', { msg, level, ts: new Date().toLocaleTimeString() })
   // Validate CLSID format before touching registry
-  if (!/^\{[0-9A-Fa-f\-]{36}\}$/.test(clsid)) return { ok: false }
-  const safeClsid = escapePSSingleQuote(clsid)
+  if (typeof clsid !== 'string' || !/^\{[0-9A-Fa-f\-]{36}\}$/.test(clsid)) return { ok: false }
+  // Explorer only loads extensions listed in "Shell Extensions\Approved". Removing the approval stops the extension loading
+  // but keeps the COM class registered, so the program that owns it keeps working and the entry can be re-added from the backup.
+  const q = V.psQuote(clsid)
   const r = await runPS(`
-$path = "Registry::HKEY_CLASSES_ROOT\\CLSID\\${safeClsid}"
-if (Test-Path $path) {
-  Remove-Item $path -Recurse -Force -ErrorAction SilentlyContinue
-  Write-Host "OK"
-} else { Write-Host "NOTFOUND" }
+$removed = 0
+foreach ($p in @('HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Shell Extensions\\Approved', 'HKCU:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Shell Extensions\\Approved')) {
+  $v = (Get-ItemProperty -Path $p -Name ${q} -EA SilentlyContinue).${q}
+  if ($null -ne $v) { Write-Output ("BACKUP|" + $p + "|" + $v); Remove-ItemProperty -Path $p -Name ${q} -Force -EA SilentlyContinue; $removed++ }
+}
+if ($removed -gt 0) { Write-Host "OK" } else { Write-Host "NOTFOUND" }
 `, 10000)
+  const backup = {}
+  for (const line of String(r.out || '').split(/\r?\n/)) {
+    const m = /^BACKUP\|(HK(?:LM|CU):[^|]+)\|(.*)$/.exec(line.trim())
+    if (m) backup[`${clsid}@${m[1]}`] = m[2]
+  }
+  if (Object.keys(backup).length) snapshots.merge('shell-extensions', backup)
   const ok = r.out.includes('OK')
-  send(`  Shell extension ${clsid}: ${ok ? 'removed' : 'not found or failed'}`, ok ? 'ok' : 'warn')
+  send(`  Shell extension ${clsid}: ${ok ? 'blocked from loading (backup kept)' : 'not found or failed'}`, ok ? 'ok' : 'warn')
   return { ok }
 })
 
@@ -3821,6 +3830,19 @@ async function restoreMaxPerfPlan({ s, cmd }) {
   s(prev ? `Previous power plan "${prev.name}" restored.` : 'Balanced power plan restored.', 'ok')
 }
 
+/** Class sub-keys (0000, 0001 …) of display adapters whose driver is from the given vendor — vendor tweaks used to be written blindly to 0000/0001. */
+async function gpuClassIndexes(ps, vendor) {
+  const rx = vendor === 'nvidia' ? 'NVIDIA' : 'AMD|Advanced Micro Devices|ATI|Radeon'
+  const r = await ps(`
+    Get-ChildItem 'HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Class\\{4d36e968-e325-11ce-bfc1-08002be10318}' -EA SilentlyContinue | ForEach-Object {
+      if ($_.PSChildName -notmatch '^\\d{4}$') { return }
+      $p = Get-ItemProperty $_.PSPath -EA SilentlyContinue
+      if (("$($p.ProviderName) $($p.DriverDesc)") -match '${rx}') { Write-Output $_.PSChildName }
+    }
+  `)
+  return String(r.out || '').split(/\r?\n/).map(x => x.trim()).filter(x => /^\d{4}$/.test(x))
+}
+
 // Actions rather than persistent tweaks, or choices that belong to the user (which DNS provider, wiping logs/history,
 // deleting Windows.old, resetting the network stack, rebooting). They are NEVER part of an automatic plan, in any mode.
 const PLAN_EXCLUDED_IDS = new Set(['reboot-now', 'winsock-reset', 'disable-ipv6', 'clean-browser-history', 'clean-eventlogs', 'clean-old-windows', 'clean-winsxs'])
@@ -4609,7 +4631,7 @@ const TWEAKS = {
     gamerImpact: 'high',
     apply: async (s, ps) => {
       const base = 'HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Class\\{4d36e968-e325-11ce-bfc1-08002be10318}'
-      for (const idx of ['0000','0001']) {
+      for (const idx of await gpuClassIndexes(ps, 'nvidia')) {
         await ps(`Set-ItemProperty -Path "${base}\\${idx}" -Name PowerMizerEnable -Value 1 -Force -EA SilentlyContinue`)
         await ps(`Set-ItemProperty -Path "${base}\\${idx}" -Name PowerMizerLevel -Value 1 -Force -EA SilentlyContinue`)
         await ps(`Set-ItemProperty -Path "${base}\\${idx}" -Name PowerMizerLevelAC -Value 1 -Force -EA SilentlyContinue`)
@@ -4620,7 +4642,7 @@ const TWEAKS = {
     restore: async (s, ps) => {
       const base = 'HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Class\\{4d36e968-e325-11ce-bfc1-08002be10318}'
       for (const name of ['PowerMizerEnable','PowerMizerLevel','PowerMizerLevelAC','PerfLevelSrc']) {
-        for (const idx of ['0000','0001']) await ps(`Remove-ItemProperty -Path "${base}\\${idx}" -Name ${name} -EA SilentlyContinue`)
+        for (const idx of await gpuClassIndexes(ps, 'nvidia')) await ps(`Remove-ItemProperty -Path "${base}\\${idx}" -Name ${name} -EA SilentlyContinue`)
       }
       s('NVIDIA defaults restored.', 'ok')
     }
@@ -7351,7 +7373,7 @@ if ($r.Count -eq 0) { Write-Output "NONE_FOUND" } else { foreach ($x in $r) { Wr
     safetyTier: 2,
     apply: async (s, ps) => {
       const base = 'HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Class\\{4d36e968-e325-11ce-bfc1-08002be10318}'
-      for (const idx of ['0000','0001']) {
+      for (const idx of await gpuClassIndexes(ps, 'nvidia')) {
         await ps(`Set-ItemProperty -Path "${base}\\${idx}" -Name DisableDynamicPstates -Value 1 -Force -EA SilentlyContinue`)
         await ps(`Set-ItemProperty -Path "${base}\\${idx}" -Name PowerMizerLevel -Value 1 -Force -EA SilentlyContinue`)
         await ps(`Set-ItemProperty -Path "${base}\\${idx}" -Name PerfLevelSrc -Value 8738 -Force -EA SilentlyContinue`)
@@ -7360,7 +7382,7 @@ if ($r.Count -eq 0) { Write-Output "NONE_FOUND" } else { foreach ($x in $r) { Wr
     },
     restore: async (s, ps) => {
       const base = 'HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Class\\{4d36e968-e325-11ce-bfc1-08002be10318}'
-      for (const idx of ['0000','0001']) {
+      for (const idx of await gpuClassIndexes(ps, 'nvidia')) {
         await ps(`Remove-ItemProperty -Path "${base}\\${idx}" -Name DisableDynamicPstates -EA SilentlyContinue`)
         await ps(`Remove-ItemProperty -Path "${base}\\${idx}" -Name PowerMizerLevel -EA SilentlyContinue`)
         await ps(`Remove-ItemProperty -Path "${base}\\${idx}" -Name PerfLevelSrc -EA SilentlyContinue`)
@@ -7394,7 +7416,7 @@ if ($r.Count -eq 0) { Write-Output "NONE_FOUND" } else { foreach ($x in $r) { Wr
     safetyTier: 2,
     apply: async (s, ps) => {
       const base = 'HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Class\\{4d36e968-e325-11ce-bfc1-08002be10318}'
-      for (const idx of ['0000','0001']) {
+      for (const idx of await gpuClassIndexes(ps, 'nvidia')) {
         await ps(`Set-ItemProperty -Path "${base}\\${idx}" -Name PowerMizerEnable -Value 1 -Force -EA SilentlyContinue`)
         await ps(`Set-ItemProperty -Path "${base}\\${idx}" -Name PowerMizerLevel -Value 1 -Force -EA SilentlyContinue`)
         await ps(`Set-ItemProperty -Path "${base}\\${idx}" -Name PowerMizerLevelAC -Value 1 -Force -EA SilentlyContinue`)
@@ -7410,7 +7432,7 @@ if ($r.Count -eq 0) { Write-Output "NONE_FOUND" } else { foreach ($x in $r) { Wr
     restore: async (s, ps) => {
       const base = 'HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Class\\{4d36e968-e325-11ce-bfc1-08002be10318}'
       for (const name of ['PowerMizerEnable','PowerMizerLevel','PowerMizerLevelAC','PerfLevelSrc','D3PCLatency','F1MaxLatency','RMAERQSizeMultiplier']) {
-        for (const idx of ['0000','0001']) await ps(`Remove-ItemProperty -Path "${base}\\${idx}" -Name ${name} -EA SilentlyContinue`)
+        for (const idx of await gpuClassIndexes(ps, 'nvidia')) await ps(`Remove-ItemProperty -Path "${base}\\${idx}" -Name ${name} -EA SilentlyContinue`)
       }
       await ps('Remove-ItemProperty -Path "HKLM:\\SYSTEM\\CurrentControlSet\\Control\\GraphicsDrivers" -Name TdrLevel -EA SilentlyContinue')
       await ps('Remove-ItemProperty -Path "HKLM:\\SYSTEM\\CurrentControlSet\\Control\\GraphicsDrivers" -Name TdrDelay -EA SilentlyContinue')
@@ -7435,7 +7457,7 @@ if ($r.Count -eq 0) { Write-Output "NONE_FOUND" } else { foreach ($x in $r) { Wr
     safetyTier: 2,
     apply: async (s, ps) => {
       const base = 'HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Class\\{4d36e968-e325-11ce-bfc1-08002be10318}'
-      for (const idx of ['0000','0001']) {
+      for (const idx of await gpuClassIndexes(ps, 'amd')) {
         await ps(`Set-ItemProperty -Path "${base}\\${idx}" -Name KMD_EnableChill -Value 0 -Force -EA SilentlyContinue`)
         await ps(`Set-ItemProperty -Path "${base}\\${idx}" -Name KMD_EnableBoost -Value 0 -Force -EA SilentlyContinue`)
         await ps(`Set-ItemProperty -Path "${base}\\${idx}" -Name KMD_EnableAntiLag -Value 0 -Force -EA SilentlyContinue`)
@@ -7444,7 +7466,7 @@ if ($r.Count -eq 0) { Write-Output "NONE_FOUND" } else { foreach ($x in $r) { Wr
     },
     restore: async (s, ps) => {
       const base = 'HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Class\\{4d36e968-e325-11ce-bfc1-08002be10318}'
-      for (const idx of ['0000','0001']) {
+      for (const idx of await gpuClassIndexes(ps, 'amd')) {
         await ps(`Remove-ItemProperty -Path "${base}\\${idx}" -Name KMD_EnableChill -EA SilentlyContinue`)
         await ps(`Remove-ItemProperty -Path "${base}\\${idx}" -Name KMD_EnableBoost -EA SilentlyContinue`)
         await ps(`Remove-ItemProperty -Path "${base}\\${idx}" -Name KMD_EnableAntiLag -EA SilentlyContinue`)
@@ -7456,7 +7478,7 @@ if ($r.Count -eq 0) { Write-Output "NONE_FOUND" } else { foreach ($x in $r) { Wr
     safetyTier: 2,
     apply: async (s, ps) => {
       const base = 'HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Class\\{4d36e968-e325-11ce-bfc1-08002be10318}'
-      for (const idx of ['0000','0001']) {
+      for (const idx of await gpuClassIndexes(ps, 'amd')) {
         await ps(`Set-ItemProperty -Path "${base}\\${idx}" -Name KMD_EnableABC -Value 0 -Force -EA SilentlyContinue`)
         await ps(`Set-ItemProperty -Path "${base}\\${idx}" -Name KMD_FRTEnabled -Value 0 -Force -EA SilentlyContinue`)
         await ps(`Set-ItemProperty -Path "${base}\\${idx}" -Name DalPowerPolicy -Value 0 -Force -EA SilentlyContinue`)
@@ -7465,7 +7487,7 @@ if ($r.Count -eq 0) { Write-Output "NONE_FOUND" } else { foreach ($x in $r) { Wr
     },
     restore: async (s, ps) => {
       const base = 'HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Class\\{4d36e968-e325-11ce-bfc1-08002be10318}'
-      for (const idx of ['0000','0001']) {
+      for (const idx of await gpuClassIndexes(ps, 'amd')) {
         await ps(`Remove-ItemProperty -Path "${base}\\${idx}" -Name KMD_EnableABC -EA SilentlyContinue`)
         await ps(`Remove-ItemProperty -Path "${base}\\${idx}" -Name KMD_FRTEnabled -EA SilentlyContinue`)
         await ps(`Remove-ItemProperty -Path "${base}\\${idx}" -Name DalPowerPolicy -EA SilentlyContinue`)
@@ -9657,8 +9679,8 @@ const GAME_EXE_MAP = {
   'arma-reforger': ['ArmaReforger.exe', 'ArmaReforgerSteam.exe', 'ArmaReforger_BE.exe'],
   'fortnite':      ['FortniteClient-Win64-Shipping.exe', 'FortniteLauncher.exe', 'EpicGamesLauncher.exe', 'FortniteClient-Win64-Shipping_BE.exe'],
   'gtav':          ['GTA5.exe', 'GTAVLauncher.exe', 'PlayGTAV.exe', 'FiveM.exe'],
-  'valorant':      ['VALORANT-Win64-Shipping.exe', 'RiotClientServices.exe', 'vgc.exe'],
-  'minecraft':     ['javaw.exe', 'java.exe', 'Minecraft.Windows.exe', 'MinecraftLauncher.exe'],
+  'valorant':      ['VALORANT-Win64-Shipping.exe', 'RiotClientServices.exe'],   // never touch vgc.exe (Vanguard anti-cheat)
+  'minecraft':     ['Minecraft.Windows.exe', 'MinecraftLauncher.exe'],   // javaw/java run every Java program — never apply game rules to them
   'cs2':           ['cs2.exe', 'csgo.exe'],
   'apex':          ['r5apex.exe', 'r5apex_dx12.exe', 'EADesktop.exe', 'Origin.exe'],
   'warzone':       ['cod.exe', 'ModernWarfare.exe', 'Warzone.exe', 'battle.net.exe'],
@@ -9720,8 +9742,9 @@ ipcMain.handle('apply-game-tweak', async (_, { gameId, action, installPath }) =>
   } else {
     // Restore: set Normal priority
     for (const exe of exes) {
-      await runPS(`Set-ItemProperty -Path "${ifeoBase}\\${exe}\\PerfOptions" -Name CpuPriorityClass -Value 2 -Force -EA SilentlyContinue`)
-      await runPS(`Set-ItemProperty -Path "${ifeoBase}\\${exe}\\PerfOptions" -Name IoPriority -Value 2 -Force -EA SilentlyContinue`)
+      // Removing the values returns the program to Windows' own defaults (writing 'Normal' explicitly would pin it)
+      await runPS(`Remove-ItemProperty -Path "${ifeoBase}\\${exe}\\PerfOptions" -Name CpuPriorityClass -EA SilentlyContinue`)
+      await runPS(`Remove-ItemProperty -Path "${ifeoBase}\\${exe}\\PerfOptions" -Name IoPriority -EA SilentlyContinue`)
     }
     send(`${gameId} priorities restored to Normal.`, 'ok')
 
@@ -11465,6 +11488,10 @@ ipcMain.handle('start-game-watcher', async () => {
       }
 
       const mmcssBase = 'HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Multimedia\\SystemProfile'
+      if (!snapshots.load('watcher-mmcss')) {   // remember the user's own value so game exit puts back exactly that
+        const cur = await runPS(`(Get-ItemProperty -Path "${mmcssBase}" -Name SystemResponsiveness -EA SilentlyContinue).SystemResponsiveness`)
+        snapshots.save('watcher-mmcss', { value: /^\d+$/.test(cur.out.trim()) ? Number(cur.out.trim()) : 20 })
+      }
       await runPS(`Set-ItemProperty -Path "${mmcssBase}" -Name SystemResponsiveness -Value 10 -Force`)
       await runPS(`Set-ItemProperty -Path "${mmcssBase}\\Tasks\\Games" -Name "GPU Priority" -Value 8 -Force`)
       await runPS('Set-ItemProperty -Path "HKCU:\\System\\GameConfigStore" -Name GameDVR_Enabled -Value 0 -Force')
@@ -11592,7 +11619,9 @@ ipcMain.handle('start-game-watcher', async () => {
       } else {
         // Pulse handles its own restore; just reset MMCSS to defaults
         const mmcssBase = 'HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Multimedia\\SystemProfile'
-        await runPS(`Set-ItemProperty -Path "${mmcssBase}" -Name SystemResponsiveness -Value 20 -Force`)
+        const snap = snapshots.load('watcher-mmcss')
+        if (snap && Number.isInteger(snap.value)) await runPS(`Set-ItemProperty -Path "${mmcssBase}" -Name SystemResponsiveness -Value ${snap.value} -Force`)
+        snapshots.remove('watcher-mmcss')
       }
       mainWindow?.webContents.send('log', { msg: '✓ Defaults restored.', level: 'ok', ts: new Date().toLocaleTimeString() })
 
@@ -12200,17 +12229,9 @@ ipcMain.handle('get-bios-info', async () => {
   }
 })
 
-ipcMain.handle('bios-scewin-read', async () => {
-  if (!requiresPremium('bios-scewin-read')) return { ok: false, reason: 'premium_required' }
-  const scewin   = assetPath('assets', 'scewin', 'SCEWIN_64.exe')
-  const dumpPath = biosDumpPath()
-  if (!fs.existsSync(scewin)) return { ok: false, error: 'not_found', dumpPath }
-  const r = await runFile(scewin, ['/o', '/s', dumpPath], { timeout: 120000 })
-  if (!r.ok && !fs.existsSync(dumpPath)) return { ok: false, error: 'not_supported', dumpPath }
-  let raw = ''
-  try { raw = fs.readFileSync(dumpPath, 'utf8') } catch { return { ok: false, error: 'read_failed', dumpPath } }
+function parseScewinDump(raw) {
   const entries = []
-  for (const block of raw.split(/\r?\n\r?\n/)) {
+  for (const block of String(raw).split(/\r?\n\r?\n/)) {
     const name    = block.match(/Setup Question\s+=\s+(.+)/)?.[1]?.trim()
     const token   = block.match(/Token\s+=\s+(\S+)/)?.[1]
     const options = [...block.matchAll(/[ \t]+(\*?)(0x[0-9a-fA-F]+)\s+(.+)/g)].map(m => ({
@@ -12220,6 +12241,23 @@ ipcMain.handle('bios-scewin-read', async () => {
       entries.push({ name, token, options, current: options.find(o => o.current)?.value ?? options[0]?.value })
     }
   }
+  return entries
+}
+// Board identity = manufacturer + baseboard product (Win32_ComputerSystem.Model is often the useless "System Product Name").
+async function getBoardId() {
+  const r = await runPS("$b = Get-CimInstance Win32_BaseBoard | Select-Object -First 1; \"$($b.Manufacturer) $($b.Product)\".Trim()", 5000)
+  return String(r.out || '').trim()
+}
+ipcMain.handle('bios-scewin-read', async () => {
+  if (!requiresPremium('bios-scewin-read')) return { ok: false, reason: 'premium_required' }
+  const scewin   = assetPath('assets', 'scewin', 'SCEWIN_64.exe')
+  const dumpPath = biosDumpPath()
+  if (!fs.existsSync(scewin)) return { ok: false, error: 'not_found', dumpPath }
+  const r = await runFile(scewin, ['/o', '/s', dumpPath], { timeout: 120000 })
+  if (!r.ok && !fs.existsSync(dumpPath)) return { ok: false, error: 'not_supported', dumpPath }
+  let raw = ''
+  try { raw = fs.readFileSync(dumpPath, 'utf8') } catch { return { ok: false, error: 'read_failed', dumpPath } }
+  const entries = parseScewinDump(raw)
   return { ok: true, entries, dumpPath }
 })
 
@@ -12302,8 +12340,7 @@ ipcMain.handle('bios-save-profile', async (_, { name, entries }) => {
   if (!name) return { ok: false, error: 'Name required' }
   let board = 'Unknown'
   try {
-    const r = await runPS(`(Get-CimInstance Win32_ComputerSystem).Model`, 4000)
-    board = r.out.trim() || 'Unknown'
+    board = (await getBoardId()) || 'Unknown'
   } catch {}
   const profiles = loadBiosProfiles().filter(p => p.name !== name)
   profiles.unshift({ name, ts: Date.now(), board, settings: entries || [] })
@@ -12364,10 +12401,17 @@ ipcMain.handle('bios-import-profile', async () => {
   if (res.canceled || !res.filePaths?.[0]) return { ok: false, error: 'cancelled' }
   let profile
   try { profile = JSON.parse(fs.readFileSync(res.filePaths[0], 'utf8')) } catch { return { ok: false, error: 'Invalid .jbios file' } }
-  if (!profile.name || !Array.isArray(profile.settings)) return { ok: false, error: 'Invalid profile format' }
-  // Check board compatibility
-  const curBoard = (await runPS(`(Get-CimInstance Win32_ComputerSystem).Model`, 4000)).out.trim()
-  if (profile.board && curBoard && profile.board !== curBoard && !curBoard.includes(profile.board) && !profile.board.includes(curBoard)) {
+  if (typeof profile.name !== 'string' || !profile.name || profile.name.length > 60 || !Array.isArray(profile.settings) || profile.settings.length > 4000) return { ok: false, error: 'Invalid profile format' }
+  // A profile file is untrusted input that ends up written to NVRAM: keep only well-formed token/value pairs.
+  const cleanSettings = profile.settings.filter(e => e && typeof e.token === 'string' && /^[0-9A-Fa-fx]{1,12}$/.test(e.token) && typeof e.value === 'string' && /^0x[0-9A-Fa-f]{1,8}$/.test(e.value))
+    .map(e => ({ token: e.token, value: e.value, ...(typeof e.name === 'string' ? { name: e.name.slice(0, 120) } : {}) }))
+  if (cleanSettings.length !== profile.settings.length) return { ok: false, error: 'Profile contains invalid entries' }
+  profile = { name: profile.name, ts: Number(profile.ts) || Date.now(), board: typeof profile.board === 'string' ? profile.board.slice(0, 160) : '', settings: cleanSettings }
+  // Board check: profiles from other boards can brick a setting that doesn't exist (or means something else) on this one.
+  const curBoard = await getBoardId()
+  const generic = /system product name|to be filled|default string|^\s*$/i
+  if (profile.board && curBoard && !generic.test(profile.board) && !generic.test(curBoard)
+      && profile.board.toLowerCase() !== curBoard.toLowerCase() && !curBoard.toLowerCase().includes(profile.board.toLowerCase()) && !profile.board.toLowerCase().includes(curBoard.toLowerCase())) {
     return { ok: false, error: 'board_mismatch', profileBoard: profile.board, currentBoard: curBoard }
   }
   const profiles = loadBiosProfiles().filter(p => p.name !== profile.name)
@@ -12520,24 +12564,32 @@ powercfg /setactive SCHEME_CURRENT
 ipcMain.handle('bios-ram-stress', async (_, durationSec) => {
   if (!requiresPremium('bios-ram-stress')) return { ok: false, reason: 'premium_required' }
   const dur = Math.min(Math.max(parseInt(durationSec) || 30, 10), 360)
-  const timeout = (dur + 30) * 1000
+  const timeout = (dur + 40) * 1000
   const r = await runPS(`
-try {
-  $size = 256MB
-  $arr  = New-Object byte[] $size
-  $rng  = [System.Security.Cryptography.RandomNumberGenerator]::Create()
-  $rng.GetBytes($arr)
-  $md5  = [System.Security.Cryptography.MD5]::Create()
-  $h1   = $md5.ComputeHash($arr)
-  Start-Sleep -Seconds ${dur}
-  $h2   = $md5.ComputeHash($arr)
-  $ok   = [System.Linq.Enumerable]::SequenceEqual($h1, $h2)
-  Write-Output "PASSED=$ok"
-} catch { Write-Output "PASSED=ERROR" }
+Add-Type -TypeDefinition @"
+using System; using System.Diagnostics;
+public static class RamTest {
+  // Writes a pattern over a 256 MB block, then reads it back and compares. Any mismatch is a memory error.
+  public static string Run(int seconds) {
+    long errors = 0, passes = 0; var sw = Stopwatch.StartNew();
+    ulong[] buf = new ulong[32 * 1024 * 1024];                      // 256 MB
+    ulong[] pats = { 0x0000000000000000UL, 0xFFFFFFFFFFFFFFFFUL, 0x5555555555555555UL, 0xAAAAAAAAAAAAAAAAUL, 0x0123456789ABCDEFUL, 0xFEDCBA9876543210UL };
+    int pi = 0;
+    while (sw.Elapsed.TotalSeconds < seconds) {
+      ulong p = pats[pi++ % pats.Length];
+      for (int i = 0; i < buf.Length; i++) buf[i] = p ^ (ulong)i;      // address-dependent so aliasing errors show up
+      for (int i = 0; i < buf.Length; i++) if (buf[i] != (p ^ (ulong)i)) errors++;
+      passes++;
+    }
+    return "ERRORS=" + errors + ";PASSES=" + passes;
+  }
+}
+"@
+try { Write-Output ([RamTest]::Run(${dur})) } catch { Write-Output "ERRORS=-1;PASSES=0" }
   `, timeout)
-  const m = r.out.match(/PASSED=(True|False|ERROR)/i)
-  if (!m || m[1].toLowerCase() === 'error') return { ok: false, passed: false }
-  return { ok: true, passed: m[1].toLowerCase() === 'true' }
+  const m = /ERRORS=(-?\d+);PASSES=(\d+)/.exec(r.out || '')
+  if (!m || Number(m[1]) < 0) return { ok: false, passed: false }
+  return { ok: true, passed: Number(m[1]) === 0, errors: Number(m[1]), passes: Number(m[2]) }
 })
 
 ipcMain.handle('bios-lhm-sensors', async () => {
@@ -13790,21 +13842,14 @@ ipcMain.handle('bios-capsule-check', async () => {
   const scewinMissing = !fs.existsSync(scewin)
   const drifts = []
   if (!scewinMissing) {
-    const tmpOut = path.join(require('os').tmpdir(), `jylli_bios_check_${Date.now()}.txt`)
-    await runCmd(`"${scewin}" /o /lang ENG /s "${tmpOut}"`).catch(() => {})
+    const tmpOut = path.join(app.getPath('userData'), 'bios_check.txt')
+    await runFile(scewin, ['/o', '/s', tmpOut], { timeout: 120000 }).catch(() => {})
     if (fs.existsSync(tmpOut)) {
       try {
-        const currentText = fs.readFileSync(tmpOut, 'utf8')
+        const currentMap = new Map(parseScewinDump(fs.readFileSync(tmpOut, 'utf8')).map(e => [String(e.token).toUpperCase(), e.current]))
         fs.unlinkSync(tmpOut)
-        // Build map of token → current value from SCEWIN output
-        // Accepts both "Selected Value=" (AMI) and "Current Value=" (other vendors)
-        const currentMap = new Map()
-        for (const line of currentText.split('\n')) {
-          const m = line.match(/^Token=([0-9A-Fa-f]+)\s.*?(?:Selected|Current)\s+Value=(.+)$/i)
-          if (m) currentMap.set(m[1].toUpperCase(), m[2].trim())
-        }
-        const snapMap = new Map(snapshot.entries.map(e => [e.token?.toUpperCase(), e]))
-        for (const [token, snapEntry] of snapMap) {
+        for (const snapEntry of snapshot.entries) {
+          const token = String(snapEntry.token || '').toUpperCase()
           const currentVal = currentMap.get(token)
           if (currentVal !== undefined && currentVal !== snapEntry.value) {
             drifts.push({
@@ -13825,17 +13870,10 @@ ipcMain.handle('bios-capsule-check', async () => {
 
 ipcMain.handle('bios-get-profile', async (_, name) => {
   if (!requiresPremium('bios-get-profile')) return { ok: false, reason: 'premium_required' }
-  if (!name) return { ok: false, error: 'no_name' }
-  const profilesDir = path.join(app.getPath('userData'), 'bios-profiles')
-  const profilePath = path.join(profilesDir, `${name}.json`)
-  try {
-    const profile = JSON.parse(fs.readFileSync(profilePath, 'utf8'))
-    // Caller expects: pA.entries (Array<{ token, value, label }>)
-    const entries = Array.isArray(profile.entries) ? profile.entries
-      : Array.isArray(profile) ? profile  // legacy flat-array format
-      : []
-    return { ok: true, name, entries }
-  } catch { return { ok: false, error: 'not_found', entries: [] } }
+  if (typeof name !== 'string' || !name) return { ok: false, error: 'no_name' }
+  const profile = loadBiosProfiles().find(p => p.name === name)
+  if (!profile) return { ok: false, error: 'not_found', entries: [] }
+  return { ok: true, name, entries: Array.isArray(profile.settings) ? profile.settings : [] }
 })
 
 // ─── ARIA Session Coach ───────────────────────────────────────────────────────
