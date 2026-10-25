@@ -27,16 +27,16 @@
   --pink-dim:    var(--c-accent-muted);
   --pink-glow:   var(--c-accent-ring);
   /* Status colors */
-  --success:     #2ECC71;
+  --success:     #3DD68C;
   --success-bg:  #0a1f12;
   --success-bd:  #1a5c35;
-  --warning:     #F39C12;
+  --warning:     #F5A524;
   --warning-bg:  #1f1400;
   --warning-bd:  rgba(230,126,34,0.35);
-  --danger:      #E74C3C;
+  --danger:      #F2555A;
   --danger-bg:   #1f0808;
   --danger-bd:   #5c1a14;
-  --info:        #3498DB;
+  --info:        #4C9EFF;
   --orange:      #E67E22;
   /* Radius shorthand */
   --radius:      var(--r-md);
@@ -92,7 +92,7 @@ html, body {
 }
 .tb-title span { color: var(--pink); }
 .tb-subtitle {
-  font-size: 10px; color: var(--muted);
+  font-size: 11px; color: var(--muted);
   font-weight: 400; margin-top: 1px;
 }
 .tb-close {
@@ -144,7 +144,7 @@ html, body {
 }
 #path-row input:focus { border-color: var(--c-accent); box-shadow: 0 0 0 3px var(--c-accent-ring); }
 #path-status {
-  font-size: 10px; color: var(--muted);
+  font-size: 11px; color: var(--muted);
   padding: 2px 0 4px;
 }
 
@@ -226,10 +226,10 @@ html, body {
   width: 18px; height: 18px; border-radius: 50%;
   background: var(--c-bg-raised); border: 1px solid var(--c-border-default);
   display: flex; align-items: center; justify-content: center;
-  font-size: 9px; font-weight: 700; color: var(--gray);
+  font-size: 11px; font-weight: 700; color: var(--gray);
   flex-shrink: 0;
 }
-#empty-state small { font-size: 9px; color: var(--muted); max-width: 280px; line-height: 1.5; }
+#empty-state small { font-size: 11px; color: var(--muted); max-width: 280px; line-height: 1.5; }
 
 /* ── Category group ── */
 .cat-group {
@@ -261,7 +261,7 @@ html, body {
   flex-shrink: 0;
 }
 .cat-name { font-size: 12px; font-weight: 700; color: var(--white); }
-.cat-desc { font-size: 10px; color: var(--muted); margin-left: auto; }
+.cat-desc { font-size: 11px; color: var(--muted); margin-left: auto; }
 
 /* ── Setting row ── */
 .setting-row {
@@ -290,9 +290,9 @@ html, body {
   color: var(--white);
   display: flex; flex-direction: column; gap: 2px;
 }
-.setting-label small { font-size: 9px; color: var(--muted); font-weight: 400; }
+.setting-label small { font-size: 11px; color: var(--muted); font-weight: 400; }
 .setting-label .missing-tag {
-  font-size: 9px; color: var(--danger);
+  font-size: 11px; color: var(--danger);
   background: rgba(231,76,60,0.1);
   border: 1px solid rgba(231,76,60,0.2);
   border-radius: 3px; padding: 1px 5px;
@@ -322,7 +322,7 @@ html, body {
   display: inline-flex; align-items: center; justify-content: center;
   border-radius: var(--r-pill);
   padding: 2px 8px;
-  font-size: 9px; font-weight: 700;
+  font-size: 11px; font-weight: 700;
   letter-spacing: 0.04em;
   text-transform: uppercase;
   white-space: nowrap;
@@ -351,12 +351,12 @@ html, body {
 }
 #footer-info {
   flex: 1;
-  font-size: 10px; color: var(--muted);
+  font-size: 11px; color: var(--muted);
   line-height: 1.5;
 }
 #footer-info span { color: var(--gray); }
 #changes-count {
-  font-size: 10px;
+  font-size: 11px;
   color: var(--c-accent);
   background: var(--c-accent-muted);
   border: 1px solid var(--c-accent-ring);
@@ -406,7 +406,7 @@ html, body {
   font-size: 11px; font-weight: 700; color: var(--white); line-height: 1.2;
 }
 .preset-card-hint {
-  font-size: 9px; color: var(--muted); font-weight: 400; line-height: 1.3;
+  font-size: 11px; color: var(--muted); font-weight: 400; line-height: 1.3;
 }
 
 /* Per-preset color theming */
@@ -519,7 +519,7 @@ mark.sh { background: var(--c-accent-muted); color: var(--c-accent); border-radi
   border-radius: var(--r-md);
 }
 #profile-bar .profile-label {
-  font-size: 9px; font-weight: 800;
+  font-size: 11px; font-weight: 800;
   color: var(--muted);
   text-transform: uppercase;
   letter-spacing: 0.08em;
@@ -542,7 +542,7 @@ mark.sh { background: var(--c-accent-muted); color: var(--c-accent); border-radi
   box-shadow: 0 0 0 2px var(--c-accent-ring);
 }
 .btn-profile-save {
-  font-size: 10px; padding: 4px 12px;
+  font-size: 11px; padding: 4px 12px;
   background: var(--c-accent-muted);
   border: 1px solid var(--c-accent-ring);
   color: var(--c-accent);
@@ -556,7 +556,7 @@ mark.sh { background: var(--c-accent-muted); color: var(--c-accent); border-radi
   box-shadow: 0 0 0 1px var(--c-accent-ring);
 }
 .btn-profile-delete {
-  font-size: 10px; padding: 4px 10px;
+  font-size: 11px; padding: 4px 10px;
   background: transparent;
   border: none;
   color: var(--danger);
@@ -595,7 +595,7 @@ mark.sh { background: var(--c-accent-muted); color: var(--c-accent); border-radi
   pointer-events: none;
 }
 #perf-budget-label {
-  font-size: 9px;
+  font-size: 11px;
   color: var(--c-accent);
   font-weight: 600;
   text-align: right;
@@ -617,14 +617,14 @@ mark.sh { background: var(--c-accent-muted); color: var(--c-accent); border-radi
   border: 1px solid var(--c-border-default);
   border-radius: var(--r-sm);
   padding: 8px 10px;
-  font-size: 10px;
+  font-size: 11px;
   color: var(--gray);
   line-height: 1.5;
   pointer-events: none;
   box-shadow: 0 8px 24px rgba(0,0,0,0.5);
   display: none;
 }
-.tt-icon { color: var(--muted); cursor: help; margin-left: 5px; font-size: 10px; vertical-align: middle; transition: color 0.1s; }
+.tt-icon { color: var(--muted); cursor: help; margin-left: 5px; font-size: 11px; vertical-align: middle; transition: color 0.1s; }
 .tt-icon:hover { color: var(--gray); }
 
 /* ── Split export button ── */
@@ -632,7 +632,7 @@ mark.sh { background: var(--c-accent-muted); color: var(--c-accent); border-radi
 #export-split.loaded { display: flex; }
 #btn-export-caret {
   padding: 5px 7px;
-  font-size: 10px;
+  font-size: 11px;
   border-left: 1px solid rgba(255,255,255,0.08) !important;
   border-radius: 0 7px 7px 0 !important;
 }
@@ -653,7 +653,7 @@ mark.sh { background: var(--c-accent-muted); color: var(--c-accent); border-radi
 #export-menu.open { display: block; }
 .export-menu-item {
   padding: 6px 10px;
-  font-size: 10px;
+  font-size: 11px;
   color: var(--gray);
   border-radius: 5px;
   cursor: pointer;
@@ -670,7 +670,7 @@ mark.sh { background: var(--c-accent-muted); color: var(--c-accent); border-radi
 #btn-reset.visible { display: inline-flex; }
 
 /* ── Keyboard hint in footer ── */
-#kb-hints { font-size: 9px; color: var(--muted); }
+#kb-hints { font-size: 11px; color: var(--muted); }
 
 @keyframes save-nudge {
   0%   { box-shadow: 0 0 0 0   rgba(var(--pink-rgb,124,110,248), 0.7); }
