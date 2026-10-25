@@ -1777,6 +1777,7 @@ const LANG = {
       genSecSecurity:'Security Services (Advanced)',
       genSecCpuSched:'CPU Scheduling',
       genSearchPlaceholder:'Search tweaks…', startupSearchPh:'Search startup items…',
+      dlOverwriteT:'Overwrite Profile?', dlOverwriteB:'A profile named <strong>"{name}"</strong> already exists. Overwrite it?', dlOverwrite:'Overwrite', dlApplyProfT:'Apply Profile: {name}', dlApplyProfB:'This will apply {n} tweaks from the "{name}" profile.', dlApplyAll:'Apply All', dlCloneT:'Clone Profile', dlCloneB:'New name for the copy of <strong>"{name}"</strong>:', dlClone:'Clone', dlCopySuffix:'(copy)', dlRenameT:'Rename Profile', dlRenameB:'New name for <strong>"{name}"</strong>:', dlRename:'Rename', dlPingT:'Custom Ping Host', dlPingB:'Enter IP or hostname to ping:', dlDnsPriT:'Custom DNS — Primary Server', dlDnsPriB:'Enter primary IPv4 DNS address (e.g. 8.8.8.8):', dlDnsSecT:'Custom DNS — Secondary Server', dlDnsSecB:'Enter secondary IPv4 DNS address (optional — leave blank to skip):', dlReEnableT:'Re-enable {name}', dlReEnableSvcB:'Service "{name}" will be restored to "{start}" start and started.', dlReEnableTaskB:'Task "{name}" will be re-enabled in Task Scheduler.', dlReEnable:'Re-enable', tkFailedName:'Failed: {name}',
       tkUgOn:'Update Guard enabled', tkUgOff:'Update Guard disabled', tkGsOn:'Game Shield enabled', tkGsOff:'Game Shield disabled', tkUgOnLong:'Update Guard enabled — Windows Update blocked during gaming',
       abClose:'Close', abAdvanced:'Advanced mode', abWhatsNew:'What\'s new', abBugReport:'Report a bug', abToggleLog:'Toggle output log', abDelete:'Delete', abRebootNow:'Reboot now',
       tkScanReq:'Scan Required', tkScanReqRevert:'Run SCEWIN Scan first to revert a setting.', tkScanReqToken:'Run SCEWIN Scan first to identify the token.', tkScanReqPlain:'Run SCEWIN Scan first.', tkScanReqProfile:'Run SCEWIN Scan first before saving a profile.', tkSettingNotFound:'Setting Not Found', tkTokenNotInDump:'Token {token} not in current BIOS dump.', tkSettingNotInDump:'This setting is not in the current BIOS dump.', tkOptionNotFound:'Option Not Found', tkOptionNotFoundMsg:'Could not find option "{label}" in current dump.', tkValueUnavail:'Value Not Available', tkValueUnavailMsg:'The original value is no longer an option in your BIOS.', tkReverted:'Reverted', tkRevertFailed:'Revert Failed', tkBiosWriteFail:'Could not write to BIOS.', tkSafetyReq:'Safety Toggle Required', tkSafetyBios:'Flip the safety toggle before applying.', tkSafetyTweak:'Flip the safety toggle on this tweak before applying it.', tkFailed:'Failed', tkOpFailed:'Operation failed.', tkHyperVOff:'Hyper-V Disabled', tkHyperVOn:'Hyper-V Re-enabled', tkRebootReq:'Reboot required for this change to take effect.', tkSelectProfile:'Select Profile', tkSelectProfileMsg:'Choose a profile from the dropdown first.', tkProfLoadFail:'Profile Load Failed', tkProfLoadFailMsg:'Could not apply profile.', tkExportFail:'Export Failed', tkExportFailMsg:'Could not export profile.', tkBoardMismatch:'Board Mismatch', tkImportFail:'Import Failed', tkImportFailMsg:'Could not import profile.', tkAutoTuneReady:'Recommendation ready — review and apply', tkFailedShort:'Failed', tkNameReq:'Name Required', tkNameReqMsg:'Enter a preset name before saving.', tkEnterProfName:'Enter a profile name', tkNoTweaksYet:'No tweaks applied yet', tkNoTweaksYetMsg:'Apply some tweaks first', tkProfSaved:'Profile saved', tkProfNotFound:'Profile not found', tkProfApplied:'Profile applied', tkProfAppliedMsg:'{applied} tweaks applied{failedPart}', tkFailedPart:', {failed} failed', tkProfDeletedT:'Profile Deleted', tkProfDeletedWarn:'Tweaks from this profile were NOT reverted automatically. Use the Changelog tab to undo them individually.', tkProfDeleted:'Profile deleted', tkCloneFail:'Clone failed', tkProfCloned:'Profile cloned', tkProfClonedMsg:'"{name}" created', tkRenameFail:'Rename failed', tkProfRenamed:'Profile renamed', tkProfExported:'Profile exported', tkProfExportedMsg:'Saved to Desktop as {file}', tkExportFailLow:'Export failed', tkImportFailLow:'Import failed', tkInvalidProfFile:'Invalid profile file', tkProfImported:'Profile imported', tkProfImportedMsg:'"{name}" added to your profiles', tkCopied:'Copied', tkReportCopied:'Session report copied to clipboard', tkAdminReq:'Administrator Required', tkAdminReqMsg:'Auto-Optimize needs Admin privileges. Relaunch as Administrator.', tkAlreadyRunning:'Already Running', tkAlreadyRunningMsg:'Auto-Optimization is already in progress.', tkUndoFailed:'Undo Failed', tkRpNotFound:'Restore point "{name}" not found', tkNothingSel:'Nothing selected', tkNothingSelTweak:'Check at least one tweak to run.', tkDraftResumed:'Draft Resumed', tkDraftResumedMsg:'Your previous selections have been restored.', tkInvalidIp:'Invalid IP', tkInvalidIpMsg:'Enter a valid IPv4 address.', tkInvalidIp2Msg:'Secondary DNS must be a valid IPv4 address or empty.', tkDnsSet:'Custom DNS configured', tkProfAssigned:'Profile assigned', tkProfAssignedMsg:'"{name}" will auto-apply when {game} launches', tkProfRemoved:'Profile removed', tkProfRemovedMsg:'No auto-profile for {game}', tkProfileFailed:'Profile Failed', tkProfMissing:'Profile Missing', tkProfMissingMsg:'"{name}" no longer exists — bundle activated without it', tkNothingSelCap:'Nothing Selected', tkSelApp:'Select at least one app to remove.', tkSelService:'Select at least one service to disable.', tkSelTask:'Select at least one task to disable.', tkSelTaskRe:'Check the tasks you want to re-enable.', tkSelDevice:'Select at least one device.', tkSelExt:'Select at least one extension to remove.', tkSelFeature:'Select features to disable.', tkGamingRec:'Gaming Recommended', tkGamingRecSvc:'Services selected for gaming{lap}{wifi}.', tkLapSafe:' (laptop-safe)', tkWifiKept:', Wi-Fi preserved', tkGamingRecTask:'Tasks selected{lap}.', tkReEnabled:'Re-enabled', tkReEnabledSvc:'{name} is now active.', tkReEnabledTask:'{name} is active again.', tkError:'Error', tkReEnableSvcFail:'Could not re-enable {name}.', tkFixApplied:'Fix applied', tkFixFailed:'Fix failed', tkUnknownError:'Unknown error', tkUpdGuard:'Update Guard', tkUpdQuiet:'Windows Update quiet hours set to {hours}', tkReapplied:'Re-applied {n} tweak(s)', tkRemoved:'Removed: {name}', genSafeDefaults:'Safe Defaults',
@@ -4129,6 +4130,7 @@ const LANG = {
       genSecSecurity:'Tietoturvapalvelut (lisäasetukset)',
       genSecCpuSched:'CPU-ajoitus',
       genSearchPlaceholder:'Hae säätöjä…', startupSearchPh:'Hae käynnistyskohteita…',
+      dlOverwriteT:'Korvataanko profiili?', dlOverwriteB:'Profiili <strong>"{name}"</strong> on jo olemassa. Korvataanko se?', dlOverwrite:'Korvaa', dlApplyProfT:'Ota profiili käyttöön: {name}', dlApplyProfB:'Tämä ottaa käyttöön {n} säätöä profiilista "{name}".', dlApplyAll:'Ota kaikki käyttöön', dlCloneT:'Kopioi profiili', dlCloneB:'Uusi nimi kopiolle: <strong>"{name}"</strong>:', dlClone:'Kopioi', dlCopySuffix:'(kopio)', dlRenameT:'Nimeä profiili uudelleen', dlRenameB:'Uusi nimi: <strong>"{name}"</strong>:', dlRename:'Nimeä', dlPingT:'Oma ping-osoite', dlPingB:'Anna IP-osoite tai isäntänimi:', dlDnsPriT:'Oma DNS — ensisijainen palvelin', dlDnsPriB:'Anna ensisijainen IPv4 DNS-osoite (esim. 8.8.8.8):', dlDnsSecT:'Oma DNS — toissijainen palvelin', dlDnsSecB:'Anna toissijainen IPv4 DNS-osoite (valinnainen — jätä tyhjäksi ohittaaksesi):', dlReEnableT:'Ota takaisin käyttöön: {name}', dlReEnableSvcB:'Palvelu "{name}" palautetaan tilaan "{start}" ja käynnistetään.', dlReEnableTaskB:'Tehtävä "{name}" otetaan takaisin käyttöön Tehtävienajastimessa.', dlReEnable:'Ota käyttöön', tkFailedName:'Epäonnistui: {name}',
       tkUgOn:'Update Guard päällä', tkUgOff:'Update Guard pois päältä', tkGsOn:'Game Shield päällä', tkGsOff:'Game Shield pois päältä', tkUgOnLong:'Update Guard päällä — Windows Update estetty pelatessa',
       abClose:'Sulje', abAdvanced:'Laajennettu tila', abWhatsNew:'Uutta', abBugReport:'Ilmoita virheestä', abToggleLog:'Näytä/piilota loki', abDelete:'Poista', abRebootNow:'Käynnistä uudelleen nyt',
       tkScanReq:'Skannaus vaaditaan', tkScanReqRevert:'Aja ensin SCEWIN-skannaus asetuksen palauttamiseksi.', tkScanReqToken:'Aja ensin SCEWIN-skannaus tunnisteen löytämiseksi.', tkScanReqPlain:'Aja ensin SCEWIN-skannaus.', tkScanReqProfile:'Aja SCEWIN-skannaus ennen profiilin tallennusta.', tkSettingNotFound:'Asetusta ei löytynyt', tkTokenNotInDump:'Tunnistetta {token} ei löydy nykyisestä BIOS-vedoksesta.', tkSettingNotInDump:'Tätä asetusta ei ole nykyisessä BIOS-vedoksessa.', tkOptionNotFound:'Vaihtoehtoa ei löytynyt', tkOptionNotFoundMsg:'Vaihtoehtoa "{label}" ei löytynyt nykyisestä vedoksesta.', tkValueUnavail:'Arvo ei ole saatavilla', tkValueUnavailMsg:'Alkuperäinen arvo ei ole enää BIOSissasi valittavissa.', tkReverted:'Palautettu', tkRevertFailed:'Palautus epäonnistui', tkBiosWriteFail:'BIOSiin kirjoitus epäonnistui.', tkSafetyReq:'Turvakytkin vaaditaan', tkSafetyBios:'Käännä turvakytkin ennen käyttöönottoa.', tkSafetyTweak:'Käännä tämän säädön turvakytkin ennen käyttöönottoa.', tkFailed:'Epäonnistui', tkOpFailed:'Toiminto epäonnistui.', tkHyperVOff:'Hyper-V poistettu käytöstä', tkHyperVOn:'Hyper-V otettu takaisin käyttöön', tkRebootReq:'Muutos vaatii uudelleenkäynnistyksen.', tkSelectProfile:'Valitse profiili', tkSelectProfileMsg:'Valitse ensin profiili pudotusvalikosta.', tkProfLoadFail:'Profiilin lataus epäonnistui', tkProfLoadFailMsg:'Profiilia ei voitu ottaa käyttöön.', tkExportFail:'Vienti epäonnistui', tkExportFailMsg:'Profiilin vienti epäonnistui.', tkBoardMismatch:'Emolevy ei täsmää', tkImportFail:'Tuonti epäonnistui', tkImportFailMsg:'Profiilin tuonti epäonnistui.', tkAutoTuneReady:'Suositus valmis — tarkista ja ota käyttöön', tkFailedShort:'Epäonnistui', tkNameReq:'Nimi vaaditaan', tkNameReqMsg:'Anna esiasetukselle nimi ennen tallennusta.', tkEnterProfName:'Anna profiilin nimi', tkNoTweaksYet:'Säätöjä ei ole vielä otettu käyttöön', tkNoTweaksYetMsg:'Ota ensin käyttöön joitakin säätöjä', tkProfSaved:'Profiili tallennettu', tkProfNotFound:'Profiilia ei löytynyt', tkProfApplied:'Profiili otettu käyttöön', tkProfAppliedMsg:'{applied} säätöä otettu käyttöön{failedPart}', tkFailedPart:', {failed} epäonnistui', tkProfDeletedT:'Profiili poistettu', tkProfDeletedWarn:'Profiilin säätöjä EI palautettu automaattisesti. Käytä Muutosloki-välilehteä peruaksesi ne yksitellen.', tkProfDeleted:'Profiili poistettu', tkCloneFail:'Kopiointi epäonnistui', tkProfCloned:'Profiili kopioitu', tkProfClonedMsg:'"{name}" luotu', tkRenameFail:'Nimeäminen epäonnistui', tkProfRenamed:'Profiili nimetty uudelleen', tkProfExported:'Profiili viety', tkProfExportedMsg:'Tallennettu työpöydälle: {file}', tkExportFailLow:'Vienti epäonnistui', tkImportFailLow:'Tuonti epäonnistui', tkInvalidProfFile:'Virheellinen profiilitiedosto', tkProfImported:'Profiili tuotu', tkProfImportedMsg:'"{name}" lisätty profiileihisi', tkCopied:'Kopioitu', tkReportCopied:'Istuntoraportti kopioitu leikepöydälle', tkAdminReq:'Vaatii järjestelmänvalvojan oikeudet', tkAdminReqMsg:'Auto-Optimize vaatii järjestelmänvalvojan oikeudet. Käynnistä uudelleen järjestelmänvalvojana.', tkAlreadyRunning:'Jo käynnissä', tkAlreadyRunningMsg:'Automaattinen optimointi on jo käynnissä.', tkUndoFailed:'Kumoaminen epäonnistui', tkRpNotFound:'Palautuspistettä "{name}" ei löytynyt', tkNothingSel:'Ei valintoja', tkNothingSelTweak:'Valitse vähintään yksi säätö suoritettavaksi.', tkDraftResumed:'Luonnos palautettu', tkDraftResumedMsg:'Aiemmat valintasi on palautettu.', tkInvalidIp:'Virheellinen IP', tkInvalidIpMsg:'Anna kelvollinen IPv4-osoite.', tkInvalidIp2Msg:'Toissijaisen DNS:n on oltava kelvollinen IPv4-osoite tai tyhjä.', tkDnsSet:'Oma DNS asetettu', tkProfAssigned:'Profiili liitetty', tkProfAssignedMsg:'"{name}" otetaan käyttöön automaattisesti kun {game} käynnistyy', tkProfRemoved:'Profiili poistettu', tkProfRemovedMsg:'Ei automaattiprofiilia: {game}', tkProfileFailed:'Profiili epäonnistui', tkProfMissing:'Profiili puuttuu', tkProfMissingMsg:'"{name}" ei ole enää olemassa — paketti aktivoitu ilman sitä', tkNothingSelCap:'Ei valintoja', tkSelApp:'Valitse vähintään yksi poistettava sovellus.', tkSelService:'Valitse vähintään yksi poistettava palvelu.', tkSelTask:'Valitse vähintään yksi poistettava tehtävä.', tkSelTaskRe:'Valitse tehtävät, jotka haluat ottaa takaisin käyttöön.', tkSelDevice:'Valitse vähintään yksi laite.', tkSelExt:'Valitse vähintään yksi poistettava laajennus.', tkSelFeature:'Valitse poistettavat ominaisuudet.', tkGamingRec:'Pelisuositus', tkGamingRecSvc:'Palvelut valittu pelaamista varten{lap}{wifi}.', tkLapSafe:' (kannettavalle turvallinen)', tkWifiKept:', Wi-Fi säilytetty', tkGamingRecTask:'Tehtävät valittu{lap}.', tkReEnabled:'Otettu takaisin käyttöön', tkReEnabledSvc:'{name} on nyt aktiivinen.', tkReEnabledTask:'{name} on taas aktiivinen.', tkError:'Virhe', tkReEnableSvcFail:'Kohdetta {name} ei voitu ottaa takaisin käyttöön.', tkFixApplied:'Korjaus suoritettu', tkFixFailed:'Korjaus epäonnistui', tkUnknownError:'Tuntematon virhe', tkUpdGuard:'Update Guard', tkUpdQuiet:'Windows Updaten hiljaiset tunnit asetettu: {hours}', tkReapplied:'Otettu uudelleen käyttöön {n} säätöä', tkRemoved:'Poistettu: {name}', genSafeDefaults:'Turvalliset oletukset',
@@ -11564,7 +11566,7 @@ async function doClearChangelog() {
 async function undoTweakEntry(tweakId, action) {
   const r = await api.runTweak(tweakId, action)
   if (r && r.ok === false) {
-    toast(`Failed: ${tweakId}`, r.error || '', 'err')
+    toast(tUIf('tkFailedName', { name: tweakId }), r.error || '', 'err')
     return
   }
   await api.addChangelogEntry({ id: tweakId, action }).catch(() => {})
@@ -11623,7 +11625,7 @@ window.applyTweak = async function(id, action = 'apply') {
   const result = await _baseApply(id, action)
   if (!result?.ok) {
     // cancelled / blocked / failed: nothing happened, so nothing goes in the history and no success toast is shown
-    if (result && !result.skipped) toast('Error', String(result.error || result.reason || ''), 'err')
+    if (result && !result.skipped) toast(tUI('tkError'), String(result.error || result.reason || ''), 'err')
     return result
   }
   await api.addChangelogEntry({ id, action }).catch(() => {})
@@ -14285,7 +14287,7 @@ async function saveCurrentProfile() {
   const existing = await api.listProfiles()
   if (existing[name]) {
     try {
-      await showConfirm({ title: 'Overwrite Profile?', body: `A profile named <strong>"${escHtml(name)}"</strong> already exists. Overwrite it?`, okText: 'Overwrite', okStyle: 'warning', icon: 'fa-floppy-disk' })
+      await showConfirm({ title: tUI('dlOverwriteT'), body: tUIf('dlOverwriteB', { name: escHtml(name) }), okText: tUI('dlOverwrite'), okStyle: 'warning', icon: 'fa-floppy-disk' })
     } catch { return }
   }
 
@@ -14331,9 +14333,9 @@ async function applyProfile(name) {
   const ids = Object.entries(profile.tweaks).filter(([, v]) => v === 'applied').map(([k]) => k.replace(/^tweak_/, ''))
   try {
     await showConfirm({
-      title: `Apply Profile: ${name}`,
-      body: `This will apply ${ids.length} tweaks from the "${escHtml(name)}" profile.`,
-      okText: 'Apply All', icon: 'fa-layer-group'
+      title: tUIf('dlApplyProfT', { name }),
+      body: tUIf('dlApplyProfB', { n: ids.length, name: escHtml(name) }),
+      okText: tUI('dlApplyAll'), icon: 'fa-layer-group'
     })
   } catch { return }
   const { applied, failed } = await applyTweakBatch(ids, 'apply')
@@ -14355,7 +14357,7 @@ async function deleteProfile(name) {
 }
 
 async function cloneProfile(name) {
-  const newName = await showPrompt({ title: 'Clone Profile', body: `New name for the copy of <strong>"${escHtml(name)}"</strong>:`, placeholder: `${name} (copy)`, okText: 'Clone', icon: 'fa-copy' })
+  const newName = await showPrompt({ title: tUI('dlCloneT'), body: tUIf('dlCloneB', { name: escHtml(name) }), placeholder: `${name} ${tUI('dlCopySuffix')}`, okText: tUI('dlClone'), icon: 'fa-copy' })
   if (!newName?.trim()) return
   const result = await api.cloneProfile(name, newName.trim())
   if (!result?.ok) { toast(tUI('tkCloneFail'), result?.error || '', 'err'); return }
@@ -14364,7 +14366,7 @@ async function cloneProfile(name) {
 }
 
 async function renameProfile(name) {
-  const newName = await showPrompt({ title: 'Rename Profile', body: `New name for <strong>"${escHtml(name)}"</strong>:`, placeholder: name, okText: 'Rename', icon: 'fa-pencil' })
+  const newName = await showPrompt({ title: tUI('dlRenameT'), body: tUIf('dlRenameB', { name: escHtml(name) }), placeholder: name, okText: tUI('dlRename'), icon: 'fa-pencil' })
   if (!newName?.trim() || newName.trim() === name) return
   const result = await api.renameProfile(name, newName.trim())
   if (!result?.ok) { toast(tUI('tkRenameFail'), result?.error || '', 'err'); return }
@@ -20711,7 +20713,7 @@ async function toggleLiveMonitor(btn) {
 async function livePingHostChange(val) {
   if (val === 'custom') {
     let customHost
-    try { customHost = await showPrompt({ title: 'Custom Ping Host', body: 'Enter IP or hostname to ping:', placeholder: '1.1.1.1' }) } catch { return }
+    try { customHost = await showPrompt({ title: tUI('dlPingT'), body: tUI('dlPingB'), placeholder: '1.1.1.1' }) } catch { return }
     settings._liveMonCustomHost = customHost.trim()
     await api.saveSettings({ _liveMonCustomHost: customHost.trim() }).catch(() => {})
     const sel = document.getElementById('live-mon-host')
@@ -20900,11 +20902,11 @@ async function netConfigureCustomDns() {
   const cur2 = settings.customDnsSecondary || ''
   let primary, secondary
   try {
-    primary = await showPrompt({ title: 'Custom DNS — Primary Server', body: 'Enter primary IPv4 DNS address (e.g. 8.8.8.8):', placeholder: '0.0.0.0', defaultValue: cur })
+    primary = await showPrompt({ title: tUI('dlDnsPriT'), body: tUI('dlDnsPriB'), placeholder: '0.0.0.0', defaultValue: cur })
   } catch { return }
   if (!/^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(primary.trim())) { toast(tUI('tkInvalidIp'), tUI('tkInvalidIpMsg'), 'warn'); return }
   try {
-    secondary = await showPrompt({ title: 'Custom DNS — Secondary Server', body: 'Enter secondary IPv4 DNS address (optional — leave blank to skip):', placeholder: '0.0.0.0', defaultValue: cur2 })
+    secondary = await showPrompt({ title: tUI('dlDnsSecT'), body: tUI('dlDnsSecB'), placeholder: '0.0.0.0', defaultValue: cur2 })
   } catch { secondary = '' }
   const sec2 = secondary.trim()
   if (sec2 && !/^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(sec2)) { toast(tUI('tkInvalidIp'), tUI('tkInvalidIp2Msg'), 'warn'); return }
@@ -21191,7 +21193,7 @@ async function applyTweakCard(id, checked, isDanger = false) {
       badge.className = 'tc-badge' + (prevApplied ? ' applied' : '')
     }
     const errMsg = result.reason === 'premium_required' ? tUI('premiumLockTitle') : (result.error || 'Tweak failed')
-    toast(`Failed: ${friendly}`, errMsg, 'err')
+    toast(tUIf('tkFailedName', { name: friendly }), errMsg, 'err')
   }
   } finally { _tweakInflight.delete(id) }
 }
@@ -24798,14 +24800,14 @@ function clearDebloatHistory() {
 
 async function doReEnableService(svcId, name, origStart) {
   const startLabel = origStart || 'demand'
-  try { await showConfirm({ title: `Re-enable ${name}`, body: `Service "${name}" will be restored to "${startLabel}" start and started.`, okText: 'Re-enable', okStyle: 'info', icon: 'fa-play' }) } catch { return }
+  try { await showConfirm({ title: tUIf('dlReEnableT', { name }), body: tUIf('dlReEnableSvcB', { name: escHtml(name), start: escHtml(startLabel) }), okText: tUI('dlReEnable'), okStyle: 'info', icon: 'fa-play' }) } catch { return }
   const r = await api.enableService(svcId, startLabel)
   if (r.ok) { appendLog(`Re-enabled service: ${svcId}`, 'ok'); toast(tUI('tkReEnabled'), tUIf('tkReEnabledSvc', { name }), 'ok') }
   else toast(tUI('tkError'), tUIf('tkReEnableSvcFail', { name }), 'error')
 }
 
 async function doReEnableTask(taskPath, taskName, label) {
-  try { await showConfirm({ title: `Re-enable ${label || taskName}`, body: `Task "${taskName}" will be re-enabled in Task Scheduler.`, okText: 'Re-enable', okStyle: 'info', icon: 'fa-play' }) } catch { return }
+  try { await showConfirm({ title: tUIf('dlReEnableT', { name: label || taskName }), body: tUIf('dlReEnableTaskB', { name: escHtml(taskName) }), okText: tUI('dlReEnable'), okStyle: 'info', icon: 'fa-play' }) } catch { return }
   const r = await api.enableScheduledTask({ path: taskPath, name: taskName })
   if (r.ok) { appendLog(`Re-enabled task: ${taskName}`, 'ok'); toast(tUI('tkReEnabled'), tUIf('tkReEnabledTask', { name: label || taskName }), 'ok'); doScanTaskStates() }
   else toast(tUI('tkError'), tUIf('tkReEnableSvcFail', { name: taskName }), 'error')
