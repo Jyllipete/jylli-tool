@@ -863,16 +863,16 @@ async function fivemBookmarksRender() {
       : bm.online === true
       ? `<span style="width:8px;height:8px;border-radius:50%;background:#2ecc71;display:inline-block;flex-shrink:0"></span>`
       : `<span style="width:8px;height:8px;border-radius:50%;background:#888;display:inline-block;flex-shrink:0"></span>`
-    const nameStr  = bm.name  || `${bm.host}:${bm.port}`
+    const nameStr  = escHtml(bm.name  || `${bm.host}:${bm.port}`)
     const countStr = bm.online === true
       ? `${bm.players}/${bm.maxClients} ${tUI('fivemBookmarksPlayers')} · ${bm.pingMs}ms`
       : bm.online === false ? tUI('fivemBookmarksOffline') : tUI('fivemBookmarksPinging')
-    const mapStr   = bm.mapName ? `<span style="font-size:9px;color:var(--muted)"> · ${bm.mapName}</span>` : ''
+    const mapStr   = bm.mapName ? `<span style="font-size:9px;color:var(--muted)"> · ${escHtml(bm.mapName)}</span>` : ''
     const linkedStr = bm.linkedBundle
-      ? `<span style="font-size:9px;color:#9b59b6"><i class="fa fa-layer-group"></i> ${tUI('fivemBookmarksLinked')} ${bm.linkedBundle}</span>`
+      ? `<span style="font-size:9px;color:#9b59b6"><i class="fa fa-layer-group"></i> ${tUI('fivemBookmarksLinked')} ${escHtml(bm.linkedBundle)}</span>`
       : ''
     const bundleOpts = bundleNames.length
-      ? `<option value="">${tUI('fivemBookmarksLinkProfile')}</option>` + bundleNames.map(n => `<option value="${n}" ${bm.linkedBundle === n ? 'selected' : ''}>${n}</option>`).join('')
+      ? `<option value="">${tUI('fivemBookmarksLinkProfile')}</option>` + bundleNames.map(n => `<option value="${escAttr(n)}" ${bm.linkedBundle === n ? 'selected' : ''}>${escHtml(n)}</option>`).join('')
       : `<option value="">${tUI('fivemBookmarksNoProfiles')}</option>`
     return `
       <div style="padding:8px 0;border-bottom:1px solid #111" id="fivem-bm-row-${i}">
@@ -880,7 +880,7 @@ async function fivemBookmarksRender() {
           ${statusDot}
           <div style="flex:1;min-width:0">
             <div style="font-size:10.5px;font-weight:700;color:#c0c0c0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${nameStr}${mapStr}</div>
-            <div style="font-size:9.5px;color:var(--muted)">${bm.host}:${bm.port} · ${countStr}</div>
+            <div style="font-size:9.5px;color:var(--muted)">${escHtml(bm.host)}:${escHtml(bm.port)} · ${countStr}</div>
             ${linkedStr}
           </div>
           <button class="btn btn-primary btn-sm" style="font-size:9px;padding:3px 10px" id="fivem-bm-connect-${i}" onclick="fivemBookmarkConnect(${i}, this)"><i class="fa fa-play"></i> ${tUI('fivemBookmarksConnect')}</button>
@@ -1162,7 +1162,7 @@ async function fivemIniEditorLoad() {
     html += `<div style="font-size:9.5px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:0.06em;margin:12px 0 6px;padding-left:2px">${catLabels[cat] || cat}</div>`
     for (const def of catDefs) {
       const cur = values[def.key]
-      const curDisplay = cur !== null ? cur : `<span style="color:var(--muted);font-style:italic">${tUI('fivemIniNotSet')}</span>`
+      const curDisplay = cur !== null ? escHtml(cur) : `<span style="color:var(--muted);font-style:italic">${tUI('fivemIniNotSet')}</span>`
       const recVal = def.recommended !== null && def.recommended !== undefined && def.recommended !== '' ? def.recommended : null
       const isDiff = cur !== null && recVal !== null && String(cur) !== String(recVal)
       const rowBg = isDiff ? 'background:rgba(243,156,18,0.05);border-color:rgba(243,156,18,0.15)' : ''
@@ -1175,19 +1175,19 @@ async function fivemIniEditorLoad() {
                 ${dangerWarn ? `<i class="fa fa-triangle-exclamation" style="color:var(--danger);font-size:9px;margin-left:4px" title="${dangerWarn}"></i>` : ''}
               </div>
               <div style="font-size:9.5px;color:var(--muted);margin-top:2px">${def.desc}</div>
-              <div style="font-size:9px;color:#555;margin-top:3px;font-family:monospace">${def.key} = ${cur !== null ? `<span style="color:#aaa">${cur}</span>` : `<span style="color:var(--muted);font-style:italic">${tUI('fivemIniNotSet')}</span>`}${recVal !== null ? ` <span style="color:#2ecc71;margin-left:6px">${tUI('fivemIniRecommended')}: ${recVal}</span>` : ''}</div>
+              <div style="font-size:9px;color:#555;margin-top:3px;font-family:monospace">${def.key} = ${cur !== null ? `<span style="color:#aaa">${escHtml(cur)}</span>` : `<span style="color:var(--muted);font-style:italic">${tUI('fivemIniNotSet')}</span>`}${recVal !== null ? ` <span style="color:#2ecc71;margin-left:6px">${tUI('fivemIniRecommended')}: ${recVal}</span>` : ''}</div>
               ${dangerWarn ? `<div style="font-size:9px;color:var(--danger);margin-top:3px"><i class="fa fa-shield-halved"></i> ${dangerWarn}</div>` : ''}
             </div>
             <div style="display:flex;gap:5px;flex-shrink:0;align-items:flex-start;margin-top:2px">
               ${def.type === 'boolean'
                 ? `<button class="btn btn-sm ${cur == 1 || cur === 'true' ? 'btn-success' : 'btn-ghost'}" style="font-size:9px;min-width:52px" onclick="fivemIniToggleBool('${def.key}', ${cur == 1 || cur === 'true' ? 0 : 1})">${cur == 1 || cur === 'true' ? tUI('fivemIniOn') : tUI('fivemIniOff')}</button>`
                 : def.type === 'number'
-                ? `<input type="number" id="cfx-ini-input-${def.key}" value="${cur !== null ? cur : (def.recommended ?? def.default ?? '')}" min="${def.min ?? ''}" max="${def.max ?? ''}" step="1" style="width:75px;padding:3px 6px;border-radius:5px;border:1px solid var(--border);background:var(--bg-card2,#1a1a1a);color:var(--fg);font-size:10px;text-align:right" onkeydown="if(event.key==='Enter')fivemIniWriteNumber('${def.key}')">
+                ? `<input type="number" id="cfx-ini-input-${def.key}" value="${escAttr(cur !== null ? cur : (def.recommended ?? def.default ?? ''))}" min="${def.min ?? ''}" max="${def.max ?? ''}" step="1" style="width:75px;padding:3px 6px;border-radius:5px;border:1px solid var(--border);background:var(--bg-card2,#1a1a1a);color:var(--fg);font-size:10px;text-align:right" onkeydown="if(event.key==='Enter')fivemIniWriteNumber('${def.key}')">
                    <button class="btn btn-primary btn-sm" style="font-size:9px" onclick="fivemIniWriteNumber('${def.key}')">${tUI('apply')}</button>`
-                : `<input type="text" id="cfx-ini-input-${def.key}" value="${cur !== null ? cur : ''}" placeholder="${def.default ?? ''}" style="width:100px;padding:3px 6px;border-radius:5px;border:1px solid var(--border);background:var(--bg-card2,#1a1a1a);color:var(--fg);font-size:10px" onkeydown="if(event.key==='Enter')fivemIniWriteText('${def.key}')">
+                : `<input type="text" id="cfx-ini-input-${def.key}" value="${escAttr(cur !== null ? cur : '')}" placeholder="${def.default ?? ''}" style="width:100px;padding:3px 6px;border-radius:5px;border:1px solid var(--border);background:var(--bg-card2,#1a1a1a);color:var(--fg);font-size:10px" onkeydown="if(event.key==='Enter')fivemIniWriteText('${def.key}')">
                    <button class="btn btn-primary btn-sm" style="font-size:9px" onclick="fivemIniWriteText('${def.key}')">${tUI('apply')}</button>`
               }
-              ${recVal !== null && String(cur) !== String(recVal) ? `<button class="btn btn-ghost btn-sm" style="font-size:9px;color:#2ecc71;border-color:rgba(46,204,113,0.3)" onclick="fivemIniApplyRecommended('${def.key}', ${JSON.stringify(recVal)})" title="${tUI('fivemIniApplyRec')}"><i class="fa fa-bolt"></i></button>` : ''}
+              ${recVal !== null && String(cur) !== String(recVal) ? `<button class="btn btn-ghost btn-sm" style="font-size:9px;color:#2ecc71;border-color:rgba(46,204,113,0.3)" onclick="fivemIniApplyRecommended('${def.key}', ${jsArg(recVal)})" title="${tUI('fivemIniApplyRec')}"><i class="fa fa-bolt"></i></button>` : ''}
             </div>
           </div>
         </div>`

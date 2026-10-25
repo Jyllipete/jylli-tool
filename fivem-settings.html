@@ -852,6 +852,7 @@ mark.sh { background: var(--c-accent-muted); color: var(--c-accent); border-radi
   </div>
 </div>
 
+<script src="js/esc.js"></script>
 <script>
 // ─── i18n ─────────────────────────────────────────────────────────────────────
 const LANG_FIVEM = {
@@ -1182,11 +1183,11 @@ async function loadSettings() {
   btn.innerHTML = `<i class="fa fa-rotate"></i> ${tF('loadBtn')}`
 
   if (!r.ok) {
-    pathStatus.innerHTML = `<i class="fa fa-triangle-exclamation" style="color:var(--danger)"></i> ${r.reason}`
+    pathStatus.innerHTML = `<i class="fa fa-triangle-exclamation" style="color:var(--danger)"></i> ${escHtml(r.reason)}`
     body.innerHTML = `<div id="empty-state">
       <div class="es-icon-wrap" style="border-color:var(--danger-bd);background:var(--danger-bg);color:var(--danger);box-shadow:0 0 20px rgba(231,76,60,0.15)"><i class="fa fa-triangle-exclamation"></i></div>
-      <div class="es-title" style="color:var(--danger)">${r.reason}</div>
-      ${r.hint ? `<small>${r.hint}</small>` : ''}
+      <div class="es-title" style="color:var(--danger)">${escHtml(r.reason)}</div>
+      ${r.hint ? `<small>${escHtml(r.hint)}</small>` : ''}
     </div>`
     return
   }
@@ -1195,7 +1196,7 @@ async function loadSettings() {
   currentVals = r.vals
   currentPath = r.path
   const srcNote = r.source === 'secondary' ? ' (secondary location)' : ''
-  pathStatus.innerHTML = `<i class="fa fa-check" style="color:var(--success)"></i> ${r.path}${srcNote}`
+  pathStatus.innerHTML = `<i class="fa fa-check" style="color:var(--success)"></i> ${escHtml(r.path)}${srcNote}`
   const pd = document.getElementById('path-display'); if (pd) { pd.textContent = r.path; pd._set = true }
   document.getElementById('btn-save').disabled = false
   document.getElementById('export-split').classList.add('loaded')
@@ -1623,7 +1624,7 @@ async function saveSettings() {
     if (warnBanner) { warnBanner.style.display = 'none'; delete warnBanner.dataset.confirmed }
     const chLabel = (changedCount !== 1 ? tF('changesPlural') : tF('changes')).replace('{n}', changedCount)
     document.getElementById('path-status').innerHTML =
-      `<i class="fa fa-check" style="color:var(--success)"></i> ${chLabel} → ${r.path}`
+      `<i class="fa fa-check" style="color:var(--success)"></i> ${chLabel} → ${escHtml(r.path)}`
     showSaveConfirmBanner(r.path)
     // Sync currentVals
     for (const def of currentDefs) {
@@ -1636,7 +1637,7 @@ async function saveSettings() {
   } else {
     btn.innerHTML = `<i class="fa fa-xmark"></i> ${tF('saveError')}`
     document.getElementById('path-status').innerHTML =
-      `<i class="fa fa-triangle-exclamation" style="color:var(--danger)"></i> ${r.reason || 'Save failed'}`
+      `<i class="fa fa-triangle-exclamation" style="color:var(--danger)"></i> ${escHtml(r.reason || 'Save failed')}`
     setTimeout(() => { btn.innerHTML = `<i class="fa fa-floppy-disk"></i> ${tF('saveBtn')}`; btn.disabled = false }, 2500)
   }
 }

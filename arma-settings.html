@@ -154,6 +154,7 @@ html, body { background: var(--bg); color: var(--white); font-family: 'Geist', '
   </div>
 </div>
 
+<script src="js/esc.js"></script>
 <script>
 // ─── i18n ─────────────────────────────────────────────────────────────────────
 const LANG_ARMA = {
@@ -380,13 +381,13 @@ async function loadSettings() {
 
   const pathStatus = document.getElementById('path-status')
   if (!r.ok) {
-    pathStatus.innerHTML = `<i class="fa fa-triangle-exclamation" style="color:#E74C3C"></i> ${r.reason}`
-    body.innerHTML = `<div id="empty-state"><i class="fa fa-triangle-exclamation" style="color:#E74C3C;font-size:32px"></i><p>${r.reason}</p>${r.hint ? `<small style="white-space:pre-wrap">${r.hint}</small>` : ''}</div>`
+    pathStatus.innerHTML = `<i class="fa fa-triangle-exclamation" style="color:#E74C3C"></i> ${escHtml(r.reason)}`
+    body.innerHTML = `<div id="empty-state"><i class="fa fa-triangle-exclamation" style="color:#E74C3C;font-size:32px"></i><p>${escHtml(r.reason)}</p>${r.hint ? `<small style="white-space:pre-wrap">${escHtml(r.hint)}</small>` : ''}</div>`
     return
   }
 
   currentVals = r.vals
-  pathStatus.innerHTML = `<i class="fa fa-check" style="color:#2ECC71"></i> ${r.path}`
+  pathStatus.innerHTML = `<i class="fa fa-check" style="color:#2ECC71"></i> ${escHtml(r.path)}`
   const pdEl = document.getElementById('path-display'); if (pdEl) pdEl.textContent = r.path
   document.getElementById('btn-save').disabled = false
   document.getElementById('preset-bar').style.display = 'flex'
@@ -433,7 +434,7 @@ function renderSettings() {
       }
       // If current value isn't in our option list, add it
       if (!curMatched && cur != null) {
-        optsHtml = `<option value="${cur}" selected>${cur} (current)</option>` + optsHtml
+        optsHtml = `<option value="${escAttr(cur)}" selected>${escHtml(cur)} (current)</option>` + optsHtml
       }
 
       row.innerHTML = `
@@ -503,7 +504,7 @@ async function saveSettings() {
 
   if (r.ok) {
     btn.innerHTML = `<i class="fa fa-check"></i> ${tA('savedBtn')}`
-    document.getElementById('path-status').innerHTML = `<i class="fa fa-check" style="color:#2ECC71"></i> ${r.path}`
+    document.getElementById('path-status').innerHTML = `<i class="fa fa-check" style="color:#2ECC71"></i> ${escHtml(r.path)}`
     showSaveBanner()
     for (const def of DEFS) {
       const el = document.getElementById(`sval-${def.key}`)
@@ -514,7 +515,7 @@ async function saveSettings() {
     setTimeout(() => { btn.innerHTML = `<i class="fa fa-floppy-disk"></i> ${tA('saveBtn')}`; btn.disabled = false }, 2500)
   } else {
     btn.innerHTML = `<i class="fa fa-xmark"></i> ${tA('saveError')}`
-    document.getElementById('path-status').innerHTML = `<i class="fa fa-triangle-exclamation" style="color:#E74C3C"></i> ${r.reason || 'Save failed'}`
+    document.getElementById('path-status').innerHTML = `<i class="fa fa-triangle-exclamation" style="color:#E74C3C"></i> ${escHtml(r.reason || 'Save failed')}`
     setTimeout(() => { btn.innerHTML = `<i class="fa fa-floppy-disk"></i> ${tA('saveBtn')}`; btn.disabled = false }, 2500)
   }
 }

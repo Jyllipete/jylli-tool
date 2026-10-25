@@ -986,6 +986,7 @@ tr.game-proc-row td { background: rgba(0,212,180,0.04) !important; }
 
 <div id="toast"></div>
 
+<script src="js/esc.js"></script>
 <script>
 // ── i18n ──
 const LANG_PULSE = {
@@ -1336,7 +1337,7 @@ async function init() {
   grid.innerHTML = _presets.map(p => `
     <div class="preset-card" id="pc-${p.id}" onclick="selectPreset('${p.id}')">
       <i class="fa ${PRESET_ICONS[p.id] || 'fa-gamepad'}"></i>
-      <div class="pname">${p.name}</div>
+      <div class="pname">${escHtml(p.name)}</div>
     </div>
   `).join('')
 
@@ -1457,7 +1458,7 @@ async function doPulseDetect() {
   if (el) el.textContent = tP('scanning')
   const r = await api.pulseDetectGame()
   if (r.found) {
-    if (el) el.innerHTML = `<span style="color:var(--ok)"><i class="fa fa-check"></i> ${tP('detected')} ${r.name}</span>`
+    if (el) el.innerHTML = `<span style="color:var(--ok)"><i class="fa fa-check"></i> ${tP('detected')} ${escHtml(r.name)}</span>`
     selectPreset(r.id)
   } else {
     if (el) el.textContent = ''
@@ -2151,8 +2152,8 @@ function renderProcs(data) {
     const isGame = gameExe && (p.Name||'').toLowerCase().includes(gameExe)
     const barColor = isGame ? 'var(--accent)' : 'var(--cpu-color)'
     const nameCell = isGame
-      ? `<span class="game-proc-badge">GAME</span>${p.Name||'?'}`
-      : (p.Name||'?')
+      ? `<span class="game-proc-badge">GAME</span>${escHtml(p.Name||'?')}`
+      : escHtml(p.Name||'?')
     return `<tr class="${isGame ? 'game-proc-row' : ''}">
       <td>${nameCell}</td>
       <td>
@@ -2164,7 +2165,7 @@ function renderProcs(data) {
         <div style="font-size:0.7rem;color:var(--text-dim)">${(p.RAM||0).toFixed(0)} MB</div>
       </td>
       <td style="font-size:0.7rem;color:var(--text-dim)">${p.Id||'?'}</td>
-      <td><button class="kill-btn" onclick="doKill(${p.Id},'${(p.Name||'').replace(/'/g,"\\'")}',this)"><i class="fa fa-xmark"></i></button></td>
+      <td><button class="kill-btn" onclick="doKill(${Number(p.Id) || 0},${jsArg(p.Name || '')},this)"><i class="fa fa-xmark"></i></button></td>
     </tr>`
   }).join('')
   if (container) container.scrollTop = scrollTop  // M-11: restore scroll
@@ -2256,7 +2257,7 @@ async function doPrearmScan() {
   if (list) list.innerHTML = _prearmChecklist.map((t, i) => `
     <div class="prearm-item ${t.impact === 'high' ? 'high-impact' : ''}" id="prearm-item-${i}">
       <div class="prearm-dot ${t.impact === 'high' ? 'high' : ''}"></div>
-      <div class="prearm-name" title="${t.name}">${t.name}</div>
+      <div class="prearm-name" title="${escAttr(t.name)}">${escHtml(t.name)}</div>
       <div class="prearm-time">${tP('prearmIn').replace('{m}', t.minsUntil)}</div>
       <button class="prearm-defer-btn" onclick="deferTask(${i})">${tP('prearmDefer')}</button>
     </div>

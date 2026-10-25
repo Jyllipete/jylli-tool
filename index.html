@@ -606,6 +606,7 @@
   </div>
 </div>
 
+<script src="js/esc.js"></script>
 <script src="js/ui-helpers.js"></script>
 <script src="js/fivem-logic.js"></script>
 <script>
@@ -7731,10 +7732,6 @@ function clearDebugConsole() {
   if (btn) { btn.classList.remove('has-errors'); btn.textContent = '' }
 }
 
-function escHtml(s) {
-  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
-}
-
 // ─── Update Download ──────────────────────────────────────────────────────────
 async function startUpdateDownload() {
   const btn = document.getElementById('update-btn-download')
@@ -8578,20 +8575,20 @@ async function _pfUpdateHogRail() {
     const [fInfo] = await Promise.all([api.freezeGetPids()])
     const frozenPids = new Set(fInfo?.frozenPids || [])
     const hogs = procs
-      .filter(p => (p.CPU > 1 || frozenPids.has(p.PID)) && p.Name)
-      .sort((a, b) => (frozenPids.has(b.PID) ? 1 : b.CPU) - (frozenPids.has(a.PID) ? 1 : a.CPU))
+      .filter(p => (p.CPU > 1 || frozenPids.has(p.Id)) && p.Name)
+      .sort((a, b) => (frozenPids.has(b.Id) ? 1 : b.CPU) - (frozenPids.has(a.Id) ? 1 : a.CPU))
       .slice(0, 6)
     if (hogs.length === 0) {
       container.innerHTML = `<div style="font-size:11px;color:var(--muted);padding:8px 0">${tUI('pmNoHogs')}</div>`
       return
     }
     container.innerHTML = hogs.map(p => {
-      const frozen = frozenPids.has(p.PID)
-      const savings = _pfFrozenSavings[p.PID] ? ` · Saved ${Math.round(_pfFrozenSavings[p.PID] / 1000)}s CPU` : ''
+      const frozen = frozenPids.has(p.Id)
+      const savings = _pfFrozenSavings[p.Id] ? ` · Saved ${Math.round(_pfFrozenSavings[p.Id] / 1000)}s CPU` : ''
       return `<div style="background:var(--bg-dark);border:1px solid ${frozen ? 'rgba(100,200,255,0.4)' : 'var(--border)'};border-radius:8px;padding:9px 12px;min-width:130px;cursor:default">
-        <div style="font-size:10px;font-weight:600;color:${frozen ? '#5ecfff' : 'var(--text)'};margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:120px" title="${p.Name}">${p.Name}</div>
+        <div style="font-size:10px;font-weight:600;color:${frozen ? '#5ecfff' : 'var(--text)'};margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:120px" title="${escAttr(p.Name)}">${escHtml(p.Name)}</div>
         <div style="font-size:9px;color:var(--muted);margin-bottom:6px">${frozen ? `<span style="color:#5ecfff">❄ ${tUI('pmFrozen')}</span>` : `CPU ${p.CPU?.toFixed(1) || '0.0'}%`}${savings}</div>
-        <button class="btn btn-ghost btn-xs" onclick="pfToggleFreeze(${p.PID},'${p.Name.replace(/'/g,"\\'")}',${p.CPU||0})" style="font-size:9px;padding:2px 8px;gap:4px">
+        <button class="btn btn-ghost btn-xs" onclick="pfToggleFreeze(${Number(p.Id) || 0},${jsArg(p.Name)},${Number(p.CPU) || 0})" style="font-size:9px;padding:2px 8px;gap:4px">
           <i class="fa ${frozen ? 'fa-play' : 'fa-snowflake'}"></i> ${frozen ? tUI('pmDefrost') : tUI('pmFreeze')}
         </button>
       </div>`
@@ -8920,7 +8917,7 @@ function renderProcessTable(data) {
     const cpuPct = Math.min(100, Math.round((p.CPU||0) / maxCpu * 100))
     const ramColor = ramPct > 70 ? 'var(--danger)' : ramPct > 40 ? 'var(--warning)' : 'var(--info)'
     return `<tr>
-      <td>${p.Name || '?'}</td>
+      <td>${escHtml(p.Name || '?')}</td>
       <td class="cpu-bar-cell">
         <div class="cpu-bar-wrap"><div class="cpu-bar-fill" style="width:${cpuPct}%;background:var(--pink)"></div></div>
         <div style="font-size:9px;color:var(--muted);margin-top:2px">${p.CPU||0}%</div>
@@ -8930,14 +8927,14 @@ function renderProcessTable(data) {
         <div style="font-size:9px;color:var(--muted);margin-top:2px">${(p.RAM||0).toFixed(0)} MB</div>
       </td>
       <td style="font-size:10px;color:var(--muted)">${p.Id||'?'}</td>
-      <td><button class="kill-btn" onclick="doKillProcess(${p.Id},'${p.Name}')"><i class="fa fa-xmark"></i></button></td>
+      <td><button class="kill-btn" onclick="doKillProcess(${Number(p.Id) || 0},${jsArg(String(p.Name || ''))})"><i class="fa fa-xmark"></i></button></td>
     </tr>`
   }).join('')
   _updateSortIndicators()
 }
 
 async function doKillProcess(pid, name) {
-  try { await showConfirm({ title: tUI('killProcessTitle'), body: `<strong style="color:#e0e0e0">${name}</strong> (PID ${pid}) ${tUI('killProcessBody')}`, okText: tUI('killProcessOk'), okStyle: 'danger', icon: 'fa-skull' }) } catch { return }
+  try { await showConfirm({ title: tUI('killProcessTitle'), body: `<strong style="color:#e0e0e0">${escHtml(name)}</strong> (PID ${Number(pid) || 0}) ${tUI('killProcessBody')}`, okText: tUI('killProcessOk'), okStyle: 'danger', icon: 'fa-skull' }) } catch { return }
   const r = await api.killProcess(pid)
   toast(r.ok ? tUI('pmKilledToast').replace('{name}', name) : tUI('pmKillFailedToast').replace('{name}', name), '', r.ok ? 'ok' : 'err')
   loadProcesses()
@@ -9282,14 +9279,14 @@ function renderStartupRow(item) {
     : ''
 
   const srcClass = item.Source === 'HKCU Registry' ? 'src-hkcu' : item.Source === 'HKLM Registry' ? 'src-hklm' : 'src-tasks'
-  const iconLetter = (item.Name || '?').trim()[0].toUpperCase()
+  const iconLetter = escHtml(((item.Name || '?').trim().charAt(0) || '?').toUpperCase())
   const rowClass = `startup-row${item.Enabled ? '' : ' row-disabled'}`
-  const itemJson = JSON.stringify(item).replace(/&/g, '&amp;').replace(/"/g, '&quot;')
+  const itemJson = escAttr(JSON.stringify(item))
   return `<div class="${rowClass}" data-item="${itemJson}">
     <div class="startup-row-icon ${srcClass}">${iconLetter}</div>
     <div style="flex:1;min-width:0">
-      <div class="startup-name" style="display:flex;align-items:center;gap:6px">${item.Name || tUI('startupUnknown')} ${bootBadge}</div>
-      <div class="startup-cmd" title="${(item.Command || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;')}">${displayCmd}</div>
+      <div class="startup-name" style="display:flex;align-items:center;gap:6px">${escHtml(item.Name || tUI('startupUnknown'))} ${bootBadge}</div>
+      <div class="startup-cmd" title="${escAttr(item.Command || '')}">${escHtml(displayCmd)}</div>
     </div>
     <div class="startup-row-actions">${openBtn}${delayBtn}</div>
     <span class="startup-impact ${effectiveImpact.toLowerCase()}">${effectiveImpact}</span>
@@ -9664,7 +9661,7 @@ async function delayStartup(btn) {
   picker.style.cssText = 'padding:8px 12px;background:var(--bg-card2);border-top:1px solid var(--border2);display:flex;align-items:center;gap:8px;flex-wrap:wrap'
   picker.innerHTML = `
     <span style="font-size:10px;color:var(--gray)"><i class="fa fa-clock"></i> ${tUI('startupDelayTitle')}:</span>
-    ${[30, 60, 120].map(s => `<button class="btn btn-ghost btn-sm" style="font-size:10px;padding:3px 10px" onclick="doDelay(${JSON.stringify(JSON.stringify(item)).slice(1,-1)},${s},this)">${s}s</button>`).join('')}
+    ${[30, 60, 120].map(s => `<button class="btn btn-ghost btn-sm" style="font-size:10px;padding:3px 10px" onclick="doDelay(${jsArg(JSON.stringify(item))},${s},this)">${s}s</button>`).join('')}
     <button class="btn btn-ghost btn-sm" style="font-size:10px;padding:3px 8px;opacity:0.5" onclick="this.closest('.delay-picker').remove()"><i class="fa fa-xmark"></i></button>
   `
   if (rowEl) rowEl.appendChild(picker)
@@ -10231,7 +10228,7 @@ function renderSchedTaskCard(t) {
   const def = actionKey ? SCHED_ACTION_DEFS[actionKey] : null
   const icon = def ? def.icon : 'fa-clock'
   const color = def ? def.color : 'var(--muted)'
-  const displayName = (t.Description && t.Description.trim()) ? t.Description.trim() : t.TaskName
+  const displayName = escHtml((t.Description && t.Description.trim()) ? t.Description.trim() : t.TaskName)
   const lastRun = schedFormatRelTime(t.LastRunTime)
   const nextRun = schedFormatCountdown(t.NextRunTime)
   const resultOk = t.LastRunTime && t.LastTaskResult === 0
@@ -10240,7 +10237,7 @@ function renderSchedTaskCard(t) {
     : ''
   const isDisabled = (t.State || '').toLowerCase() === 'disabled'
   return `
-    <div class="sched-card${isDisabled ? ' is-disabled' : ''}" id="sched-card-${t.TaskName}">
+    <div class="sched-card${isDisabled ? ' is-disabled' : ''}" id="sched-card-${escAttr(t.TaskName)}">
       <div style="display:flex;align-items:center;gap:10px">
         <div class="sched-card-icon" style="background:${color}22;color:${color}"><i class="fa ${icon}"></i></div>
         <div style="flex:1;min-width:0">
@@ -10250,19 +10247,19 @@ function renderSchedTaskCard(t) {
       </div>
       <div class="sched-card-meta">
         <div><span style="color:var(--muted-2,#555)">${tUI('schedLastRun')}:</span> ${lastRun} ${resultBadge}</div>
-        ${nextRun ? `<div id="sched-nrt-${t.TaskName}"><span style="color:var(--muted-2,#555)">${tUI('schedNextRun')}:</span> ${nextRun}</div>` : ''}
+        ${nextRun ? `<div id="sched-nrt-${escAttr(t.TaskName)}"><span style="color:var(--muted-2,#555)">${tUI('schedNextRun')}:</span> ${nextRun}</div>` : ''}
       </div>
       <div class="sched-card-footer">
-        <button class="btn btn-ghost btn-sm" title="${tUI('schedRunNowTitle')}" onclick="doRunTask('${_schedEsc(t.TaskName)}')"><i class="fa fa-play"></i> ${tUI('schedRunNow')}</button>
-        <button class="btn btn-ghost btn-sm" onclick="doToggleTask('${_schedEsc(t.TaskName)}', ${isDisabled})" title="${isDisabled ? tUI('schedBulkEnableAll') : tUI('schedBulkDisableAll')}">
+        <button class="btn btn-ghost btn-sm" title="${tUI('schedRunNowTitle')}" onclick="doRunTask(${jsArg(t.TaskName)})"><i class="fa fa-play"></i> ${tUI('schedRunNow')}</button>
+        <button class="btn btn-ghost btn-sm" onclick="doToggleTask(${jsArg(t.TaskName)}, ${isDisabled})" title="${isDisabled ? tUI('schedBulkEnableAll') : tUI('schedBulkDisableAll')}">
           <i class="fa ${isDisabled ? 'fa-circle-check' : 'fa-ban'}"></i>
         </button>
-        <button class="btn btn-ghost btn-sm" onclick="doToggleHistory('${_schedEsc(t.TaskName)}')" title="${tUI('schedHistoryTitle')}"><i class="fa fa-clock-rotate-left"></i></button>
-        <button class="btn btn-danger btn-sm" style="margin-left:auto" onclick="doDeleteTask('${_schedEsc(t.TaskName)}')"><i class="fa fa-trash"></i></button>
+        <button class="btn btn-ghost btn-sm" onclick="doToggleHistory(${jsArg(t.TaskName)})" title="${tUI('schedHistoryTitle')}"><i class="fa fa-clock-rotate-left"></i></button>
+        <button class="btn btn-danger btn-sm" style="margin-left:auto" onclick="doDeleteTask(${jsArg(t.TaskName)})"><i class="fa fa-trash"></i></button>
       </div>
-      <div class="sched-history-panel" id="sched-hist-${t.TaskName}">
+      <div class="sched-history-panel" id="sched-hist-${escAttr(t.TaskName)}">
         <div style="font-size:10px;color:var(--muted);padding-bottom:4px;font-weight:700;text-transform:uppercase;letter-spacing:0.7px">${tUI('schedHistoryTitle')}</div>
-        <div id="sched-hist-body-${t.TaskName}" style="color:var(--muted);font-size:10px">${tUI('schedHistoryEmpty')}</div>
+        <div id="sched-hist-body-${escAttr(t.TaskName)}" style="color:var(--muted);font-size:10px">${tUI('schedHistoryEmpty')}</div>
       </div>
     </div>
   `
@@ -11700,10 +11697,10 @@ function showUnknownGameBanner(exe, name) {
     <span class="toast-icon-wrap"><i class="fa fa-gamepad"></i></span>
     <div class="toast-body" style="flex:1">
       <div class="toast-title">${tUI('unknownGameTitle')}</div>
-      <div class="toast-msg">${name}</div>
+      <div class="toast-msg">${escHtml(name)}</div>
     </div>
     <button class="btn btn-primary btn-sm" style="font-size:9px;padding:3px 8px;flex-shrink:0" onclick="addUnknownGameToWatcher()">${tUI('unknownGameYes')}</button>
-    <button class="btn btn-ghost btn-sm" style="font-size:9px;padding:3px 8px;flex-shrink:0" onclick="blacklistUnknownGame('${exe}')">${tUI('unknownGameNo')}</button>
+    <button class="btn btn-ghost btn-sm" style="font-size:9px;padding:3px 8px;flex-shrink:0" onclick="blacklistUnknownGame(${jsArg(exe)})">${tUI('unknownGameNo')}</button>
     <button class="toast-close" onclick="document.getElementById('unknown-game-banner')?.remove()" aria-label="${tUI('ttDismiss')}"><i class="fa fa-xmark"></i></button>
   `
   container.appendChild(el)
@@ -13181,7 +13178,7 @@ function renderBiosCapsuleDrift(cr) {
         ? `<span style="font-size:9px;background:#3a1a0a;color:#e67e22;border:1px solid #e67e22;border-radius:4px;padding:2px 6px"><i class="fa fa-triangle-exclamation"></i> External change</span>`
         : `<span style="font-size:9px;background:#0a2a1a;color:#2ecc71;border:1px solid #2ecc71;border-radius:4px;padding:2px 6px"><i class="fa fa-pen"></i> Changed by you</span>`}
       <div style="font-size:9px;color:#444">${fmt(d.changedAt)}</div>
-      ${d.external ? `<button class="btn btn-ghost btn-sm" style="font-size:9px;padding:2px 8px" onclick="doBiosCapsuleRestore('${d.token}','${d.from}','${escHtml(d.settingName)}')"><i class="fa fa-rotate-left"></i> Restore</button>` : ''}
+      ${d.external ? `<button class="btn btn-ghost btn-sm" style="font-size:9px;padding:2px 8px" onclick="doBiosCapsuleRestore(${jsArg(d.token)},${jsArg(d.from)},${jsArg(d.settingName)})"><i class="fa fa-rotate-left"></i> Restore</button>` : ''}
     </div>`).join('')
   el.style.display = ''
   el.innerHTML = `
@@ -14282,7 +14279,7 @@ async function saveCurrentProfile() {
   const existing = await api.listProfiles()
   if (existing[name]) {
     try {
-      await showConfirm({ title: 'Overwrite Profile?', body: `A profile named <strong>"${name}"</strong> already exists. Overwrite it?`, okText: 'Overwrite', okStyle: 'warning', icon: 'fa-floppy-disk' })
+      await showConfirm({ title: 'Overwrite Profile?', body: `A profile named <strong>"${escHtml(name)}"</strong> already exists. Overwrite it?`, okText: 'Overwrite', okStyle: 'warning', icon: 'fa-floppy-disk' })
     } catch { return }
   }
 
@@ -14308,15 +14305,15 @@ async function loadProfilesList() {
       <div class="profile-row">
         <div class="profile-row-icon"><i class="fa fa-layer-group"></i></div>
         <div class="profile-row-info">
-          <div class="profile-row-name">${p.name}</div>
+          <div class="profile-row-name">${escHtml(p.name)}</div>
           <div class="profile-row-meta">${count} tweaks applied · saved ${date}</div>
         </div>
         <div style="display:flex;gap:5px;flex-shrink:0;flex-wrap:wrap">
-          <button class="btn btn-primary btn-sm" onclick="applyProfile(${JSON.stringify(p.name)})"><i class="fa fa-play"></i> Apply</button>
-          <button class="btn btn-ghost btn-sm" onclick="renameProfile(${JSON.stringify(p.name)})" title="${tUI('ttRename')}"><i class="fa fa-pencil"></i></button>
-          <button class="btn btn-ghost btn-sm" onclick="cloneProfile(${JSON.stringify(p.name)})" title="${tUI('ttClone')}"><i class="fa fa-copy"></i></button>
-          <button class="btn btn-ghost btn-sm" onclick="exportProfile(${JSON.stringify(p.name)})" title="${tUI('ttExport')}"><i class="fa fa-file-export"></i></button>
-          <button class="btn btn-ghost btn-sm" onclick="deleteProfile(${JSON.stringify(p.name)})" title="${tUI('ttDelete')}" style="color:var(--danger)"><i class="fa fa-trash"></i></button>
+          <button class="btn btn-primary btn-sm" onclick="applyProfile(${jsArg(p.name)})"><i class="fa fa-play"></i> Apply</button>
+          <button class="btn btn-ghost btn-sm" onclick="renameProfile(${jsArg(p.name)})" title="${tUI('ttRename')}"><i class="fa fa-pencil"></i></button>
+          <button class="btn btn-ghost btn-sm" onclick="cloneProfile(${jsArg(p.name)})" title="${tUI('ttClone')}"><i class="fa fa-copy"></i></button>
+          <button class="btn btn-ghost btn-sm" onclick="exportProfile(${jsArg(p.name)})" title="${tUI('ttExport')}"><i class="fa fa-file-export"></i></button>
+          <button class="btn btn-ghost btn-sm" onclick="deleteProfile(${jsArg(p.name)})" title="${tUI('ttDelete')}" style="color:var(--danger)"><i class="fa fa-trash"></i></button>
         </div>
       </div>`
   }).join('')
@@ -14329,7 +14326,7 @@ async function applyProfile(name) {
   try {
     await showConfirm({
       title: `Apply Profile: ${name}`,
-      body: `This will apply ${ids.length} tweaks from the "${name}" profile.`,
+      body: `This will apply ${ids.length} tweaks from the "${escHtml(name)}" profile.`,
       okText: 'Apply All', icon: 'fa-layer-group'
     })
   } catch { return }
@@ -14340,7 +14337,7 @@ async function applyProfile(name) {
 
 async function deleteProfile(name) {
   try {
-    await showConfirm({ title: tUI('deleteProfileTitle'), body: `${tUI('deleteProfileBody')} "${name}"?`, okText: tUI('deleteOk'), okStyle: 'warning', icon: 'fa-trash' })
+    await showConfirm({ title: tUI('deleteProfileTitle'), body: `${tUI('deleteProfileBody')} "${escHtml(name)}"?`, okText: tUI('deleteOk'), okStyle: 'warning', icon: 'fa-trash' })
   } catch { return }
   const result = await api.deleteProfile(name)
   if (result?.hadAppliedTweaks) {
@@ -14352,7 +14349,7 @@ async function deleteProfile(name) {
 }
 
 async function cloneProfile(name) {
-  const newName = await showPrompt({ title: 'Clone Profile', body: `New name for the copy of <strong>"${name}"</strong>:`, placeholder: `${name} (copy)`, okText: 'Clone', icon: 'fa-copy' })
+  const newName = await showPrompt({ title: 'Clone Profile', body: `New name for the copy of <strong>"${escHtml(name)}"</strong>:`, placeholder: `${name} (copy)`, okText: 'Clone', icon: 'fa-copy' })
   if (!newName?.trim()) return
   const result = await api.cloneProfile(name, newName.trim())
   if (!result?.ok) { toast('Clone failed', result?.error || '', 'err'); return }
@@ -14361,7 +14358,7 @@ async function cloneProfile(name) {
 }
 
 async function renameProfile(name) {
-  const newName = await showPrompt({ title: 'Rename Profile', body: `New name for <strong>"${name}"</strong>:`, placeholder: name, okText: 'Rename', icon: 'fa-pencil' })
+  const newName = await showPrompt({ title: 'Rename Profile', body: `New name for <strong>"${escHtml(name)}"</strong>:`, placeholder: name, okText: 'Rename', icon: 'fa-pencil' })
   if (!newName?.trim() || newName.trim() === name) return
   const result = await api.renameProfile(name, newName.trim())
   if (!result?.ok) { toast('Rename failed', result?.error || '', 'err'); return }
@@ -19923,7 +19920,7 @@ async function hwIrqInit() {
       const items = visible.map(d =>
         `<div class="hw-irq-chip">
           <span class="hw-irq-chip-num">IRQ ${d.irq}</span>
-          <span class="hw-irq-chip-name" title="${d.name}">${d.name}</span>
+          <span class="hw-irq-chip-name" title="${escAttr(d.name)}">${escHtml(d.name)}</span>
         </div>`
       ).join('')
       const extraChip = extra > 0
@@ -21428,7 +21425,7 @@ function renderGPDetail(g) {
         ${g.id === 'arma-reforger' ? `<button class="btn btn-info btn-sm" onclick="api.openArmaSettings()"><i class="fa fa-sliders"></i> Graphics Settings</button>` : ''}
       </div>
       ${tip ? `<div class="gp-tip-v2"><i class="fa fa-lightbulb" style="color:var(--info);margin-right:6px"></i>${tip}</div>` : ''}
-      ${g.installPath ? `<div style="margin-bottom:14px"><button class="btn btn-ghost btn-sm" onclick="api.openPath('${g.installPath.replace(/\\/g,'\\\\')}')" ><i class="fa fa-folder-open"></i> ${tUI('gpOpenFolder')}</button></div>` : ''}
+      ${g.installPath ? `<div style="margin-bottom:14px"><button class="btn btn-ghost btn-sm" onclick="api.openPath(${jsArg(g.installPath)})" ><i class="fa fa-folder-open"></i> ${tUI('gpOpenFolder')}</button></div>` : ''}
       <div class="gp-section-lbl">${tUI('gpAutoProfile')}</div>
       <div style="display:flex;gap:8px;align-items:center;margin-bottom:14px" id="gp-profile-assign-row">
         <select class="gp-profile-select" id="gp-profile-sel-${g.id}" onchange="assignGameProfile('${g.id}',this.value)">
@@ -21527,8 +21524,8 @@ async function gpRenderBundles() {
       <div class="gp-bundle-game">${gameName}</div>
       <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:4px">${tags || '<span style="font-size:9px;color:var(--muted)">Empty bundle</span>'}</div>
       <div style="display:flex;gap:5px;margin-top:auto">
-        <button class="btn btn-ghost btn-sm" style="font-size:9px;flex:1" onclick="gpActivateBundleBtn(this,${JSON.stringify(b.name)})"><i class="fa fa-play"></i> ${tUI('gpBundleActivate')}</button>
-        <button class="btn btn-ghost btn-sm" style="font-size:9px;color:var(--danger);border-color:rgba(231,76,60,0.3)" onclick="gpDeleteBundle(${JSON.stringify(b.name)})"><i class="fa fa-trash"></i></button>
+        <button class="btn btn-ghost btn-sm" style="font-size:9px;flex:1" onclick="gpActivateBundleBtn(this,${jsArg(b.name)})"><i class="fa fa-play"></i> ${tUI('gpBundleActivate')}</button>
+        <button class="btn btn-ghost btn-sm" style="font-size:9px;color:var(--danger);border-color:rgba(231,76,60,0.3)" onclick="gpDeleteBundle(${jsArg(b.name)})"><i class="fa fa-trash"></i></button>
       </div>
     </div>`
   }).join('')
@@ -21781,7 +21778,7 @@ async function buildAppOptimizer(c) {
     </div>
     <div class="ao-hero-cta">
       <button class="btn-ao-optimize" id="ao-optimize-all-btn"
-        ${_aoAllDone ? 'disabled' : `onclick="applyAllRunningApps(${JSON.stringify(APP_OPTI_DEFS.filter(a => _aoInitInstalled.has(a.id) && tweakState(a.id) !== 'applied').map(a => a.id))})"`}>
+        ${_aoAllDone ? 'disabled' : `onclick="applyAllRunningApps(${jsArg(APP_OPTI_DEFS.filter(a => _aoInitInstalled.has(a.id) && tweakState(a.id) !== 'applied').map(a => a.id))})"`}>
         <i class="fa fa-bolt"></i> ${_aoAllDone ? tUI('aoOptimizeAllDone') : tUI('aoOptimizeAll')}
       </button>
     </div>`
@@ -21945,7 +21942,7 @@ async function buildAppOptimizer(c) {
         <div class="ao-running-bar-ttl">${tUI('aoRunningAppsTitle')}</div>
         <div class="ao-running-bar-sub">${runNamesDisplay}</div>
       </div>
-      <button class="btn btn-sm" style="background:var(--pink);color:#000;white-space:nowrap;flex-shrink:0" onclick="applyAllRunningApps(${JSON.stringify(runningUnoptimized.map(a => a.id))})">
+      <button class="btn btn-sm" style="background:var(--pink);color:#000;white-space:nowrap;flex-shrink:0" onclick="applyAllRunningApps(${jsArg(runningUnoptimized.map(a => a.id))})">
         <i class="fa fa-bolt"></i> ${tUI('aoApplyAllRunning')}
       </button>`
     c.appendChild(applyAllBar)
@@ -22758,7 +22755,7 @@ async function loadDiskUsage(btn) {
         ? 'linear-gradient(90deg,#fbbf24,#f59e0b)'
         : 'linear-gradient(90deg,#3498db,#00D4FF)'
     const labelColor = row.bytes >= 10737418240 ? '#f87171' : row.bytes >= 1073741824 ? '#fbbf24' : '#3498db'
-    const openBtn = row.path ? `<button class="btn btn-ghost" style="font-size:9px;padding:1px 5px;border-radius:4px;line-height:1.4;margin-left:4px" onclick="api.openPath(${JSON.stringify(row.path)})" title="${tUI('diskUsageOpen')}"><i class="fa fa-folder-open"></i></button>` : ''
+    const openBtn = row.path ? `<button class="btn btn-ghost" style="font-size:9px;padding:1px 5px;border-radius:4px;line-height:1.4;margin-left:4px" onclick="api.openPath(${jsArg(row.path)})" title="${tUI('diskUsageOpen')}"><i class="fa fa-folder-open"></i></button>` : ''
     return `<div style="margin-bottom:8px">
       <div style="display:flex;justify-content:space-between;align-items:center;font-size:12px;margin-bottom:3px">
         <span style="color:var(--white)">${row.label}</span>
@@ -22793,14 +22790,14 @@ async function loadPhantomApps(btn) {
   const summary = tUI('phantomFound').replace('{n}', data.length).replace('{size}', fmt(totalBytes))
   el.innerHTML = `<div style="font-size:11px;color:#a78bfa;font-weight:600;margin-bottom:8px">${summary}</div>` +
     data.map(row => `
-    <div id="phantom-row-${btoa(row.folderPath).replace(/[^a-zA-Z0-9]/g,'')}" style="display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-bottom:1px solid #1a1a1a;gap:8px">
+    <div id="phantom-row-${domId(row.folderPath)}" style="display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-bottom:1px solid #1a1a1a;gap:8px">
       <div style="flex:1;min-width:0">
-        <div style="font-size:11px;font-weight:600;color:var(--white);white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${row.folderPath}">${row.folderName}</div>
-        <div style="font-size:10px;color:#7a7a8a">${row.label}</div>
+        <div style="font-size:11px;font-weight:600;color:var(--white);white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${escAttr(row.folderPath)}">${escHtml(row.folderName)}</div>
+        <div style="font-size:10px;color:#7a7a8a">${escHtml(row.label)}</div>
       </div>
       <span style="font-size:11px;font-weight:700;color:#a78bfa;white-space:nowrap">${fmt(row.sizeBytes)}</span>
       <button class="btn btn-sm" style="font-size:10px;background:rgba(248,113,113,0.1);color:#f87171;border:1px solid rgba(248,113,113,0.3);white-space:nowrap;flex-shrink:0"
-        onclick="deletePhantomRow(this, ${JSON.stringify(row.folderPath)}, ${JSON.stringify(row.folderName)})">${tUI('phantomDelete')}</button>
+        onclick="deletePhantomRow(this, ${jsArg(row.folderPath)}, ${jsArg(row.folderName)})">${tUI('phantomDelete')}</button>
     </div>`).join('')
   el.style.display = 'block'
 }
@@ -22817,7 +22814,7 @@ async function deletePhantomRow(btn, folderPath, folderName) {
   btn.disabled = true
   btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i>'
   const r = await api.deletePhantomFolder(folderPath).catch(() => ({ ok: false }))
-  const rowId = 'phantom-row-' + btoa(folderPath).replace(/[^a-zA-Z0-9]/g,'')
+  const rowId = 'phantom-row-' + domId(folderPath)
   const row = document.getElementById(rowId)
   if (r.ok) {
     if (row) { row.style.opacity = '0.4'; row.style.textDecoration = 'line-through'; btn.disabled = true; btn.textContent = tUI('phantomDeleted') }
@@ -23428,10 +23425,10 @@ function win32RenderList(apps) {
       const isOem = !isSystem && oemApps.some(o => (app.DisplayName||'').toLowerCase().includes(o.toLowerCase()))
       item.innerHTML = `
         <label style="flex:1;min-width:0;display:flex;align-items:center;gap:8px">
-          <input type="checkbox" class="win32-chk" id="win32-chk-${uid}" data-name="${(app.DisplayName||'').replace(/"/g,'')}" data-key="${escHtml(app.Key||'')}" data-size="${app.SizeBytes||0}" ${isSystem ? 'disabled' : ''} onchange="updateWin32Count()">
+          <input type="checkbox" class="win32-chk" id="win32-chk-${uid}" data-name="${escAttr(app.DisplayName||'')}" data-key="${escHtml(app.Key||'')}" data-size="${app.SizeBytes||0}" ${isSystem ? 'disabled' : ''} onchange="updateWin32Count()">
           <div style="min-width:0;flex:1">
-            <span class="app-name" style="display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${app.DisplayName || '?'}</span>
-            ${app.DisplayVersion ? `<span style="font-size:10px;color:#555">${app.DisplayVersion}</span>` : ''}
+            <span class="app-name" style="display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escHtml(app.DisplayName || '?')}</span>
+            ${app.DisplayVersion ? `<span style="font-size:10px;color:#555">${escHtml(app.DisplayVersion)}</span>` : ''}
           </div>
           ${isSystem ? `<span class="app-warn" title="${tUI('systemComponentTooltip')}"><i class="fa fa-lock"></i> System</span>` : ''}
           ${rarely ? `<span style="background:#3a2800;color:#f5a623;border-radius:4px;padding:1px 6px;font-size:10px;font-weight:600">${tUI('rarelyUsedBadge')}</span>` : ''}
@@ -24323,8 +24320,8 @@ async function doScanDevices() {
     <div style="display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--border2)">
       <input type="checkbox" id="dev-chk-${i}" checked style="accent-color:var(--pink)">
       <div style="flex:1;min-width:0">
-        <div style="font-size:12px;color:#e0e0e0;font-weight:500">${d.name}</div>
-        <div style="font-size:10px;color:#555">${d.cls || 'Unknown'} · ${d.present ? `<span style="color:#f39c12">Error/Unknown</span>` : `<span style="color:#888">Ghost device (not connected)</span>`}</div>
+        <div style="font-size:12px;color:#e0e0e0;font-weight:500">${escHtml(d.name)}</div>
+        <div style="font-size:10px;color:#555">${escHtml(d.cls || 'Unknown')} · ${d.present ? `<span style="color:#f39c12">Error/Unknown</span>` : `<span style="color:#888">Ghost device (not connected)</span>`}</div>
       </div>
     </div>
   `).join('')
@@ -24485,8 +24482,8 @@ async function doScanShellExtensions() {
       <div style="display:flex;align-items:flex-start;gap:8px;padding:5px 0;border-bottom:1px solid var(--border2)">
         <input type="checkbox" id="shell-chk-${i}" ${!ext.dllExists ? 'checked' : ''} style="accent-color:var(--pink);margin-top:2px">
         <div style="flex:1;min-width:0">
-          <div style="font-size:11px;color:#e0e0e0;font-weight:500">${ext.name || ext.clsid}</div>
-          <div style="font-size:10px;color:#555;word-break:break-all">${ext.dllPath || tUI('shellExtNoDll')}</div>
+          <div style="font-size:11px;color:#e0e0e0;font-weight:500">${escHtml(ext.name || ext.clsid)}</div>
+          <div style="font-size:10px;color:#555;word-break:break-all">${escHtml(ext.dllPath || tUI('shellExtNoDll'))}</div>
         </div>
         ${!ext.dllExists ? `<span style="font-size:9px;color:#f5a623;background:rgba(245,166,35,.12);border:1px solid rgba(245,166,35,.3);padding:1px 5px;border-radius:3px;white-space:nowrap">${tUI('shellExtOrphanedBadge')}</span>` : `<span style="font-size:9px;color:#555;padding:1px 5px">${tUI('shellExtActiveBadge')}</span>`}
       </div>

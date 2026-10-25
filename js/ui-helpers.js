@@ -33,6 +33,7 @@ function _closeModal(id) {
 // ─── Custom confirm dialog ────────────────────────────────────────────────────
 let _confirmResolve = null, _confirmReject = null
 function showConfirm({ title, body, okText = 'Confirm', okStyle = 'danger', icon = 'fa-triangle-exclamation' }) {
+  _supersedePendingDialog()
   const wRgb  = getComputedStyle(document.documentElement).getPropertyValue('--warning-rgb').trim() || '243,156,18'
   const iRgb  = getComputedStyle(document.documentElement).getPropertyValue('--info-rgb').trim()    || '52,152,219'
   const styles = {
@@ -49,21 +50,33 @@ function showConfirm({ title, body, okText = 'Confirm', okStyle = 'danger', icon
   const okBtn = document.getElementById('confirm-modal-ok')
   okBtn.textContent = okText
   okBtn.style.cssText = `background:${s.btnBg};color:${s.btnColor};border:none`
+  okBtn.onclick = _confirmModalResolve   // a previous prompt may have replaced it
   _openModal('confirm-modal')
   return new Promise((res, rej) => { _confirmResolve = res; _confirmReject = rej })
 }
 function _confirmModalResolve() { _closeModal('confirm-modal'); if (_confirmResolve) { _confirmResolve(); _confirmResolve = null } }
-function _confirmModalReject()  { _closeModal('confirm-modal'); if (_confirmReject)  { _confirmReject();  _confirmReject  = null } }
+function _confirmModalReject()  {
+  _closeModal('confirm-modal')
+  document.getElementById('confirm-modal-ok').onclick = _confirmModalResolve   // Cancel on a prompt must not leave the prompt handler behind
+  if (_promptResolve) { _promptResolve(''); _promptResolve = null }             // a cancelled prompt resolves empty instead of hanging
+  if (_confirmReject)  { _confirmReject();  _confirmReject  = null }
+}
+// Opening a dialog while another is still waiting would orphan the first caller's promise forever; settle it as cancelled.
+function _supersedePendingDialog() {
+  if (_promptResolve) { _promptResolve(''); _promptResolve = null }
+  if (_confirmReject) { const r = _confirmReject; _confirmReject = null; _confirmResolve = null; r() }
+}
 
 // ─── Prompt dialog (text input) ───────────────────────────────────────────────
 let _promptResolve = null
 function showPrompt({ title, body = '', placeholder = '', okText = 'OK', icon = 'fa-pencil' }) {
+  _supersedePendingDialog()
   const iRgb = getComputedStyle(document.documentElement).getPropertyValue('--info-rgb').trim() || '52,152,219'
   const iconEl = document.getElementById('confirm-modal-icon')
   iconEl.style.cssText = `width:36px;height:36px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;background:rgba(${iRgb},0.12);border:1px solid rgba(${iRgb},0.3);color:var(--info)`
   iconEl.innerHTML = `<i class="fa ${icon}"></i>`
   document.getElementById('confirm-modal-title').textContent = title
-  document.getElementById('confirm-modal-body').innerHTML = `${body ? `<div style="margin-bottom:10px">${body}</div>` : ''}<input id="_prompt-input" type="text" placeholder="${placeholder}" maxlength="48" style="width:100%;box-sizing:border-box;background:var(--c-bg-base);border:1px solid var(--c-border-default);border-radius:7px;padding:7px 11px;color:var(--white);font-size:11px;font-family:inherit;outline:none;transition:border-color var(--dur-short),box-shadow var(--dur-short)" onfocus="this.style.borderColor='var(--c-accent)';this.style.boxShadow='0 0 0 3px var(--c-accent-ring)'" onblur="this.style.borderColor='';this.style.boxShadow=''" onkeydown="if(event.key==='Enter')_promptModalResolve()"><div id="_prompt-err" style="font-size:9.5px;color:var(--danger);margin-top:4px;display:none"></div>`
+  document.getElementById('confirm-modal-body').innerHTML = `${body ? `<div style="margin-bottom:10px">${body}</div>` : ''}<input id="_prompt-input" type="text" placeholder="${escAttr(placeholder)}" maxlength="48" style="width:100%;box-sizing:border-box;background:var(--c-bg-base);border:1px solid var(--c-border-default);border-radius:7px;padding:7px 11px;color:var(--white);font-size:11px;font-family:inherit;outline:none;transition:border-color var(--dur-short),box-shadow var(--dur-short)" onfocus="this.style.borderColor='var(--c-accent)';this.style.boxShadow='0 0 0 3px var(--c-accent-ring)'" onblur="this.style.borderColor='';this.style.boxShadow=''" onkeydown="if(event.key==='Enter')_promptModalResolve()"><div id="_prompt-err" style="font-size:9.5px;color:var(--danger);margin-top:4px;display:none"></div>`
   const okBtn = document.getElementById('confirm-modal-ok')
   okBtn.textContent = okText
   okBtn.style.cssText = 'background:var(--info);color:#fff;border:none'
@@ -279,15 +292,19 @@ function toast(title, msg = '', type = 'ok', duration = 3500) {
   const icons = { ok: 'fa-circle-check', err: 'fa-circle-xmark', warn: 'fa-triangle-exclamation', info: 'fa-circle-info' }
   const t = document.createElement('div')
   t.className = `toast ${safeType}`
+  // title / msg are plain text — callers routinely pass process names, error messages and API data
   t.innerHTML = `
     <span class="toast-icon-wrap"><i class="fa ${icons[safeType]}"></i></span>
     <div class="toast-body">
-      <div class="toast-title">${title}</div>
-      ${msg ? `<div class="toast-msg">${msg}</div>` : ''}
+      <div class="toast-title"></div>
+      <div class="toast-msg"></div>
       <div class="toast-bar"></div>
     </div>
-    <button class="toast-close" onclick="this.closest('.toast').remove()" aria-label="${tUI('ttDismiss')}"><i class="fa fa-xmark"></i></button>
+    <button class="toast-close" onclick="this.closest('.toast').remove()" aria-label="${escAttr(tUI('ttDismiss'))}"><i class="fa fa-xmark"></i></button>
   `
+  t.querySelector('.toast-title').textContent = title == null ? '' : String(title)
+  const msgEl = t.querySelector('.toast-msg')
+  if (msg) msgEl.textContent = String(msg); else msgEl.remove()
   t.querySelector('.toast-bar').style.animationDuration = `${duration}ms`
   document.getElementById('toast-container').appendChild(t)
   setTimeout(() => {
