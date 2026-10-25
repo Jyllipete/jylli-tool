@@ -28,8 +28,8 @@ Dashboard fixtures + sparkline on accent; Premium lock card, Smart Profile Wizar
 
 ## NEXT
 1. **Decision needed (product):** Game Shield's "kill background processes" is not implemented in main.js (`toggle-game-shield` only disables Edge/Google updater tasks; `set-game-shield-exclusions`, `onGameShieldEvent`, `onUnknownGameCandidate`, `onUpdateGuardStatus/Warning`, `onPulseCooldownTick`, `autodetectAomAnswers`, `onBudgetSessionReport`, `pulseGetHistory/CoreLoads` are called by the renderer behind `?.` guards but are not exposed in preload). Either implement them or remove the UI.
-2. Remaining visual polish: Auto-Optimize later steps, SPW later steps, Gaming/Network pages with real data; fps-hud-settings/HUD windows keep their own hard-coded palette and English strings.
-3. Remaining English strings: dynamic error toasts (`Failed: ${tweakId}`), confirm titles.
+2. Visual: SPW steps 1-7 verified on tokens; Auto-Optimize steps 2-5 and Gaming/Network pages with real data not yet viewed; fps-hud-settings/HUD windows keep their own hard-coded palette and English strings.
+3. Profile/DNS/ping/re-enable dialogs and error toasts are now in LANG (dl*/tk* keys); other English left is minor (HUD windows, a few log lines).
 4. JylliSensor.cs improvements (needs rebuild, skipped).
 5. User: copy Ed25519 key + TOKEN_KEY to Railway (jylli-bot/RAILWAY_ENV.md), push, release, deploy bot.
 
