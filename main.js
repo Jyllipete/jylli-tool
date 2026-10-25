@@ -261,7 +261,7 @@ function _triggerGameAutoOptimize() {
   const gamingIds = Object.entries(TWEAKS)
     .filter(([, t]) => t.safetyTier === 1 && (t.gamerImpact === 'high') && ['gaming','latency','input','gpu','cpu'].includes(t.category))
     .map(([id]) => id)
-  ipcMain.emit('run-auto-opti-silent', gamingIds)
+  debugLog('[game-auto-optimize] disabled: automatic silent tweaks are not applied; ' + gamingIds.length + ' candidates')
 }
 
 // Override state for active operations (null = idle, use page-based presence)
@@ -796,12 +796,12 @@ let _ortProvider = 'none'  // 'npu' | 'gpu' | 'cpu' | 'none'
 
 // Canonical tweak IDs used for feature vector construction (must match model training order)
 const TWEAK_CANONICAL = [
-  'disable-game-dvr', 'disable-power-throttling', 'disable-hpet', 'gpu-hw-scheduling',
-  'disable-telemetry', 'disable-sysmain', 'msicpu', 'disable-spectre',
-  'ntfs-perf', 'visual-effects-perf', 'disable-hibernate', 'disable-cortana',
-  'network-throttling-off', 'tcp-autotuning', 'disable-search', 'disable-defrag',
-  'wasapi-1ms', 'pro-audio-mmcss', 'disable-mem-compression', 'global-timer-res',
-  'gpu-preemption', 'vrr-borderless', 'directstorage',
+  'game-dvr', 'power-throttling', 'hpet', 'gpu-hwsch',
+  'telemetry', 'sysmain', 'msi-mode', 'spectre-meltdown',
+  'ntfs', 'visual-effects', 'hibernate', 'cortana',
+  'net-throttling', 'tcp-stack', 'search-box-local', 'disable-auto-maintenance',
+  'wasapi-min-period', 'mmcss-proaudio', 'memory-compression', 'global-timer-resolution',
+  'gpu-preemption', 'vrr-borderless', 'directstorage-nvme',
 ]
 
 async function loadOrtModel() {
@@ -837,14 +837,14 @@ function buildAdvisorFeatures(sysInfo, ariaInsights, settings) {
   const f = new Float32Array(64).fill(0)
   f[0] = Math.min((sysInfo?.cpuCores || 4) / 32, 1)
   f[1] = Math.min((sysInfo?.cpuSpeed || 3) / 6, 1)
-  f[2] = Math.min((sysInfo?.ramGb || 8) / 128, 1)
-  f[3] = Math.min((sysInfo?.gpuVram || 4096) / (24 * 1024), 1)
-  f[4] = Math.min((sysInfo?.displayHz || 60) / 360, 1)
+  f[2] = Math.min((sysInfo?.ramGB || 8) / 128, 1)
+  f[3] = Math.min((sysInfo?.vramMB || 4096) / (24 * 1024), 1)
+  f[4] = Math.min((sysInfo?.displayRefresh || 60) / 360, 1)
   f[5] = sysInfo?.isLaptop ? 1 : 0
   f[6] = sysInfo?.isWifi ? 1 : 0
-  f[7] = sysInfo?.isNvme ? 1 : 0
-  f[8] = (sysInfo?.cpuName || '').toLowerCase().includes('amd') ? 1 : 0
-  f[9] = (sysInfo?.gpuName || '').toLowerCase().includes('nvidia') ? 1 : 0
+  f[7] = sysInfo?.nvme ? 1 : 0
+  f[8] = (sysInfo?.cpu || '').toLowerCase().includes('amd') ? 1 : 0
+  f[9] = (sysInfo?.gpu || '').toLowerCase().includes('nvidia') ? 1 : 0
   // ARIA anomaly counts per metric, last 1/5/10/20 sessions
   const recent = Array.isArray(ariaInsights) ? ariaInsights.slice(-20) : []
   const ariaMetrics = [['cpu', 10], ['gpu', 14], ['ram', 18], ['cpuTemp', 22]]
@@ -1164,7 +1164,7 @@ powerMonitor.on('resume', async () => {
   try {
     const raw = fs.existsSync(SETTINGS_PATH) ? fs.readFileSync(SETTINGS_PATH, 'utf8') : '{}'
     const saved = JSON.parse(raw)
-    const usbActive = saved['usb-suspend'] === 'applied'
+    const usbActive = saved['tweak_usb-suspend'] === 'applied'
     if (!usbActive) return
     await new Promise((resolve, reject) => {
       const ps = spawn('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', `
@@ -9880,7 +9880,7 @@ ipcMain.handle('open-pulse-window', () => {
     transparent: false,
     backgroundColor: '#0d0d0d',
     show: false,
-    focusable: false,
+    focusable: true,
     skipTaskbar: true,
     title: 'Pulse',
     icon: path.join(__dirname, 'assets', 'icon.png'),
@@ -10020,7 +10020,7 @@ ipcMain.handle('open-arma-settings', () => {
     transparent: false,
     backgroundColor: '#0d0d0d',
     show: false,
-    focusable:   false,
+    focusable: true,
     skipTaskbar: true,
     title: 'Arma Reforger Graphics Settings',
     icon: path.join(__dirname, 'assets', 'icon.png'),
@@ -12038,7 +12038,7 @@ ipcMain.handle('export-report', async () => {
   try {
     const settings  = loadSettings()
     const changelog = (() => {
-      try { return JSON.parse(fs.readFileSync(path.join(app.getPath('userData'), 'changelog.json'), 'utf8')) } catch { return [] }
+      try { return JSON.parse(fs.readFileSync(path.join(app.getPath('userData'), 'jt_changelog.json'), 'utf8')) } catch { return [] }
     })()
     const { winVer, ram, cpu, gpu } = getSystemFields()
     const lines = [
