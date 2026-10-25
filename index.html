@@ -1740,25 +1740,6 @@ function showPage(page, tabId) {
     c.innerHTML = ''
     c.classList.remove('page-enter', 'dir-up')
 
-    const builders = {
-      // ── Primary pages ──
-      dashboard: buildDashboard, 'restore-points': buildRestorePoints,
-      'process-manager': buildProcessManager, fixes: buildFixes, preflight: buildPreflight,
-      network: buildNetwork, 'startup-manager': buildStartupManager,
-      scheduler: buildScheduler, changelog: buildChangelog,
-      settings: buildSettings, 'latency-monitor': buildLatencyMonitor,
-      pulse: buildPulse, 'bios-tuner': buildBiosTuner,
-      // ── New intent-based pages ──
-      performance: buildPerformance, gaming: buildGaming, 'privacy-cleanup': buildPrivacyCleanup,
-      // ── Redirect shims: old page IDs still work (deep links, internal calls) ──
-      'windows-opti':   (c) => buildPerformance(c),
-      hardware:         (c) => buildPerformance(c),
-      debloater:        (c) => buildPrivacyCleanup(c),
-      cleanup:          (c) => buildPrivacyCleanup(c),
-      'game-opti':      (c) => buildGaming(c),
-      'app-optimizer':  (c) => buildGaming(c),
-      fivem:            buildFiveM,
-    }
 
     // Page HTML caching is disabled: pages that fill in asynchronously were cached half-built ("Loading…" forever) and lost their event wiring.
     const canCache = false
@@ -1769,7 +1750,7 @@ function showPage(page, tabId) {
       if (page === 'startup-manager') _startupRewireAfterCacheRestore(c)
     } else {
       try {
-        await (route ? Shell.TAB_BUILDERS[route.tab] : builders[page])?.(c)
+        await (route && Shell.TAB_BUILDERS[route.tab])?.(c)
       } catch (e) {
         if (window._navToken !== navToken) return   // the user already moved on; don't paint an error onto another page
         c.innerHTML = `<div class="empty-state"><i class="fa fa-triangle-exclamation" style="color:var(--danger);font-size:28px;margin-bottom:10px"></i><p style="color:var(--muted)">${escHtml(e.message || tUI('pageLoadFailed'))}</p><button class="btn btn-ghost btn-sm" onclick="showPage(${jsArg(page)})"><i class="fa fa-rotate-right"></i> ${tUI('pageRetry')}</button></div>`
@@ -13486,112 +13467,6 @@ async function quickCleanRam() {
 // ─── Page: Performance (tab wrapper) ─────────────────────────────────────────
 if (!window._activeTab) window._activeTab = {}
 
-function _makePageHero(iconHtml, title, sub, chipText) {
-  const hero = document.createElement('div')
-  hero.className = 'page-hero-strip'
-  hero.innerHTML = `
-    <div class="page-hero-icon">${iconHtml}</div>
-    <div class="page-hero-text">
-      <div class="page-hero-title">${title}</div>
-      <div class="page-hero-sub">${sub}</div>
-    </div>
-    ${chipText ? `<div class="page-hero-meta"><span class="page-hero-chip">${chipText}</span></div>` : ''}
-  `
-  return hero
-}
-
-function _makeTabBar(tabs, activeId, onSwitch) {
-  const bar = document.createElement('div')
-  bar.className = 'page-tabs'
-  tabs.forEach(t => {
-    const btn = document.createElement('button')
-    const isPremiumTab = t.premium && !settings.isPremium
-    btn.className = 'page-tab' + (t.id === activeId ? ' active' : '') + (isPremiumTab ? ' tab-is-premium' : '')
-    const lockIcon = isPremiumTab ? `<i class="fa fa-lock tab-lock-icon" style="font-size:9px;color:rgba(155,89,182,0.65);margin-left:5px"></i>` : ''
-    const countBadge = t.count != null ? `<span class="page-tab-count">${t.count}</span>` : ''
-    btn.innerHTML = t.label() + countBadge + lockIcon
-    btn.onclick = () => onSwitch(t.id)
-    bar.appendChild(btn)
-  })
-  return bar
-}
-
-async function buildPerformance(c) {
-  if (!window._activeTab.performance || window._activeTab.performance === 'quick') window._activeTab.performance = 'windows'
-
-  const HW_PREMIUM = true // CPU/GPU/Power tabs require premium
-
-  const TABS = [
-    { id:'windows',label:() => tUI('tabWindows'),    count: null, premium: false },
-    { id:'cpumem', label:() => tUI('tabCPUMem'),     count: null, premium: HW_PREMIUM },
-    { id:'gpu',    label:() => tUI('tabGPU'),         count: null, premium: HW_PREMIUM },
-    { id:'power',  label:() => tUI('tabPower'),       count: null, premium: HW_PREMIUM },
-  ]
-
-  const tab = window._activeTab.performance
-  c.innerHTML = ''
-
-  // Hero strip with live metrics bar
-  const si = sysInfo
-  const cpuShort = (si?.cpu || '').replace(/\(.*\)/g,'').trim().split(' ').slice(0,4).join(' ')
-  const gpuShort = (si?.gpu || '').replace(/\(.*\)/g,'').trim().split(' ').slice(0,3).join(' ')
-  const hero = _makePageHero(
-    '<i class="fa fa-gauge-high"></i>',
-    tTitle('performance'),
-    tSub('performance'),
-    cpuShort && gpuShort ? `${cpuShort} · ${gpuShort}` : null
-  )
-  const _liveBar = document.createElement('div')
-  _liveBar.className = 'perf-live-bar'
-  _liveBar.id = 'perf-live-bar'
-  _liveBar.innerHTML = `
-    <span class="perf-metric-pill hw-cpu"><span class="perf-metric-dot"></span><i class="fa fa-microchip"></i><span id="plm-cpu-val">CPU —</span></span>
-    <span class="perf-metric-pill hw-ram"><span class="perf-metric-dot"></span><i class="fa fa-memory"></i><span id="plm-ram-val">RAM —</span></span>
-    <span class="perf-metric-pill hw-gpu"><span class="perf-metric-dot"></span><i class="fa fa-display"></i><span id="plm-gpu-val">GPU —</span></span>
-  `
-  hero.appendChild(_liveBar)
-  c.appendChild(hero)
-  ;(function _perfBarPoll() {
-    const bar = document.getElementById('perf-live-bar')
-    if (!bar) return
-    const m = window._lastMetrics
-    if (m) {
-      const cv = document.getElementById('plm-cpu-val'); if (cv) cv.textContent = `CPU ${m.cpu||0}%`
-      const rv = document.getElementById('plm-ram-val'); if (rv) rv.textContent = `RAM ${m.ram||0}%`
-      const gv = document.getElementById('plm-gpu-val'); if (gv) gv.textContent = `GPU ${m.gpu||0}%`
-    }
-    if (document.getElementById('perf-live-bar')) setTimeout(_perfBarPoll, 3000)
-  })()
-
-  c.appendChild(_makeTabBar(TABS, tab, async (id) => {
-    window._activeTab.performance = id
-    await buildPerformance(c)
-    c.scrollTop = 0
-  }))
-
-  const inner = document.createElement('div')
-  inner.id = 'perf-tab-content'
-  c.appendChild(inner)
-
-  if (tab === 'windows') {
-    buildWindowsOpti(inner, 'full')
-  } else if (!settings.isPremium) {
-    // Tab bar stays visible; only content area shows the inline lock
-    await _buildTabPremiumLock(inner, 'hardware')
-  } else {
-    await buildHardware(inner)
-    const HW_TAB_SECTIONS = {
-      cpumem: new Set(['hw-mem', 'hw-audio']),
-      gpu:    new Set(['hw-nvidia', 'hw-amd', 'hw-gpu-adv']),
-      power:  new Set(['hw-power', 'hw-storage']),
-    }
-    const allowed = HW_TAB_SECTIONS[tab] || new Set()
-    inner.querySelectorAll('.section-card[data-sec-id]').forEach(el => {
-      el.style.display = allowed.has(el.dataset.secId) ? '' : 'none'
-    })
-  }
-}
-
 // ─── Page: Windows Opti ───────────────────────────────────────────────────────
 function buildWindowsOpti(c) {
   const si = sysInfo
@@ -16143,43 +16018,6 @@ const GAME_TIPS = {
   pubg:          'Use Smooth + Unlocked framerate preset. Disable V-Sync. Lower foliage to very low.',
 }
 // ─── Page: Gaming (tab wrapper) ───────────────────────────────────────────────
-async function buildGaming(c) {
-  if (!window._activeTab.gaming) window._activeTab.gaming = 'profiles'
-
-  const TABS = [
-    { id:'profiles', label:() => tUI('tabGameProfiles'), premium: true },
-    { id:'appopt',   label:() => tUI('tabAppOptimizer'), premium: false },
-  ]
-
-  if (!window._activeTab.gaming || window._activeTab.gaming === 'fivem') window._activeTab.gaming = 'profiles'
-  const tab = window._activeTab.gaming
-  c.innerHTML = ''
-
-  c.appendChild(_makePageHero(
-    '<i class="fa fa-gamepad"></i>',
-    tTitle('gaming'),
-    tSub('gaming'),
-    null
-  ))
-
-  c.appendChild(_makeTabBar(TABS, tab, async (id) => {
-    window._activeTab.gaming = id
-    await buildGaming(c)
-    c.scrollTop = 0
-  }))
-
-  const inner = document.createElement('div')
-  inner.id = 'gaming-tab-content'
-  c.appendChild(inner)
-
-  if (tab === 'profiles') {
-    if (!settings.isPremium) await _buildTabPremiumLock(inner, 'game-opti')
-    else await buildGameOpti(inner)
-  } else if (tab === 'appopt') {
-    await buildAppOptimizer(inner)
-  }
-}
-
 let selectedGameId = 'fortnite'
 let gpScanned = false
 let _gpScanRunning = false
@@ -17384,38 +17222,6 @@ const CLEANUP_IMPACT = {
 }
 
 // ─── Page: Privacy & Cleanup (tab wrapper) ───────────────────────────────────
-async function buildPrivacyCleanup(c) {
-  if (!window._activeTab['privacy-cleanup']) window._activeTab['privacy-cleanup'] = 'cleanup'
-
-  const TABS = [
-    { id:'cleanup',   label:() => tUI('tabCleanup') },
-    { id:'debloater', label:() => tUI('tabDebloater') },
-  ]
-
-  const tab = window._activeTab['privacy-cleanup']
-  c.innerHTML = ''
-
-  c.appendChild(_makePageHero(
-    '<i class="fa fa-shield-halved"></i>',
-    tTitle('privacy-cleanup'),
-    tSub('privacy-cleanup'),
-    null
-  ))
-
-  c.appendChild(_makeTabBar(TABS, tab, async (id) => {
-    window._activeTab['privacy-cleanup'] = id
-    await buildPrivacyCleanup(c)
-    c.scrollTop = 0
-  }))
-
-  const inner = document.createElement('div')
-  inner.id = 'privacy-tab-content'
-  c.appendChild(inner)
-
-  if (tab === 'cleanup')        buildCleanup(inner)
-  else if (tab === 'debloater') buildDebloater(inner)
-}
-
 function buildCleanup(c) {
   const sections = [
     {
