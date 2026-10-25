@@ -8558,9 +8558,12 @@ function stopPfHogRail() {
   if (_pfHogInterval) { clearInterval(_pfHogInterval); _pfHogInterval = null }
 }
 
+let _pfHogBusy = false
 async function _pfUpdateHogRail() {
   const container = document.getElementById('pf-hog-cards')
   if (!container) { stopPfHogRail(); return }
+  if (_pfHogBusy || document.hidden) return   // never stack process scans; skip while the window is hidden
+  _pfHogBusy = true
   try {
     const procs = await api.getProcesses()
     if (!Array.isArray(procs)) return
@@ -8585,7 +8588,7 @@ async function _pfUpdateHogRail() {
         </button>
       </div>`
     }).join('')
-  } catch {}
+  } catch {} finally { _pfHogBusy = false }
 }
 
 async function pfToggleFreeze(pid, name, cpuPct) {
