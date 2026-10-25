@@ -1598,9 +1598,14 @@ function startMetrics() {
   // Per-core heatmap — polled on its own 3s timer (Get-Counter takes ~1s)
   if (_coreHeatmapInterval) clearInterval(_coreHeatmapInterval)
   if (api.pulseGetCoreLoads) {
+    let coresBusy = false   // the CIM query can take a few seconds: never stack requests
     const pollCores = async () => {
-      const loads = await api.pulseGetCoreLoads().catch(() => ({}))
-      renderCoreHeatmap(loads)
+      if (coresBusy || document.hidden) return
+      coresBusy = true
+      try {
+        const loads = await api.pulseGetCoreLoads().catch(() => ({}))
+        renderCoreHeatmap(loads)
+      } finally { coresBusy = false }
     }
     pollCores()
     _coreHeatmapInterval = setInterval(pollCores, 3000)
