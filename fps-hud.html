@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline';">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-src 'none'; img-src 'self' data: https://cdn.discordapp.com; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline';">
 <title>FPS HUD</title>
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -41,16 +41,18 @@ function resetFadeTimer() {
   document.getElementById('hud').classList.remove('faded')
   _fadeTimer = setTimeout(() => { document.getElementById('hud').classList.add('faded') }, 6000)
 }
-api.onAriaHudInit(({ size, color }) => {
-  if (size) document.body.dataset.size = size
+function applyHudConfig({ ariaFpsHudSize, ariaFpsHudColor } = {}) {
+  if (ariaFpsHudSize) document.body.dataset.size = ariaFpsHudSize
   const val = document.getElementById('fps-val')
-  if (val && color) val.style.color = color
-})
-api.onAriaHudTick(({ currentFps }) => {
+  if (val && ariaFpsHudColor) val.style.color = ariaFpsHudColor
+}
+api.getFpsHudConfig().then(applyHudConfig).catch(() => {})
+api.onFpsHudColorChanged(hex => applyHudConfig({ ariaFpsHudColor: hex }))
+api.onAriaFpsTick(({ avgFps } = {}) => {
   const el = document.getElementById('fps-val')
   if (!el) return
-  if (currentFps == null) { el.textContent = '—'; return }
-  el.textContent = currentFps
+  if (avgFps == null) { el.textContent = '—'; return }
+  el.textContent = Math.round(avgFps)
   resetFadeTimer()
 })
 </script>

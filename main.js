@@ -448,6 +448,22 @@ async function destroyDiscordRPC() {
 // telemetry and bug reports go to the bot's rate-limited public endpoints, which hold the Discord webhooks.
 const BOT_URL         = 'https://jylli-bot-production.up.railway.app'
 const PREMIUM_STORE_URL = 'https://jyllitool.netlify.app/'
+// One elevated instance only: two copies would both run the sensors, watchers and settings writers.
+const _gotInstanceLock = app.requestSingleInstanceLock()
+if (!_gotInstanceLock) app.exit(0)
+app.on('second-instance', () => {
+  try { if (mainWindow) { if (mainWindow.isMinimized()) mainWindow.restore(); mainWindow.show(); mainWindow.focus() } } catch {}
+})
+
+// No window may ever navigate away from its bundled page or open new windows: a remote page would inherit the preload bridge.
+app.on('web-contents-created', (_, contents) => {
+  contents.setWindowOpenHandler(() => ({ action: 'deny' }))
+  contents.on('will-navigate', (e, url) => {
+    e.preventDefault()
+    try { const u = new URL(url); if (['https:', 'http:', 'ms-windows-store:'].includes(u.protocol)) shell.openExternal(url) } catch {}
+  })
+  contents.on('will-attach-webview', e => e.preventDefault())
+})
 const { createAuth } = require('./lib/auth')
 const V = require('./lib/validate')
 const Ini = require('./lib/ini')
@@ -882,23 +898,12 @@ function createWindow() {
       preload: path.join(__dirname, 'preload.js'),
       nodeIntegration: false,
       contextIsolation: true,
-      sandbox: false,
+      sandbox: true,
       devTools: false
     }
   })
 
   mainWindow.loadFile('index.html')
-
-  // COOP/COEP headers required for SharedArrayBuffer (used by Thread Mapper)
-  mainWindow.webContents.session.webRequest.onHeadersReceived((details, callback) => {
-    callback({
-      responseHeaders: {
-        ...details.responseHeaders,
-        'Cross-Origin-Opener-Policy':   ['same-origin'],
-        'Cross-Origin-Embedder-Policy': ['require-corp'],
-      }
-    })
-  })
 
   mainWindow.webContents.on('before-input-event', (e, input) => {
     if (input.key === 'F12' || (input.control && input.shift && input.key === 'I')) e.preventDefault()
@@ -1811,10 +1816,11 @@ ipcMain.handle('admin-debug-append', (_, data) => {
 
 ipcMain.handle('relaunch-admin', () => {
   if (!IS_WIN) return { ok: false, reason: 'not_win' }
+  app.releaseSingleInstanceLock()
   execFile('powershell.exe', [
     '-WindowStyle', 'Hidden', '-Command',
     `Start-Process ${V.psQuote(process.execPath)} -Verb RunAs`
-  ], { windowsHide: true }, (err) => { if (!err) app.quit() })
+  ], { windowsHide: true }, (err) => { if (!err) app.quit(); else app.requestSingleInstanceLock() })
   return { ok: true }
 })
 
@@ -9971,7 +9977,8 @@ ipcMain.handle('open-pulse-window', () => {
       preload: path.join(__dirname, 'preload.js'),
       nodeIntegration: false,
       contextIsolation: true,
-      sandbox: false
+      sandbox: true,
+      devTools: false
     }
   })
   pulseWindow.loadFile('pulse.html')
@@ -10015,10 +10022,11 @@ function openFivemHud() {
     focusable: false,
     show: false,
     webPreferences: {
-      preload: path.join(__dirname, 'preload.js'),
+      preload: path.join(__dirname, 'preload-overlay.js'),
       nodeIntegration: false,
       contextIsolation: true,
-      sandbox: false
+      sandbox: true,
+      devTools: false
     }
   })
   fivemHudWindow.loadFile('fivem-hud.html')
@@ -10070,7 +10078,8 @@ ipcMain.handle('open-fivem-settings', () => {
       preload: path.join(__dirname, 'preload.js'),
       nodeIntegration: false,
       contextIsolation: true,
-      sandbox: false
+      sandbox: true,
+      devTools: false
     }
   })
   fivemSettingsWindow.loadFile('fivem-settings.html')
@@ -10108,7 +10117,8 @@ ipcMain.handle('open-arma-settings', () => {
       preload: path.join(__dirname, 'preload.js'),
       nodeIntegration: false,
       contextIsolation: true,
-      sandbox: false
+      sandbox: true,
+      devTools: false
     }
   })
   armaSettingsWindow.loadFile('arma-settings.html')
@@ -13188,7 +13198,7 @@ function createFpsHud() {
     x: dw - 176, y: dh - 88,
     frame: false, transparent: true, alwaysOnTop: true, skipTaskbar: true, resizable: false,
     show: false,
-    webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, nodeIntegration: false },
+    webPreferences: { preload: path.join(__dirname, 'preload-overlay.js'), contextIsolation: true, nodeIntegration: false, sandbox: true, devTools: false },
   })
   _fpsHudWindow.loadFile(path.join(__dirname, 'fps-hud.html'))
   _fpsHudWindow.setAlwaysOnTop(true, 'screen-saver')
@@ -13581,7 +13591,7 @@ ipcMain.handle('open-fps-hud-settings', async () => {
   try {
     _fpsHudSettingsWindow = new BrowserWindow({
       width: 480, height: 560, frame: false, resizable: false,
-      webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, nodeIntegration: false },
+      webPreferences: { preload: path.join(__dirname, 'preload-overlay.js'), contextIsolation: true, nodeIntegration: false, sandbox: true, devTools: false },
       parent: mainWindow, modal: false, show: false,
     })
     _fpsHudSettingsWindow.loadFile(path.join(__dirname, 'fps-hud-settings.html'))
@@ -13612,7 +13622,12 @@ ipcMain.handle('set-fps-hud-color', (_, hex) => {
   return { ok: true }
 })
 
+ipcMain.handle('get-fps-hud-config', () => {
+  const st = loadSettings()
+  return { ariaFpsHudColor: st.ariaFpsHudColor || '#ffffff', ariaFpsHudSize: st.ariaFpsHudSize || 'md', ariaFpsHudCorner: st.ariaFpsHudCorner || 'br' }
+})
 ipcMain.handle('set-fps-hud-corner', (_, corner) => {
+  if (!['tl', 'tr', 'bl', 'br'].includes(corner)) return { ok: false }
   const s = loadSettings()
   s.ariaFpsHudCorner = corner
   saveSettings(s)
