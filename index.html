@@ -203,11 +203,6 @@
     <div class="boot-step-counter" id="boot-step-counter">0 / 6</div>
   </div>
 
-  <!-- Hidden legacy segments — keep for JS compat -->
-  <div style="display:none">
-    <div id="lseg-cpu"></div><div id="lseg-ram"></div><div id="lseg-gpu"></div>
-    <div id="lseg-vram"></div><div id="lseg-storage"></div><div id="lseg-os"></div>
-  </div>
 </div>
 
 <!-- Generic confirm modal -->
@@ -729,18 +724,7 @@ async function init(isPremium = false) {
   // Segmented progress bar — light up each segment as its step completes
   const LOAD_SEGS = ['cpu','ram','gpu','vram','storage','os']
   function setLoadProgress(stepId) {
-    // Mark the active segment (pulsing) for the current step, done for all previous
     var idx = LOAD_SEGS.indexOf(stepId)
-    for (var i = 0; i <= idx; i++) {
-      var seg = document.getElementById('lseg-' + LOAD_SEGS[i])
-      if (!seg) continue
-      seg.classList.remove('seg-active')
-      seg.classList.add('seg-done')
-    }
-    // Bolt charges up: opacity 0.45 → 1.0 across the 6 steps
-    var boltOpacity = (0.45 + ((idx + 1) / LOAD_SEGS.length) * 0.55).toFixed(2)
-    var loadEl = document.getElementById('loading')
-    if (loadEl) loadEl.style.setProperty('--bolt-opacity', boltOpacity)
     // Drive fluid progress bar + step counter
     var fill = document.getElementById('boot-progress-fill')
     if (fill) fill.style.width = ((idx + 1) / LOAD_SEGS.length * 100) + '%'
@@ -748,8 +732,6 @@ async function init(isPremium = false) {
     if (counter) counter.textContent = (idx + 1) + ' / ' + LOAD_SEGS.length
   }
   function markSegActive(stepId) {
-    var seg = document.getElementById('lseg-' + stepId)
-    if (seg && !seg.classList.contains('seg-done')) seg.classList.add('seg-active')
     // Nudge fluid bar to show progress has started on this step
     var fill = document.getElementById('boot-progress-fill')
     if (fill) { var pct = LOAD_SEGS.indexOf(stepId) / LOAD_SEGS.length * 100; if (parseFloat(fill.style.width||0) < pct + 2) fill.style.width = (pct + 2) + '%' }
