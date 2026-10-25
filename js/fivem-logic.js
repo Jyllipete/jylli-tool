@@ -1200,7 +1200,8 @@ async function fivemIniWriteKey(key, value, force = false) {
   const r = await api.fivemIniWriteKey({ key, value, force }).catch(() => null)
   if (!r) { toast('', tUI('fivemIniWriteFailed'), 'error'); return false }
   if (!r.ok && r.needsConfirm) {
-    const confirmed = await showConfirm({ title: tUI('fivemIniDangerTitle'), body: r.reason, okText: tUI('fivemIniDangerConfirm'), okStyle: 'danger', icon: 'fa-triangle-exclamation' })
+    let confirmed = false
+    try { confirmed = await showConfirm({ title: tUI('fivemIniDangerTitle'), body: escHtml(r.reason), okText: tUI('fivemIniDangerConfirm'), okStyle: 'danger', icon: 'fa-triangle-exclamation' }) } catch {}
     if (!confirmed) return false
     return fivemIniWriteKey(key, value, true)
   }

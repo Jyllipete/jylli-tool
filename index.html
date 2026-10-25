@@ -11620,9 +11620,12 @@ function openTweakDiff(id, ts) {
 const _baseApply = applyTweak
 window.applyTweak = async function(id, action = 'apply') {
   const result = await _baseApply(id, action)
-  // Log to changelog
+  if (!result?.ok) {
+    // cancelled / blocked / failed: nothing happened, so nothing goes in the history and no success toast is shown
+    if (result && !result.skipped) toast('Error', String(result.error || result.reason || ''), 'err')
+    return result
+  }
   await api.addChangelogEntry({ id, action }).catch(() => {})
-  // Show toast
   const friendly = id.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
   toast(action === 'apply' ? `${tUI('historyApplied')}: ${friendly}` : `${tUI('historyRestored')}: ${friendly}`, '', action === 'apply' ? 'ok' : 'info')
   return result
@@ -14637,9 +14640,9 @@ async function _guardLghubCheck(id, action) {
 async function applyTweak(id, action = 'apply') {
   if (id.startsWith('fivem-') && !settings.isPremium) {
     toast(tUI('premiumLockTitle'), tUI('aomFivemLockedDesc'), 'warn')
-    return
+    return { ok: false, skipped: true }
   }
-  if (_tweakInflight.has(id)) return
+  if (_tweakInflight.has(id)) return { ok: false, skipped: true }
   _tweakInflight.add(id)
   try {
   // ── Smart Conflict Engine: runtime context checks before applying ──────────
@@ -14655,12 +14658,12 @@ async function applyTweak(id, action = 'apply') {
           icon: conflict.icon || 'fa-triangle-exclamation'
         })
       } catch {
-        return
+        return { ok: false, skipped: true }
       }
     }
   }
 
-  if (!await _guardLghubCheck(id, action)) return
+  if (!await _guardLghubCheck(id, action)) return { ok: false, skipped: true }
 
   const badge = document.getElementById(`badge-${id}`)
   const prog = document.getElementById(`prog-${id}`)
@@ -14684,7 +14687,9 @@ async function applyTweak(id, action = 'apply') {
   let _diffBefore = null
   try { _diffBefore = (await api.tweakDiffSnapshot(id))?.snapshot ?? null } catch {}
 
-  const result = await api.runTweak(id, action)
+  let result
+  try { result = await api.runTweak(id, action) } catch (e) { result = { ok: false, error: String(e?.message || e) } }   // a rejected IPC call must not leave the UI stuck on "Running…"
+  if (!result) result = { ok: false }
 
   // Tweak Diff: snapshot after and persist to tweak_diff_log in localStorage
   if (_diffBefore && result.ok) {
@@ -14746,6 +14751,7 @@ async function applyTweak(id, action = 'apply') {
   } else {
     if (badge) { badge.innerHTML = '<i class="fa fa-xmark"></i> ERROR'; badge.className = 'tweak-badge' }
   }
+  return result
   } finally { _tweakInflight.delete(id) }
 }
 
@@ -19002,6 +19008,8 @@ async function applyTweakBatch(ids, action = 'apply') {
 
     try {
       const result = await api.runTweak(id, action)
+      // A failed or refused tweak (premium, unknown id, error) must not be recorded as applied.
+      if (!result?.ok) { failed++; if (log && log.lastChild) log.lastChild.style.color = '#e74c3c'; continue }
       settings[`tweak_${id}`] = action === 'apply' ? 'applied' : 'restored'
       if (action === 'restore') {
         const pfStates = getPreflightStates()
@@ -25516,7 +25524,8 @@ window.applyTweak = async function(id, action = 'apply') {
   if (progBar) progBar.classList.add('indeterminate')
   if (badge)   badge.textContent = action === 'apply' ? tUI('statusRunning') : tUI('statusRestoring')
 
-  const result = await api.applyGameTweak(gameId, action)
+  let result
+  try { result = await api.applyGameTweak(gameId, action) } catch (e) { result = { ok: false, error: String(e?.message || e) } }
 
   if (progBar) { progBar.classList.remove('indeterminate'); progBar.style.width = '100%' }
   if (prog) {
@@ -25527,12 +25536,18 @@ window.applyTweak = async function(id, action = 'apply') {
     }, { once: true })
   }
 
+  if (!result?.ok) {
+    if (badge) { badge.innerHTML = '<i class="fa fa-xmark"></i> ERROR'; badge.className = 'tweak-badge' }
+    return result || { ok: false }
+  }
   if (badge) {
     badge.innerHTML = action === 'apply' ? `<i class="fa fa-check"></i> ${tUI('statusApplied')}` : `<i class="fa fa-rotate-left"></i> ${tUI('statusRestored')}`
     badge.className   = `tweak-badge ${action === 'apply' ? 'applied' : 'restored'}`
   }
   settings[`tweak_${id}`] = action === 'apply' ? 'applied' : 'restored'
   await api.saveSettings(settings)
+  await api.addChangelogEntry({ id, action }).catch(() => {})
+  return result
 }
 
 // ─── Auth/Boot — see js/boot-logic.js ──────────────────────────────────────────

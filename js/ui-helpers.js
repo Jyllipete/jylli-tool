@@ -54,7 +54,8 @@ function showConfirm({ title, body, okText = 'Confirm', okStyle = 'danger', icon
   _openModal('confirm-modal')
   return new Promise((res, rej) => { _confirmResolve = res; _confirmReject = rej })
 }
-function _confirmModalResolve() { _closeModal('confirm-modal'); if (_confirmResolve) { _confirmResolve(); _confirmResolve = null } }
+function _confirmModalResolve() { _closeModal('confirm-modal'); if (_confirmResolve) { _confirmResolve(true); _confirmResolve = null } }
+// showConfirm resolves true when confirmed and rejects on Cancel
 function _confirmModalReject()  {
   _closeModal('confirm-modal')
   document.getElementById('confirm-modal-ok').onclick = _confirmModalResolve   // Cancel on a prompt must not leave the prompt handler behind
