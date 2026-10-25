@@ -10,7 +10,7 @@
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 :root {
-  --arma:     #5c8c3e;
+  --arma:     var(--c-accent);
   --bg:       var(--c-bg-base);
   --bg-card:  var(--c-bg-elevated);
   --bg-dark:  var(--c-bg-base);
@@ -18,81 +18,81 @@
   --border2:  var(--c-border-subtle);
   --white:    var(--c-text-primary);
   --muted:    var(--c-text-tertiary);
-  --success:  #2ECC71;
-  --danger:   #E74C3C;
-  --warning:  #F39C12;
+  --success:  #3DD68C;
+  --danger:   #F2555A;
+  --warning:  #F5A524;
 }
 html, body { background: var(--bg); color: var(--white); font-family: 'Geist', 'Segoe UI', system-ui, sans-serif; font-size: 13px; height: 100%; overflow: hidden; user-select: none; -webkit-app-region: no-drag; }
 
 /* Titlebar */
 #titlebar { display:flex; align-items:center; height:44px; background:var(--bg-dark); border-bottom:1px solid var(--border); padding:0 14px; -webkit-app-region:drag; flex-shrink:0; gap:10px; }
-.tb-icon { width:28px; height:28px; border-radius:8px; background:rgba(92,140,62,0.18); border:1px solid rgba(92,140,62,0.35); display:flex; align-items:center; justify-content:center; color:var(--arma); font-size:13px; flex-shrink:0; }
+.tb-icon { width:28px; height:28px; border-radius:8px; background:var(--c-accent-muted); border:1px solid var(--c-accent-ring); display:flex; align-items:center; justify-content:center; color:var(--arma); font-size:13px; flex-shrink:0; }
 .tb-title { font-size:13px; font-weight:700; color:var(--white); }
 .tb-title span { color:var(--arma); }
-.tb-subtitle { font-size:10px; color:#444; margin-top:1px; }
-.tb-close { -webkit-app-region:no-drag; width:28px; height:28px; border-radius:6px; border:none; background:transparent; color:#555; cursor:pointer; font-size:14px; display:flex; align-items:center; justify-content:center; transition:background 0.12s,color 0.12s; }
+.tb-subtitle { font-size:11px; color:var(--c-text-tertiary); margin-top:1px; }
+.tb-close { -webkit-app-region:no-drag; width:28px; height:28px; border-radius:6px; border:none; background:transparent; color:var(--c-text-tertiary); cursor:pointer; font-size:14px; display:flex; align-items:center; justify-content:center; transition:background 0.12s,color 0.12s; }
 .tb-close:hover { background:var(--danger); color:white; }
 
 /* Layout */
 #root { display:flex; flex-direction:column; height:100vh; }
 #content { flex:1; overflow-y:auto; padding:16px; display:flex; flex-direction:column; gap:12px; }
 #content::-webkit-scrollbar { width:4px; }
-#content::-webkit-scrollbar-thumb { background:#222; border-radius:2px; }
+#content::-webkit-scrollbar-thumb { background:var(--c-border-default); border-radius:2px; }
 
 /* Path row */
 #path-row { display:flex; gap:8px; align-items:center; }
 #path-row input { flex:1; background:var(--bg-card); border:1px solid var(--border2); border-radius:7px; padding:6px 10px; color:var(--white); font-size:11px; outline:none; }
-#path-row input:focus { border-color:rgba(92,140,62,0.5); }
-#path-status { font-size:10px; color:#444; padding:2px 0 4px; min-height:18px; }
+#path-row input:focus { border-color:var(--c-accent-ring); }
+#path-status { font-size:11px; color:var(--c-text-tertiary); padding:2px 0 4px; min-height:18px; }
 
 /* Buttons */
 .btn { display:inline-flex; align-items:center; gap:6px; border:none; border-radius:7px; padding:7px 14px; font-size:11px; font-weight:600; cursor:pointer; transition:background 0.13s ease, box-shadow 0.13s ease; white-space:nowrap; font-family:inherit; }
 .btn:disabled { opacity:0.45; cursor:not-allowed; }
-.btn-primary { background:var(--arma); color:white; }
-.btn-primary:not(:disabled):hover { background:#4a7832; box-shadow:0 0 0 1px rgba(92,140,62,0.4), 0 0 16px rgba(92,140,62,0.2); }
+.btn-primary { background:var(--arma); color:#0B0A14; }
+.btn-primary:not(:disabled):hover { background:color-mix(in srgb, var(--c-accent) 86%, #fff);  }
 .btn-primary:not(:disabled):active { transform:scale(0.97); }
 .btn-ghost { background:rgba(255,255,255,0.05); border:1px solid var(--border2); color:var(--white); }
-.btn-ghost:not(:disabled):hover { background:rgba(255,255,255,0.09); border-color:#333; }
+.btn-ghost:not(:disabled):hover { background:rgba(255,255,255,0.09); border-color:var(--c-border-strong); }
 .btn-ghost:not(:disabled):active { transform:scale(0.97); }
 
 /* Sysinfo bar */
-#sysinfo-bar { display:none; align-items:center; gap:10px; background:rgba(92,140,62,0.06); border:1px solid rgba(92,140,62,0.2); border-radius:8px; padding:8px 14px; font-size:10px; color:#6a9a4a; }
+#sysinfo-bar { display:none; align-items:center; gap:10px; background:var(--c-accent-muted); border:1px solid var(--c-accent-ring); border-radius:8px; padding:8px 14px; font-size:11px; color:#6a9a4a; }
 
 /* Preset bar */
 #preset-bar { display:none; align-items:center; gap:8px; flex-wrap:wrap; }
-.preset-label { font-size:10px; font-weight:600; color:#444; text-transform:uppercase; letter-spacing:0.06em; white-space:nowrap; }
+.preset-label { font-size:11px; font-weight:600; color:var(--c-text-tertiary); text-transform:uppercase; letter-spacing:0.06em; white-space:nowrap; }
 .preset-btn { display:inline-flex; align-items:center; gap:6px; border-radius:8px; padding:6px 13px; font-size:11px; font-weight:600; cursor:pointer; transition:all 0.12s; border:1px solid transparent; white-space:nowrap; font-family:inherit; }
 .preset-btn:hover { box-shadow:0 0 0 1px rgba(255,255,255,0.1); }
-.preset-quality     { background:rgba(52,152,219,0.1); border-color:rgba(52,152,219,0.3); color:#3498DB; }
-.preset-performance { background:rgba(92,140,62,0.1);  border-color:rgba(92,140,62,0.3);  color:var(--arma); }
-.preset-recommended { background:rgba(243,156,18,0.1); border-color:rgba(243,156,18,0.3); color:#F39C12; }
-.preset-divider { width:1px; height:20px; background:#222; margin:0 2px; }
+.preset-quality     { background:var(--c-bg-raised); border-color:var(--c-border-default); color:var(--c-text-secondary); }
+.preset-performance { background:var(--c-accent-muted);  border-color:var(--c-accent-ring);  color:var(--arma); }
+.preset-recommended { background:var(--c-bg-raised); border-color:var(--c-border-default); color:var(--c-text-secondary); }
+.preset-divider { width:1px; height:20px; background:var(--c-border-default); margin:0 2px; }
 
 /* Empty state */
-#empty-state { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px; color:#333; text-align:center; padding:40px; }
-#empty-state i { font-size:36px; color:#222; }
-#empty-state p { font-size:12px; max-width:380px; line-height:1.6; color:#555; }
-#empty-state small { font-size:10px; color:#2a2a2a; line-height:1.6; }
+#empty-state { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px; color:var(--c-text-tertiary); text-align:center; padding:40px; }
+#empty-state i { font-size:36px; color:var(--c-border-default); }
+#empty-state p { font-size:12px; max-width:380px; line-height:1.6; color:var(--c-text-tertiary); }
+#empty-state small { font-size:11px; color:var(--c-text-tertiary); line-height:1.6; }
 
 /* Category groups */
 .cat-group { background:var(--bg-card); border:1px solid var(--border); border-radius:10px; overflow:hidden; }
 .cat-header { display:flex; align-items:center; gap:8px; padding:10px 14px; background:rgba(255,255,255,0.02); border-bottom:1px solid var(--border); }
-.cat-icon { width:24px; height:24px; border-radius:6px; display:flex; align-items:center; justify-content:center; font-size:11px; flex-shrink:0; }
+.cat-icon { background:var(--c-accent-muted); border:1px solid var(--c-accent-ring); color:var(--c-accent); width:24px; height:24px; border-radius:6px; display:flex; align-items:center; justify-content:center; font-size:11px; flex-shrink:0; }
 .cat-name { font-size:12px; font-weight:700; color:var(--white); }
-.cat-desc { font-size:10px; color:#444; margin-left:auto; }
+.cat-desc { font-size:11px; color:var(--c-text-tertiary); margin-left:auto; }
 
 /* Setting rows */
 .setting-row { display:grid; grid-template-columns:1fr 180px 64px; align-items:center; gap:10px; padding:9px 14px; border-bottom:1px solid rgba(255,255,255,0.03); transition:background 0.1s; }
 .setting-row:last-child { border-bottom:none; }
 .setting-row:hover { background:rgba(255,255,255,0.02); }
-.setting-row.is-changed { background:rgba(92,140,62,0.05); }
+.setting-row.is-changed { background:var(--c-accent-muted); }
 .setting-label { font-size:11px; font-weight:500; color:var(--white); display:flex; flex-direction:column; gap:2px; }
-.setting-label small { font-size:9px; color:#383838; font-weight:400; }
-.setting-control select { width:100%; background:#0f0f0f; border:1px solid #222; border-radius:6px; padding:5px 8px; color:var(--white); font-size:11px; cursor:pointer; outline:none; transition:border-color 0.12s; font-family:inherit; }
-.setting-control select:focus { border-color:rgba(92,140,62,0.5); }
+.setting-label small { font-size:11px; color:var(--c-text-tertiary); font-weight:400; }
+.setting-control select { width:100%; background:var(--c-bg-base); border:1px solid var(--c-border-default); border-radius:6px; padding:5px 8px; color:var(--white); font-size:11px; cursor:pointer; outline:none; transition:border-color 0.12s; font-family:inherit; }
+.setting-control select:focus { border-color:var(--c-accent-ring); }
 .setting-control select.is-rec { border-color:rgba(46,204,113,0.4); }
 .setting-control input[type=range] { width:100%; accent-color:var(--arma); }
-.impact-pill { display:inline-flex; align-items:center; justify-content:center; border-radius:20px; padding:2px 8px; font-size:9px; font-weight:700; letter-spacing:0.04em; text-transform:uppercase; white-space:nowrap; }
+.impact-pill { display:inline-flex; align-items:center; justify-content:center; border-radius:20px; padding:2px 8px; font-size:11px; font-weight:700; letter-spacing:0.04em; text-transform:uppercase; white-space:nowrap; }
 .imp-low       { background:rgba(74,222,128,0.1);  color:#4ade80; border:1px solid rgba(74,222,128,0.25); }
 .imp-medium    { background:rgba(250,204,21,0.1);  color:#facc15; border:1px solid rgba(250,204,21,0.25); }
 .imp-high      { background:rgba(249,115,22,0.1);  color:#f97316; border:1px solid rgba(249,115,22,0.25); }
@@ -100,8 +100,8 @@ html, body { background: var(--bg); color: var(--white); font-family: 'Geist', '
 
 /* Footer */
 #footer { flex-shrink:0; display:flex; align-items:center; gap:8px; padding:10px 16px; background:var(--bg-dark); border-top:1px solid var(--border); }
-#footer-info { flex:1; font-size:10px; color:#383838; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-#changes-count { font-size:10px; color:var(--arma); background:rgba(92,140,62,0.12); border:1px solid rgba(92,140,62,0.3); border-radius:20px; padding:2px 9px; font-weight:600; display:none; }
+#footer-info { flex:1; font-size:11px; color:var(--c-text-tertiary); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+#changes-count { font-size:11px; color:var(--arma); background:var(--c-accent-muted); border:1px solid var(--c-accent-ring); border-radius:20px; padding:2px 9px; font-weight:600; display:none; }
 </style>
 </head>
 <body>
@@ -372,7 +372,7 @@ async function loadSettings() {
   const body = document.getElementById('settings-body')
   btn.disabled = true
   btn.innerHTML = `<i class="fa fa-spinner fa-spin"></i> ${tA('loadingSpinner')}`
-  body.innerHTML = `<div id="empty-state"><i class="fa fa-spinner fa-spin" style="font-size:28px;color:#333"></i></div>`
+  body.innerHTML = `<div id="empty-state"><i class="fa fa-spinner fa-spin" style="font-size:28px;color:var(--c-text-tertiary)"></i></div>`
 
   const r = await window.api.armaReadSettings(getManualPath())
   btn.disabled = false
@@ -380,13 +380,13 @@ async function loadSettings() {
 
   const pathStatus = document.getElementById('path-status')
   if (!r.ok) {
-    pathStatus.innerHTML = `<i class="fa fa-triangle-exclamation" style="color:#E74C3C"></i> ${escHtml(r.reason)}`
-    body.innerHTML = `<div id="empty-state"><i class="fa fa-triangle-exclamation" style="color:#E74C3C;font-size:32px"></i><p>${escHtml(r.reason)}</p>${r.hint ? `<small style="white-space:pre-wrap">${escHtml(r.hint)}</small>` : ''}</div>`
+    pathStatus.innerHTML = `<i class="fa fa-triangle-exclamation" style="color:var(--danger)"></i> ${escHtml(r.reason)}`
+    body.innerHTML = `<div id="empty-state"><i class="fa fa-triangle-exclamation" style="color:var(--danger);font-size:32px"></i><p>${escHtml(r.reason)}</p>${r.hint ? `<small style="white-space:pre-wrap">${escHtml(r.hint)}</small>` : ''}</div>`
     return
   }
 
   currentVals = r.vals
-  pathStatus.innerHTML = `<i class="fa fa-check" style="color:#2ECC71"></i> ${escHtml(r.path)}`
+  pathStatus.innerHTML = `<i class="fa fa-check" style="color:var(--success)"></i> ${escHtml(r.path)}`
   const pdEl = document.getElementById('path-display'); if (pdEl) pdEl.textContent = r.path
   document.getElementById('btn-save').disabled = false
   document.getElementById('preset-bar').style.display = 'flex'
@@ -409,7 +409,7 @@ function renderSettings() {
     group.className = 'cat-group'
     group.innerHTML = `
       <div class="cat-header">
-        <div class="cat-icon" style="background:${cat.color}18;border:1px solid ${cat.color}33;color:${cat.color}">${cat.icon}</div>
+        <div class="cat-icon">${cat.icon}</div>
         <div class="cat-name">${cat.name}</div>
         <div class="cat-desc">${cat.desc}</div>
       </div>`
@@ -503,7 +503,7 @@ async function saveSettings() {
 
   if (r.ok) {
     btn.innerHTML = `<i class="fa fa-check"></i> ${tA('savedBtn')}`
-    document.getElementById('path-status').innerHTML = `<i class="fa fa-check" style="color:#2ECC71"></i> ${escHtml(r.path)}`
+    document.getElementById('path-status').innerHTML = `<i class="fa fa-check" style="color:var(--success)"></i> ${escHtml(r.path)}`
     showSaveBanner()
     for (const def of DEFS) {
       const el = document.getElementById(`sval-${def.key}`)
@@ -514,7 +514,7 @@ async function saveSettings() {
     setTimeout(() => { btn.innerHTML = `<i class="fa fa-floppy-disk"></i> ${tA('saveBtn')}`; btn.disabled = false }, 2500)
   } else {
     btn.innerHTML = `<i class="fa fa-xmark"></i> ${tA('saveError')}`
-    document.getElementById('path-status').innerHTML = `<i class="fa fa-triangle-exclamation" style="color:#E74C3C"></i> ${escHtml(r.reason || 'Save failed')}`
+    document.getElementById('path-status').innerHTML = `<i class="fa fa-triangle-exclamation" style="color:var(--danger)"></i> ${escHtml(r.reason || 'Save failed')}`
     setTimeout(() => { btn.innerHTML = `<i class="fa fa-floppy-disk"></i> ${tA('saveBtn')}`; btn.disabled = false }, 2500)
   }
 }
@@ -524,7 +524,7 @@ function showSaveBanner() {
   const b = document.createElement('div')
   b.id = 'save-confirm-banner'
   b.style.cssText = 'background:rgba(46,204,113,0.08);border:1px solid rgba(46,204,113,0.25);border-radius:8px;padding:10px 14px;display:flex;align-items:center;gap:10px;font-size:11px'
-  b.innerHTML = `<i class="fa fa-circle-check" style="color:#2ECC71;font-size:14px;flex-shrink:0"></i><div style="flex:1;line-height:1.5"><strong style="color:#2ECC71">${tA('savedMsg')}</strong><br><span style="color:#8a8a9a">${tA('savedNote')}</span></div><button onclick="this.closest('#save-confirm-banner').remove()" style="background:none;border:none;color:#555;cursor:pointer;font-size:13px">✕</button>`
+  b.innerHTML = `<i class="fa fa-circle-check" style="color:var(--success);font-size:14px;flex-shrink:0"></i><div style="flex:1;line-height:1.5"><strong style="color:var(--success)">${tA('savedMsg')}</strong><br><span style="color:#8a8a9a">${tA('savedNote')}</span></div><button onclick="this.closest('#save-confirm-banner').remove()" style="background:none;border:none;color:#555;cursor:pointer;font-size:13px">✕</button>`
   document.getElementById('content').insertBefore(b, document.getElementById('settings-body'))
 }
 
@@ -548,7 +548,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     sysInfo = await window.api.getSystemInfo()
     if (sysInfo) {
       const tier = getSystemTier()
-      const tierColor = tier === 'high' ? '#2ECC71' : tier === 'mid' ? '#F39C12' : '#E74C3C'
+      const tierColor = tier === 'high' ? 'var(--success)' : tier === 'mid' ? 'var(--warning)' : 'var(--danger)'
       const tierLabel = tier === 'high' ? tA('tierHigh') : tier === 'mid' ? tA('tierMid') : tA('tierBudget')
       const vramStr = sysInfo.vramMB >= 1024 ? `${Math.round(sysInfo.vramMB/1024)}GB VRAM` : `${sysInfo.vramMB || '?'}MB VRAM`
       document.getElementById('sysinfo-bar').style.display = 'flex'
