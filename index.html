@@ -11010,6 +11010,7 @@ async function runPreflightScan(btn) {
     if (statusEl) statusEl.textContent = _pfStepLabels[msg] || msg
     if (scanBar) scanBar.style.width = `${pct}%`
   }
+  api.offPreflightProgress?.()
   api.onPreflightProgress(onProgress)
   window.__pfProgressCleanup = () => { /* ipcRenderer listener auto-removed on next call */ }
 
@@ -11439,6 +11440,7 @@ async function beginRuntimeInstall(items) {
   const updateProgress = ({ step, total, name }) => {
     if (btn) btn.innerHTML = `<i class="fa fa-spinner fa-spin"></i> ${tUI('pfRuntimeInstalling').replace('{name}', name)} (${step}/${total})`
   }
+  api.offRuntimeInstallProgress?.()
   api.onRuntimeInstallProgress(updateProgress)
 
   const result = await api.installRuntimes(items)

@@ -1,16 +1,32 @@
 {
   "name": "jylli-tool",
-  "version": "1.5.9",
+  "version": "1.6.0",
   "description": "Jylli Tool",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
     "build": "electron-builder --win --x64",
-    "pack": "electron-builder --dir"
+    "pack": "electron-builder --dir",
+    "check": "node tools/check.js && node tools/scan-injection.js",
+    "test": "node --test \"test/**/*.test.js\"",
+    "preview": "electron tools/ui-preview/preview-main.js"
   },
   "build": {
     "appId": "com.jylli.tool",
     "productName": "Jylli Tool",
+    "files": [
+      "main.js",
+      "preload.js",
+      "preload-overlay.js",
+      "*.html",
+      "css/**",
+      "js/**",
+      "lib/**",
+      "assets/**",
+      "!assets/**/*.md",
+      "!assets/**/.gitkeep",
+      "package.json"
+    ],
     "win": {
       "target": "nsis",
       "icon": "assets/icon.ico",
@@ -32,10 +48,8 @@
       "assets/scewin/**",
       "assets/presentmon/**",
       "assets/sensor/**",
-      "assets/jobmon/**",
-      "assets/etw/**",
-      "assets/ai/**",
-      "node_modules/onnxruntime-node/**"
+      "assets/DDU/**",
+      "assets/runtimes/**"
     ],
     "publish": {
       "provider": "github",
@@ -45,14 +59,12 @@
     }
   },
   "devDependencies": {
-    "electron": "^33.4.11",
-    "electron-builder": "^25.1.8"
+    "electron": "^45.0.0",
+    "electron-builder": "^26.18.0"
   },
   "dependencies": {
     "@fortawesome/fontawesome-free": "^7.2.0",
     "discord-rpc": "^4.0.1",
-    "discord.js": "^14.26.4",
-    "electron-updater": "^6.8.3",
-    "onnxruntime-node": "^1.26.0"
+    "electron-updater": "^6.8.11"
   }
 }
