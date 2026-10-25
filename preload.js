@@ -318,8 +318,11 @@ contextBridge.exposeInMainWorld('api', {
 
   // Game Shield / Update Guard
   toggleUpdateGuard:    (on)         => ipcRenderer.invoke('toggle-update-guard', on),
+  onUpdateGuardStatus:  (cb)         => on('update-guard-status', cb),
   toggleGameShield:     (on)         => ipcRenderer.invoke('toggle-game-shield', on),
   getGameShieldExclusions: ()        => ipcRenderer.invoke('get-game-shield-exclusions'),
+  setGameShieldExclusions: (list)    => ipcRenderer.invoke('set-game-shield-exclusions', list),
+  onGameShieldEvent:    (cb)         => on('game-shield-event', cb),
 
   // Game History / Custom Games
   addCustomGame:        (exe, name)  => ipcRenderer.invoke('add-custom-game', { exe, name }),

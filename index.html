@@ -1777,6 +1777,9 @@ const LANG = {
       genSecSecurity:'Security Services (Advanced)',
       genSecCpuSched:'CPU Scheduling',
       genSearchPlaceholder:'Search tweaks…', startupSearchPh:'Search startup items…',
+      ugFrozenLabel:'Windows Update frozen for this session',
+      ugRescheduled:'Update rescheduled to {when}', ugActiveHours:'Active hours set: {hours}',
+      gsFreedT:'Game Shield freed {mb}MB RAM', gsFreedB:'Stopped {n} background process(es) this session',
       dlOverwriteT:'Overwrite Profile?', dlOverwriteB:'A profile named <strong>"{name}"</strong> already exists. Overwrite it?', dlOverwrite:'Overwrite', dlApplyProfT:'Apply Profile: {name}', dlApplyProfB:'This will apply {n} tweaks from the "{name}" profile.', dlApplyAll:'Apply All', dlCloneT:'Clone Profile', dlCloneB:'New name for the copy of <strong>"{name}"</strong>:', dlClone:'Clone', dlCopySuffix:'(copy)', dlRenameT:'Rename Profile', dlRenameB:'New name for <strong>"{name}"</strong>:', dlRename:'Rename', dlPingT:'Custom Ping Host', dlPingB:'Enter IP or hostname to ping:', dlDnsPriT:'Custom DNS — Primary Server', dlDnsPriB:'Enter primary IPv4 DNS address (e.g. 8.8.8.8):', dlDnsSecT:'Custom DNS — Secondary Server', dlDnsSecB:'Enter secondary IPv4 DNS address (optional — leave blank to skip):', dlReEnableT:'Re-enable {name}', dlReEnableSvcB:'Service "{name}" will be restored to "{start}" start and started.', dlReEnableTaskB:'Task "{name}" will be re-enabled in Task Scheduler.', dlReEnable:'Re-enable', tkFailedName:'Failed: {name}',
       tkUgOn:'Update Guard enabled', tkUgOff:'Update Guard disabled', tkGsOn:'Game Shield enabled', tkGsOff:'Game Shield disabled', tkUgOnLong:'Update Guard enabled — Windows Update blocked during gaming',
       abClose:'Close', abAdvanced:'Advanced mode', abWhatsNew:'What\'s new', abBugReport:'Report a bug', abToggleLog:'Toggle output log', abDelete:'Delete', abRebootNow:'Reboot now',
@@ -4130,6 +4133,9 @@ const LANG = {
       genSecSecurity:'Tietoturvapalvelut (lisäasetukset)',
       genSecCpuSched:'CPU-ajoitus',
       genSearchPlaceholder:'Hae säätöjä…', startupSearchPh:'Hae käynnistyskohteita…',
+      ugFrozenLabel:'Windows Update jäädytetty tämän session ajaksi',
+      ugRescheduled:'Päivitys siirretty: {when}', ugActiveHours:'Aktiiviset tunnit asetettu: {hours}',
+      gsFreedT:'Game Shield vapautti {mb} Mt RAMia', gsFreedB:'Pysäytettiin {n} taustaprosessia tämän session aikana',
       dlOverwriteT:'Korvataanko profiili?', dlOverwriteB:'Profiili <strong>"{name}"</strong> on jo olemassa. Korvataanko se?', dlOverwrite:'Korvaa', dlApplyProfT:'Ota profiili käyttöön: {name}', dlApplyProfB:'Tämä ottaa käyttöön {n} säätöä profiilista "{name}".', dlApplyAll:'Ota kaikki käyttöön', dlCloneT:'Kopioi profiili', dlCloneB:'Uusi nimi kopiolle: <strong>"{name}"</strong>:', dlClone:'Kopioi', dlCopySuffix:'(kopio)', dlRenameT:'Nimeä profiili uudelleen', dlRenameB:'Uusi nimi: <strong>"{name}"</strong>:', dlRename:'Nimeä', dlPingT:'Oma ping-osoite', dlPingB:'Anna IP-osoite tai isäntänimi:', dlDnsPriT:'Oma DNS — ensisijainen palvelin', dlDnsPriB:'Anna ensisijainen IPv4 DNS-osoite (esim. 8.8.8.8):', dlDnsSecT:'Oma DNS — toissijainen palvelin', dlDnsSecB:'Anna toissijainen IPv4 DNS-osoite (valinnainen — jätä tyhjäksi ohittaaksesi):', dlReEnableT:'Ota takaisin käyttöön: {name}', dlReEnableSvcB:'Palvelu "{name}" palautetaan tilaan "{start}" ja käynnistetään.', dlReEnableTaskB:'Tehtävä "{name}" otetaan takaisin käyttöön Tehtävienajastimessa.', dlReEnable:'Ota käyttöön', tkFailedName:'Epäonnistui: {name}',
       tkUgOn:'Update Guard päällä', tkUgOff:'Update Guard pois päältä', tkGsOn:'Game Shield päällä', tkGsOff:'Game Shield pois päältä', tkUgOnLong:'Update Guard päällä — Windows Update estetty pelatessa',
       abClose:'Sulje', abAdvanced:'Laajennettu tila', abWhatsNew:'Uutta', abBugReport:'Ilmoita virheestä', abToggleLog:'Näytä/piilota loki', abDelete:'Poista', abRebootNow:'Käynnistä uudelleen nyt',
@@ -6131,12 +6137,12 @@ async function init(isPremium = false) {
     const sub = document.getElementById('ug-status-sub')
     if (sub) {
       if (blocked) {
-        sub.textContent = tUI('ugBlockedLabel').replace('{n}', blockCount)
+        sub.textContent = blockCount > 0 ? tUI('ugBlockedLabel').replace('{n}', blockCount) : tUI('ugFrozenLabel')
       } else if (deferredUntil) {
-        sub.textContent = `Update rescheduled to ${deferredUntil}`
+        sub.textContent = tUIf('ugRescheduled', { when: deferredUntil })
         setTimeout(() => { if (sub) sub.textContent = tUI('settingsUpdateGuardDesc') }, 12000)
       } else if (activeHoursSet) {
-        sub.textContent = `Active hours set: ${activeHoursSet}`
+        sub.textContent = tUIf('ugActiveHours', { hours: activeHoursSet })
         toast(tUI('tkUpdGuard'), tUIf('tkUpdQuiet', { hours: activeHoursSet }), 'ok', 6000)
         setTimeout(() => { if (sub) sub.textContent = tUI('settingsUpdateGuardDesc') }, 15000)
       } else {
@@ -6207,8 +6213,8 @@ async function init(isPremium = false) {
     } else if (action === 'session-summary') {
       if (processesKilled > 0 || estimatedRamFreedMB > 0) {
         toast(
-          `Game Shield freed ${estimatedRamFreedMB}MB RAM`,
-          `Blocked ${processesKilled} background process${processesKilled !== 1 ? 'es' : ''} this session`,
+          tUIf('gsFreedT', { mb: estimatedRamFreedMB }),
+          tUIf('gsFreedB', { n: processesKilled }),
           'ok', 5000
         )
       }
@@ -7275,12 +7281,14 @@ function fingerprintDismiss() {
 
 function settingsToggleUpdateGuard(on) {
   api.toggleUpdateGuard(on).catch(() => {})
+  if (on && !gameWatcherRunning) toggleGameWatcher()
   toast(tUI(on ? 'tkUgOnLong' : 'tkUgOff'), '', on ? 'ok' : 'info')
 }
 
 function settingsToggleGameShield(on) {
   api.toggleGameShield(on).catch(() => {})
-  toast(on ? 'Game Shield enabled — processes locked on game start' : 'Game Shield disabled', '', on ? 'ok' : 'info')
+  if (on && !gameWatcherRunning) toggleGameWatcher()
+  toast(tUI(on ? 'tkGsOn' : 'tkGsOff'), '', on ? 'ok' : 'info')
 }
 
 function settingsToggleGameWatcher(on) {
@@ -7304,11 +7312,13 @@ function launchRuleToggle(rule, on) {
   if (rule === 'updateGuard') {
     settings.updateGuardEnabled = on
     api.toggleUpdateGuard(on).catch(() => {})
+    if (on && !gameWatcherRunning) toggleGameWatcher()
     toast(tUI(on ? 'tkUgOn' : 'tkUgOff'), '', on ? 'ok' : 'info')
     _syncLrCardOpacity('lr-card-ug', on)
   } else if (rule === 'gameShield') {
     settings.gameShieldEnabled = on
     api.toggleGameShield(on).catch(() => {})
+    if (on && !gameWatcherRunning) toggleGameWatcher()
     toast(tUI(on ? 'tkGsOn' : 'tkGsOff'), '', on ? 'ok' : 'info')
     _syncLrCardOpacity('lr-card-gs', on)
   } else if (rule === 'gameWatcher') {
@@ -7408,7 +7418,7 @@ function _gwStripHide() {
 function gwStripStopAll() {
   api.pulseStop?.().catch(() => {})
   api.toggleUpdateGuard?.(false).catch(() => {})
-  api.toggleGameShield?.(false).catch(() => {})
+  api.toggleGameShield?.(false).catch(() => {}); settings.gameShieldEnabled = false
   toast(tUI('nowGamingStopAll'), '', 'info', 3000)
 }
 

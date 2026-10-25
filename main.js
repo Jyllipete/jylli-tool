@@ -1213,6 +1213,7 @@ function shutdownBackground() {
                    _livePingInterval, gameWatcherInterval, _thermalTimer, _effTimer, _latTimer, _historySamplerTimer, _ariaTimer, _ariaFpsTimer, _updateGuardTimer]) {
     try { if (t) { clearInterval(t); clearTimeout(t) } } catch {}
   }
+  try { gameShieldShutdown() } catch {}
   try { if (_historyDirty > 0) saveHistory() } catch {}
   try { stopPresentMon(_pmSessionProc); _pmSessionProc = null } catch {}
   try { stopPresentMon(_pmTweakProc); _pmTweakProc = null } catch {}
@@ -1948,7 +1949,7 @@ ipcMain.handle('get-tweak-states', async () => {
 // read tokens nor write a premium flag.
 const PROTECTED_SETTINGS = ['authToken', 'hmacSecret', 'discordUserId', 'authExpiry', 'isPremium', 'settingsHmac']
 // Written by the main process itself; a stale copy held by the renderer must never overwrite them.
-const MAIN_OWNED_SETTINGS = ['lastAutoSnapshot', 'thermalLastAudit', 'aria_insights']
+const MAIN_OWNED_SETTINGS = ['lastAutoSnapshot', 'thermalLastAudit', 'aria_insights', 'gameShieldEnabled', 'gameShieldExclusions', 'updateGuardEnabled']
 ipcMain.handle('load-settings', () => {
   startupTrace('IPC load-settings handler called')
   const s = { ...loadSettings() }
@@ -11529,6 +11530,8 @@ ipcMain.handle('start-game-watcher', async () => {
       activeGameProfile = detectedGame
       const presetName = PULSE_PRESETS[detectedGame].name
       mainWindow?.webContents.send('game-watcher-event', { event: 'game-started', gameId: detectedGame })
+      gameShieldActivate().catch(() => {})
+      if (loadSettings().updateGuardEnabled && auth && auth.isPremium()) updateGuardSession(true).catch(() => {})
       mainWindow?.webContents.send('log', { msg: `🎮 Game detected: ${presetName} — applying optimizations…`, level: 'head', ts: new Date().toLocaleTimeString() })
 
       // Update Discord presence to show the active game
@@ -11630,6 +11633,8 @@ ipcMain.handle('start-game-watcher', async () => {
       activeGameProfile = null
       activeGameProfileTweaksApplied = false
       mainWindow?.webContents.send('game-watcher-event', { event: 'game-closed', gameId: prev })
+      gameShieldDeactivate().catch(() => {})
+      updateGuardSession(false).catch(() => {})
       mainWindow?.webContents.send('log', { msg: `Game closed: ${prev} — restoring defaults…`, level: 'info', ts: new Date().toLocaleTimeString() })
 
       // Stop rolling FPS counter and hide display before PresentMon shuts down
@@ -13612,7 +13617,12 @@ async function setUpdateGuard(on) {
     if (!snapshots.load('update-guard')) snapshots.save('update-guard', { prev: ['Automatic', 'Manual', 'Disabled'].includes(cur) ? cur : 'Manual' })
     const r = await runPS(`Set-Service -Name wuauserv -StartupType Disabled -EA SilentlyContinue; Stop-Service -Name wuauserv -Force -EA SilentlyContinue`)
     clearTimeout(_updateGuardTimer)
-    _updateGuardTimer = setTimeout(() => { setUpdateGuard(false).catch(() => {}); mainWindow?.webContents.send('update-guard-expired') }, 8 * 3600 * 1000)
+    _updateGuardTimer = setTimeout(() => {
+      _ugActive = false
+      setUpdateGuard(false).catch(() => {})
+      mainWindow?.webContents.send('update-guard-expired')
+      mainWindow?.webContents.send('update-guard-status', { blocked: false, blockCount: 0 })
+    }, 8 * 3600 * 1000)   // safety net: never leave Windows Update off for more than one long session
     return r.ok
   }
   clearTimeout(_updateGuardTimer); _updateGuardTimer = null
@@ -13622,29 +13632,151 @@ async function setUpdateGuard(on) {
   snapshots.remove('update-guard')
   return r.ok
 }
+// Update Guard holds Windows Update off only while a game is running: armed by the toggle, activated by the game watcher, released on exit.
+let _ugActive = false
+async function updateGuardSession(on) {
+  if (on === _ugActive) return true
+  _ugActive = on
+  const ok = await setUpdateGuard(on)
+  if (on && !ok) _ugActive = false
+  mainWindow?.webContents.send('update-guard-status', { blocked: on && ok, blockCount: 0 })
+  return ok
+}
 ipcMain.handle('toggle-update-guard', async (_, on) => {
   if (!requiresPremium('toggle-update-guard')) return { ok: false, reason: 'premium_required' }
-  const ok = await setUpdateGuard(!!on)
-  return { ok, active: !!on }
+  on = !!on
+  saveSettings({ ...loadSettings(), updateGuardEnabled: on })
+  let ok = true
+  if (!on) ok = await updateGuardSession(false)
+  else if (activeGameProfile) ok = await updateGuardSession(true)   // a game is already running
+  return { ok, active: on }
 })
+
+// ─── Game Shield ──────────────────────────────────────────────────────────────
+// On game start: stop tier-1 background apps (and tier 3 when RAM is high); during the game: stop browsers/tier 3 when RAM passes the
+// mid-session threshold; on game exit: start everything that was stopped again. Lists and thresholds live in lib/gameshield.js.
+const GameShield = require('./lib/gameshield')
+let _gsSession = null   // { stopped: Map<name, path|null>, killCount, freedMB, midTimer, busy }
+
+const gsRamPct = () => Math.round((1 - os.freemem() / os.totalmem()) * 100)
+const gsSend = payload => { try { mainWindow?.webContents.send('game-shield-event', payload) } catch {} }
+const gsLog = (msg, level = 'info') => { try { mainWindow?.webContents.send('log', { msg, level, ts: new Date().toLocaleTimeString() }) } catch {} }
+function gsSettings() {
+  const s = loadSettings()
+  const { tier3, mid } = GameShield.clampThresholds(s.gameShieldTier3Threshold, s.gameShieldMidSessionThreshold)
+  return { enabled: !!s.gameShieldEnabled, tier3, mid, exclusions: GameShield.normalizeExclusions(s.gameShieldExclusions) }
+}
+
+// Stops the named processes (names come from lib/gameshield constants only) and remembers where each ran from.
+async function gsStopNames(session, names) {
+  if (!names.length) return []
+  const list = names.map(n => "'" + n + "'").join(',')
+  const r = await runPS("Get-Process -Name " + list + " -EA SilentlyContinue | Select-Object Id,Name,Path,WorkingSet64 | ConvertTo-Json -Compress", 15000)
+  let procs = []
+  try { const j = JSON.parse(r.out || '[]'); procs = Array.isArray(j) ? j : [j] } catch {}
+  const stoppedNow = new Set()
+  for (const p of procs) {
+    if (!p || !Number.isInteger(p.Id) || p.Id === process.pid || typeof p.Name !== 'string') continue
+    const name = p.Name.toLowerCase()
+    if (!names.includes(name)) continue
+    const k = await runFile('taskkill', ['/PID', String(p.Id), '/F'], { timeout: 8000 })
+    if (!k.ok) continue
+    stoppedNow.add(name)
+    session.killCount++
+    session.freedMB += Math.round((Number(p.WorkingSet64) || 0) / 1048576)
+    if (!session.stopped.has(name) || !session.stopped.get(name)) session.stopped.set(name, GameShield.isRelaunchable(p.Path) ? p.Path : null)
+  }
+  return [...stoppedNow]
+}
+
+async function gameShieldActivate() {
+  const cfg = gsSettings()
+  if (!cfg.enabled || _gsSession || !(auth && auth.isPremium())) return
+  const session = _gsSession = { stopped: new Map(), killCount: 0, freedMB: 0, midTimer: null, busy: false }
+  const names = GameShield.launchKillList({ ramPct: gsRamPct(), tier3Threshold: cfg.tier3, exclusions: cfg.exclusions })
+  const killed = await gsStopNames(session, names)
+  if (_gsSession !== session) return   // game already closed while we were stopping things
+  gsLog(killed.length ? 'Game Shield: stopped ' + killed.join(', ') : 'Game Shield: nothing to stop', killed.length ? 'ok' : 'info')
+  gsSend({ action: 'activated', killed: killed.map(n => n + '.exe') })
+  session.midTimer = setInterval(() => gameShieldMidTick().catch(() => {}), 20000)
+}
+
+async function gameShieldMidTick() {
+  const s = _gsSession
+  if (!s || s.busy) return
+  s.busy = true
+  try {
+    const cfg = gsSettings()
+    if (!cfg.enabled) return
+    const names = GameShield.midSessionKillList({ ramPct: gsRamPct(), tier3Threshold: cfg.tier3, midThreshold: cfg.mid, exclusions: cfg.exclusions, alreadyStopped: [...s.stopped.keys()] })
+    if (!names.length) return
+    const killed = await gsStopNames(s, names)
+    if (_gsSession === s && killed.length) {
+      gsLog('Game Shield: RAM high — stopped ' + killed.join(', '), 'warn')
+      gsSend({ action: 'mid-session-kill', killed: killed.map(n => n + '.exe') })
+    }
+  } finally { s.busy = false }
+}
+
+// Starts a stopped app again (detached, no shell). The path was reported by Get-Process and re-validated.
+function gsRelaunch(p) {
+  try {
+    if (!GameShield.isRelaunchable(p) || !fs.existsSync(p)) return false
+    require('child_process').spawn(p, [], { detached: true, stdio: 'ignore', windowsHide: false }).unref()
+    return true
+  } catch { return false }
+}
+
+async function gameShieldDeactivate() {
+  const s = _gsSession
+  if (!s) return
+  _gsSession = null
+  clearInterval(s.midTimer)
+  const paths = [...s.stopped.entries()].filter(([, p]) => p)
+  let running = new Set()
+  if (paths.length) {
+    const r = await runPS("Get-Process -Name " + paths.map(([n]) => "'" + n + "'").join(',') + " -EA SilentlyContinue | Select-Object -ExpandProperty Name", 10000)
+    running = new Set((r.out || '').split(/\r?\n/).map(x => x.trim().toLowerCase()).filter(Boolean))
+  }
+  const restored = []
+  for (const [name, p] of paths) { if (!running.has(name) && gsRelaunch(p)) restored.push(name + '.exe') }
+  gsLog(restored.length ? 'Game Shield: restarted ' + restored.join(', ') : 'Game Shield: session ended', 'ok')
+  gsSend({ action: 'session-summary', processesKilled: s.killCount, estimatedRamFreedMB: s.freedMB })
+  gsSend({ action: 'deactivated', restored })
+}
+
+// App quitting mid-game: start the stopped apps again so the user is not left without them.
+function gameShieldShutdown() {
+  const s = _gsSession
+  if (!s) return
+  _gsSession = null
+  clearInterval(s.midTimer)
+  for (const [, p] of s.stopped) { if (p) gsRelaunch(p) }
+}
 
 ipcMain.handle('toggle-game-shield', async (_, on) => {
   if (!requiresPremium('toggle-game-shield')) return { ok: false, reason: 'premium_required' }
-  // Game Shield suppresses background interference during gaming sessions
+  on = !!on
+  saveSettings({ ...loadSettings(), gameShieldEnabled: on })
+  // Keeps the old behaviour: also silences the Edge/Google updater tasks while Game Shield is on.
   const tasks = ['MicrosoftEdgeUpdateTaskMachineCore', 'MicrosoftEdgeUpdateTaskMachineUA', 'GoogleUpdateTaskMachineCore', 'GoogleUpdateTaskMachineUA']
   const action = on ? 'Disable' : 'Enable'
   const ps = tasks.map(t => `schtasks /Change /TN "${t}" /${action} 2>$null`).join('; ')
   await runPS(ps, 15000).catch(() => {})
-  return { ok: true, active: !!on }
+  if (!on) await gameShieldDeactivate()
+  else if (activeGameProfile) gameShieldActivate().catch(() => {})   // a game is already running
+  return { ok: true, active: on }
 })
 
 ipcMain.handle('get-game-shield-exclusions', async () => {
   if (!requiresPremium('get-game-shield-exclusions')) return { ok: false, reason: 'premium_required' }
-  const r = await runPS(`
-    $path = 'HKLM:\\SOFTWARE\\JylliTool\\GameShield'
-    if (Test-Path $path) { (Get-ItemProperty $path).Exclusions } else { '' }
-  `)
-  const exclusions = (r.out || '').split(',').map(s => s.trim()).filter(Boolean)
+  return { ok: true, exclusions: gsSettings().exclusions }
+})
+
+ipcMain.handle('set-game-shield-exclusions', async (_, list) => {
+  if (!requiresPremium('set-game-shield-exclusions')) return { ok: false, reason: 'premium_required' }
+  const exclusions = GameShield.normalizeExclusions(list)
+  saveSettings({ ...loadSettings(), gameShieldExclusions: exclusions })
   return { ok: true, exclusions }
 })
 
