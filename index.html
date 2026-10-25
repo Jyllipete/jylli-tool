@@ -17060,7 +17060,7 @@ async function loadHistoryChart(range) {
         </div>
       </div>`
     requestAnimationFrame(() => {
-      drawHistorySparkline('hist-canvas-cpu', data.map(s => s.cpu), 'hist-stat-cpu', '#e06b8e')
+      drawHistorySparkline('hist-canvas-cpu', data.map(s => s.cpu), 'hist-stat-cpu', (getComputedStyle(document.documentElement).getPropertyValue('--c-accent').trim() || '#8B7CF6'))
       drawHistorySparkline('hist-canvas-ram', data.map(s => s.ram), 'hist-stat-ram', '#3498db')
     })
   } catch {

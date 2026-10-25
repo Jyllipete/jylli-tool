@@ -69,7 +69,9 @@ function respond(name, args, ctx) {
     case 'getTempSize': return { totalMB: 2840 }
     case 'getDiskUsage': return { ok: true, folders: [] }
     case 'getRecycleBinSize': return { sizeMB: 412 }
-    case 'getWhatsNew': return [{ version: '1.6.0', items: [{ type: 'new', text: 'Redesigned interface' }] }]
+    case 'getWhatsNew': return [{ version: '1.6.0', items: ['New — Redesigned interface', 'Security — Signed Premium tokens'] }]
+    case 'getHealthScore': return { total: 78, breakdown: { temp: { score: 14, max: 20, label: 'Temps' }, startup: { score: 9, max: 20, label: 'Startup' }, tweaks: { score: 18, max: 20, label: 'Tweaks' } } }
+    case 'getMetricsHistory': return Array.from({ length: 48 }, (_, i) => ({ ts: now - (48 - i) * 1800000, cpu: 20 + Math.round(15 * Math.abs(Math.sin(i / 4))), ram: 42 + Math.round(6 * Math.sin(i / 7)) }))
     case 'getPremiumUrl': return 'https://jyllitool.netlify.app/'
     case 'detectGames': return { ok: true, games: [] }
     case 'getGameWatcherStatus': return { running: false }
