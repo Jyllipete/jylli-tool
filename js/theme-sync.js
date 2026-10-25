@@ -18,6 +18,9 @@
 
   async function init() {
     if (document.documentElement.dataset.themeSync === 'manual') return
+    // Main passes ?accent=/?theme= in the window URL, which also covers windows whose preload has no getSettings
+    const q = new URLSearchParams(location.search)
+    if (applyAccent(q.get('accent')) || applyAccent(ACCENTS[q.get('theme')])) return
     try {
       const st = await window.api.getSettings()
       applyAccent(st?.accentColor || ACCENTS[st?.theme] || ACCENTS.jylli)
