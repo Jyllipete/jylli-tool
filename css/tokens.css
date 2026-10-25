@@ -13,6 +13,7 @@
 
   /* ── Accent: deep royal purple (Jylli default — overridden at runtime by applyTheme) ── */
   --c-accent:         #8B7CF6;
+  --c-accent-rgb:     139,124,246;
   --c-accent-muted:   rgba(139,124,246,0.12);
   --c-accent-ring:    rgba(139,124,246,0.28);
   --c-accent-glow:    rgba(139,124,246,0.16);

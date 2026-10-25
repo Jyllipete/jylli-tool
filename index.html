@@ -362,7 +362,7 @@
   <div class="modal-sheet" style="width:580px;max-width:95vw;max-height:88vh;display:flex;flex-direction:column;">
     <div class="modal-sheet-header">
       <div style="display:flex;align-items:center;gap:12px">
-        <div style="width:38px;height:38px;border-radius:10px;background:rgba(155,89,182,0.15);border:1px solid rgba(155,89,182,0.35);display:flex;align-items:center;justify-content:center;font-size:17px;color:#9b59b6"><i class="fa fa-wand-sparkles"></i></div>
+        <div style="width:38px;height:38px;border-radius:10px;background:rgba(var(--c-accent-rgb),0.15);border:1px solid rgba(var(--c-accent-rgb),0.35);display:flex;align-items:center;justify-content:center;font-size:17px;color:var(--c-accent)"><i class="fa fa-wand-sparkles"></i></div>
         <div>
           <div id="spw-title" style="font-size:16px;font-weight:800;color:var(--white)">Smart Profile Wizard</div>
           <div id="spw-subtitle" style="font-size:10px;color:var(--muted)">Instant optimization for your setup</div>
@@ -19184,7 +19184,7 @@ function spwClose() {
 function spwSetIndicators(active) {
   for (let i = 1; i <= 8; i++) {
     const el = document.getElementById(`spw-ind-${i}`)
-    if (el) el.style.background = i <= active ? '#9b59b6' : ''
+    if (el) el.style.background = i <= active ? 'var(--c-accent)' : ''
   }
 }
 
@@ -19203,15 +19203,15 @@ function spwStep1() {
       ${useCases.map(u => `
         <div id="spw-uc-${u.id}" onclick="spwSelectUseCase('${u.id}')"
           style="background:#111;border:1px solid #222;border-radius:10px;padding:12px 16px;cursor:pointer;transition:border-color .15s,background .15s;display:flex;align-items:center;gap:14px"
-          onmouseenter="this.style.borderColor='rgba(155,89,182,0.4)'" onmouseleave="if(!this.classList.contains('spw-sel'))this.style.borderColor='#222'">
-          <div style="width:36px;height:36px;border-radius:8px;background:rgba(155,89,182,0.1);border:1px solid rgba(155,89,182,0.2);display:flex;align-items:center;justify-content:center;font-size:15px;color:#9b59b6;flex-shrink:0"><i class="fa ${u.icon}"></i></div>
+          onmouseenter="this.style.borderColor='rgba(var(--c-accent-rgb),0.4)'" onmouseleave="if(!this.classList.contains('spw-sel'))this.style.borderColor='#222'">
+          <div style="width:36px;height:36px;border-radius:8px;background:rgba(var(--c-accent-rgb),0.1);border:1px solid rgba(var(--c-accent-rgb),0.2);display:flex;align-items:center;justify-content:center;font-size:15px;color:var(--c-accent);flex-shrink:0"><i class="fa ${u.icon}"></i></div>
           <div><div style="font-size:12px;font-weight:700;color:var(--white)">${u.label}</div><div style="font-size:10px;color:var(--muted);margin-top:2px">${u.desc}</div></div>
-          <i class="fa fa-circle-check" id="spw-uc-chk-${u.id}" style="margin-left:auto;font-size:16px;color:#9b59b6;display:none"></i>
+          <i class="fa fa-circle-check" id="spw-uc-chk-${u.id}" style="margin-left:auto;font-size:16px;color:var(--c-accent);display:none"></i>
         </div>`).join('')}
     </div>`
   document.getElementById('spw-footer').innerHTML = `
     <button class="btn btn-ghost btn-sm" onclick="spwClose()">${tUI('close')}</button>
-    <button id="spw-next1" class="btn btn-primary btn-sm" onclick="spwStep2()" disabled style="background:#9b59b6;border-color:#9b59b6">${tWizard('spwNext')} <i class="fa fa-arrow-right"></i></button>`
+    <button id="spw-next1" class="btn btn-primary btn-sm" onclick="spwStep2()" disabled style="background:var(--c-accent);border-color:var(--c-accent)">${tWizard('spwNext')} <i class="fa fa-arrow-right"></i></button>`
   if (_spwUseCase) spwSelectUseCase(_spwUseCase)
 }
 
@@ -19219,8 +19219,8 @@ function spwSelectUseCase(id) {
   _spwUseCase = id
   document.querySelectorAll('[id^="spw-uc-"]').forEach(el => {
     const isThis = el.id === `spw-uc-${id}`
-    el.style.borderColor = isThis ? '#9b59b6' : '#222'
-    el.style.background  = isThis ? 'rgba(155,89,182,0.12)' : '#111'
+    el.style.borderColor = isThis ? 'var(--c-accent)' : '#222'
+    el.style.background  = isThis ? 'rgba(var(--c-accent-rgb),0.12)' : '#111'
     el.classList.toggle('spw-sel', isThis)
   })
   document.querySelectorAll('[id^="spw-uc-chk-"]').forEach(el => { el.style.display = 'none' })
@@ -19249,17 +19249,17 @@ function spwStep2() {
     <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:14px">
       ${specs.map(s => `
         <div style="display:flex;align-items:center;gap:10px;padding:9px 12px;background:#111;border:1px solid #1a1a22;border-radius:8px">
-          <i class="fa ${s.icon}" style="color:#9b59b6;width:13px;font-size:12px;flex-shrink:0"></i>
+          <i class="fa ${s.icon}" style="color:var(--c-accent);width:13px;font-size:12px;flex-shrink:0"></i>
           <span style="font-size:10.5px;color:var(--muted);width:64px;flex-shrink:0">${s.label}</span>
           <span style="font-size:10.5px;color:#c0c0c0;font-weight:600;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${s.val}</span>
         </div>`).join('')}
     </div>
-    <div style="padding:9px 12px;background:rgba(155,89,182,0.06);border:1px solid rgba(155,89,182,0.18);border-radius:8px;font-size:10px;color:var(--gray)">
-      <i class="fa fa-circle-info" style="color:#9b59b6;margin-right:5px"></i>${tWizard('spwHwNote')}
+    <div style="padding:9px 12px;background:rgba(var(--c-accent-rgb),0.06);border:1px solid rgba(var(--c-accent-rgb),0.18);border-radius:8px;font-size:10px;color:var(--gray)">
+      <i class="fa fa-circle-info" style="color:var(--c-accent);margin-right:5px"></i>${tWizard('spwHwNote')}
     </div>`
   document.getElementById('spw-footer').innerHTML = `
     <button class="btn btn-ghost btn-sm" onclick="spwStep1()"><i class="fa fa-arrow-left"></i> ${tWizard('spwBack')}</button>
-    <button class="btn btn-primary btn-sm" onclick="spwStep3()" style="background:#9b59b6;border-color:#9b59b6">${tWizard('spwNext')} <i class="fa fa-arrow-right"></i></button>`
+    <button class="btn btn-primary btn-sm" onclick="spwStep3()" style="background:var(--c-accent);border-color:var(--c-accent)">${tWizard('spwNext')} <i class="fa fa-arrow-right"></i></button>`
 }
 
 // ── Step 3: Games ─────────────────────────────────────────────────────────────
@@ -19273,16 +19273,16 @@ function spwStep3() {
       ${SPW_GAMES.map(g => `
         <div id="spw-g-${g.id}" onclick="spwToggleGame('${g.id}')"
           style="background:#111;border:1px solid #222;border-radius:8px;padding:10px 12px;cursor:pointer;transition:border-color .15s,background .15s;display:flex;align-items:center;gap:10px"
-          onmouseenter="this.style.borderColor='rgba(155,89,182,0.4)'" onmouseleave="this.style.borderColor=_spwGames.has('${g.id}')?'#9b59b6':'#222'">
-          <i class="fa ${g.icon}" style="color:#9b59b6;width:12px;font-size:13px;flex-shrink:0"></i>
+          onmouseenter="this.style.borderColor='rgba(var(--c-accent-rgb),0.4)'" onmouseleave="this.style.borderColor=_spwGames.has('${g.id}')?'var(--c-accent)':'#222'">
+          <i class="fa ${g.icon}" style="color:var(--c-accent);width:12px;font-size:13px;flex-shrink:0"></i>
           <span style="font-size:11.5px;font-weight:600;color:var(--white)">${g.label}</span>
-          <i class="fa fa-check" id="spw-g-chk-${g.id}" style="margin-left:auto;font-size:12px;color:#9b59b6;display:none"></i>
+          <i class="fa fa-check" id="spw-g-chk-${g.id}" style="margin-left:auto;font-size:12px;color:var(--c-accent);display:none"></i>
         </div>`).join('')}
     </div>
     <div style="margin-top:10px;font-size:10px;color:var(--muted);text-align:center"><i class="fa fa-circle-info"></i> ${tWizard('spwSkip')}</div>`
   document.getElementById('spw-footer').innerHTML = `
     <button class="btn btn-ghost btn-sm" onclick="spwStep2()"><i class="fa fa-arrow-left"></i> ${tWizard('spwBack')}</button>
-    <button class="btn btn-primary btn-sm" onclick="spwStep4()" style="background:#9b59b6;border-color:#9b59b6">${tWizard('spwNext')} <i class="fa fa-arrow-right"></i></button>`
+    <button class="btn btn-primary btn-sm" onclick="spwStep4()" style="background:var(--c-accent);border-color:var(--c-accent)">${tWizard('spwNext')} <i class="fa fa-arrow-right"></i></button>`
   _spwGames.forEach(id => spwToggleGame(id, true))
 }
 
@@ -19294,7 +19294,7 @@ function spwToggleGame(id, forceOn) {
   const on = _spwGames.has(id)
   const el = document.getElementById(`spw-g-${id}`)
   const chk = document.getElementById(`spw-g-chk-${id}`)
-  if (el) { el.style.borderColor = on ? '#9b59b6' : '#222'; el.style.background = on ? 'rgba(155,89,182,0.12)' : '#111' }
+  if (el) { el.style.borderColor = on ? 'var(--c-accent)' : '#222'; el.style.background = on ? 'rgba(var(--c-accent-rgb),0.12)' : '#111' }
   if (chk) chk.style.display = on ? '' : 'none'
 }
 
@@ -19309,7 +19309,7 @@ function spwStep4() {
     { id:'lghub',     icon:'fa-gamepad',     label: tWizard('spwPeriphGHub'),      desc: tWizard('spwPeriphGHubDesc'),      val: _spwLghub     },
     { id:'printer',   icon:'fa-print',       label: tWizard('spwPeriphPrinter'),   desc: tWizard('spwPeriphPrinterDesc'),   val: _spwPrinter   },
   ]
-  const active = 'background:rgba(155,89,182,0.18);border-color:#9b59b6;color:#9b59b6'
+  const active = 'background:rgba(var(--c-accent-rgb),0.18);border-color:var(--c-accent);color:var(--c-accent)'
   const inactive = 'background:#111;border-color:#333;color:var(--muted)'
   document.getElementById('spw-body').innerHTML = `
     <div style="font-size:13px;font-weight:700;color:var(--white);margin-bottom:4px">${tWizard('spwStep4Title')}</div>
@@ -19317,7 +19317,7 @@ function spwStep4() {
     <div style="display:flex;flex-direction:column;gap:8px">
       ${periphItems.map(p => `
         <div style="background:#111;border:1px solid #1a1a22;border-radius:10px;padding:11px 14px;display:flex;align-items:center;gap:12px">
-          <div style="width:32px;height:32px;border-radius:7px;background:rgba(155,89,182,0.1);border:1px solid rgba(155,89,182,0.2);display:flex;align-items:center;justify-content:center;font-size:13px;color:#9b59b6;flex-shrink:0"><i class="fa ${p.icon}"></i></div>
+          <div style="width:32px;height:32px;border-radius:7px;background:rgba(var(--c-accent-rgb),0.1);border:1px solid rgba(var(--c-accent-rgb),0.2);display:flex;align-items:center;justify-content:center;font-size:13px;color:var(--c-accent);flex-shrink:0"><i class="fa ${p.icon}"></i></div>
           <div style="flex:1">
             <div style="font-size:11px;font-weight:700;color:var(--white)">${p.label}</div>
             <div style="font-size:9.5px;color:var(--muted);margin-top:1px">${p.desc}</div>
@@ -19330,7 +19330,7 @@ function spwStep4() {
     </div>`
   document.getElementById('spw-footer').innerHTML = `
     <button class="btn btn-ghost btn-sm" onclick="spwStep3()"><i class="fa fa-arrow-left"></i> ${tWizard('spwBack')}</button>
-    <button class="btn btn-primary btn-sm" onclick="spwStep5()" style="background:#9b59b6;border-color:#9b59b6">${tWizard('spwNext')} <i class="fa fa-arrow-right"></i></button>`
+    <button class="btn btn-primary btn-sm" onclick="spwStep5()" style="background:var(--c-accent);border-color:var(--c-accent)">${tWizard('spwNext')} <i class="fa fa-arrow-right"></i></button>`
 }
 
 function spwSetPeriph(id, val) {
@@ -19358,16 +19358,16 @@ function spwStep5() {
     <div style="display:flex;flex-direction:column;gap:8px">
       ${connOpts.map(c => `
         <div id="spw-conn-${c.id}" onclick="spwSelectConn('${c.id}')"
-          style="background:${_spwConnType===c.id?'rgba(155,89,182,0.12)':'#111'};border:1px solid ${_spwConnType===c.id?'#9b59b6':'#222'};border-radius:10px;padding:12px 16px;cursor:pointer;transition:all .15s;display:flex;align-items:center;gap:14px"
-          onmouseenter="this.style.borderColor='rgba(155,89,182,0.4)'" onmouseleave="if(_spwConnType!=='${c.id}')this.style.borderColor='#222'">
-          <div style="width:36px;height:36px;border-radius:8px;background:rgba(155,89,182,0.1);border:1px solid rgba(155,89,182,0.2);display:flex;align-items:center;justify-content:center;font-size:15px;color:#9b59b6;flex-shrink:0"><i class="fa ${c.icon}"></i></div>
+          style="background:${_spwConnType===c.id?'rgba(var(--c-accent-rgb),0.12)':'#111'};border:1px solid ${_spwConnType===c.id?'var(--c-accent)':'#222'};border-radius:10px;padding:12px 16px;cursor:pointer;transition:all .15s;display:flex;align-items:center;gap:14px"
+          onmouseenter="this.style.borderColor='rgba(var(--c-accent-rgb),0.4)'" onmouseleave="if(_spwConnType!=='${c.id}')this.style.borderColor='#222'">
+          <div style="width:36px;height:36px;border-radius:8px;background:rgba(var(--c-accent-rgb),0.1);border:1px solid rgba(var(--c-accent-rgb),0.2);display:flex;align-items:center;justify-content:center;font-size:15px;color:var(--c-accent);flex-shrink:0"><i class="fa ${c.icon}"></i></div>
           <div style="flex:1"><div style="font-size:12px;font-weight:700;color:var(--white)">${c.label}</div><div style="font-size:10px;color:var(--muted);margin-top:2px">${c.desc}</div></div>
-          <i class="fa fa-circle-check" style="font-size:16px;color:#9b59b6;${_spwConnType===c.id?'':'display:none'}"></i>
+          <i class="fa fa-circle-check" style="font-size:16px;color:var(--c-accent);${_spwConnType===c.id?'':'display:none'}"></i>
         </div>`).join('')}
     </div>`
   document.getElementById('spw-footer').innerHTML = `
     <button class="btn btn-ghost btn-sm" onclick="spwStep4()"><i class="fa fa-arrow-left"></i> ${tWizard('spwBack')}</button>
-    <button class="btn btn-primary btn-sm" onclick="spwStep6()" style="background:#9b59b6;border-color:#9b59b6">${tWizard('spwNext')} <i class="fa fa-arrow-right"></i></button>`
+    <button class="btn btn-primary btn-sm" onclick="spwStep6()" style="background:var(--c-accent);border-color:var(--c-accent)">${tWizard('spwNext')} <i class="fa fa-arrow-right"></i></button>`
 }
 
 function spwSelectConn(id) { _spwConnType = id; spwStep5() }
@@ -19387,16 +19387,16 @@ function spwStep6() {
     <div style="display:flex;flex-direction:column;gap:8px">
       ${safeOpts.map(s => `
         <div id="spw-safe-${s.id}" onclick="spwSelectSafety('${s.id}')"
-          style="background:${_spwSafetyLevel===s.id?'rgba(155,89,182,0.08)':'#111'};border:1px solid ${_spwSafetyLevel===s.id?'#9b59b6':'#222'};border-radius:10px;padding:12px 16px;cursor:pointer;transition:all .15s;display:flex;align-items:center;gap:14px"
-          onmouseenter="this.style.borderColor='rgba(155,89,182,0.4)'" onmouseleave="if(_spwSafetyLevel!=='${s.id}')this.style.borderColor='#222'">
+          style="background:${_spwSafetyLevel===s.id?'rgba(var(--c-accent-rgb),0.08)':'#111'};border:1px solid ${_spwSafetyLevel===s.id?'var(--c-accent)':'#222'};border-radius:10px;padding:12px 16px;cursor:pointer;transition:all .15s;display:flex;align-items:center;gap:14px"
+          onmouseenter="this.style.borderColor='rgba(var(--c-accent-rgb),0.4)'" onmouseleave="if(_spwSafetyLevel!=='${s.id}')this.style.borderColor='#222'">
           <div style="width:36px;height:36px;border-radius:8px;background:rgba(0,0,0,0.2);border:1px solid ${s.color}44;display:flex;align-items:center;justify-content:center;font-size:15px;color:${s.color};flex-shrink:0"><i class="fa ${s.icon}"></i></div>
           <div style="flex:1"><div style="font-size:12px;font-weight:700;color:var(--white)">${s.label}</div><div style="font-size:10px;color:var(--muted);margin-top:2px">${s.desc}</div></div>
-          <i class="fa fa-circle-check" style="font-size:16px;color:#9b59b6;${_spwSafetyLevel===s.id?'':'display:none'}"></i>
+          <i class="fa fa-circle-check" style="font-size:16px;color:var(--c-accent);${_spwSafetyLevel===s.id?'':'display:none'}"></i>
         </div>`).join('')}
     </div>`
   document.getElementById('spw-footer').innerHTML = `
     <button class="btn btn-ghost btn-sm" onclick="spwStep5()"><i class="fa fa-arrow-left"></i> ${tWizard('spwBack')}</button>
-    <button class="btn btn-primary btn-sm" onclick="spwStep7()" style="background:#9b59b6;border-color:#9b59b6">${tWizard('spwNext')} <i class="fa fa-arrow-right"></i></button>`
+    <button class="btn btn-primary btn-sm" onclick="spwStep7()" style="background:var(--c-accent);border-color:var(--c-accent)">${tWizard('spwNext')} <i class="fa fa-arrow-right"></i></button>`
 }
 
 function spwSelectSafety(id) { _spwSafetyLevel = id; spwStep6() }
@@ -19425,14 +19425,14 @@ async function spwStep7() {
   _spwPlanIds = [...tweakIds]
   body.innerHTML = `
     <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;align-items:center">
-      <div style="background:rgba(155,89,182,0.1);border:1px solid rgba(155,89,182,0.25);border-radius:8px;padding:7px 13px;font-size:11px;color:#9b59b6"><i class="fa fa-wand-sparkles"></i> ${tweakIds.length} ${tWizard('spwStep7Sub')}</div>
+      <div style="background:rgba(var(--c-accent-rgb),0.1);border:1px solid rgba(var(--c-accent-rgb),0.25);border-radius:8px;padding:7px 13px;font-size:11px;color:var(--c-accent)"><i class="fa fa-wand-sparkles"></i> ${tweakIds.length} ${tWizard('spwStep7Sub')}</div>
     </div>
     ${tweakIds.length === 0 ? `<div style="text-align:center;padding:24px 0;color:var(--success)"><i class="fa fa-check-circle" style="font-size:28px;margin-bottom:8px;display:block"></i>${tWizard('spwAllApplied')}</div>` : ''}
     <div style="display:flex;flex-direction:column;gap:4px;max-height:290px;overflow-y:auto" id="spw-plan-rows">
       ${tweakIds.map(id => {
         const m = metaMap[id]; const impact = m?.gamerImpact; const tier = m?.safetyTier
         return `<div style="display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:7px;background:#111;border:1px solid #1a1a22">
-          <input type="checkbox" id="spwrpp-${id}" checked style="accent-color:#9b59b6;flex-shrink:0">
+          <input type="checkbox" id="spwrpp-${id}" checked style="accent-color:var(--c-accent);flex-shrink:0">
           <div style="flex:1;min-width:0">
             <div style="font-size:10.5px;font-weight:600;color:#c0c0c0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${tName(id) || id}</div>
             <div style="font-size:9px;color:var(--muted)">${m?.category || ''}</div>
@@ -19441,12 +19441,12 @@ async function spwStep7() {
           ${tier ? `<span style="font-size:8.5px;font-weight:700;padding:2px 6px;border-radius:4px;background:rgba(0,0,0,0.3);color:${tierColor[tier]};border:1px solid ${tierColor[tier]}33;flex-shrink:0">${tierLabel[tier]}</span>` : ''}
         </div>`}).join('')}
     </div>
-    ${tweakIds.length > 0 ? `<div style="margin-top:10px;padding:9px 11px;background:rgba(155,89,182,0.06);border:1px solid rgba(155,89,182,0.16);border-radius:8px;display:flex;gap:8px;align-items:flex-start"><i class="fa fa-shield-halved" style="color:#9b59b6;flex-shrink:0;font-size:12px;margin-top:1px"></i><span style="font-size:10.5px;color:#c0c0c0;line-height:1.5">${tWizard('aomRestorePointWarn')}</span></div>` : ''}`
+    ${tweakIds.length > 0 ? `<div style="margin-top:10px;padding:9px 11px;background:rgba(var(--c-accent-rgb),0.06);border:1px solid rgba(var(--c-accent-rgb),0.16);border-radius:8px;display:flex;gap:8px;align-items:flex-start"><i class="fa fa-shield-halved" style="color:var(--c-accent);flex-shrink:0;font-size:12px;margin-top:1px"></i><span style="font-size:10.5px;color:#c0c0c0;line-height:1.5">${tWizard('aomRestorePointWarn')}</span></div>` : ''}`
 
   footer.innerHTML = `
     <button class="btn btn-ghost btn-sm" onclick="spwStep6()"><i class="fa fa-arrow-left"></i> ${tWizard('spwBack')}</button>
     ${tweakIds.length > 0
-      ? `<button class="btn btn-primary btn-sm" onclick="spwStep8()" style="background:#9b59b6;border-color:#9b59b6"><i class="fa fa-wand-sparkles"></i> ${tWizard('spwApply')} (${tweakIds.length})</button>`
+      ? `<button class="btn btn-primary btn-sm" onclick="spwStep8()" style="background:var(--c-accent);border-color:var(--c-accent)"><i class="fa fa-wand-sparkles"></i> ${tWizard('spwApply')} (${tweakIds.length})</button>`
       : `<button class="btn btn-ghost btn-sm" onclick="spwClose()">${tUI('close')}</button>`}`
 }
 
@@ -19468,8 +19468,8 @@ async function spwStep8() {
         <div id="spw-run-status" style="font-size:11px;color:var(--gray);font-weight:600">${tWizard('aomCreatingRp')}</div>
         <div id="spw-run-counter" style="font-size:10px;color:var(--muted)">0 / ${tweakIds.length}</div>
       </div>
-      <div style="height:6px;background:rgba(155,89,182,0.1);border-radius:3px;overflow:hidden;margin-bottom:10px">
-        <div id="spw-run-bar" style="height:100%;background:#9b59b6;border-radius:3px;width:0%;transition:width .4s ease"></div>
+      <div style="height:6px;background:rgba(var(--c-accent-rgb),0.1);border-radius:3px;overflow:hidden;margin-bottom:10px">
+        <div id="spw-run-bar" style="height:100%;background:var(--c-accent);border-radius:3px;width:0%;transition:width .4s ease"></div>
       </div>
     </div>
     <div id="spw-run-log" style="font-size:10px;color:var(--muted);line-height:1.8;max-height:280px;overflow-y:auto;font-family:monospace;background:#09090d;border-radius:6px;padding:8px 10px"></div>`
@@ -19503,7 +19503,7 @@ async function spwStep8() {
   if (log) {
     log.innerHTML += `<div style="color:var(--success);font-weight:700;margin-top:6px"><i class="fa fa-check"></i> ${tWizard('aomComplete')}</div>`
     log.innerHTML += `
-    <div style="margin-top:10px;padding:11px;background:rgba(155,89,182,0.06);border:1px solid rgba(155,89,182,0.18);border-radius:9px">
+    <div style="margin-top:10px;padding:11px;background:rgba(var(--c-accent-rgb),0.06);border:1px solid rgba(var(--c-accent-rgb),0.18);border-radius:9px">
       <div style="font-size:9px;font-weight:700;color:var(--muted);letter-spacing:.8px;text-transform:uppercase;margin-bottom:8px">${tWizard('aomSessionReport')}</div>
       <div style="display:flex;gap:12px;align-items:center">
         <div style="text-align:center">

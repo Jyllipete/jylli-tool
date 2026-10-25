@@ -17,6 +17,8 @@ const SIZES = String(arg('size', '1280x820')).split(',').map(s => s.split('x').m
 const ONLY_PAGES = arg('pages', null) ? String(arg('pages')).split(',') : null
 const WINDOWS = !!arg('windows', false)
 const TAG = String(arg('tag', 'run'))
+// --overlay name=js;name2=js2 : after boot, run JS (e.g. open a dialog) and shoot it as overlay-<name>.png
+const OVERLAYS = arg('overlay', null) ? String(arg('overlay')).split(';').map(x => { const i = x.indexOf('='); return [x.slice(0, i), x.slice(i + 1)] }) : []
 const ACCENT = arg('accent', null)
 
 const PAGES = ['dashboard', 'preflight', 'fixes', 'restore-points', 'performance', 'gaming', 'network', 'privacy-cleanup', 'startup-manager', 'process-manager',
@@ -88,6 +90,13 @@ async function main() {
       await sleep(1100)
       await shot(win, path.join(OUT, name, `${page}.png`))
       if (logs.length) { report.push(`${name}/${page}:`); logs.forEach(l => report.push('   ' + l)) }
+    }
+    for (const [oname, js] of OVERLAYS) {
+      logs.length = 0
+      await win.webContents.executeJavaScript(js).catch(e => logs.push('[overlay] ' + e.message))
+      await sleep(900)
+      await shot(win, path.join(OUT, name, `overlay-${oname}.png`))
+      if (logs.length) { report.push(`${name}/overlay-${oname}:`); logs.forEach(l => report.push('   ' + l)) }
     }
     win.destroy()
   }
