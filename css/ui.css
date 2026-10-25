@@ -450,3 +450,17 @@
 .j-history-row:last-child { border-bottom: 0; }
 .j-history-row .j-row-title { gap: 6px; }
 .j-history-row .j-row-title i { color: var(--c-text-tertiary); font-size: var(--fs-2); }
+
+/* ═══ Forms (scheduler and other form pages) ═══ */
+.j-field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.j-field-label { font: 500 var(--fs-1)/1 var(--font); letter-spacing: .05em; text-transform: uppercase; color: var(--c-text-tertiary); }
+.j-field-hint { font-size: var(--fs-2); color: var(--c-text-tertiary); }
+.j-field .j-select, .j-field .j-input { width: 100%; }
+.j-field .j-input[type="time"] { width: 160px; }
+.j-wrap { flex-wrap: wrap; }
+.j-sched-form { display: flex; flex-direction: column; gap: 14px; }
+.j-sched-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.j-sched-submit { display: flex; justify-content: flex-end; }
+.sched-day-chip.sched-day-active { background: var(--c-accent-muted); border-color: var(--c-accent-ring); color: var(--c-accent); }
+.j-sched-loading { padding: 16px; }
+.sched-bulk-bar { padding: 8px 16px 0; }

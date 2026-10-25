@@ -531,6 +531,7 @@
 <script src="js/pages/settings.js"></script>
 <script src="js/pages/system-processes.js"></script>
 <script src="js/pages/system-history.js"></script>
+<script src="js/pages/system-scheduler.js"></script>
 <script src="js/ui-helpers.js"></script>
 <script src="js/fivem-logic.js"></script>
 <script>
@@ -4588,96 +4589,6 @@ function renderPingHistoryLog() {
 }
 
 // ─── Page: Scheduler ──────────────────────────────────────────────────────────
-async function buildScheduler(c) {
-  if (!settings.isPremium) { await buildPremiumBanner(c, 'scheduler'); return }
-  const hero = document.createElement('div')
-  hero.style.cssText = 'background:linear-gradient(135deg,#0d0d14 0%,#10100d 100%);border:1px solid #2a2a1a;border-radius:12px;padding:18px 20px;margin-bottom:12px'
-  hero.innerHTML = `
-    <div style="font-size:15px;font-weight:800;color:var(--warning);margin-bottom:6px"><i class="fa fa-clock"></i> ${tUI('schedHeroTitle')}</div>
-    <div style="font-size:11px;color:var(--gray);line-height:1.5">${tUI('schedHeroSub')}</div>
-  `
-  c.appendChild(hero)
-
-  const card = makeSection(tUI('schedScheduleTask'), tUI('schedSectionSub'))
-  card.innerHTML += `
-    <div style="padding:14px 18px 18px">
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:10px">
-        <div>
-          <div style="font-size:10px;color:var(--muted);margin-bottom:5px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px">${tUI('schedTaskLabel')}</div>
-          <select class="styled-select" id="sched-action" style="width:100%" onchange="schedUpdateActionDesc()">
-            <optgroup label="${tUI('schedCatCleaning')}">
-              <option value="clean-temp">${tUI('schedOptCleanTemp')}</option>
-              <option value="clean-nvidia">${tUI('schedOptNvidiaCache')}</option>
-              <option value="clean-downloads">${tUI('schedClearDownloads')}</option>
-            </optgroup>
-            <optgroup label="${tUI('schedCatPerformance')}">
-              <option value="defrag-c">${tUI('schedOptDefrag')}</option>
-              <option value="clean-ram">${tUI('schedFreeRam')}</option>
-            </optgroup>
-            <optgroup label="${tUI('schedCatSystem')}">
-              <option value="flush-dns">${tUI('schedOptFlushDns')}</option>
-              <option value="windows-update">${tUI('schedCheckUpdates')}</option>
-            </optgroup>
-          </select>
-          <div class="sched-action-desc" id="sched-action-desc"></div>
-        </div>
-        <div>
-          <div style="font-size:10px;color:var(--muted);margin-bottom:5px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px">${tUI('schedWhenLabel')}</div>
-          <select class="styled-select" id="sched-when" style="width:100%" onchange="schedUpdateWhenRows()">
-            <option value="startup">${tUI('schedOptStartup')}</option>
-            <option value="logon">${tUI('schedOptLogin')}</option>
-            <option value="hourly">${tUI('schedOptHourly')}</option>
-            <option value="daily-3am">${tUI('schedOptDaily')}</option>
-            <option value="daily-custom">${tUI('schedOptDailyCustom')}</option>
-            <option value="weekly-sun">${tUI('schedOptWeekly')}</option>
-            <option value="weekly-custom">${tUI('schedOptWeeklyCustom')}</option>
-          </select>
-        </div>
-      </div>
-      <div class="sched-time-row" id="sched-time-row">
-        <div style="font-size:10px;color:var(--muted);margin-bottom:5px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px">${tUI('schedTimeLabel')}</div>
-        <input type="time" class="styled-select" id="sched-time" value="03:00" style="width:160px">
-      </div>
-      <div class="sched-day-row" id="sched-day-row" style="margin-top:10px">
-        <div style="font-size:10px;color:var(--muted);margin-bottom:5px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px">${tUI('schedDayLabel')}</div>
-        <div style="display:flex;gap:6px;flex-wrap:wrap">
-          ${['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map((d,i)=>`<button type="button" class="btn btn-ghost btn-sm sched-day-chip${i===0?' sched-day-active':''}" data-day="${['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][i]}" onclick="schedSelectDay(this)">${tUI('schedOpt'+d)}</button>`).join('')}
-        </div>
-      </div>
-      <div style="margin-top:10px">
-        <div style="font-size:10px;color:var(--muted);margin-bottom:5px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px">${tUI('schedLabelLabel')}</div>
-        <input type="text" class="styled-select" id="sched-label" placeholder="${escAttr(tUI('schedLabelPlaceholder'))}" maxlength="255" style="width:100%">
-      </div>
-      <div style="margin-top:12px;text-align:right">
-        <button class="btn btn-primary" onclick="doScheduleTask()">${tUI('schedAdd')}</button>
-      </div>
-    </div>
-  `
-  c.appendChild(card)
-
-  const activeCard = makeSection(tUI('schedActiveTasks'))
-  activeCard.innerHTML += `
-    <div class="sched-bulk-bar" id="sched-bulk-bar" style="display:none">
-      <button class="btn btn-ghost btn-sm" onclick="schedBulkToggle(true)"><i class="fa fa-circle-check"></i> ${tUI('schedBulkEnableAll')}</button>
-      <button class="btn btn-ghost btn-sm" onclick="schedBulkToggle(false)"><i class="fa fa-ban"></i> ${tUI('schedBulkDisableAll')}</button>
-      <button class="btn btn-danger btn-sm" onclick="schedBulkDelete()"><i class="fa fa-trash"></i> ${tUI('schedBulkDeleteAll')}</button>
-    </div>
-  `
-  const taskList = document.createElement('div')
-  taskList.id = 'sched-task-list'
-  taskList.innerHTML = `<div style="padding:16px 18px;color:var(--muted);font-size:11px">${tUI('schedLoading')}</div>`
-  activeCard.appendChild(taskList)
-  c.appendChild(activeCard)
-
-  c.appendChild(makeTip(tUI('schedTip'), 'info'))
-
-  schedUpdateActionDesc()
-  loadScheduledTasks()
-  registerPageCleanup('scheduler', () => {
-    if (window._schedTicker) { clearInterval(window._schedTicker); window._schedTicker = null }
-  })
-}
-
 function schedUpdateActionDesc() {
   const sel = document.getElementById('sched-action')
   const desc = document.getElementById('sched-action-desc')
