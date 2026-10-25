@@ -269,3 +269,11 @@ input[type="range"] { accent-color: var(--c-accent); }
 #pulse-launch-rules .lr-card [style*="font-size:9px"] { font-size: 11.5px !important; color: var(--c-text-tertiary) !important; }
 #pulse-launch-rules .pulse-section-label, #pulse-launch-rules-armed { font-size: 11px !important; }
 #pulse-launch-rules .lr-card { padding-top: 11px; padding-bottom: 11px; }
+
+/* ── Premium lock: accent-based instead of the old purple; CTA reads as a button, not a link ── */
+.premium-lock-banner { background: var(--c-bg-elevated); border: 1px solid var(--c-accent-ring); box-shadow: 0 16px 48px rgba(0,0,0,0.6); border-radius: var(--r-lg, 14px); }
+.plb-icon, .tab-premium-lock-icon { background: var(--c-accent-muted); border-color: var(--c-accent-ring); color: var(--c-accent); box-shadow: none; }
+.plb-desc { color: var(--c-text-secondary); }
+.plb-cta, .tab-premium-lock .btn-primary { background: var(--c-accent) !important; color: #0b0b10 !important; text-decoration: none !important; }
+.plb-cta:hover, .tab-premium-lock .btn-primary:hover { filter: brightness(1.1); background: var(--c-accent) !important; }
+.page-tab.tab-is-premium .tab-lock-icon { color: var(--c-text-tertiary); }
