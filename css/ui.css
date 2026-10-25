@@ -310,3 +310,26 @@
 #log-output.j-drawer-body { padding: 12px 16px; font-size: var(--fs-2); }
 .j-drawer #log-clear, .j-drawer #log-toggle-btn { margin: 0; font-size: var(--fs-2); color: var(--c-text-secondary); }
 .j-sidebar .sidebar-footer { margin-top: 0; border-top: 0; letter-spacing: 0; }
+
+/* ═══ Legacy tweak cards as a dense list ═══
+   Cards keep their markup (ids, handlers, progress bar); only the layout changes. Scoped by #page-content so they beat the
+   three stacked .tweak-card definitions in css/style.css regardless of load order. */
+#page-content .tweak-card-grid { display: flex; flex-direction: column; gap: 0; padding: 0; }
+#page-content .tweak-card { position: relative; flex-direction: row; align-items: center; gap: 16px; min-height: 56px; padding: 10px 16px; border: 0; border-bottom: 1px solid var(--hairline); border-radius: 0; background: transparent; box-shadow: none; transform: none; animation: none; }
+#page-content .tweak-card:last-child { border-bottom: 0; }
+#page-content .tweak-card:hover { background: var(--c-bg-hover); border-bottom-color: var(--hairline); box-shadow: none; transform: none; }
+#page-content .tweak-card.tc-applied { background: transparent; border-bottom-color: var(--hairline); }
+#page-content .tweak-card::before, #page-content .tweak-card::after { display: none; }
+#page-content .tc-top { flex: 1; min-width: 0; align-items: center; gap: 0; }
+#page-content .tc-icon { display: none; }
+#page-content .tc-name { display: flex; align-items: center; gap: 8px; margin: 0 0 2px; font: 500 var(--fs-3)/1.35 var(--font); letter-spacing: 0; color: var(--c-text-primary); }
+#page-content .tc-desc { font-size: var(--fs-2); line-height: 1.45; -webkit-line-clamp: 2; color: var(--c-text-tertiary); }
+#page-content .tc-foot { flex: none; margin: 0; gap: 14px; }
+#page-content .tc-info-btn { position: static; order: 2; }
+#page-content .tc-badge { font-size: var(--fs-1); }
+
+#page-content .tc-toggle { width: 32px; height: 18px; }
+#page-content .tc-slider { border-radius: 9px; background: var(--surface-3); border: 1px solid var(--hairline-strong); box-shadow: none; }
+#page-content .tc-slider::before { top: 2px; bottom: auto; left: 2px; width: 12px; height: 12px; background: var(--c-text-secondary); box-shadow: none; }
+#page-content .tc-toggle input:checked + .tc-slider { background: var(--c-accent); border-color: transparent; box-shadow: none; }
+#page-content .tc-toggle input:checked + .tc-slider::before { transform: translateX(14px); background: #0B0A14; box-shadow: none; }
