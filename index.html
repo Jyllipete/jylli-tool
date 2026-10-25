@@ -23428,7 +23428,7 @@ function win32RenderList(apps) {
       const isOem = !isSystem && oemApps.some(o => (app.DisplayName||'').toLowerCase().includes(o.toLowerCase()))
       item.innerHTML = `
         <label style="flex:1;min-width:0;display:flex;align-items:center;gap:8px">
-          <input type="checkbox" class="win32-chk" id="win32-chk-${uid}" data-name="${(app.DisplayName||'').replace(/"/g,'')}" data-uninstall="${(app.QuietUninstallString||app.UninstallString||'').replace(/"/g,'&quot;')}" data-size="${app.SizeBytes||0}" ${isSystem ? 'disabled' : ''} onchange="updateWin32Count()">
+          <input type="checkbox" class="win32-chk" id="win32-chk-${uid}" data-name="${(app.DisplayName||'').replace(/"/g,'')}" data-key="${escHtml(app.Key||'')}" data-size="${app.SizeBytes||0}" ${isSystem ? 'disabled' : ''} onchange="updateWin32Count()">
           <div style="min-width:0;flex:1">
             <span class="app-name" style="display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${app.DisplayName || '?'}</span>
             ${app.DisplayVersion ? `<span style="font-size:10px;color:#555">${app.DisplayVersion}</span>` : ''}
@@ -23490,7 +23490,7 @@ async function doWin32Uninstall() {
   if (!checked.length) return
   const items = checked.map(el => ({
     name: el.dataset.name || el.id,
-    uninstallString: el.dataset.uninstall || ''
+    key: el.dataset.key || ''
   }))
 
   try {

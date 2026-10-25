@@ -449,6 +449,12 @@ async function destroyDiscordRPC() {
 const BOT_URL         = 'https://jylli-bot-production.up.railway.app'
 const PREMIUM_STORE_URL = 'https://jyllitool.netlify.app/'
 const { createAuth } = require('./lib/auth')
+const V = require('./lib/validate')
+// DNS helpers — argument arrays only, so an adapter name or address can never be interpreted by a shell.
+const dnsSetDhcp   = a => runFile('netsh.exe', ['interface', 'ip', 'set', 'dns', `name=${a}`, 'dhcp'])
+const dnsSetStatic = (a, ip) => V.isIp(ip) ? runFile('netsh.exe', ['interface', 'ip', 'set', 'dns', `name=${a}`, 'static', ip, 'primary']) : Promise.resolve({ ok: false })
+const dnsAddServer = (a, ip) => V.isIp(ip) ? runFile('netsh.exe', ['interface', 'ip', 'add', 'dns', `name=${a}`, ip, 'index=2']) : Promise.resolve({ ok: false })
+const { runFile } = require('./lib/shell')
 let auth = null   // created once userData is known (app ready)
 let ANALYTICS_PATH = null
 let APP_VERSION    = null
@@ -1286,7 +1292,7 @@ async function setStartupTask(enabled) {
 // In PS single-quoted strings, ' is the only special character — it becomes ''.
 function escapePSSingleQuote(s) {
   if (typeof s !== 'string') throw new TypeError('Expected string')
-  return s.replace(/'/g, "''")
+  return V.psQuote(s).slice(1, -1)   // also doubles the Unicode quote look-alikes PowerShell treats as quotes
 }
 
 // Coerce val to a positive integer; throw if it is not a valid one.
@@ -1805,7 +1811,7 @@ ipcMain.handle('relaunch-admin', () => {
   if (!IS_WIN) return { ok: false, reason: 'not_win' }
   execFile('powershell.exe', [
     '-WindowStyle', 'Hidden', '-Command',
-    `Start-Process '${process.execPath}' -Verb RunAs`
+    `Start-Process ${V.psQuote(process.execPath)} -Verb RunAs`
   ], { windowsHide: true }, (err) => { if (!err) app.quit() })
   return { ok: true }
 })
@@ -2521,6 +2527,8 @@ Write-Host "DONE"
   return results
 })
 
+// Uninstall commands are remembered here (read from the registry by main); the renderer only ever sends back a Key.
+let _win32Uninstall = new Map()
 ipcMain.handle('list-installed-win32', async () => {
   const r = await runPS(`
 $paths = @(
@@ -2533,35 +2541,39 @@ $apps = Get-ItemProperty $paths -ErrorAction SilentlyContinue |
   Select-Object DisplayName, DisplayVersion, Publisher,
     @{N='SizeBytes';E={if($_.EstimatedSize){[long]$_.EstimatedSize * 1024}else{0}}},
     @{N='InstallDate';E={$_.InstallDate}},
+    @{N='Key';E={$_.PSPath -replace '^[^:]*::',''}},
     UninstallString, QuietUninstallString
 $apps | ConvertTo-Json -Depth 2
 `)
+  _win32Uninstall = new Map()
   if (!r.ok || !r.out) return []
   try {
-    const data = JSON.parse(r.out)
-    return Array.isArray(data) ? data : [data]
+    const parsed = JSON.parse(r.out)
+    const data = Array.isArray(parsed) ? parsed : [parsed]
+    for (const a of data) if (a && typeof a.Key === 'string') _win32Uninstall.set(a.Key, { name: String(a.DisplayName || ''), cmd: String(a.QuietUninstallString || a.UninstallString || '') })
+    return data
   } catch { return [] }
 })
 
 ipcMain.handle('uninstall-win32-apps', async (_, items) => {
   const send = (msg, level) => mainWindow?.webContents.send('log', { msg, level, ts: new Date().toLocaleTimeString() })
-  if (!Array.isArray(items) || items.length === 0) return []
+  if (!Array.isArray(items) || items.length === 0 || items.length > 500) return []
   send(`Uninstalling ${items.length} app(s)…`, 'head')
   const results = []
   for (let i = 0; i < items.length; i++) {
-    const { name, uninstallString } = items[i]
-    if (!uninstallString || typeof uninstallString !== 'string') {
-      send(`  [${i+1}/${items.length}] ${name}: no uninstall string — skipped`, 'info')
+    // Only a registry Key from the last list-installed-win32 call is accepted — the command line itself comes from main's cache.
+    const entry = typeof items[i]?.key === 'string' ? _win32Uninstall.get(items[i].key) : null
+    const name = entry?.name || String(items[i]?.name || '').slice(0, 120)
+    if (!entry || !entry.cmd) {
+      send(`  [${i+1}/${items.length}] ${name}: unknown or no uninstall command — skipped`, 'info')
       results.push({ name, ok: false })
       continue
     }
     mainWindow?.webContents.send('debloat-progress', { current: i + 1, total: items.length, pkg: name })
-    // Write the uninstall string to a temp .cmd file to avoid all shell-quoting issues.
-    // Double-quotes in the uninstall string are written verbatim to the file, then cmd executes it correctly.
-    const safeForPS = uninstallString.replace(/'/g, "''")
+    // The command is written to a temp .cmd file (random name) so cmd.exe parses it exactly as the app registered it.
     const r = await runPS(`
 $tmp = [System.IO.Path]::GetTempFileName() + '.cmd'
-[System.IO.File]::WriteAllText($tmp, '${safeForPS}')
+[System.IO.File]::WriteAllText($tmp, ${V.psQuote(entry.cmd)})
 try {
   $p = Start-Process 'cmd.exe' -ArgumentList "/c \`"$tmp\`"" -Wait -PassThru -WindowStyle Hidden -ErrorAction SilentlyContinue
   $exit = if ($p) { $p.ExitCode } else { 1 }
@@ -2587,16 +2599,28 @@ ipcMain.handle('get-prefetch-ages', async () => {
   } catch { return [] }
 })
 
+// Services that must never be stopped/disabled from the UI — doing so breaks logon, networking, security or the OS itself.
+const PROTECTED_SERVICES = new Set(['rpcss', 'rpceptmapper', 'dcomlaunch', 'lsm', 'samss', 'eventlog', 'bfe', 'mpssvc', 'cryptsvc', 'trustedinstaller',
+  'dhcp', 'dnscache', 'nsi', 'plugplay', 'power', 'profsvc', 'gpsvc', 'usermanager', 'winmgmt', 'schedule', 'audioendpointbuilder', 'audiosrv', 'wlansvc',
+  'lanmanworkstation', 'lanmanserver', 'netlogon', 'keyiso', 'vss', 'sens', 'themes', 'wcmsvc', 'wscsvc', 'sppsvc', 'tiledatamodelsvc', 'camsvc', 'cdpsvc', 'coremessaging',
+  'brokerinfrastructure', 'systemeventsbroker', 'timebrokersvc', 'staterepository', 'windefend', 'wdnissvc', 'securityhealthservice', 'sense'])
+const isProtectedService = id => PROTECTED_SERVICES.has(String(id).toLowerCase())
+
 ipcMain.handle('disable-services', async (_, services) => {
   const send = (msg, level) => mainWindow?.webContents.send('log', { msg, level, ts: new Date().toLocaleTimeString() })
   const origStarts = {}
+  if (!Array.isArray(services) || services.length > 200) return { ok: false, origStarts }
   for (const svc of services) {
-    if (!/^[\w\-]{1,256}$/.test(svc)) {
-      send(`  Skipped invalid service name: ${svc}`, 'warn')
+    if (!V.isServiceName(svc)) {
+      send(`  Skipped invalid service name`, 'warn')
+      continue
+    }
+    if (isProtectedService(svc)) {
+      send(`  ${svc}: protected system service — skipped`, 'warn')
       continue
     }
     // Capture current start type before disabling so undo can restore it precisely.
-    const qr = await runCmd(`sc qc ${svc}`)
+    const qr = await runFile('sc.exe', ['qc', svc])
     const match = (qr.out || '').match(/START_TYPE\s*:\s*\d+\s+(\S+)/)
     if (match) {
       // sc output uses AUTO_START, DEMAND_START, DISABLED, BOOT_START, SYSTEM_START
@@ -2605,8 +2629,8 @@ ipcMain.handle('disable-services', async (_, services) => {
     } else {
       origStarts[svc] = 'demand'
     }
-    await runCmd(`sc config ${svc} start= disabled`)
-    await runCmd(`sc stop ${svc}`)
+    await runFile('sc.exe', ['config', svc, 'start=', 'disabled'])
+    await runFile('sc.exe', ['stop', svc])
     send(`  ${svc}: disabled (was ${origStarts[svc]})`, 'ok')
   }
   return { ok: true, origStarts }
@@ -2614,7 +2638,9 @@ ipcMain.handle('disable-services', async (_, services) => {
 
 ipcMain.handle('disable-scheduled-tasks', async (_, tasks) => {
   const send = (msg, level) => mainWindow?.webContents.send('log', { msg, level, ts: new Date().toLocaleTimeString() })
+  if (!Array.isArray(tasks) || tasks.length > 200) return { ok: false }
   for (const task of tasks) {
+    if (!task || typeof task.name !== 'string' || task.name.length > 260 || (task.path && String(task.path).length > 260)) continue
     const safePath = escapePSSingleQuote(String(task.path || ''))
     const safeName = escapePSSingleQuote(String(task.name || ''))
     const r = await runPS(`Disable-ScheduledTask -TaskPath '${safePath}' -TaskName '${safeName}' -ErrorAction SilentlyContinue`)
@@ -2649,21 +2675,21 @@ ipcMain.handle('get-unused-devices', async () => {
 
 ipcMain.handle('remove-devices', async (_, ids) => {
   const send = (msg, level) => mainWindow?.webContents.send('log', { msg, level, ts: new Date().toLocaleTimeString() })
+  if (!Array.isArray(ids) || ids.length > 500) return { ok: false }
   for (const id of ids) {
-    // Use pnputil to permanently remove the device node (works on ghost/non-present devices)
-    const r = await runPS(`
-      $result = & pnputil /remove-device "${id}" 2>&1
-      if ($LASTEXITCODE -eq 0 -or $result -match 'successfully') {
-        Write-Output "OK"
-      } else {
-        # Fallback: Remove-PnpDevice for present devices
+    if (!V.isDeviceInstanceId(id)) { send('  Skipped invalid device id', 'warn'); continue }
+    // pnputil permanently removes the device node (works on ghost/non-present devices). Argument array → no shell.
+    let ok = (await runFile('pnputil.exe', ['/remove-device', id])).ok
+    if (!ok) {
+      // Fallback: Remove-PnpDevice for present devices
+      const r = await runPS(`
         try {
-          Get-PnpDevice | Where-Object {$_.InstanceId -eq '${id}'} | Remove-PnpDevice -Confirm:$false -EA Stop
+          Get-PnpDevice | Where-Object {$_.InstanceId -eq ${V.psQuote(id)}} | Remove-PnpDevice -Confirm:$false -EA Stop
           Write-Output "OK"
         } catch { Write-Output "FAIL" }
-      }
-    `)
-    const ok = r.out.includes('OK')
+      `)
+      ok = r.out.includes('OK')
+    }
     send(`  ${ok ? 'Removed' : 'Could not remove'}: ${id.split('\\').pop()}`, ok ? 'ok' : 'warn')
   }
   return { ok: true }
@@ -3549,14 +3575,18 @@ ipcMain.handle('fivem-import-pack', async () => {
 })
 
 // IPC: ping a FiveM server's public /info.json + /players.json endpoints
-ipcMain.handle('fivem-server-ping', async (_, { host, port }) => {
+ipcMain.handle('fivem-server-ping', async (_, args) => {
+  if (!requiresPremium('fivem-server-ping')) return { ok: false, reason: 'premium_required' }
+  const host = args?.host
+  const port = typeof args?.port === 'string' && /^\d{1,5}$/.test(args.port) ? parseInt(args.port, 10) : args?.port
+  if (!V.isHostname(host) || !V.isPort(port)) return { ok: false }
   const http  = require('http')
   const https = require('https')
   const makeFetch = (mod, extra = {}) => (path) => new Promise(resolve => {
     const start = Date.now()
     const req = mod.get({ hostname: host, port: parseInt(port, 10), path, timeout: 4000, ...extra }, res => {
       let raw = ''
-      res.on('data', d => { raw += d })
+      res.on('data', d => { raw += d; if (raw.length > 2 * 1024 * 1024) { req.destroy(); resolve({ ok: false }) } })
       res.on('end', () => {
         try { resolve({ ok: true, data: JSON.parse(raw), ms: Date.now() - start }) }
         catch { resolve({ ok: false }) }
@@ -4996,17 +5026,17 @@ const TWEAKS = {
     gamerImpact: 'medium',
     apply: async (s, ps) => {
       const adapters = await ps("Get-NetAdapter | Where-Object {$_.Status -eq 'Up'} | Select-Object -ExpandProperty Name")
-      for (const a of adapters.out.split('\n').map(l => l.trim()).filter(Boolean)) {
-        const r1 = await new Promise(res => require('child_process').exec(`netsh interface ip set dns name="${a}" static 1.1.1.1 primary`, { windowsHide: true }, (e) => res({ ok: !e })))
-        const r2 = await new Promise(res => require('child_process').exec(`netsh interface ip add dns name="${a}" 1.0.0.1 index=2`, { windowsHide: true }, (e) => res({ ok: !e })))
+      for (const a of adapters.out.split('\n').map(l => l.trim()).filter(V.isAdapterName)) {
+        const r1 = await dnsSetStatic(a, '1.1.1.1')
+        const r2 = await dnsAddServer(a, '1.0.0.1')
         if (r1.ok && r2.ok) s(`  ${a}: Cloudflare 1.1.1.1 set`, 'ok')
         else s(`  ${a}: DNS set failed`, 'warn')
       }
     },
     restore: async (s, ps) => {
       const adapters = await ps("Get-NetAdapter | Where-Object {$_.Status -eq 'Up'} | Select-Object -ExpandProperty Name")
-      for (const a of adapters.out.split('\n').map(l => l.trim()).filter(Boolean)) {
-        await new Promise(res => require('child_process').exec(`netsh interface ip set dns name="${a}" dhcp`, { windowsHide: true }, res))
+      for (const a of adapters.out.split('\n').map(l => l.trim()).filter(V.isAdapterName)) {
+        await dnsSetDhcp(a)
         s(`  ${a}: DNS restored to DHCP`, 'ok')
       }
     }
@@ -5018,16 +5048,16 @@ const TWEAKS = {
     gamerImpact: 'medium',
     apply: async (s, ps) => {
       const adapters = await ps("Get-NetAdapter | Where-Object {$_.Status -eq 'Up'} | Select-Object -ExpandProperty Name")
-      for (const a of adapters.out.split('\n').map(l => l.trim()).filter(Boolean)) {
-        await new Promise(res => require('child_process').exec(`netsh interface ip set dns name="${a}" static 8.8.8.8 primary`, { windowsHide: true }, res))
-        await new Promise(res => require('child_process').exec(`netsh interface ip add dns name="${a}" 8.8.4.4 index=2`, { windowsHide: true }, res))
+      for (const a of adapters.out.split('\n').map(l => l.trim()).filter(V.isAdapterName)) {
+        await dnsSetStatic(a, '8.8.8.8')
+        await dnsAddServer(a, '8.8.4.4')
         s(`  ${a}: Google DNS 8.8.8.8 set`, 'ok')
       }
     },
     restore: async (s, ps) => {
       const adapters = await ps("Get-NetAdapter | Where-Object {$_.Status -eq 'Up'} | Select-Object -ExpandProperty Name")
-      for (const a of adapters.out.split('\n').map(l => l.trim()).filter(Boolean)) {
-        await new Promise(res => require('child_process').exec(`netsh interface ip set dns name="${a}" dhcp`, { windowsHide: true }, res))
+      for (const a of adapters.out.split('\n').map(l => l.trim()).filter(V.isAdapterName)) {
+        await dnsSetDhcp(a)
       }
       s('DNS restored to DHCP.', 'ok')
     }
@@ -5041,7 +5071,7 @@ const TWEAKS = {
       await ps(`Add-DnsClientDohServerAddress -ServerAddress '1.1.1.1' -DohTemplate 'https://cloudflare-dns.com/dns-query' -AllowFallbackToUdp $false -AutoUpgrade $true -ErrorAction SilentlyContinue`)
       await ps(`Add-DnsClientDohServerAddress -ServerAddress '1.0.0.1' -DohTemplate 'https://cloudflare-dns.com/dns-query' -AllowFallbackToUdp $false -AutoUpgrade $true -ErrorAction SilentlyContinue`)
       const adapters = await ps("Get-NetAdapter | Where-Object {$_.Status -eq 'Up'} | Select-Object -ExpandProperty Name")
-      for (const a of adapters.out.split('\n').map(l => l.trim()).filter(Boolean)) {
+      for (const a of adapters.out.split('\n').map(l => l.trim()).filter(V.isAdapterName)) {
         await ps(`Set-DnsClientServerAddress -InterfaceAlias '${a}' -ServerAddresses ('1.1.1.1','1.0.0.1') -ErrorAction SilentlyContinue`)
       }
       s('DNS over HTTPS enabled via Cloudflare DoH.', 'ok')
@@ -5050,8 +5080,8 @@ const TWEAKS = {
       await ps(`Remove-DnsClientDohServerAddress -ServerAddress '1.1.1.1' -ErrorAction SilentlyContinue`)
       await ps(`Remove-DnsClientDohServerAddress -ServerAddress '1.0.0.1' -ErrorAction SilentlyContinue`)
       const adapters = await ps("Get-NetAdapter | Where-Object {$_.Status -eq 'Up'} | Select-Object -ExpandProperty Name")
-      for (const a of adapters.out.split('\n').map(l => l.trim()).filter(Boolean)) {
-        await new Promise(res => require('child_process').exec(`netsh interface ip set dns name="${a}" dhcp`, { windowsHide: true }, res))
+      for (const a of adapters.out.split('\n').map(l => l.trim()).filter(V.isAdapterName)) {
+        await dnsSetDhcp(a)
       }
       s('DoH removed — DNS restored to adapter defaults.', 'ok')
     }
@@ -5063,16 +5093,16 @@ const TWEAKS = {
     gamerImpact: 'medium',
     apply: async (s, ps) => {
       const adapters = await ps("Get-NetAdapter | Where-Object {$_.Status -eq 'Up'} | Select-Object -ExpandProperty Name")
-      for (const a of adapters.out.split('\n').map(l => l.trim()).filter(Boolean)) {
-        await new Promise(res => require('child_process').exec(`netsh interface ip set dns name="${a}" static 9.9.9.9 primary`, { windowsHide: true }, res))
-        await new Promise(res => require('child_process').exec(`netsh interface ip add dns name="${a}" 149.112.112.112 index=2`, { windowsHide: true }, res))
+      for (const a of adapters.out.split('\n').map(l => l.trim()).filter(V.isAdapterName)) {
+        await dnsSetStatic(a, '9.9.9.9')
+        await dnsAddServer(a, '149.112.112.112')
         s(`  ${a}: Quad9 9.9.9.9 set`, 'ok')
       }
     },
     restore: async (s, ps) => {
       const adapters = await ps("Get-NetAdapter | Where-Object {$_.Status -eq 'Up'} | Select-Object -ExpandProperty Name")
-      for (const a of adapters.out.split('\n').map(l => l.trim()).filter(Boolean)) {
-        await new Promise(res => require('child_process').exec(`netsh interface ip set dns name="${a}" dhcp`, { windowsHide: true }, res))
+      for (const a of adapters.out.split('\n').map(l => l.trim()).filter(V.isAdapterName)) {
+        await dnsSetDhcp(a)
       }
       s('DNS restored to DHCP.', 'ok')
     }
@@ -5084,16 +5114,16 @@ const TWEAKS = {
     gamerImpact: 'medium',
     apply: async (s, ps) => {
       const adapters = await ps("Get-NetAdapter | Where-Object {$_.Status -eq 'Up'} | Select-Object -ExpandProperty Name")
-      for (const a of adapters.out.split('\n').map(l => l.trim()).filter(Boolean)) {
-        await new Promise(res => require('child_process').exec(`netsh interface ip set dns name="${a}" static 94.140.14.14 primary`, { windowsHide: true }, res))
-        await new Promise(res => require('child_process').exec(`netsh interface ip add dns name="${a}" 94.140.15.15 index=2`, { windowsHide: true }, res))
+      for (const a of adapters.out.split('\n').map(l => l.trim()).filter(V.isAdapterName)) {
+        await dnsSetStatic(a, '94.140.14.14')
+        await dnsAddServer(a, '94.140.15.15')
         s(`  ${a}: AdGuard DNS 94.140.14.14 set`, 'ok')
       }
     },
     restore: async (s, ps) => {
       const adapters = await ps("Get-NetAdapter | Where-Object {$_.Status -eq 'Up'} | Select-Object -ExpandProperty Name")
-      for (const a of adapters.out.split('\n').map(l => l.trim()).filter(Boolean)) {
-        await new Promise(res => require('child_process').exec(`netsh interface ip set dns name="${a}" dhcp`, { windowsHide: true }, res))
+      for (const a of adapters.out.split('\n').map(l => l.trim()).filter(V.isAdapterName)) {
+        await dnsSetDhcp(a)
       }
       s('DNS restored to DHCP.', 'ok')
     }
@@ -5108,17 +5138,18 @@ const TWEAKS = {
       const primary = cfg?.customDnsPrimary
       const secondary = cfg?.customDnsSecondary
       if (!primary) { s('No custom DNS configured. Use the Configure button in the Networking tab to set your DNS servers.', 'warn'); return }
+      if (!V.isIp(primary) || (secondary && !V.isIp(secondary))) { s('Custom DNS addresses must be valid IP addresses — nothing changed.', 'warn'); return }
       const adapters = await ps("Get-NetAdapter | Where-Object {$_.Status -eq 'Up'} | Select-Object -ExpandProperty Name")
-      for (const a of adapters.out.split('\n').map(l => l.trim()).filter(Boolean)) {
-        await new Promise(res => require('child_process').exec(`netsh interface ip set dns name="${a}" static ${primary} primary`, { windowsHide: true }, res))
-        if (secondary) await new Promise(res => require('child_process').exec(`netsh interface ip add dns name="${a}" ${secondary} index=2`, { windowsHide: true }, res))
+      for (const a of adapters.out.split('\n').map(l => l.trim()).filter(V.isAdapterName)) {
+        await dnsSetStatic(a, primary)
+        if (secondary) await dnsAddServer(a, secondary)
         s(`  ${a}: Custom DNS ${primary} set`, 'ok')
       }
     },
     restore: async (s, ps) => {
       const adapters = await ps("Get-NetAdapter | Where-Object {$_.Status -eq 'Up'} | Select-Object -ExpandProperty Name")
-      for (const a of adapters.out.split('\n').map(l => l.trim()).filter(Boolean)) {
-        await new Promise(res => require('child_process').exec(`netsh interface ip set dns name="${a}" dhcp`, { windowsHide: true }, res))
+      for (const a of adapters.out.split('\n').map(l => l.trim()).filter(V.isAdapterName)) {
+        await dnsSetDhcp(a)
       }
       s('DNS restored to DHCP.', 'ok')
     }
@@ -9792,9 +9823,11 @@ ipcMain.handle('apply-game-tweak', async (_, { gameId, action, installPath }) =>
     send('Game DVR disabled.', 'ok')
 
     // Defender exclusion for install path
-    if (installPath) {
-      await runPS(`Add-MpPreference -ExclusionPath '${installPath.replace(/'/g, "''")}' -ErrorAction SilentlyContinue`)
+    if (installPath && V.isSafeGamePath(installPath) && fs.existsSync(installPath)) {
+      await runPS(`Add-MpPreference -ExclusionPath ${V.psQuote(installPath)} -ErrorAction SilentlyContinue`)
       send(`Defender exclusion added: ${installPath}`, 'ok')
+    } else if (installPath) {
+      send('Defender exclusion skipped: install path is not a valid game folder.', 'warn')
     }
 
     send(`✓ ${gameId} optimizations applied!`, 'ok')
@@ -9807,8 +9840,8 @@ ipcMain.handle('apply-game-tweak', async (_, { gameId, action, installPath }) =>
     send(`${gameId} priorities restored to Normal.`, 'ok')
 
     // Remove Defender exclusion
-    if (installPath) {
-      await runPS(`Remove-MpPreference -ExclusionPath '${installPath.replace(/'/g, "''")}' -ErrorAction SilentlyContinue`)
+    if (installPath && V.isSafeGamePath(installPath)) {
+      await runPS(`Remove-MpPreference -ExclusionPath ${V.psQuote(installPath)} -ErrorAction SilentlyContinue`)
       send(`Defender exclusion removed: ${installPath}`, 'ok')
     }
   }
@@ -9833,7 +9866,15 @@ ipcMain.handle('get-processes', async () => {
 
 ipcMain.handle('kill-process', async (_, pid) => {
   const n = assertPositiveInt(pid, 'pid')
-  const r = await runPS(`Stop-Process -Id ${n} -Force -ErrorAction SilentlyContinue`)
+  if (n <= 4 || n === process.pid) return { ok: false, reason: 'protected' }
+  const r = await runPS(`
+$p = Get-Process -Id ${n} -ErrorAction SilentlyContinue
+if (-not $p) { 'GONE'; exit 0 }
+$protected = @('system','idle','registry','smss','csrss','wininit','winlogon','services','lsass','lsm','svchost','dwm','fontdrvhost','memory compression','securityhealthservice','msmpeng','nissrv','explorer')
+if ($protected -contains $p.ProcessName.ToLower()) { 'PROTECTED'; exit 0 }
+Stop-Process -Id ${n} -Force -ErrorAction SilentlyContinue
+'KILLED'`)
+  if (/PROTECTED/.test(r.out)) return { ok: false, reason: 'protected' }
   return { ok: r.ok }
 })
 
@@ -11479,7 +11520,7 @@ ipcMain.handle('start-game-watcher', async () => {
           if (!(cur.out || '').includes('DISABLEDXMAXIMIZEDWINDOWEDMODE')) {
             const base = (cur.out || '').trim()
             const newVal = base ? `${base} DISABLEDXMAXIMIZEDWINDOWEDMODE` : '~ DISABLEDXMAXIMIZEDWINDOWEDMODE'
-            await runPS(`Set-ItemProperty -Path "${compatPath}" -Name "${exe}" -Value "${newVal}" -Force`)
+            await runPS(`Set-ItemProperty -Path "${compatPath}" -Name "${exe}" -Value ${V.psQuote(newVal)} -Force`)
           }
         }
       }
@@ -11525,9 +11566,9 @@ ipcMain.handle('start-game-watcher', async () => {
         let gamePid = null
         try {
           const exeName = (PULSE_PRESETS[detectedGame]?.exe || '').replace(/\*$/, '').replace(/\.exe$/i, '')
-          if (exeName) {
-            const r = require('child_process').execSync(`powershell -NoProfile -Command "(Get-Process -Name '${exeName}' -ErrorAction SilentlyContinue | Select-Object -First 1).Id"`, { timeout: 3000 }).toString().trim()
-            const n = parseInt(r, 10); if (!isNaN(n) && n > 0) gamePid = n
+          if (exeName && V.isProcessName(exeName)) {
+            const r = await runFile('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', `(Get-Process -Name ${V.psQuote(exeName)} -ErrorAction SilentlyContinue | Select-Object -First 1).Id`], { timeout: 4000 })
+            const n = parseInt(r.out, 10); if (!isNaN(n) && n > 0) gamePid = n
           }
         } catch {}
         _pmSessionProc = spawnPresentMon(null, gamePid)
@@ -11692,7 +11733,8 @@ ipcMain.handle('schedule-tweak', async (_, { taskName, schedule, action }) => {
     'windows-update':    'Start-Process "ms-settings:windowsupdate-action"',
     'clean-downloads':   'Remove-Item -Path "$env:USERPROFILE\\Downloads\\*" -Recurse -Force -EA SilentlyContinue',
   }
-  const psCommand = psCommands[action] || action
+  if (typeof taskName !== 'string' || taskName.length > 80 || !Object.prototype.hasOwnProperty.call(psCommands, action)) return { ok: false, error: 'invalid_request' }
+  const psCommand = psCommands[action]
 
   // Encode as UTF-16 LE Base64 so -EncodedCommand handles all quoting automatically
   const encodedCommand = Buffer.from(psCommand, 'utf16le').toString('base64')
@@ -11702,6 +11744,7 @@ ipcMain.handle('schedule-tweak', async (_, { taskName, schedule, action }) => {
   else if (schedule === 'daily-3am')  trigger = 'New-ScheduledTaskTrigger -Daily -At "3:00AM"'
   else if (schedule === 'weekly-sun') trigger = 'New-ScheduledTaskTrigger -Weekly -DaysOfWeek Sunday -At "3:00AM"'
   else if (schedule === 'logon')      trigger = 'New-ScheduledTaskTrigger -AtLogon'
+  if (!trigger) return { ok: false, error: 'invalid_schedule' }
 
   const r = await runPS(`
     try {
@@ -11709,7 +11752,7 @@ ipcMain.handle('schedule-tweak', async (_, { taskName, schedule, action }) => {
       $trigger   = ${trigger}
       $settings  = New-ScheduledTaskSettingsSet -RunOnlyIfNetworkAvailable:$false -StartWhenAvailable
       $principal = New-ScheduledTaskPrincipal -UserId 'SYSTEM' -RunLevel Highest
-      Register-ScheduledTask -TaskName 'JT_${taskName.replace(/\W/g, '_')}' -Action $action -Trigger $trigger -Settings $settings -Principal $principal -Force -ErrorAction Stop | Out-Null
+      Register-ScheduledTask -TaskName '${'JT_' + taskName.replace(/\W/g, '_')}' -Action $action -Trigger $trigger -Settings $settings -Principal $principal -Force -ErrorAction Stop | Out-Null
       Write-Output 'ok'
     } catch {
       Write-Error $_.Exception.Message
@@ -11746,12 +11789,14 @@ Get-ScheduledTask | Where-Object {$_.TaskName -like 'JT_*'} | ForEach-Object {
 
 ipcMain.handle('delete-scheduled-tweak', async (_, taskName) => {
   if (!requiresPremium('delete-scheduled-tweak')) return { ok: false, reason: 'premium_required' }
+  if (!V.isJylliTaskName(taskName)) return { ok: false, error: 'invalid_task' }
   await runPS(`Unregister-ScheduledTask -TaskName '${taskName}' -Confirm:$false -ErrorAction SilentlyContinue`)
   return { ok: true }
 })
 
 ipcMain.handle('run-scheduled-tweak', async (_, taskName) => {
   if (!requiresPremium('run-scheduled-tweak')) return { ok: false, reason: 'premium_required' }
+  if (!V.isJylliTaskName(taskName)) return { ok: false, error: 'invalid_task' }
   try {
     await runPS(`Start-ScheduledTask -TaskName '${taskName}' -ErrorAction Stop`)
     return { ok: true }
@@ -11760,6 +11805,7 @@ ipcMain.handle('run-scheduled-tweak', async (_, taskName) => {
 
 ipcMain.handle('toggle-scheduled-tweak', async (_, { taskName, enable }) => {
   if (!requiresPremium('toggle-scheduled-tweak')) return { ok: false, reason: 'premium_required' }
+  if (!V.isJylliTaskName(taskName)) return { ok: false, error: 'invalid_task' }
   try {
     const cmd = enable ? 'Enable-ScheduledTask' : 'Disable-ScheduledTask'
     await runPS(`${cmd} -TaskName '${taskName}' -ErrorAction Stop`)
@@ -11769,6 +11815,7 @@ ipcMain.handle('toggle-scheduled-tweak', async (_, { taskName, enable }) => {
 
 ipcMain.handle('get-scheduled-task-history', async (_, taskName) => {
   if (!requiresPremium('get-scheduled-task-history')) return []
+  if (!V.isJylliTaskName(taskName)) return []
   try {
     const r = await runPS(`
 Get-WinEvent -LogName 'Microsoft-Windows-TaskScheduler/Operational' -MaxEvents 200 -EA SilentlyContinue |
@@ -12210,9 +12257,9 @@ ipcMain.handle('get-bios-info', async () => {
 ipcMain.handle('bios-scewin-read', async () => {
   if (!requiresPremium('bios-scewin-read')) return { ok: false, reason: 'premium_required' }
   const scewin   = assetPath('assets', 'scewin', 'SCEWIN_64.exe')
-  const dumpPath = path.join(app.getPath('userData'), 'bios_dump.txt')
+  const dumpPath = biosDumpPath()
   if (!fs.existsSync(scewin)) return { ok: false, error: 'not_found', dumpPath }
-  const r = await runCmd(`"${scewin}" /o /s "${dumpPath}"`)
+  const r = await runFile(scewin, ['/o', '/s', dumpPath], { timeout: 120000 })
   if (!r.ok && !fs.existsSync(dumpPath)) return { ok: false, error: 'not_supported', dumpPath }
   let raw = ''
   try { raw = fs.readFileSync(dumpPath, 'utf8') } catch { return { ok: false, error: 'read_failed', dumpPath } }
@@ -12230,10 +12277,13 @@ ipcMain.handle('bios-scewin-read', async () => {
   return { ok: true, entries, dumpPath }
 })
 
-ipcMain.handle('bios-scewin-write', async (_, { token, value, dumpPath, settingName, oldValue }) => {
+const biosDumpPath = () => path.join(app.getPath('userData'), 'bios_dump.txt')
+ipcMain.handle('bios-scewin-write', async (_, { token, value, settingName, oldValue }) => {
   if (!requiresPremium('bios-scewin-write')) return { ok: false, reason: 'premium_required' }
+  const dumpPath = biosDumpPath()   // never taken from the renderer
+  if (typeof token !== 'string' || typeof value !== 'string' || token.length > 200 || value.length > 200) return { ok: false, error: 'invalid_request' }
   const scewin     = assetPath('assets', 'scewin', 'SCEWIN_64.exe')
-  const backupPath = dumpPath.replace('bios_dump.txt', 'bios_dump_backup.txt')
+  const backupPath = path.join(path.dirname(dumpPath), 'bios_dump_backup.txt')
   if (!fs.existsSync(scewin))   return { ok: false, error: 'SCEWIN not found' }
   if (!fs.existsSync(dumpPath)) return { ok: false, error: 'No BIOS dump — run scan first' }
   // Backup dump before every write so we can auto-restore on failure
@@ -12250,7 +12300,7 @@ ipcMain.handle('bios-scewin-write', async (_, { token, value, dumpPath, settingN
     }
   )
   fs.writeFileSync(dumpPath, raw, 'utf8')
-  const r = await runCmd(`"${scewin}" /i /s "${dumpPath}"`)
+  const r = await runFile(scewin, ['/i', '/s', dumpPath], { timeout: 180000 })
   if (!r.ok) {
     // Auto-restore backup so the dump stays consistent
     try { fs.copyFileSync(backupPath, dumpPath) } catch {}
@@ -12301,7 +12351,7 @@ ipcMain.handle('bios-list-profiles', async () => {
   return { ok: true, profiles: p.map(({ name, ts, board }) => ({ name, ts, board })) }
 })
 
-ipcMain.handle('bios-save-profile', async (_, { name, dumpPath, entries }) => {
+ipcMain.handle('bios-save-profile', async (_, { name, entries }) => {
   if (!requiresPremium('bios-save-profile')) return { ok: false, reason: 'premium_required' }
   if (!name) return { ok: false, error: 'Name required' }
   let board = 'Unknown'
@@ -12316,18 +12366,19 @@ ipcMain.handle('bios-save-profile', async (_, { name, dumpPath, entries }) => {
   return { ok: true }
 })
 
-ipcMain.handle('bios-load-profile', async (_, { name, dumpPath }) => {
+ipcMain.handle('bios-load-profile', async (_, { name }) => {
+  const dumpPath = biosDumpPath()
   if (!requiresPremium('bios-load-profile')) return { ok: false, reason: 'premium_required' }
   const scewin = assetPath('assets', 'scewin', 'SCEWIN_64.exe')
   if (!fs.existsSync(scewin)) return { ok: false, error: 'SCEWIN not found' }
-  if (!dumpPath || !fs.existsSync(dumpPath)) return { ok: false, error: 'No BIOS dump — run SCEWIN scan first' }
+  if (!fs.existsSync(dumpPath)) return { ok: false, error: 'No BIOS dump — run SCEWIN scan first' }
   const profiles = loadBiosProfiles()
   const profile = profiles.find(p => p.name === name)
   if (!profile) return { ok: false, error: 'Profile not found' }
   let written = 0, failed = 0
   for (const { token, value } of (profile.settings || [])) {
     try {
-      const backupPath = dumpPath.replace('bios_dump.txt', 'bios_dump_backup.txt')
+      const backupPath = path.join(path.dirname(dumpPath), 'bios_dump_backup.txt')
       fs.copyFileSync(dumpPath, backupPath)
       let raw = fs.readFileSync(dumpPath, 'utf8')
       const tokenEsc = token.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
@@ -12341,7 +12392,7 @@ ipcMain.handle('bios-load-profile', async (_, { name, dumpPath }) => {
         }
       )
       fs.writeFileSync(dumpPath, raw, 'utf8')
-      const r = await runCmd(`"${scewin}" /i /s "${dumpPath}"`)
+      const r = await runFile(scewin, ['/i', '/s', dumpPath], { timeout: 180000 })
       if (r.ok) written++; else failed++
     } catch { failed++ }
   }
@@ -12433,19 +12484,25 @@ ipcMain.handle('ryzenadj-read', async () => {
   }
 })
 
-ipcMain.handle('ryzenadj-apply', async (_, { ppt, tdc, edc, stapm, tctl, fclk, curve }) => {
+ipcMain.handle('ryzenadj-apply', async (_, p) => {
+  if (!requiresPremium('ryzenadj-apply')) return { ok: false, error: 'premium_required' }
   const ryzenadj = assetPath('assets', 'ryzenadj', 'ryzenadj.exe')
   if (!fs.existsSync(ryzenadj)) return { ok: false, error: 'not_found' }
+  const { ppt, tdc, edc, stapm, tctl, fclk, curve } = p || {}
   const args = []
-  if (ppt   > 0)  args.push(`--ppt-limit-fast=${ppt * 1000}`)
-  if (tdc   > 0)  args.push(`--tdc-limit-slow=${tdc * 1000}`)
-  if (edc   > 0)  args.push(`--edc-limit-slow=${edc * 1000}`)
-  if (stapm > 0)  args.push(`--stapm-limit=${stapm * 1000}`)
-  if (tctl  > 0)  args.push(`--tctl-temp=${tctl}`)
-  if (fclk  > 0)  args.push(`--min-fclk-frequency=${fclk}`)
-  if (curve !== 0 && curve !== undefined) args.push(`--set-coall=${curve}`)
+  // Hard bounds: values outside them are rejected, never clamped silently, so a bad value can't reach the SoC.
+  const num = (v, min, max) => (v === undefined || v === null || v === 0) ? undefined : V.inRange(v, min, max)
+  const lim = { ppt: num(ppt, 1, 250), tdc: num(tdc, 1, 250), edc: num(edc, 1, 300), stapm: num(stapm, 1, 250), tctl: num(tctl, 40, 105), fclk: num(fclk, 400, 3000), curve: num(curve, -50, 30) }
+  for (const [k, v] of Object.entries(lim)) if (v === null) return { ok: false, error: `${k}_out_of_range` }
+  if (lim.ppt)   args.push(`--ppt-limit-fast=${Math.round(lim.ppt * 1000)}`)
+  if (lim.tdc)   args.push(`--tdc-limit-slow=${Math.round(lim.tdc * 1000)}`)
+  if (lim.edc)   args.push(`--edc-limit-slow=${Math.round(lim.edc * 1000)}`)
+  if (lim.stapm) args.push(`--stapm-limit=${Math.round(lim.stapm * 1000)}`)
+  if (lim.tctl)  args.push(`--tctl-temp=${Math.round(lim.tctl)}`)
+  if (lim.fclk)  args.push(`--min-fclk-frequency=${Math.round(lim.fclk)}`)
+  if (lim.curve) args.push(`--set-coall=${Math.round(lim.curve)}`)
   if (!args.length) return { ok: false, error: 'No values provided' }
-  const r = await runCmd(`"${ryzenadj}" ${args.join(' ')}`)
+  const r = await runFile(ryzenadj, args)
   return { ok: r.ok, error: r.ok ? null : (r.err || r.out || 'RyzenAdj failed') }
 })
 
@@ -13519,6 +13576,7 @@ ipcMain.handle('set-fps-hud-size', async (_, sizeKey) => {
 })
 
 ipcMain.handle('set-fps-hud-color', (_, hex) => {
+  if (!V.isHexColor(hex)) return { ok: false }
   const s = loadSettings()
   s.ariaFpsHudColor = hex
   saveSettings(s)
