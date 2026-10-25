@@ -9875,10 +9875,15 @@ ipcMain.handle('apply-game-tweak', async (_, { gameId, action, installPath }) =>
 // Clean temp files
 // ─── Process Manager ──────────────────────────────────────────────────────────
 ipcMain.handle('get-processes', async () => {
+  // Get-Process.CPU is cumulative CPU *seconds*; the UI shows a percentage, so take the live per-process % from the perf counters
+  // (CIM class names are not localised, unlike Get-Counter paths) and divide by the logical core count.
   const r = await runPS(`
+    $cores = [Environment]::ProcessorCount
+    $perf = @{}
+    Get-CimInstance Win32_PerfFormattedData_PerfProc_Process -EA SilentlyContinue | ForEach-Object { $perf[[int]$_.IDProcess] = $_.PercentProcessorTime }
     Get-Process | Where-Object {$_.CPU -ne $null} |
     Select-Object Name, Id,
-      @{N='CPU';E={[math]::Round($_.CPU,1)}},
+      @{N='CPU';E={ $v = $perf[[int]$_.Id]; if ($null -eq $v) { 0 } else { [math]::Round([math]::Min(100, $v / $cores), 1) } }},
       @{N='RAM';E={[math]::Round($_.WorkingSet64/1MB,1)}},
       @{N='Path';E={try{$_.MainModule.FileName}catch{''}}} |
     Sort-Object RAM -Descending | Select-Object -First 80 |

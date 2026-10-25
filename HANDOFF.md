@@ -26,12 +26,14 @@ Phase 5 page review (all 17 pages captured and checked; flat tweak/quick-win car
 ## DONE (later in the same session)
 Dashboard fixtures + sparkline on accent; Premium lock card, Smart Profile Wizard, language picker, lock screen restyled on tokens (legacy #9b59b6 purple retired from css/style.css; flag emoji replaced by EN/FI chips); `--c-accent-rgb` default added to tokens.css; a11y: icon-only buttons get translated aria-labels (`_labelIconButtons` in js/ui-helpers.js); Update Guard/Game Shield toasts translated; hog rail no longer stacks scans; Privacy page tolerates `{ok:false}` from history/regrets. Harness: `--overlay "name=js"` opens dialogs before shooting (a string/number result is written to report.txt).
 
+## Real-app testing (now allowed by the user)
+Launch: `env -u ELECTRON_RUN_AS_NODE npx --no-install electron . --remote-debugging-port=9222`, drive it with a CDP script (Runtime.evaluate / Page.captureScreenshot). First launch auto-relaunches as admin after 3 s (dev: relaunches bare electron.exe and quits) — call `window._adminRelaunchCancel()` right after load. Bot v2 is deployed (main pushed, Railway env vars + Discord redirect set); Discord sign-in works. All 17 pages load with no console errors. Fixed from real data: game scan 23 s→4 s (PS 5.1 has no `??`), process CPU% was cumulative seconds, startup path abbreviation, What's New teaser. Game Shield + Update Guard are implemented (lib/gameshield.js, watcher hooks, events); not exercised end-to-end live (needs a running game; would stop the user's Discord/Spotify).
+
 ## NEXT
-1. **Decision needed (product):** Game Shield's "kill background processes" is not implemented in main.js (`toggle-game-shield` only disables Edge/Google updater tasks; `set-game-shield-exclusions`, `onGameShieldEvent`, `onUnknownGameCandidate`, `onUpdateGuardStatus/Warning`, `onPulseCooldownTick`, `autodetectAomAnswers`, `onBudgetSessionReport`, `pulseGetHistory/CoreLoads` are called by the renderer behind `?.` guards but are not exposed in preload). Either implement them or remove the UI.
-2. Visual: all pages, dialogs, wizards (SPW + Auto-Optimize) and secondary windows reviewed on tokens. HUD overlays (fps-hud, fivem-hud) intentionally keep their own game-overlay palette; fps-hud-settings is on tokens but English-only.
-3. Profile/DNS/ping/re-enable dialogs and error toasts are now in LANG (dl*/tk* keys); other English left is minor (HUD windows, a few log lines).
-4. JylliSensor.cs improvements (needs rebuild, skipped).
-5. User: copy Ed25519 key + TOKEN_KEY to Railway (jylli-bot/RAILWAY_ENV.md), push, release, deploy bot.
+1. JylliSensor.cs improvements (needs rebuild; never specified what) — optional.
+2. Remaining unwired renderer hooks behind `?.`: onUnknownGameCandidate, onUpdateGuardWarning (pending-updates count), onPulseCooldownTick.
+3. Slow first-load calls worth a spinner: health score ~6.7 s, core loads ~1 s warm.
+4. Release: version bump/tag, `npm run build`, publish (user).
 
 ## Known limits to tell the user
 Nothing has been run on real Windows (no launching allowed): fixes are verified by syntax checks, unit tests, scans and screenshots only. v1.5.9 clients cannot sign in until 1.6.0 + new bot are deployed. Inline-style purge and full per-page component rebuild are only partly done (pro.css layer restyles instead).
