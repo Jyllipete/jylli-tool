@@ -1,6 +1,6 @@
 // Headless interaction test (jsdom; npm i --no-save jsdom@24): clicks every sidebar section and tab, toggles Advanced mode, switches language,
 // collapses the sidebar and opens the drawer. Usage: node tools/ui-preview/dom-interact.js [lang] [premium|free]
-// Note: content of slow pages (several mock API calls at 400 ms each) can still be empty when sampled; re-run if only those fail.
+// Hidden advanced tabs (Latency, Processes, BIOS) are reported as notes: they only show with Advanced mode on.
 // Headless DOM smoke test (jsdom, no Electron, no GPU): loads index.html with the preview fixtures as window.api,
 // opens every legacy page id and reports console errors + header text. Needs jsdom, which is not a project dependency: npm i --no-save jsdom@24 (CPU-only, never opens a window).
 // Usage: node tools/ui-preview/dom-smoke.js [lang] [premium|free]
@@ -54,9 +54,10 @@ const sleep = ms => new Promise(r => setTimeout(r, ms))
       errors.length = 0
       if (s.tabs.length > 1) {
         const b = tabBtn(t.id)
-        if (!b) { bad.push('tab button hidden (advanced?) ' + s.id + '/' + t.id); w.Shell.tab(t.id) } else b.click()
+        if (!b) { console.log('note: tab hidden until Advanced mode:', s.id + '/' + t.id); w.Shell.tab(t.id) } else b.click()
       }
-      await sleep(500)
+      await sleep(1200)   // old page is cleared after ~130 ms, new content arrives after the mocked API calls
+      for (let i = 0; i < 16 && !d.getElementById('page-content').children.length; i++) await sleep(250)
       check(s.tabs.length === 1 || tabBtn(t.id)?.classList.contains('j-tab-active'), 'active tab ' + s.id + '/' + t.id)
       check(d.getElementById('page-content').children.length > 0, 'content empty ' + s.id + '/' + t.id)
       if (errors.length) bad.push('errors ' + s.id + '/' + t.id + ': ' + errors.join(' | '))
