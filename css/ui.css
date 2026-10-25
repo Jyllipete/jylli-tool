@@ -444,3 +444,9 @@
 #page-content .sec-collapse-btn { width: 24px; height: 24px; border: 0; border-radius: var(--r-sm); background: none; color: var(--c-text-tertiary); cursor: pointer; }
 #page-content .sec-collapse-btn:hover { background: var(--c-bg-hover); color: var(--c-text-primary); }
 #page-content .sec-progress-badge { font: 500 var(--fs-1)/1 var(--font-mono); color: var(--c-text-tertiary); }
+
+/* ═══ System > History ═══ */
+.j-history-row { display: flex; align-items: center; gap: 12px; padding: 10px 16px; border-bottom: 1px solid var(--hairline); }
+.j-history-row:last-child { border-bottom: 0; }
+.j-history-row .j-row-title { gap: 6px; }
+.j-history-row .j-row-title i { color: var(--c-text-tertiary); font-size: var(--fs-2); }

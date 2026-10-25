@@ -530,6 +530,7 @@
 <script src="js/pages/home.js"></script>
 <script src="js/pages/settings.js"></script>
 <script src="js/pages/system-processes.js"></script>
+<script src="js/pages/system-history.js"></script>
 <script src="js/ui-helpers.js"></script>
 <script src="js/fivem-logic.js"></script>
 <script>
@@ -6029,68 +6030,6 @@ function renderPreflightDiff(prev, curr, prevTs) {
   })
   diffHtml += `</div></div>`
   el.insertAdjacentHTML('afterbegin', diffHtml)
-}
-
-function buildChangelog(c) {
-  const card = makeSection(tUI('historyTitle'), tUI('historySubtitle'))
-  const header = document.createElement('div')
-  header.style.cssText = 'display:flex;gap:8px;padding:8px 18px 4px'
-  header.innerHTML = `
-    <button class="btn btn-ghost btn-sm" onclick="loadChangelogPage()"><i class="fa fa-arrows-rotate"></i> ${tUI('historyRefresh')}</button>
-    <button class="btn btn-danger btn-sm" onclick="doClearChangelog()"><i class="fa fa-trash"></i> ${tUI('historyClear')}</button>
-    <span id="cl-count" style="font-size:10px;color:var(--muted);align-self:center"></span>
-  `
-  card.appendChild(header)
-
-  const list = document.createElement('div')
-  list.id = 'changelog-list'
-  list.innerHTML = `<div style="padding:24px;text-align:center;color:var(--muted);font-size:11px">${tUI('historyLoading')}</div>`
-  card.appendChild(list)
-  c.appendChild(card)
-
-  c.appendChild(makeTip(`${tUI('historyStoragePath')}: %APPDATA%\\petes-tweaking-utility\\ptu_changelog.json`, 'info'))
-  loadChangelogPage()
-}
-
-async function loadChangelogPage() {
-  const entries = await api.getChangelog()
-  const list = document.getElementById('changelog-list')
-  const count = document.getElementById('cl-count')
-  if (!list) return
-  if (count) count.textContent = `${entries.length} ${tUI('historyCount')}`
-  if (!entries.length) {
-    list.innerHTML = `<div style="padding:20px 18px;color:var(--muted);font-size:11px;text-align:center">${tUI('historyEmpty')}</div>`
-    return
-  }
-  // Non-reversible actions (debloat, cleanup, one-way fixes)
-  const NON_REVERSIBLE = ['remove-uwp', 'debloat', 'remove-device', 'disable-service', 'disable-task', 'fix-', 'clean-', 'delete-']
-  const isReversible = (id) => !NON_REVERSIBLE.some(prefix => id.startsWith(prefix) || id.includes(prefix))
-
-  // Build a lookup set of diff entries keyed by id+ts for O(1) checks
-  let diffLog = []
-  try { diffLog = JSON.parse(localStorage.getItem('tweak_diff_log') || '[]') } catch {}
-  const diffKeys = new Set(diffLog.map(d => `${d.id}:${d.ts}`))
-
-  list.innerHTML = entries.slice(0, 100).map(e => {
-    const oppositeAction = e.action === 'apply' ? 'restore' : 'apply'
-    const undoLabel = e.action === 'apply' ? tUI('historyUndo') : tUI('historyReapply')
-    const showUndo = isReversible(e.id)
-    // Find nearest diff entry within ±5s of this changelog entry ts
-    const nearDiff = diffLog.find(d => d.id === e.id && Math.abs(d.ts - e.ts) < 5000)
-    const hasDiff = !!nearDiff
-    return `
-    <div class="cl-entry">
-      <div class="cl-dot ${e.action}"></div>
-      <div class="cl-body">
-        <div class="cl-title">${e.action === 'apply' ? `<i class="fa fa-check"></i> ${tUI('historyApplied')}` : `<i class="fa fa-rotate-left"></i> ${tUI('historyRestored')}`}: ${e.id}</div>
-        <div class="cl-ts">${new Date(e.ts).toLocaleString()}</div>
-      </div>
-      <div style="display:flex;gap:5px;flex-shrink:0">
-        ${hasDiff ? `<button class="btn btn-ghost btn-sm" style="font-size:10px;padding:2px 10px;color:var(--warning)" onclick="openTweakDiff('${escHtml(e.id)}',${nearDiff.ts})"><i class="fa fa-code-compare"></i> ${tUI('diffBtn')}</button>` : ''}
-        ${showUndo ? `<button class="btn btn-ghost btn-sm" style="font-size:10px;padding:2px 10px;flex-shrink:0" onclick="undoTweakEntry('${escHtml(e.id)}','${oppositeAction}')">${undoLabel}</button>` : ''}
-      </div>
-    </div>`
-  }).join('')
 }
 
 async function doClearChangelog() {
