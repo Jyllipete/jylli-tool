@@ -3,6 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <link rel="stylesheet" href="css/fonts.css">
+<link rel="stylesheet" href="css/tokens.css">
+<script src="js/theme-sync.js"></script>
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-src 'none'; img-src 'self' data: https://cdn.discordapp.com; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline';">
 <title>FiveM HUD</title>
 <style>
@@ -12,21 +14,21 @@ html, body {
   height: auto;
   overflow: hidden;
   background: transparent;
-  font-family: 'Segoe UI', system-ui, sans-serif;
+  font-family: var(--font, 'Geist', 'Segoe UI', system-ui, sans-serif);
   user-select: none;
 }
 .hud {
-  background: rgba(8,8,14,0.55);
-  border: none;
+  background: rgba(9,9,11,0.72);
+  border: 1px solid rgba(255,255,255,0.08);
   border-radius: 10px;
   padding: 8px 10px 7px;
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
 }
 .hud-title {
-  font-size: 8.5px;
-  font-weight: 700;
-  color: rgba(255,46,99,0.65);
+  font-size: 11px;
+  font-weight: 600;
+  color: rgba(237,237,240,0.5);
   text-transform: uppercase;
   letter-spacing: 0.12em;
   margin-bottom: 7px;
@@ -128,7 +130,7 @@ html, body {
 
   <div class="metric">
     <div class="metric-label">CPU</div>
-    <div class="metric-bar-track"><div class="metric-bar-fill" id="bar-cpu" style="background:#ff4c7a"></div></div>
+    <div class="metric-bar-track"><div class="metric-bar-fill" id="bar-cpu" style="background:#8B7CF6"></div></div>
     <div class="metric-val" id="val-cpu">—</div>
   </div>
 
@@ -140,13 +142,13 @@ html, body {
 
   <div class="metric">
     <div class="metric-label">GPU</div>
-    <div class="metric-bar-track"><div class="metric-bar-fill" id="bar-gpu" style="background:#00d4b4"></div></div>
+    <div class="metric-bar-track"><div class="metric-bar-fill" id="bar-gpu" style="background:#8B7CF6"></div></div>
     <div class="metric-val" id="val-gpu">—</div>
   </div>
 
   <div class="metric" style="margin-bottom:0">
     <div class="metric-label">RAM</div>
-    <div class="metric-bar-track"><div class="metric-bar-fill" id="bar-ram" style="background:#7c6aff"></div></div>
+    <div class="metric-bar-track"><div class="metric-bar-fill" id="bar-ram" style="background:#8B7CF6"></div></div>
     <div class="metric-val" id="val-ram">—</div>
   </div>
 
@@ -198,7 +200,7 @@ function drawSparkline(canvasId, data, color) {
   ctx.closePath()
   ctx.fillStyle = color.replace(')', ', 0.12)').replace('rgb(', 'rgba(').replace('rgba(rgba(', 'rgba(')
   // simpler: just use a fixed semi-transparent fill
-  ctx.fillStyle = 'rgba(255,46,99,0.08)'
+  ctx.fillStyle = 'rgba(139,124,246,0.08)'
   ctx.fill()
 
   // line
@@ -208,7 +210,7 @@ function drawSparkline(canvasId, data, color) {
     const y = toY(v)
     i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y)
   })
-  ctx.strokeStyle = 'rgba(255,46,99,0.55)'
+  ctx.strokeStyle = 'rgba(139,124,246,0.7)'
   ctx.lineWidth   = 1.5
   ctx.lineJoin    = 'round'
   ctx.stroke()
@@ -229,9 +231,9 @@ setInterval(async () => {
   const cpu = m.cpu ?? 0
   const gpu = m.gpu ?? 0
   const ram = m.ram ?? 0
-  setBar('cpu', cpu, '#ff4c7a', '#f39c12', '#e74c3c')
-  setBar('gpu', gpu, '#00d4b4', '#f39c12', '#e74c3c')
-  setBar('ram', ram, '#7c6aff', '#f39c12', '#e74c3c')
+  setBar('cpu', cpu, '#8B7CF6', '#F5A524', '#F2555A')
+  setBar('gpu', gpu, '#8B7CF6', '#F5A524', '#F2555A')
+  setBar('ram', ram, '#8B7CF6', '#F5A524', '#F2555A')
 
   _cpuHistory.push(cpu)
   if (_cpuHistory.length > MAX_HIST) _cpuHistory.shift()
@@ -244,12 +246,12 @@ api.onLivePingTick(d => {
   if (!val) return
   if (!d || d.ms == null) {
     val.textContent  = 'timeout'
-    val.style.color  = '#e74c3c'
+    val.style.color  = '#F2555A'
     return
   }
   const ms = d.ms
   val.textContent = ms + ' ms'
-  val.style.color = ms < 40 ? '#2ecc71' : ms < 80 ? '#f39c12' : '#e74c3c'
+  val.style.color = ms < 40 ? '#3DD68C' : ms < 80 ? '#F5A524' : '#F2555A'
 })
 
 // ping ticks are pushed by the main process (TCP probe) — starting another live-ping here would hijack the Network page's monitor

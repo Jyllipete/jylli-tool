@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <link rel="stylesheet" href="css/fonts.css">
+<link rel="stylesheet" href="css/tokens.css">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-src 'none'; img-src 'self' data: https://cdn.discordapp.com; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline';">
 <title>FPS HUD</title>
 <style>
@@ -19,9 +20,9 @@ html, body {
 .hud { display: flex; align-items: center; justify-content: center; transition: opacity 0.4s ease; }
 .hud.faded { opacity: 0.20; }
 #fps-val {
-  font-family: 'Segoe UI', system-ui, sans-serif;
+  font-family: var(--font-mono, 'Geist Mono', 'Cascadia Code', Consolas, monospace);
   font-size: var(--fps-font-size, 36px);
-  font-weight: 800;
+  font-weight: 600;
   line-height: 1;
   font-variant-numeric: tabular-nums;
   color: #ffffff;
