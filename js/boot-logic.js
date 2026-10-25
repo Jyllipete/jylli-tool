@@ -9,7 +9,7 @@ function showLockScreen(deniedMsg) {
   el.innerHTML = `
     <div id="lock-left">
       <div id="lock-left-logo">
-        <div style="width:56px;height:56px;background:var(--c-accent-muted);border:1.5px solid var(--c-accent);border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:26px;box-shadow:0 0 0 1px var(--c-accent-ring)">⚡</div>
+        <div style="width:56px;height:56px;background:var(--c-accent-muted);border:1.5px solid var(--c-accent);border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:26px;box-shadow:0 0 0 1px var(--c-accent-ring);color:var(--c-accent)"><i class="fa fa-bolt"></i></div>
         <div>
           <div style="font-size:20px;font-weight:700;color:var(--c-text-primary);margin-bottom:4px">Jylli Tool</div>
           <div style="font-size:12px;color:var(--c-text-secondary);line-height:1.5;max-width:200px">${tUI('lsSubtitle')}</div>

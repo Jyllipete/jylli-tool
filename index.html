@@ -101,17 +101,17 @@
 
 <!-- Language picker (first launch only) -->
 <div id="lang-picker" style="display:none">
-  <div class="lang-picker-icon">⚡</div>
+  <div class="lang-picker-icon"><i class="fa fa-bolt"></i></div>
   <div class="lang-picker-heading">
     <div class="lang-picker-title">Jylli Tool</div>
     <div class="lang-picker-sub">Choose your language / Valitse kieli</div>
   </div>
   <div class="lang-picker-btns">
     <button class="lang-btn" onclick="selectLanguage('en')">
-      <span class="lang-flag">🇬🇧</span> English
+      <span class="lang-flag">EN</span> English
     </button>
     <button class="lang-btn" onclick="selectLanguage('fi')">
-      <span class="lang-flag">🇫🇮</span> Suomi
+      <span class="lang-flag">FI</span> Suomi
     </button>
   </div>
 </div>
@@ -6883,8 +6883,8 @@ function buildSettings(c) {
             <div class="startup-name">${tUI('language')} / Kieli</div>
           </div>
           <div style="display:flex;gap:6px">
-            <button class="btn btn-sm ${lang==='en'?'btn-primary':'btn-ghost'}" onclick="setLanguage('en')">🇬🇧 EN</button>
-            <button class="btn btn-sm ${lang==='fi'?'btn-primary':'btn-ghost'}" onclick="setLanguage('fi')">🇫🇮 FI</button>
+            <button class="btn btn-sm ${lang==='en'?'btn-primary':'btn-ghost'}" onclick="setLanguage('en')">EN</button>
+            <button class="btn btn-sm ${lang==='fi'?'btn-primary':'btn-ghost'}" onclick="setLanguage('fi')">FI</button>
           </div>
         </div>
       </div>
