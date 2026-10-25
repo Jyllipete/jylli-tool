@@ -39,6 +39,7 @@ function loadLang() {
   vm.createContext(ctx)
   if (split.every(fs.existsSync)) {
     for (const f of split) vm.runInContext(fs.readFileSync(f, 'utf8'), ctx, { filename: f })
+    vm.runInContext('this.LANG = LANG', ctx)   // top-level const is not a context property
     return ctx.LANG
   }
   const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8')
@@ -49,7 +50,8 @@ function loadLang() {
   return ctx.LANG
 }
 const LANG = loadLang()
-if (LANG) {
+if (!LANG) fail('LANG did not load')
+else {
   const flat = o => Object.entries(o || {}).flatMap(([g, v]) => v && typeof v === 'object' && !Array.isArray(v) ? Object.keys(v).map(k => g + '.' + k) : [g])
   const en = flat(LANG.en), fi = new Set(flat(LANG.fi))
   const enSet = new Set(en)
