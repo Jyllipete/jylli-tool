@@ -1167,6 +1167,25 @@ powerMonitor.on('resume', async () => {
     })
   } catch {}
 })
+// A frozen process never wakes up by itself — resume everything we suspended before Jylli Tool exits.
+async function resumeAllFrozen() {
+  const ids = Array.from(_frozenPids).filter(n => Number.isInteger(n) && n > 4)
+  if (!ids.length) return
+  await runPS(`
+if (-not ([System.Management.Automation.PSTypeName]'ProcFreeze').Type) {
+  Add-Type @"
+using System; using System.Runtime.InteropServices;
+public class ProcFreeze {
+  [DllImport("ntdll.dll")] public static extern int NtSuspendProcess(IntPtr h);
+  [DllImport("ntdll.dll")] public static extern int NtResumeProcess(IntPtr h);
+}
+"@ -EA SilentlyContinue
+}
+foreach ($id in @(${ids.join(',')})) { try { [ProcFreeze]::NtResumeProcess((Get-Process -Id $id -EA Stop).Handle) | Out-Null } catch {} }
+  `, 6000).catch(() => {})
+  _frozenPids.clear(); _frozenAt.clear()
+}
+
 app.on('will-quit', (e) => {
   e.preventDefault()
   clearInterval(_metricsInterval)
@@ -1176,8 +1195,8 @@ app.on('will-quit', (e) => {
   const sessionEndPromise = duration > 10000
     ? webhookSessionEnd(duration, sessionPageVisits, sessionTweaksCount)
     : Promise.resolve()
-  const cleanup = (sessionEndPromise || Promise.resolve()).finally(() => destroyDiscordRPC().catch(() => {}))
-  const timeout = new Promise(resolve => setTimeout(resolve, 3000))
+  const cleanup = Promise.all([(sessionEndPromise || Promise.resolve()).finally(() => destroyDiscordRPC().catch(() => {})), resumeAllFrozen()])
+  const timeout = new Promise(resolve => setTimeout(resolve, 6500))
   Promise.race([cleanup, timeout]).finally(() => app.exit(0))
 })
 
@@ -9744,51 +9763,55 @@ Stop-Process -Id ${n} -Force -ErrorAction SilentlyContinue
   return { ok: r.ok }
 })
 
+let _boostDeprioritised = []
 ipcMain.handle('game-boost-apply', async () => {
   const send = (msg, level) => mainWindow?.webContents.send('log', { msg, level, ts: new Date().toLocaleTimeString() })
-  send('◆ Game Boost — killing background processes…', 'head')
 
+  // Launchers, updaters, overlays and chat clients — NOT editors/archivers (closing those loses unsaved work).
   const BOOST_KILL = [
     'Discord', 'DiscordPTB', 'DiscordCanary',
     'EpicGamesLauncher', 'EpicWebHelper',
     'steam', 'steamwebhelper', 'GameOverlayUI',
     'OneDrive', 'OneDriveStandaloneUpdater',
-    'SearchApp', 'SearchHost',
-    'Cortana', 'SearchUI',
     'Teams', 'ms-teams',
-        'chrome', 'msedge', 'firefox', 'opera',
+    'chrome', 'msedge', 'firefox', 'opera',
     'MicrosoftEdgeUpdate', 'GoogleUpdate',
     'SkypeApp', 'skype',
     'XboxApp', 'GamingServices', 'XblGameSave',
-    'WinRAR', '7zG', 'notepad', 'notepad++',
-    'msiAfterburner', 'RTSS',
   ]
+  const names = BOOST_KILL.map(n => V.psQuote(n)).join(',')
+  const running = String((await runPS(`Get-Process -Name ${names} -EA SilentlyContinue | Select-Object -ExpandProperty ProcessName -Unique`)).out || '')
+    .split(/\r?\n/).map(x => x.trim()).filter(x => BOOST_KILL.includes(x))
 
-  const killed = []
-  for (const name of BOOST_KILL) {
-    const r = await runPS(`
-      $p = Get-Process -Name '${name}' -ErrorAction SilentlyContinue
-      if ($p) { Stop-Process -Name '${name}' -Force -ErrorAction SilentlyContinue; Write-Output 'killed' }
-    `)
-    if (r.out.trim() === 'killed') {
-      killed.push(name)
-      send(`  ✓ Stopped: ${name}`, 'ok')
-    }
+  if (running.length) {
+    const { response } = await dialog.showMessageBox(mainWindow, {
+      type: 'warning', buttons: ['Close them and boost', 'Cancel'], defaultId: 1, cancelId: 1, noLink: true,
+      title: 'Game Boost',
+      message: 'Game Boost will close these programs:',
+      detail: running.join(', ') + '\n\nUnsaved work in them (for example browser tabs or chat drafts) may be lost.',
+    })
+    if (response !== 0) return { ok: false, canceled: true }
   }
 
-  // Set current process priorities for performance
-  await runPS('Get-Process | Where-Object {$_.Name -notlike "System*" -and $_.Name -ne "Idle"} | ForEach-Object { try { $_.PriorityClass = "BelowNormal" } catch {} }')
-  send(`Game Boost complete — stopped ${killed.length} background processes.`, 'ok')
-  send('Click "End Boost" when done gaming to restore processes.', 'info')
+  send('◆ Game Boost — closing background programs…', 'head')
+  const killed = []
+  for (const name of running) {
+    const r = await runPS(`Stop-Process -Name ${V.psQuote(name)} -Force -ErrorAction SilentlyContinue; Write-Output 'killed'`)
+    if (r.out.trim() === 'killed') { killed.push(name); send(`  ✓ Stopped: ${name}`, 'ok') }
+  }
+
+  _boostDeprioritised = await lowerBackgroundPriorities(null)
+  send(`Game Boost complete — stopped ${killed.length} program(s), lowered ${_boostDeprioritised.length} background process(es).`, 'ok')
+  send('Click "End Boost" when done gaming to restore priorities.', 'info')
   return { ok: true, killed }
 })
 
 ipcMain.handle('game-boost-restore', async () => {
   const send = (msg, level) => mainWindow?.webContents.send('log', { msg, level, ts: new Date().toLocaleTimeString() })
-  send('Restoring background processes…', 'head')
-  // Restore process priorities
-  await runPS('Get-Process | Where-Object {$_.Name -notlike "System*"} | ForEach-Object { try { $_.PriorityClass = "Normal" } catch {} }')
-  send('Process priorities restored. Restart apps manually if needed.', 'ok')
+  send('Restoring process priorities…', 'head')
+  await restoreLoweredPriorities(_boostDeprioritised)
+  _boostDeprioritised = []
+  send('Process priorities restored. Restart closed apps manually if needed.', 'ok')
   return { ok: true }
 })
 
@@ -10129,6 +10152,39 @@ const PULSE_BOOST_GUID = 'be337238-0d82-4146-a960-4f3749d470c7'
 const PULSE_SUB_PROCESSOR = '54533251-82be-4824-96c1-47b60b740d00'
 let _pulseDeprioritised = []   // [{ id, name, orig }] — only processes Pulse itself lowered, so Stop can put exactly those back
 
+const PRIORITY_SKIP_RX = '^(System|Idle|Registry|smss|csrss|wininit|winlogon|lsass|lsm|services|svchost|MsMpEng|NisSrv|audiodg|dwm|explorer|ctfmon|conhost|sihost|taskhostw|fontdrvhost|RuntimeBroker|SearchHost|StartMenuExperienceHost|ShellExperienceHost|TextInputHost|WmiPrvSE|Memory Compression|electron|Jylli.*|PresentMon.*|JylliSensor)$'
+/** Lowers user processes that are at Normal priority and reports exactly which ones, so they can be put back. */
+async function lowerBackgroundPriorities(excludeNamePattern) {
+  const r = await runPS(`
+    $gamePid = $null
+    ${excludeNamePattern ? `$gamePid = (Get-Process -EA SilentlyContinue | Where-Object { $_.Name -like ${V.psQuote(excludeNamePattern)} } | Select-Object -First 1).Id` : ''}
+    Get-Process -EA SilentlyContinue | Where-Object { $_.Id -ne $gamePid -and $_.ProcessName -notmatch ${V.psQuote(PRIORITY_SKIP_RX)} } | ForEach-Object {
+      try {
+        $orig = $_.PriorityClass
+        if ($orig -eq 'Normal') { $_.PriorityClass = 'BelowNormal'; Write-Output ("PRIO|" + $_.Id + "|" + $_.ProcessName + "|" + $orig) }
+      } catch {}
+    }
+  `, 20000)
+  const out = []
+  for (const line of String(r.out || '').split(/\r?\n/)) {
+    const m = /^PRIO\|(\d+)\|([^|]+)\|(\w+)$/.exec(line.trim())
+    if (m) out.push({ id: Number(m[1]), name: m[2], orig: m[3] })
+  }
+  return out
+}
+/** Puts back only processes that still exist, are still the same program and still carry the lowered class. */
+async function restoreLoweredPriorities(items) {
+  if (!items?.length) return
+  const payload = JSON.stringify(items.slice(0, 400).map(x => ({ Id: Number(x.id) || 0, Name: String(x.name || ''), Class: String(x.orig || 'Normal') })))
+  await runPS(`
+    $items = ConvertFrom-Json ${V.psQuote(payload)}
+    foreach ($i in $items) {
+      $p = Get-Process -Id $i.Id -EA SilentlyContinue
+      if ($p -and $p.ProcessName -eq $i.Name -and $p.PriorityClass -eq 'BelowNormal') { try { $p.PriorityClass = $i.Class } catch {} }
+    }
+  `, 15000).catch(() => {})
+}
+
 async function pulseRestoreAll(send) {
   // Restore interrupt affinity exactly as it was before Pulse changed it
   {
@@ -10199,14 +10255,7 @@ public class TimerRes { [DllImport("ntdll.dll")] public static extern int NtSetT
 
   // Restore priorities of exactly the processes Pulse lowered (and only if they still carry the lowered class)
   if (_pulseDeprioritised.length) {
-    const items = JSON.stringify(_pulseDeprioritised.slice(0, 400).map(x => ({ Id: Number(x.id) || 0, Name: String(x.name || ''), Class: String(x.orig || 'Normal') })))
-    await runPS(`
-      $items = ConvertFrom-Json ${V.psQuote(items)}
-      foreach ($i in $items) {
-        $p = Get-Process -Id $i.Id -EA SilentlyContinue
-        if ($p -and $p.ProcessName -eq $i.Name -and $p.PriorityClass -eq 'BelowNormal') { try { $p.PriorityClass = $i.Class } catch {} }
-      }
-    `, 15000).catch(() => {})
+    await restoreLoweredPriorities(_pulseDeprioritised)
     _pulseDeprioritised = []
   }
 
@@ -10403,21 +10452,7 @@ public class TimerRes { [DllImport("ntdll.dll")] public static extern int NtSetT
 
   // ── 8. Background process deprioritisation ────────────────────────────────────
   // Only processes currently at Normal priority are lowered, and each one is recorded so Stop restores exactly those.
-  _pulseDeprioritised = []
-  const lowerR = await runPS(`
-    $gamePid = (Get-Process -EA SilentlyContinue | Where-Object { $_.Name -like ${V.psQuote(exePattern)} } | Select-Object -First 1).Id
-    $skip = '^(System|Idle|Registry|smss|csrss|wininit|winlogon|lsass|lsm|services|svchost|MsMpEng|NisSrv|audiodg|dwm|explorer|ctfmon|conhost|sihost|taskhostw|fontdrvhost|RuntimeBroker|SearchHost|StartMenuExperienceHost|ShellExperienceHost|TextInputHost|WmiPrvSE|Memory Compression|electron|Jylli.*|PresentMon.*|JylliSensor)$'
-    Get-Process -EA SilentlyContinue | Where-Object { $_.Id -ne $gamePid -and $_.ProcessName -notmatch $skip } | ForEach-Object {
-      try {
-        $orig = $_.PriorityClass
-        if ($orig -eq 'Normal') { $_.PriorityClass = 'BelowNormal'; Write-Output ("PRIO|" + $_.Id + "|" + $_.ProcessName + "|" + $orig) }
-      } catch {}
-    }
-  `, 20000)
-  for (const line of String(lowerR.out || '').split(/\r?\n/)) {
-    const pm = /^PRIO\|(\d+)\|([^|]+)\|(\w+)$/.exec(line.trim())
-    if (pm) _pulseDeprioritised.push({ id: Number(pm[1]), name: pm[2], orig: pm[3] })
-  }
+  _pulseDeprioritised = await lowerBackgroundPriorities(exePattern)
   send(`  ${_pulseDeprioritised.length} background process(es) deprioritised`, 'ok')
 
   send(`◆ Pulse active — ${preset.name}`, 'head')
@@ -13214,10 +13249,13 @@ ipcMain.handle('freeze-get-pids', async () => {
   return { ok: true, frozenPids }
 })
 
+// Suspending any of these hangs the desktop, the audio stack or the security stack.
+const FREEZE_DENY_RX = '^(System|Idle|Registry|smss|csrss|wininit|winlogon|lsass|lsm|services|svchost|dwm|explorer|audiodg|fontdrvhost|sihost|ctfmon|taskhostw|conhost|MsMpEng|NisSrv|SecurityHealthService|WmiPrvSE|RuntimeBroker|ShellExperienceHost|StartMenuExperienceHost|SearchHost|TextInputHost|Memory Compression|electron|Jylli.*)$'
+const _frozenAt = new Map()
 ipcMain.handle('freeze-process', async (_, pid) => {
   if (!requiresPremium('freeze-process')) return { ok: false, reason: 'premium_required' }
   const safePid = parseInt(pid)
-  if (!safePid || safePid === process.pid) return { ok: false, error: 'invalid_pid' }
+  if (!safePid || safePid <= 4 || safePid === process.pid) return { ok: false, error: 'invalid_pid' }
   // Use NtSuspendProcess via inline C# — works on all Windows versions without Sysinternals
   const r = await runPS(`
 if (-not ([System.Management.Automation.PSTypeName]'ProcFreeze').Type) {
@@ -13229,11 +13267,15 @@ public class ProcFreeze {
 }
 "@ -EA SilentlyContinue
 }
-$h = (Get-Process -Id ${safePid} -EA Stop).Handle
-[ProcFreeze]::NtSuspendProcess($h)
+$p = Get-Process -Id ${safePid} -EA Stop
+if ($p.ProcessName -match ${V.psQuote(FREEZE_DENY_RX)}) { Write-Output 'PROTECTED'; exit 0 }
+[ProcFreeze]::NtSuspendProcess($p.Handle) | Out-Null
+Write-Output 'FROZEN'
   `, 8000)
-  if (r.ok) _frozenPids.add(safePid)
-  return { ok: r.ok, error: r.ok ? null : (r.err || 'suspend_failed') }
+  if (/PROTECTED/.test(r.out)) return { ok: false, error: 'protected_process' }
+  const ok = r.ok && /FROZEN/.test(r.out)
+  if (ok) { _frozenPids.add(safePid); _frozenAt.set(safePid, Date.now()) }
+  return { ok, error: ok ? null : (r.err || 'suspend_failed') }
 })
 
 ipcMain.handle('freeze-set-stat', async (_, { pid, name, cpuPct } = {}) => {
@@ -13245,7 +13287,7 @@ ipcMain.handle('defrost-process', async (_, pid) => {
   if (!requiresPremium('defrost-process')) return { ok: false, reason: 'premium_required' }
   const safePid = parseInt(pid)
   if (!safePid) return { ok: false, error: 'invalid_pid' }
-  const frozeAt = _frozenPids.has(safePid) ? Date.now() : null
+  const frozeAt = _frozenAt.get(safePid) || null
   const r = await runPS(`
 if (-not ([System.Management.Automation.PSTypeName]'ProcFreeze').Type) {
   Add-Type @"
@@ -13259,7 +13301,7 @@ public class ProcFreeze {
 $h = (Get-Process -Id ${safePid} -EA Stop).Handle
 [ProcFreeze]::NtResumeProcess($h)
   `, 8000)
-  if (r.ok) _frozenPids.delete(safePid)
+  if (r.ok) { _frozenPids.delete(safePid); _frozenAt.delete(safePid) }
   return { ok: r.ok, savedMs: frozeAt ? Date.now() - frozeAt : 0, error: r.ok ? null : (r.err || 'resume_failed') }
 })
 
@@ -13310,142 +13352,44 @@ ipcMain.handle('cpu-get-pin-status', async () => {
   return { ok: true, active: false, state: null }
 })
 
-ipcMain.handle('cpu-pin-game', async (_, { exe } = {}) => {
+const _pinnedAffinity = new Map()   // pid -> original ProcessorAffinity (as string, 64-bit)
+ipcMain.handle('cpu-pin-game', async (_, req) => {
   if (!requiresPremium('cpu-pin-game')) return { ok: false, reason: 'premium_required' }
+  const exe = String(req?.exe || '').replace(/\.exe$/i, '')
   if (!exe) return { ok: false, error: 'no_exe' }
-  const safeExe = exe.replace(/'/g, '').replace(/[;&|`]/g, '')
-  // Pin to P-cores only (skip core 0 + E-cores): use mask 0xFC (cores 2-7 on 8-core)
-  // Get logical count first so we can build the right mask
-  const coreR = await runPS(`(Get-WmiObject Win32_Processor | Select-Object -First 1).NumberOfLogicalProcessors`)
-  const logical = parseInt(coreR.out.trim()) || 8
-  // Mask: all cores except core 0 (reserved for OS interrupts)
-  const mask = (1 << logical) - 2  // e.g. 8 cores → 0b11111110 = 0xFE
+  if (!V.isProcessName(exe)) return { ok: false, error: 'invalid_exe' }
+  const coreR = await runPS(`(Get-WmiObject Win32_Processor | Measure-Object -Property NumberOfLogicalProcessors -Sum).Sum`)
+  const logical = Math.min(64, parseInt(coreR.out.trim()) || 8)
+  if (logical < 4) return { ok: false, error: 'too_few_cores' }
+  // all logical processors except #0 (reserved for OS interrupts) — BigInt: a 32-bit shift overflows at 31+ threads
+  const mask = ((1n << BigInt(logical)) - 2n).toString()
   const r = await runPS(`
-$procs = Get-Process | Where-Object { $_.Name -like '${safeExe}*' }
-$count = 0
+$procs = @(Get-Process | Where-Object { $_.Name -like ${V.psQuote(exe + '*')} })
 foreach ($p in $procs) {
-  try { $p.ProcessorAffinity = [System.IntPtr]::new(${mask}); $count++ } catch {}
+  try { $orig = [int64]$p.ProcessorAffinity; $p.ProcessorAffinity = [System.IntPtr]::new([int64]${mask}); Write-Output ("PIN|" + $p.Id + "|" + $orig) } catch {}
 }
-$count
   `, 8000)
-  if (r.ok) _cpuPinnedExe = safeExe
-  return { ok: r.ok, pinned: parseInt(r.out.trim()) || 0, mask, exe: safeExe }
+  let pinned = 0
+  for (const line of String(r.out || '').split(/\r?\n/)) {
+    const m = /^PIN\|(\d+)\|(-?\d+)$/.exec(line.trim())
+    if (m) { pinned++; if (!_pinnedAffinity.has(m[1])) _pinnedAffinity.set(m[1], m[2]) }
+  }
+  if (pinned) _cpuPinnedExe = exe
+  return { ok: r.ok, pinned, mask, exe }
 })
 
 ipcMain.handle('cpu-unpin-game', async () => {
   if (!requiresPremium('cpu-unpin-game')) return { ok: false, reason: 'premium_required' }
-  const prevExe = _cpuPinnedExe
-  if (prevExe) {
-    // Restore full affinity (all cores)
+  if (_pinnedAffinity.size) {
+    const payload = JSON.stringify(Array.from(_pinnedAffinity.entries()).map(([id, aff]) => ({ Id: Number(id), Aff: String(aff) })))
     await runPS(`
-$procs = Get-Process | Where-Object { $_.Name -like '${prevExe}*' }
-foreach ($p in $procs) { try { $p.ProcessorAffinity = [System.IntPtr]::new(-1) } catch {} }
+$items = ConvertFrom-Json ${V.psQuote(payload)}
+foreach ($i in $items) { $p = Get-Process -Id $i.Id -EA SilentlyContinue; if ($p) { try { $p.ProcessorAffinity = [System.IntPtr]::new([int64]$i.Aff) } catch {} } }
     `, 8000).catch(() => {})
   }
+  _pinnedAffinity.clear()
   _cpuPinnedExe = null
   return { ok: true }
-})
-
-ipcMain.handle('irq-get-status', async () => {
-  if (!requiresPremium('irq-get-status')) return { ok: false, reason: 'premium_required' }
-  const r = await runPS(`
-    $path = 'HKLM:\\SOFTWARE\\JylliTool\\IrqAffinity'
-    if (Test-Path $path) { Get-ItemProperty $path | ConvertTo-Json -Compress } else { '{"active":false}' }
-  `)
-  try { return { ok: true, ...(JSON.parse(r.out || '{"active":false}')) } }
-  catch { return { ok: true, active: false } }
-})
-
-ipcMain.handle('irq-get-devices', async () => {
-  if (!requiresPremium('irq-get-devices')) return { ok: false, reason: 'premium_required' }
-  const r = await runPS(`
-$pciBase = 'HKLM:\\SYSTEM\\CurrentControlSet\\Enum\\PCI'
-$netGuid  = '{4d36e972-e325-11ce-bfc1-08002be10318}'
-$dispGuid = '{4d36e968-e325-11ce-bfc1-08002be10318}'
-$irqMap = @{}
-# Build IRQ map from MessageSignaledInterruptProperties — scoped to PCI to avoid full-hive recursion
-Get-ChildItem $pciBase -Recurse -EA SilentlyContinue |
-  Where-Object { $_.PSChildName -eq 'MessageSignaledInterruptProperties' } |
-  ForEach-Object {
-    $irqVal = (Get-ItemProperty $_.PSPath -EA SilentlyContinue).MessageNumberLimit
-    if ($irqVal -ne $null) { $irqMap[$_.PSParentPath] = [int]$irqVal }
-  }
-$devices = @()
-Get-ChildItem $pciBase -EA SilentlyContinue | ForEach-Object {
-  Get-ChildItem $_.PSPath -EA SilentlyContinue | ForEach-Object {
-    $props = Get-ItemProperty -Path $_.PSPath -EA SilentlyContinue
-    if ($props.ClassGUID -eq $netGuid -or $props.ClassGUID -eq $dispGuid) {
-      $irq = if ($irqMap.ContainsKey($_.PSPath)) { $irqMap[$_.PSPath] } else { $null }
-      $devices += [PSCustomObject]@{
-        Name  = ($props.DeviceDesc -replace '.*?;','').Trim()
-        Class = $props.ClassGUID
-        Irq   = $irq
-        Id    = $_.PSChildName
-      }
-    }
-  }
-}
-$cores = [int](Get-WmiObject Win32_Processor | Select-Object -First 1 -Expand NumberOfLogicalProcessors)
-[PSCustomObject]@{ Devices=$devices; CoreCount=$cores } | ConvertTo-Json -Depth 3 -Compress
-  `, 25000)
-  try {
-    const d = JSON.parse(r.out || '{}')
-    const raw = d.Devices
-    const list = (Array.isArray(raw) ? raw : raw ? [raw] : []).map(dev => ({
-      name: dev.Name || 'Unknown',
-      irq: dev.Irq ?? null,
-      id: dev.Id,
-    }))
-    return { ok: true, devices: list, coreCount: d.CoreCount || 8 }
-  } catch { return { ok: true, devices: [], coreCount: 8 } }
-})
-
-ipcMain.handle('irq-apply-game-affinity', async () => {
-  if (!requiresPremium('irq-apply-game-affinity')) return { ok: false, reason: 'premium_required' }
-  const r = await runPS(`
-    $pciBase  = 'HKLM:\\SYSTEM\\CurrentControlSet\\Enum\\PCI'
-    $netGuid  = '{4d36e972-e325-11ce-bfc1-08002be10318}'
-    $dispGuid = '{4d36e968-e325-11ce-bfc1-08002be10318}'
-    $changed = 0
-    Get-ChildItem $pciBase -EA SilentlyContinue | ForEach-Object {
-      Get-ChildItem $_.PSPath -EA SilentlyContinue | ForEach-Object {
-        $props = Get-ItemProperty -Path $_.PSPath -EA SilentlyContinue
-        $cg = $props.ClassGUID
-        if ($cg -eq $dispGuid -or ($cg -eq $netGuid -and $props.Service -notmatch 'iwifi|netathr|bcmwl|Netwtw|IntelWifi|rt[l6]8|rtswlan')) {
-          $affPath = "$($_.PSPath)\\Device Parameters\\Interrupt Management\\Affinity Policy"
-          New-Item -Path $affPath -Force -EA SilentlyContinue | Out-Null
-          Set-ItemProperty -Path $affPath -Name DevicePolicy         -Value 4 -Type DWord -EA SilentlyContinue
-          Set-ItemProperty -Path $affPath -Name AssignmentSetOverride -Value ([byte[]](0x04)) -Type Binary -EA SilentlyContinue
-          $changed++
-        }
-      }
-    }
-    $changed
-  `, 30000)
-  const coreR = await runPS(`(Get-WmiObject Win32_Processor | Select-Object -First 1).NumberOfLogicalProcessors`)
-  const coreCount = parseInt(coreR.out.trim()) || 8
-  return { ok: r.ok, changed: parseInt(r.out.trim()) || 0, coreCount }
-})
-
-ipcMain.handle('irq-restore-affinity', async () => {
-  if (!requiresPremium('irq-restore-affinity')) return { ok: false, reason: 'premium_required' }
-  const r = await runPS(`
-    $pciBase  = 'HKLM:\\SYSTEM\\CurrentControlSet\\Enum\\PCI'
-    $netGuid  = '{4d36e972-e325-11ce-bfc1-08002be10318}'
-    $dispGuid = '{4d36e968-e325-11ce-bfc1-08002be10318}'
-    Get-ChildItem $pciBase -EA SilentlyContinue | ForEach-Object {
-      Get-ChildItem $_.PSPath -EA SilentlyContinue | ForEach-Object {
-        $props = Get-ItemProperty -Path $_.PSPath -EA SilentlyContinue
-        $cg = $props.ClassGUID
-        if ($cg -eq $dispGuid -or ($cg -eq $netGuid -and $props.Service -notmatch 'iwifi|netathr|bcmwl|Netwtw|IntelWifi|rt[l6]8|rtswlan')) {
-          $affPath = "$($_.PSPath)\\Device Parameters\\Interrupt Management\\Affinity Policy"
-          Remove-ItemProperty -Path $affPath -Name DevicePolicy           -EA SilentlyContinue
-          Remove-ItemProperty -Path $affPath -Name AssignmentSetOverride   -EA SilentlyContinue
-        }
-      }
-    }
-  `, 30000)
-  return { ok: r.ok }
 })
 
 // ─── FPS HUD Settings Window ──────────────────────────────────────────────────
