@@ -4,21 +4,26 @@ const { exec, execFile, spawn } = require('child_process')
 const fs = require('fs')
 const os = require('os')
 
-// ─── Debug log (writes to %TEMP%\jylli-debug.txt for diagnosing analytics) ───
+// ─── Debug log ───────────────────────────────────────────────────────────────
+// Diagnostic logs contain machine details, so they are OFF unless JYLLI_DEBUG=1 is set; when on they stop growing at 1 MB.
+const DEBUG_ON = process.env.JYLLI_DEBUG === '1'
+const _debugPath = path.join(os.tmpdir(), 'jylli-debug.txt')
+let _debugBytes = 0
 function debugLog(msg) {
-  try { fs.appendFileSync(path.join(os.tmpdir(), 'jylli-debug.txt'), `${new Date().toISOString()} ${msg}\n`) } catch {}
+  if (!DEBUG_ON || _debugBytes > 1024 * 1024) return
+  try { const line = `${new Date().toISOString()} ${msg}\n`; _debugBytes += line.length; fs.appendFileSync(_debugPath, line) } catch {}
 }
 
-// ─── Startup trace (writes to %TEMP%\jylli-startup.txt — read after hang) ────
+// ─── Startup trace (%TEMP%\jylli-startup.txt — read after a startup hang) ──────────
+// Only the first 90 seconds are traced (or everything when JYLLI_DEBUG=1) so it never costs a disk write per PowerShell call afterwards.
 const _traceStart = Date.now()
 const _tracePath = path.join(os.tmpdir(), 'jylli-startup.txt')
+let _traceBytes = 0
 function startupTrace(msg) {
-  try {
-    const ms = Date.now() - _traceStart
-    fs.appendFileSync(_tracePath, `[T+${ms}ms][main] ${msg}\n`)
-  } catch {}
+  const ms = Date.now() - _traceStart
+  if ((ms > 90000 && !DEBUG_ON) || _traceBytes > 512 * 1024) return
+  try { const line = `[T+${ms}ms][main] ${msg}\n`; _traceBytes += line.length; fs.appendFileSync(_tracePath, line) } catch {}
 }
-// Clear log on each fresh launch
 try { fs.writeFileSync(_tracePath, `=== Jylli startup trace ${new Date().toISOString()} ===\n`) } catch {}
 
 // ─── Constants ───────────────────────────────────────────────────────────────
@@ -1238,51 +1243,38 @@ const MAX_PS_CONCURRENT = 4
 let _psRunning = 0
 const _psQueue = []
 
+function pumpPsQueue() {
+  while (_psRunning < MAX_PS_CONCURRENT && _psQueue.length) _psQueue.shift()()
+}
+/** Always resolves { ok, out, err, code }. A command that waited too long for a free slot resolves { ok:false, err:'queue_timeout' } — it never throws. */
 function runPS(command, timeoutMs = 30000) {
-  const cmdPreview = command.slice(0, 60).replace(/\n/g, ' ')
-  startupTrace(`runPS enter: running=${_psRunning} queued=${_psQueue.length} cmd="${cmdPreview}"`)
-  if (_psRunning < MAX_PS_CONCURRENT) {
-    _psRunning++
-    return _runPSRaw(command, timeoutMs).finally(() => {
-      _psRunning--
-      if (_psQueue.length) _psQueue.shift()()
-    })
-  }
-  startupTrace(`runPS QUEUED (slots full): cmd="${cmdPreview}"`)
-  return new Promise((resolve, reject) => {
-    let settled = false
-    const runner = () => {
-      if (settled) { _psRunning--; if (_psQueue.length) _psQueue.shift()(); return }
-      clearTimeout(queueTimeout)
-      settled = true
-      startupTrace(`runPS dequeued: cmd="${cmdPreview}"`)
+  return new Promise(resolve => {
+    let started = false
+    let waitTimer = null
+    const start = () => {
+      if (started) return
+      started = true
+      clearTimeout(waitTimer)
       _psRunning++
-      _runPSRaw(command, timeoutMs)
-        .then(resolve, reject)
-        .finally(() => {
-          _psRunning--
-          if (_psQueue.length) _psQueue.shift()()
-        })
+      _runPSRaw(command, timeoutMs).then(resolve).finally(() => { _psRunning--; pumpPsQueue() })
     }
-    // Expire in queue after timeoutMs so callers don't silently hang indefinitely.
-    const queueTimeout = setTimeout(() => {
-      if (settled) return
-      settled = true
-      const idx = _psQueue.indexOf(runner)
-      if (idx !== -1) _psQueue.splice(idx, 1)
-      startupTrace(`runPS queue-wait timeout: cmd="${cmdPreview}"`)
-      reject(new Error(`runPS queue wait timeout cmd="${cmdPreview}"`))
-    }, timeoutMs)
-    _psQueue.push(runner)
+    if (_psRunning < MAX_PS_CONCURRENT) { start(); return }
+    waitTimer = setTimeout(() => {
+      if (started) return
+      started = true
+      const i = _psQueue.indexOf(start); if (i !== -1) _psQueue.splice(i, 1)
+      resolve({ ok: false, out: '', err: 'queue_timeout', code: 'QUEUE_TIMEOUT' })
+    }, Math.max(timeoutMs, 30000) + 30000)
+    _psQueue.push(start)
   })
 }
 
 // Run a simple cmd/system binary (sc, bcdedit, netsh, etc.) fully hidden
-function runCmd(cmd) {
+function runCmd(cmd, timeoutMs = 30000) {
   return new Promise((resolve) => {
     exec(cmd, {
       windowsHide: true,
-      timeout: 30000
+      timeout: timeoutMs
     }, (err, stdout, stderr) => {
       resolve({
         ok: !err || err.code === 0,
@@ -14019,8 +14011,9 @@ $gpu = Get-WmiObject Win32_VideoController | Select-Object -First 1
   return { ok: true, dduPath: dduFound ? dduPath : null, dduFound, vendor, gpuName, driverVersion }
 })
 
-ipcMain.handle('install-runtimes', async (_, items = []) => {
+ipcMain.handle('install-runtimes', async (_, rawItems = []) => {
   if (!requiresPremium('install-runtimes')) return { ok: false, reason: 'premium_required' }
+  const items = (Array.isArray(rawItems) ? rawItems : []).filter(i => i && ['vcredist', 'dotnet48'].includes(i.id))
   const total = items.length
   const results = []
   for (let i = 0; i < items.length; i++) {
@@ -14034,15 +14027,15 @@ ipcMain.handle('install-runtimes', async (_, items = []) => {
         const vcPath = assetPath('assets', 'runtimes', 'vc_redist.x64.exe')
         if (!fs.existsSync(vcPath)) { missing = true }
         else {
-          const r = await runCmd(`"${vcPath}" /install /quiet /norestart`)
-          ok = r.ok
+          const r = await runCmd(`"${vcPath}" /install /quiet /norestart`, 300000)
+          ok = r.ok || [3010, 1638].includes(r.code)   // 3010 = success, reboot needed; 1638 = a newer version is already installed
         }
       } else if (item.id === 'dotnet48') {
         const netPath = assetPath('assets', 'runtimes', 'ndp48-x86-x64-allos-enu.exe')
         if (!fs.existsSync(netPath)) { missing = true }
         else {
-          const r = await runCmd(`"${netPath}" /quiet /norestart`, 120000)
-          ok = r.ok
+          const r = await runCmd(`"${netPath}" /quiet /norestart`, 900000)
+          ok = r.ok || [3010, 1638].includes(r.code)
         }
       }
     } catch {}
