@@ -9582,11 +9582,14 @@ function genRefreshAllCounters() {
 }
 
 function makeTip(text, type = 'info') {
-  const icons = { info: '<i class="fa fa-circle-info"></i>', success: '<i class="fa fa-check"></i>', warning: '<i class="fa fa-triangle-exclamation"></i>', danger: '<i class="fa fa-triangle-exclamation"></i>' }
+  // `text` is trusted markup supplied by the caller (same contract as before). Rendered as a j-callout.
+  const tone = { info: 'info', success: 'ok', warning: 'warn', danger: 'danger' }[type] || 'info'
+  const icon = { info: 'circle-info', ok: 'check', warn: 'triangle-exclamation', danger: 'triangle-exclamation' }[tone]
   const d = document.createElement('div')
-  d.className = `tip ${type}`
-  d.innerHTML = `<span class="tip-icon">${icons[type]}</span><span>${text}</span>`
+  d.className = `j-callout j-callout-${tone}`
+  d.innerHTML = `<i class="fa fa-${icon}" aria-hidden="true"></i><div>${text}</div>`
   return d
+
 }
 
 // ─── Metrics ──────────────────────────────────────────────────────────────────
