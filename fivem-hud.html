@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline';">
+<title>FiveM HUD</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body {
+  width: 186px;
+  height: auto;
+  overflow: hidden;
+  background: transparent;
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  user-select: none;
+}
+.hud {
+  background: rgba(8,8,14,0.55);
+  border: none;
+  border-radius: 10px;
+  padding: 8px 10px 7px;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+.hud-title {
+  font-size: 8.5px;
+  font-weight: 700;
+  color: rgba(255,46,99,0.65);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  margin-bottom: 7px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.hud-uptime {
+  font-size: 8.5px;
+  font-weight: 400;
+  color: rgba(255,255,255,0.22);
+  text-transform: none;
+  letter-spacing: 0;
+}
+/* ── Metrics ── */
+.metric {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: 4px;
+}
+.metric-label {
+  font-size: 8.5px;
+  font-weight: 700;
+  color: rgba(255,255,255,0.28);
+  width: 28px;
+  flex-shrink: 0;
+  letter-spacing: 0.04em;
+}
+.metric-bar-track {
+  flex: 1;
+  height: 5px;
+  background: rgba(255,255,255,0.04);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.metric-bar-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.5s ease, background 0.5s ease;
+  width: 0%;
+}
+.metric-val {
+  font-size: 10px;
+  font-weight: 700;
+  color: rgba(255,255,255,0.7);
+  width: 30px;
+  text-align: right;
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Sparkline ── */
+.sparkline-row {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: 5px;
+  margin-top: -1px;
+}
+.sparkline-label {
+  font-size: 7.5px;
+  color: rgba(255,255,255,0.18);
+  width: 28px;
+  flex-shrink: 0;
+  letter-spacing: 0.04em;
+}
+.sparkline-canvas {
+  flex: 1;
+  display: block;
+  height: 16px;
+}
+.sparkline-spacer { width: 30px; flex-shrink: 0; }
+
+/* ── Divider ── */
+.divider {
+  border: none;
+  border-top: 1px solid rgba(255,255,255,0.04);
+  margin: 5px 0 4px;
+}
+
+/* ── Ping ── */
+.ping-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 9px;
+}
+.ping-label { color: rgba(255,255,255,0.22); font-size: 8.5px; }
+.ping-val { font-weight: 700; font-size: 10px; font-variant-numeric: tabular-nums; }
+</style>
+</head>
+<body>
+<div class="hud" id="hud">
+  <div class="hud-title">
+    FiveM HUD
+    <span class="hud-uptime" id="hud-uptime">0s</span>
+  </div>
+
+  <div class="metric">
+    <div class="metric-label">CPU</div>
+    <div class="metric-bar-track"><div class="metric-bar-fill" id="bar-cpu" style="background:#ff4c7a"></div></div>
+    <div class="metric-val" id="val-cpu">—</div>
+  </div>
+
+  <div class="sparkline-row">
+    <div class="sparkline-label">trend</div>
+    <canvas class="sparkline-canvas" id="sparkline-cpu" width="86" height="16"></canvas>
+    <div class="sparkline-spacer"></div>
+  </div>
+
+  <div class="metric">
+    <div class="metric-label">GPU</div>
+    <div class="metric-bar-track"><div class="metric-bar-fill" id="bar-gpu" style="background:#00d4b4"></div></div>
+    <div class="metric-val" id="val-gpu">—</div>
+  </div>
+
+  <div class="metric" style="margin-bottom:0">
+    <div class="metric-label">RAM</div>
+    <div class="metric-bar-track"><div class="metric-bar-fill" id="bar-ram" style="background:#7c6aff"></div></div>
+    <div class="metric-val" id="val-ram">—</div>
+  </div>
+
+  <hr class="divider">
+
+  <div class="ping-row">
+    <span class="ping-label">CFX ping</span>
+    <span class="ping-val" id="val-ping" style="color:rgba(255,255,255,0.5)">—</span>
+  </div>
+</div>
+<script>
+const setBar = (id, pct, colOk, colWarn, colBad) => {
+  const fill = document.getElementById('bar-' + id)
+  const val  = document.getElementById('val-' + id)
+  if (!fill || !val) return
+  fill.style.width      = Math.min(pct, 100) + '%'
+  fill.style.background = pct > 85 ? colBad : pct > 60 ? colWarn : colOk
+  val.textContent       = Math.round(pct) + '%'
+}
+
+// ── Sparkline ───────────────────────────────────────────────────────────────
+const _cpuHistory = []
+const MAX_HIST = 24
+
+function drawSparkline(canvasId, data, color) {
+  const canvas = document.getElementById(canvasId)
+  if (!canvas) return
+  const ctx    = canvas.getContext('2d')
+  const W      = canvas.width
+  const H      = canvas.height
+  ctx.clearRect(0, 0, W, H)
+  if (data.length < 2) return
+
+  const min  = 0
+  const max  = 100
+  const step = W / (MAX_HIST - 1)
+
+  const toY = v => H - Math.round(((v - min) / (max - min)) * (H - 2)) - 1
+
+  // filled area
+  ctx.beginPath()
+  ctx.moveTo(0, H)
+  data.forEach((v, i) => {
+    const x = i * step
+    const y = toY(v)
+    i === 0 ? ctx.lineTo(x, y) : ctx.lineTo(x, y)
+  })
+  ctx.lineTo((data.length - 1) * step, H)
+  ctx.closePath()
+  ctx.fillStyle = color.replace(')', ', 0.12)').replace('rgb(', 'rgba(').replace('rgba(rgba(', 'rgba(')
+  // simpler: just use a fixed semi-transparent fill
+  ctx.fillStyle = 'rgba(255,46,99,0.08)'
+  ctx.fill()
+
+  // line
+  ctx.beginPath()
+  data.forEach((v, i) => {
+    const x = i * step
+    const y = toY(v)
+    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y)
+  })
+  ctx.strokeStyle = 'rgba(255,46,99,0.55)'
+  ctx.lineWidth   = 1.5
+  ctx.lineJoin    = 'round'
+  ctx.stroke()
+}
+
+// ── Uptime ──────────────────────────────────────────────────────────────────
+let _uptimeStart = Date.now()
+setInterval(() => {
+  const s  = Math.round((Date.now() - _uptimeStart) / 1000)
+  const el = document.getElementById('hud-uptime')
+  if (el) el.textContent = s < 60 ? s + 's' : Math.floor(s / 60) + 'm ' + (s % 60) + 's'
+}, 1000)
+
+// ── Metrics poll every 2s ───────────────────────────────────────────────────
+setInterval(async () => {
+  const m = await api.getMetrics().catch(() => null)
+  if (!m) return
+  const cpu = m.cpu ?? 0
+  const gpu = m.gpu ?? 0
+  const ram = m.ram ?? 0
+  setBar('cpu', cpu, '#ff4c7a', '#f39c12', '#e74c3c')
+  setBar('gpu', gpu, '#00d4b4', '#f39c12', '#e74c3c')
+  setBar('ram', ram, '#7c6aff', '#f39c12', '#e74c3c')
+
+  _cpuHistory.push(cpu)
+  if (_cpuHistory.length > MAX_HIST) _cpuHistory.shift()
+  drawSparkline('sparkline-cpu', _cpuHistory, 'rgb(255,46,99)')
+}, 2000)
+
+// ── CFX ping via IPC event ──────────────────────────────────────────────────
+api.onLivePingTick(d => {
+  const val = document.getElementById('val-ping')
+  if (!val) return
+  if (!d || d.ms == null) {
+    val.textContent  = 'timeout'
+    val.style.color  = '#e74c3c'
+    return
+  }
+  const ms = d.ms
+  val.textContent = ms + ' ms'
+  val.style.color = ms < 40 ? '#2ecc71' : ms < 80 ? '#f39c12' : '#e74c3c'
+})
+
+api.startLivePing({ host: 'runtime.fivem.net', port: 443, protocol: 'https', interval: 3000 }).catch(() => {})
+</script>
+</body>
+</html>

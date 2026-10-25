@@ -1,0 +1,92 @@
+# Dependencies
+node_modules/
+.venv/
+venv/
+env/
+__pycache__/
+*.egg-info/
+
+# Build outputs
+dist/
+build/
+out/
+.next/
+.nuxt/
+.cache/
+.turbo/
+
+# Electron build output
+out/win-unpacked/
+out/mac/
+*.AppImage
+*.dmg
+
+# Version control
+.git/
+.gitignore
+
+# OS files
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+.vscode/
+.idea/
+
+# Environment & config
+.env
+.env.local
+.env.*.local
+
+# Temporary files
+*.tmp
+*.temp
+*.log
+.tmp/
+temp/
+
+# Package manager lock files
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+Pipfile.lock
+
+# Source maps (large, not useful)
+*.js.map
+*.css.map
+
+# Media
+*.mp4
+*.mov
+*.avi
+*.wav
+*.mp3
+*.flac
+
+# Archives
+*.zip
+*.tar
+*.gz
+*.rar
+*.7z
+
+# IDE generated
+*.iml
+.gradle/
+.mvn/
+
+# Testing artifacts
+coverage/
+.nyc_output/
+*.lcov
+
+# Binary artifacts
+*.exe
+*.dll
+*.so
+*.dylib
+*.o
+*.obj
+*.pdb
+*.ilk

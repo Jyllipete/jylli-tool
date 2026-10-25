@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline';">
+<title>FPS HUD</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body {
+  width: 100%; height: 100%;
+  overflow: hidden;
+  background: transparent;
+  user-select: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.hud { display: flex; align-items: center; justify-content: center; transition: opacity 0.4s ease; }
+.hud.faded { opacity: 0.20; }
+#fps-val {
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  font-size: var(--fps-font-size, 36px);
+  font-weight: 800;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  color: #ffffff;
+  text-shadow: 0 1px 6px rgba(0,0,0,0.7);
+}
+body[data-size='sm'] { --fps-font-size: 24px; }
+body[data-size='md'] { --fps-font-size: 36px; }
+body[data-size='lg'] { --fps-font-size: 52px; }
+body[data-size='xl'] { --fps-font-size: 72px; }
+</style>
+</head>
+<body data-size="md">
+<div class="hud" id="hud"><div id="fps-val">—</div></div>
+<script>
+let _fadeTimer = null
+function resetFadeTimer() {
+  clearTimeout(_fadeTimer)
+  document.getElementById('hud').classList.remove('faded')
+  _fadeTimer = setTimeout(() => { document.getElementById('hud').classList.add('faded') }, 6000)
+}
+api.onAriaHudInit(({ size, color }) => {
+  if (size) document.body.dataset.size = size
+  const val = document.getElementById('fps-val')
+  if (val && color) val.style.color = color
+})
+api.onAriaHudTick(({ currentFps }) => {
+  const el = document.getElementById('fps-val')
+  if (!el) return
+  if (currentFps == null) { el.textContent = '—'; return }
+  el.textContent = currentFps
+  resetFadeTimer()
+})
+</script>
+</body>
+</html>

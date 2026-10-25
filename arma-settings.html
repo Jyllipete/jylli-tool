@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<link rel="stylesheet" href="css/tokens.css">
+<link rel="stylesheet" href="assets/fa/css/all.min.css">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com;">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700;800&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+<title>Arma Reforger Graphics Settings</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --arma:     #5c8c3e;
+  --bg:       var(--c-bg-base);
+  --bg-card:  var(--c-bg-elevated);
+  --bg-dark:  var(--c-bg-base);
+  --border:   var(--c-border-default);
+  --border2:  var(--c-border-subtle);
+  --white:    var(--c-text-primary);
+  --muted:    var(--c-text-tertiary);
+  --success:  #2ECC71;
+  --danger:   #E74C3C;
+  --warning:  #F39C12;
+}
+html, body { background: var(--bg); color: var(--white); font-family: 'Geist', 'Segoe UI', system-ui, sans-serif; font-size: 13px; height: 100%; overflow: hidden; user-select: none; -webkit-app-region: no-drag; }
+
+/* Titlebar */
+#titlebar { display:flex; align-items:center; height:44px; background:var(--bg-dark); border-bottom:1px solid var(--border); padding:0 14px; -webkit-app-region:drag; flex-shrink:0; gap:10px; }
+.tb-icon { width:28px; height:28px; border-radius:8px; background:rgba(92,140,62,0.18); border:1px solid rgba(92,140,62,0.35); display:flex; align-items:center; justify-content:center; color:var(--arma); font-size:13px; flex-shrink:0; }
+.tb-title { font-size:13px; font-weight:700; color:var(--white); }
+.tb-title span { color:var(--arma); }
+.tb-subtitle { font-size:10px; color:#444; margin-top:1px; }
+.tb-close { -webkit-app-region:no-drag; width:28px; height:28px; border-radius:6px; border:none; background:transparent; color:#555; cursor:pointer; font-size:14px; display:flex; align-items:center; justify-content:center; transition:background 0.12s,color 0.12s; }
+.tb-close:hover { background:var(--danger); color:white; }
+
+/* Layout */
+#root { display:flex; flex-direction:column; height:100vh; }
+#content { flex:1; overflow-y:auto; padding:16px; display:flex; flex-direction:column; gap:12px; }
+#content::-webkit-scrollbar { width:4px; }
+#content::-webkit-scrollbar-thumb { background:#222; border-radius:2px; }
+
+/* Path row */
+#path-row { display:flex; gap:8px; align-items:center; }
+#path-row input { flex:1; background:var(--bg-card); border:1px solid var(--border2); border-radius:7px; padding:6px 10px; color:var(--white); font-size:11px; outline:none; }
+#path-row input:focus { border-color:rgba(92,140,62,0.5); }
+#path-status { font-size:10px; color:#444; padding:2px 0 4px; min-height:18px; }
+
+/* Buttons */
+.btn { display:inline-flex; align-items:center; gap:6px; border:none; border-radius:7px; padding:7px 14px; font-size:11px; font-weight:600; cursor:pointer; transition:background 0.13s ease, box-shadow 0.13s ease; white-space:nowrap; font-family:inherit; }
+.btn:disabled { opacity:0.45; cursor:not-allowed; }
+.btn-primary { background:var(--arma); color:white; }
+.btn-primary:not(:disabled):hover { background:#4a7832; box-shadow:0 0 0 1px rgba(92,140,62,0.4), 0 0 16px rgba(92,140,62,0.2); }
+.btn-primary:not(:disabled):active { transform:scale(0.97); }
+.btn-ghost { background:rgba(255,255,255,0.05); border:1px solid var(--border2); color:var(--white); }
+.btn-ghost:not(:disabled):hover { background:rgba(255,255,255,0.09); border-color:#333; }
+.btn-ghost:not(:disabled):active { transform:scale(0.97); }
+
+/* Sysinfo bar */
+#sysinfo-bar { display:none; align-items:center; gap:10px; background:rgba(92,140,62,0.06); border:1px solid rgba(92,140,62,0.2); border-radius:8px; padding:8px 14px; font-size:10px; color:#6a9a4a; }
+
+/* Preset bar */
+#preset-bar { display:none; align-items:center; gap:8px; flex-wrap:wrap; }
+.preset-label { font-size:10px; font-weight:600; color:#444; text-transform:uppercase; letter-spacing:0.06em; white-space:nowrap; }
+.preset-btn { display:inline-flex; align-items:center; gap:6px; border-radius:8px; padding:6px 13px; font-size:11px; font-weight:600; cursor:pointer; transition:all 0.12s; border:1px solid transparent; white-space:nowrap; font-family:inherit; }
+.preset-btn:hover { box-shadow:0 0 0 1px rgba(255,255,255,0.1); }
+.preset-quality     { background:rgba(52,152,219,0.1); border-color:rgba(52,152,219,0.3); color:#3498DB; }
+.preset-performance { background:rgba(92,140,62,0.1);  border-color:rgba(92,140,62,0.3);  color:var(--arma); }
+.preset-recommended { background:rgba(243,156,18,0.1); border-color:rgba(243,156,18,0.3); color:#F39C12; }
+.preset-divider { width:1px; height:20px; background:#222; margin:0 2px; }
+
+/* Empty state */
+#empty-state { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px; color:#333; text-align:center; padding:40px; }
+#empty-state i { font-size:36px; color:#222; }
+#empty-state p { font-size:12px; max-width:380px; line-height:1.6; color:#555; }
+#empty-state small { font-size:10px; color:#2a2a2a; line-height:1.6; }
+
+/* Category groups */
+.cat-group { background:var(--bg-card); border:1px solid var(--border); border-radius:10px; overflow:hidden; }
+.cat-header { display:flex; align-items:center; gap:8px; padding:10px 14px; background:rgba(255,255,255,0.02); border-bottom:1px solid var(--border); }
+.cat-icon { width:24px; height:24px; border-radius:6px; display:flex; align-items:center; justify-content:center; font-size:11px; flex-shrink:0; }
+.cat-name { font-size:12px; font-weight:700; color:var(--white); }
+.cat-desc { font-size:10px; color:#444; margin-left:auto; }
+
+/* Setting rows */
+.setting-row { display:grid; grid-template-columns:1fr 180px 64px; align-items:center; gap:10px; padding:9px 14px; border-bottom:1px solid rgba(255,255,255,0.03); transition:background 0.1s; }
+.setting-row:last-child { border-bottom:none; }
+.setting-row:hover { background:rgba(255,255,255,0.02); }
+.setting-row.is-changed { background:rgba(92,140,62,0.05); }
+.setting-label { font-size:11px; font-weight:500; color:var(--white); display:flex; flex-direction:column; gap:2px; }
+.setting-label small { font-size:9px; color:#383838; font-weight:400; }
+.setting-control select { width:100%; background:#0f0f0f; border:1px solid #222; border-radius:6px; padding:5px 8px; color:var(--white); font-size:11px; cursor:pointer; outline:none; transition:border-color 0.12s; font-family:inherit; }
+.setting-control select:focus { border-color:rgba(92,140,62,0.5); }
+.setting-control select.is-rec { border-color:rgba(46,204,113,0.4); }
+.setting-control input[type=range] { width:100%; accent-color:var(--arma); }
+.impact-pill { display:inline-flex; align-items:center; justify-content:center; border-radius:20px; padding:2px 8px; font-size:9px; font-weight:700; letter-spacing:0.04em; text-transform:uppercase; white-space:nowrap; }
+.imp-low       { background:rgba(74,222,128,0.1);  color:#4ade80; border:1px solid rgba(74,222,128,0.25); }
+.imp-medium    { background:rgba(250,204,21,0.1);  color:#facc15; border:1px solid rgba(250,204,21,0.25); }
+.imp-high      { background:rgba(249,115,22,0.1);  color:#f97316; border:1px solid rgba(249,115,22,0.25); }
+.imp-very-high { background:rgba(239,68,68,0.12);  color:#ef4444; border:1px solid rgba(239,68,68,0.3); }
+
+/* Footer */
+#footer { flex-shrink:0; display:flex; align-items:center; gap:8px; padding:10px 16px; background:var(--bg-dark); border-top:1px solid var(--border); }
+#footer-info { flex:1; font-size:10px; color:#383838; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+#changes-count { font-size:10px; color:var(--arma); background:rgba(92,140,62,0.12); border:1px solid rgba(92,140,62,0.3); border-radius:20px; padding:2px 9px; font-weight:600; display:none; }
+</style>
+</head>
+<body>
+<div id="root">
+  <div id="titlebar">
+    <div class="tb-icon"><i class="fa fa-helmet-safety"></i></div>
+    <div style="flex:1">
+      <div class="tb-title">Arma Reforger <span>Graphics</span> Settings</div>
+      <div class="tb-subtitle">ReforgerEngineSettings.conf · Documents\My Games\ArmaReforger\profile\.save\app…_user…\settings</div>
+    </div>
+    <button class="tb-close" onclick="window.api.closeArmaSettings()"><i class="fa fa-xmark"></i></button>
+  </div>
+
+  <div id="content">
+    <div id="sysinfo-bar"><i class="fa fa-microchip"></i><span id="sysinfo-text"></span></div>
+
+    <div>
+      <div id="path-row">
+        <input id="manual-path" type="text" placeholder="Optional: paste path to settings folder (…\app1874880_user...\settings)" spellcheck="false">
+        <button class="btn btn-ghost" id="btn-load" onclick="loadSettings()"><i class="fa fa-rotate"></i> <span id="lbl-load-btn">Load</span></button>
+      </div>
+      <div id="path-status"></div>
+    </div>
+
+    <div id="preset-bar">
+      <span class="preset-label"><i class="fa fa-wand-magic-sparkles"></i> <span id="lbl-presets">Presets</span></span>
+      <div class="preset-divider"></div>
+      <button class="preset-btn preset-quality"     onclick="applyPreset('quality')">    <i class="fa fa-gem"></i>  <span id="lbl-preset-quality">Quality</span></button>
+      <button class="preset-btn preset-performance" onclick="applyPreset('performance')"><i class="fa fa-bolt"></i> <span id="lbl-preset-performance">Performance</span></button>
+      <div class="preset-divider"></div>
+      <button class="preset-btn preset-recommended" onclick="applyPreset('recommended')"><i class="fa fa-star"></i> <span id="lbl-preset-recommended">Recommended</span></button>
+    </div>
+
+    <div id="settings-body">
+      <div id="empty-state">
+        <i class="fa fa-helmet-safety"></i>
+        <p id="lbl-empty-title">Load your Arma Reforger graphics settings to get started.</p>
+        <small id="lbl-empty-small">File: Documents\My Games\ArmaReforger\profile\.save\app…_user…\settings\ReforgerEngineSettings.conf<br>
+        If not found, launch the game, open Settings → Video, change any setting and quit.</small>
+      </div>
+    </div>
+  </div>
+
+  <div id="footer">
+    <div id="footer-info"><span id="path-display"><!-- set by JS --></span></div>
+    <span id="changes-count"></span>
+    <button class="btn btn-primary" id="btn-save" onclick="saveSettings()" disabled><i class="fa fa-floppy-disk"></i> <span id="lbl-save-btn">Save Settings</span></button>
+  </div>
+</div>
+
+<script>
+// ─── i18n ─────────────────────────────────────────────────────────────────────
+const LANG_ARMA = {
+  en: {
+    loadBtn: 'Load', loadingSpinner: 'Loading…',
+    presetsLabel: 'Presets',
+    presetQuality: 'Quality', presetPerformance: 'Performance', presetRecommended: 'Recommended',
+    presetApplied: 'Applied',
+    emptyTitle: 'Load your Arma Reforger graphics settings to get started.',
+    emptySmall: 'File: Documents\\My Games\\ArmaReforger\\profile\\.save\\app…_user…\\settings\\ReforgerEngineSettings.conf\nIf not found, launch the game, open Settings → Video, change any setting and quit.',
+    pathPlaceholder: 'Optional: paste path to settings folder (…\\app1874880_user...\\settings)',
+    noFile: 'No file loaded',
+    saveBtn: 'Save Settings', savingBtn: 'Saving…', savedBtn: 'Saved!', saveError: 'Error',
+    savedMsg: 'Settings saved.',
+    savedNote: 'Make sure Arma Reforger is fully closed before saving. Relaunch the game for changes to take effect.',
+    changes: '{n} change', changesPlural: '{n} changes',
+    tierHigh: 'High-End', tierMid: 'Mid-Range', tierBudget: 'Budget',
+    catDisplay: 'Display', catDisplayDesc: 'Window mode, resolution, AA',
+    catWorld: 'World Quality', catWorldDesc: 'Environment, objects, grass',
+    catTextures: 'Textures', catTexturesDesc: 'Texture detail & filtering',
+    catPost: 'Post-Process', catPostDesc: 'HBAO, SSDO, SSR, PPAA',
+    impLow: 'Low', impMed: 'Med', impHigh: 'High', impVeryHigh: 'V.High',
+  },
+  fi: {
+    loadBtn: 'Lataa', loadingSpinner: 'Ladataan…',
+    presetsLabel: 'Esiasetukset',
+    presetQuality: 'Laatu', presetPerformance: 'Suorituskyky', presetRecommended: 'Suositeltu',
+    presetApplied: 'Käytetty',
+    emptyTitle: 'Lataa Arma Reforger -grafiikka-asetuksesi aloittaaksesi.',
+    emptySmall: 'Tiedosto: Documents\\My Games\\ArmaReforger\\profile\\.save\\app…_user…\\settings\\ReforgerEngineSettings.conf\nJos tiedostoa ei löydy, käynnistä peli, avaa Asetukset → Video, muuta jotain asetusta ja sulje peli.',
+    pathPlaceholder: 'Valinnainen: liitä polku asetuskansioon (…\\app1874880_user...\\settings)',
+    noFile: 'Ei tiedostoa ladattu',
+    saveBtn: 'Tallenna asetukset', savingBtn: 'Tallennetaan…', savedBtn: 'Tallennettu!', saveError: 'Virhe',
+    savedMsg: 'Asetukset tallennettu.',
+    savedNote: 'Varmista, että Arma Reforger on täysin suljettu ennen tallentamista. Käynnistä peli uudelleen muutosten voimaantuloa varten.',
+    changes: '{n} muutos', changesPlural: '{n} muutosta',
+    tierHigh: 'Huipputaso', tierMid: 'Keskitaso', tierBudget: 'Budjetti',
+    catDisplay: 'Näyttö', catDisplayDesc: 'Ikkuna, resoluutio, AA',
+    catWorld: 'Maailman laatu', catWorldDesc: 'Ympäristö, objektit, ruoho',
+    catTextures: 'Tekstuurit', catTexturesDesc: 'Tekstuurien taso & suodatus',
+    catPost: 'Jälkikäsittely', catPostDesc: 'HBAO, SSDO, SSR, PPAA',
+    impLow: 'Matala', impMed: 'Keski', impHigh: 'Korkea', impVeryHigh: 'Eritt. korkea',
+  }
+}
+function getLangA() {
+  try { return JSON.parse(localStorage.getItem('jylli-settings') || '{}').language || 'en' } catch { return 'en' }
+}
+function tA(key) { const l = getLangA(); return (LANG_ARMA[l] || LANG_ARMA.en)[key] || LANG_ARMA.en[key] || key }
+
+// ─── Setting definitions ──────────────────────────────────────────────────────
+// Each entry maps to a real key in ReforgerEngineSettings.conf.
+// rec_low/mid/high = recommended value for that PC tier.
+const DEFS = [
+  // ── Display / Video ──
+  { key:'windowMode', label:'Window Mode',
+    desc:'Exclusive fullscreen gives lowest input latency.',
+    impact:'high',
+    opts:[['FULLSCREEN','Exclusive Fullscreen ★'],['BORDERLESS','Borderless Windowed'],['WINDOWED','Windowed']],
+    rec_low:'FULLSCREEN', rec_mid:'FULLSCREEN', rec_high:'FULLSCREEN' },
+
+  { key:'vsync', label:'V-Sync',
+    desc:'Sync FPS to monitor refresh. Disable for minimum input lag.',
+    impact:'high',
+    opts:[['0','Disabled ★'],['1','Enabled']],
+    rec_low:'0', rec_mid:'0', rec_high:'0' },
+
+  { key:'fsaa', label:'Anti-Aliasing (FSAA)',
+    desc:'Edge smoothing method. FXAA is lightweight; TAA adds blur.',
+    impact:'medium',
+    opts:[['NONE','None'],['FXAA','FXAA'],['TAA','TAA']],
+    rec_low:'NONE', rec_mid:'FXAA', rec_high:'FXAA' },
+
+  { key:'resolutionScale', label:'Resolution Scale',
+    desc:'Internal render resolution (1 = native, 0.75 = 75% upscaled).',
+    impact:'very high',
+    opts:[['0.5','50%'],['0.67','67%'],['0.75','75%'],['0.85','85%'],['1','100% (Native)']],
+    rec_low:'0.75', rec_mid:'1', rec_high:'1' },
+
+  { key:'fsrEnabled', label:'FSR Upscaling',
+    desc:'AMD FidelityFX upscaling — boosts FPS with slight sharpness loss.',
+    impact:'very high',
+    opts:[['0','Disabled'],['1','Enabled']],
+    rec_low:'1', rec_mid:'0', rec_high:'0' },
+
+  // ── Environment Quality ──
+  { key:'environmentQuality', label:'Environment Quality',
+    desc:'Overall world detail — foliage, buildings and props.',
+    impact:'very high',
+    opts:[['LOW','Low'],['MEDIUM','Medium'],['HIGH','High'],['ULTRA','Ultra']],
+    rec_low:'LOW', rec_mid:'MEDIUM', rec_high:'HIGH' },
+
+  { key:'objectDrawDistance', label:'Object Draw Distance',
+    desc:'How far away objects are rendered (soldiers, vehicles, props).',
+    impact:'very high',
+    opts:[['Low','Low'],['Medium','Medium'],['High','High']],
+    rec_low:'Low', rec_mid:'Medium', rec_high:'High' },
+
+  // ── Grass ──
+  { key:'grassDistance', label:'Grass Draw Distance',
+    desc:'Grass render distance in metres. Lower = big FPS gain outdoors.',
+    impact:'very high',
+    opts:[['0','Off (0m)'],['75','75m'],['125','125m'],['175','175m (Default)'],['250','250m'],['350','350m']],
+    rec_low:'0', rec_mid:'125', rec_high:'250' },
+
+  { key:'grassLod', label:'Grass Density LOD',
+    desc:'Grass geometry density. Lower LOD = less dense grass.',
+    impact:'high',
+    opts:[['0','LOD 0 (Lowest)'],['1','LOD 1'],['2','LOD 2 (Default)'],['3','LOD 3 (Highest)']],
+    rec_low:'0', rec_mid:'1', rec_high:'2' },
+
+  // ── Textures ──
+  { key:'textureDetail', label:'Texture Detail',
+    desc:'Texture streaming budget — 0=low VRAM, 3=high VRAM.',
+    impact:'medium',
+    opts:[['0','Low (low VRAM)'],['1','Medium'],['2','High'],['3','Ultra (8GB+ VRAM)']],
+    rec_low:'0', rec_mid:'1', rec_high:'3' },
+
+  { key:'textureFilter', label:'Texture Filtering',
+    desc:'Anisotropic filtering quality for angled surfaces.',
+    impact:'low',
+    opts:[['0','Bilinear'],['1','Trilinear'],['2','Anisotropic x4'],['3','Anisotropic x8'],['4','Anisotropic x16']],
+    rec_low:'1', rec_mid:'2', rec_high:'4' },
+
+  { key:'geometricDetail', label:'Geometric Detail',
+    desc:'Mesh/tessellation complexity of terrain and objects.',
+    impact:'high',
+    opts:[['0','Very Low'],['1','Low'],['2','Medium'],['3','High (Default)'],['4','Ultra']],
+    rec_low:'1', rec_mid:'2', rec_high:'3' },
+
+  // ── Post-process ──
+  { key:'hbao', label:'HBAO+ (Ambient Occlusion)',
+    desc:'Horizon-Based Ambient Occlusion — contact shadows. Costs GPU.',
+    impact:'high',
+    opts:[['0','Disabled ★'],['1','Enabled']],
+    rec_low:'0', rec_mid:'0', rec_high:'1' },
+
+  { key:'ssdo', label:'SSDO (Directional AO)',
+    desc:'Directional occlusion — subtle but GPU heavy.',
+    impact:'medium',
+    opts:[['0','Disabled ★'],['1','Enabled']],
+    rec_low:'0', rec_mid:'0', rec_high:'1' },
+
+  { key:'ssr', label:'Screen-Space Reflections',
+    desc:'Reflections on water and glossy surfaces.',
+    impact:'high',
+    opts:[['0','Disabled'],['1','Enabled']],
+    rec_low:'0', rec_mid:'0', rec_high:'1' },
+
+  { key:'ppaa', label:'Post-Process AA',
+    desc:'Additional post-process AA pass (PPAA). 0=off, 4=max.',
+    impact:'medium',
+    opts:[['0','Off'],['1','Light'],['2','Medium'],['3','High'],['4','Ultra']],
+    rec_low:'0', rec_mid:'2', rec_high:'4' },
+]
+
+const CATS = [
+  { get name() { return tA('catDisplay') }, color:'#FF2E63', icon:'<i class="fa fa-display"></i>', get desc() { return tA('catDisplayDesc') },
+    keys:['windowMode','vsync','fsaa','resolutionScale','fsrEnabled'] },
+  { get name() { return tA('catWorld') }, color:'#5c8c3e', icon:'<i class="fa fa-mountain-sun"></i>', get desc() { return tA('catWorldDesc') },
+    keys:['environmentQuality','objectDrawDistance','grassDistance','grassLod'] },
+  { get name() { return tA('catTextures') }, color:'#3498DB', icon:'<i class="fa fa-image"></i>', get desc() { return tA('catTexturesDesc') },
+    keys:['textureDetail','textureFilter','geometricDetail'] },
+  { get name() { return tA('catPost') }, color:'#9B59B6', icon:'<i class="fa fa-wand-sparkles"></i>', get desc() { return tA('catPostDesc') },
+    keys:['hbao','ssdo','ssr','ppaa'] },
+]
+
+const IMPACT_CLASS = { low:'imp-low', medium:'imp-medium', high:'imp-high', 'very high':'imp-very-high' }
+const IMPACT_LABEL = { get low() { return tA('impLow') }, get medium() { return tA('impMed') }, get high() { return tA('impHigh') }, get 'very high'() { return tA('impVeryHigh') } }
+
+const PRESETS = {
+  quality: {
+    windowMode:'FULLSCREEN', vsync:'0', fsaa:'FXAA', resolutionScale:'1', fsrEnabled:'0',
+    environmentQuality:'HIGH', objectDrawDistance:'High',
+    grassDistance:'250', grassLod:'2',
+    textureDetail:'2', textureFilter:'3', geometricDetail:'3',
+    hbao:'1', ssdo:'0', ssr:'1', ppaa:'3',
+  },
+  performance: {
+    windowMode:'FULLSCREEN', vsync:'0', fsaa:'NONE', resolutionScale:'0.75', fsrEnabled:'1',
+    environmentQuality:'LOW', objectDrawDistance:'Low',
+    grassDistance:'0', grassLod:'0',
+    textureDetail:'0', textureFilter:'1', geometricDetail:'1',
+    hbao:'0', ssdo:'0', ssr:'0', ppaa:'0',
+  },
+  recommended: {
+    windowMode:'FULLSCREEN', vsync:'0', fsaa:'FXAA', resolutionScale:'1', fsrEnabled:'0',
+    environmentQuality:'MEDIUM', objectDrawDistance:'Medium',
+    grassDistance:'125', grassLod:'1',
+    textureDetail:'2', textureFilter:'2', geometricDetail:'2',
+    hbao:'0', ssdo:'0', ssr:'0', ppaa:'1',
+  },
+}
+
+let currentVals = {}
+let sysInfo = null
+
+function getManualPath() { return (document.getElementById('manual-path')?.value || '').trim() || undefined }
+
+function getSystemTier() {
+  if (!sysInfo) return 'mid'
+  const vram  = sysInfo.vramMB  || 0
+  const cores = sysInfo.cpuCores || 4
+  const ram   = sysInfo.ramGB   || 8
+  if (vram >= 8192 || (vram >= 6144 && cores >= 8)) return 'high'
+  if (vram >= 3072 && cores >= 4 && ram >= 12)      return 'mid'
+  return 'low'
+}
+
+function getRec(def) {
+  const t = getSystemTier()
+  return t === 'high' ? def.rec_high : t === 'low' ? def.rec_low : def.rec_mid
+}
+
+async function loadSettings() {
+  const btn = document.getElementById('btn-load')
+  const body = document.getElementById('settings-body')
+  btn.disabled = true
+  btn.innerHTML = `<i class="fa fa-spinner fa-spin"></i> ${tA('loadingSpinner')}`
+  body.innerHTML = `<div id="empty-state"><i class="fa fa-spinner fa-spin" style="font-size:28px;color:#333"></i></div>`
+
+  const r = await window.api.armaReadSettings(getManualPath())
+  btn.disabled = false
+  btn.innerHTML = `<i class="fa fa-rotate"></i> ${tA('loadBtn')}`
+
+  const pathStatus = document.getElementById('path-status')
+  if (!r.ok) {
+    pathStatus.innerHTML = `<i class="fa fa-triangle-exclamation" style="color:#E74C3C"></i> ${r.reason}`
+    body.innerHTML = `<div id="empty-state"><i class="fa fa-triangle-exclamation" style="color:#E74C3C;font-size:32px"></i><p>${r.reason}</p>${r.hint ? `<small style="white-space:pre-wrap">${r.hint}</small>` : ''}</div>`
+    return
+  }
+
+  currentVals = r.vals
+  pathStatus.innerHTML = `<i class="fa fa-check" style="color:#2ECC71"></i> ${r.path}`
+  const pdEl = document.getElementById('path-display'); if (pdEl) pdEl.textContent = r.path
+  document.getElementById('btn-save').disabled = false
+  document.getElementById('preset-bar').style.display = 'flex'
+
+  renderSettings()
+  trackChanges()
+}
+
+function renderSettings() {
+  const body = document.getElementById('settings-body')
+  body.innerHTML = ''
+  const defMap = {}
+  for (const d of DEFS) defMap[d.key] = d
+
+  for (const cat of CATS) {
+    const catDefs = cat.keys.map(k => defMap[k]).filter(Boolean)
+    if (!catDefs.length) continue
+
+    const group = document.createElement('div')
+    group.className = 'cat-group'
+    group.innerHTML = `
+      <div class="cat-header">
+        <div class="cat-icon" style="background:${cat.color}18;border:1px solid ${cat.color}33;color:${cat.color}">${cat.icon}</div>
+        <div class="cat-name">${cat.name}</div>
+        <div class="cat-desc">${cat.desc}</div>
+      </div>`
+
+    for (const def of catDefs) {
+      const rec = getRec(def)
+      const cur = currentVals[def.key]
+      const displayVal = cur != null ? String(cur) : String(rec)
+      const isRec = String(displayVal) === String(rec)
+
+      const row = document.createElement('div')
+      row.className = 'setting-row'
+      row.id = `srow-${def.key}`
+
+      let optsHtml = ''
+      let curMatched = false
+      for (const [v, lbl] of def.opts) {
+        const sel = String(v) === displayVal
+        if (sel) curMatched = true
+        optsHtml += `<option value="${v}" ${sel ? 'selected' : ''}>${lbl}</option>`
+      }
+      // If current value isn't in our option list, add it
+      if (!curMatched && cur != null) {
+        optsHtml = `<option value="${cur}" selected>${cur} (current)</option>` + optsHtml
+      }
+
+      row.innerHTML = `
+        <div class="setting-label">${def.label}<small>${def.desc}</small></div>
+        <div class="setting-control">
+          <select id="sval-${def.key}" data-key="${def.key}" onchange="onChange('${def.key}')" class="${isRec ? 'is-rec' : ''}">${optsHtml}</select>
+        </div>
+        <div><span class="impact-pill ${IMPACT_CLASS[def.impact] || 'imp-low'}">${IMPACT_LABEL[def.impact] || def.impact}</span></div>
+      `
+      group.appendChild(row)
+    }
+    body.appendChild(group)
+  }
+}
+
+function onChange(key) {
+  const el = document.getElementById(`sval-${key}`)
+  const def = DEFS.find(d => d.key === key)
+  if (!def || !el) return
+  el.classList.toggle('is-rec', String(el.value) === String(getRec(def)))
+  const orig = currentVals[key]
+  document.getElementById(`srow-${key}`)?.classList.toggle('is-changed', orig != null && String(el.value) !== String(orig))
+  trackChanges()
+}
+
+function trackChanges() {
+  let count = 0
+  for (const def of DEFS) {
+    const el = document.getElementById(`sval-${def.key}`)
+    if (el && currentVals[def.key] != null && String(el.value) !== String(currentVals[def.key])) count++
+  }
+  const badge = document.getElementById('changes-count')
+  badge.style.display = count > 0 ? 'inline-block' : 'none'
+  badge.textContent = (count !== 1 ? tA('changesPlural') : tA('changes')).replace('{n}', count)
+}
+
+function applyPreset(id) {
+  if (!Object.keys(currentVals).length) return
+  const vals = PRESETS[id]
+  if (!vals) return
+  for (const def of DEFS) {
+    const el = document.getElementById(`sval-${def.key}`)
+    if (el && vals[def.key] !== undefined) { el.value = vals[def.key]; onChange(def.key) }
+  }
+  const btn = document.querySelector(`.preset-${id}`)
+  if (btn) {
+    const orig = btn.innerHTML
+    btn.innerHTML = `<i class="fa fa-check"></i> ${tA('presetApplied')}`
+    btn.style.opacity = '0.7'
+    setTimeout(() => { btn.innerHTML = orig; btn.style.opacity = '' }, 1800)
+  }
+}
+
+
+async function saveSettings() {
+  const btn = document.getElementById('btn-save')
+  const changes = {}
+  for (const def of DEFS) {
+    const el = document.getElementById(`sval-${def.key}`)
+    if (el) changes[def.key] = el.value
+  }
+  btn.disabled = true
+  btn.innerHTML = `<i class="fa fa-spinner fa-spin"></i> ${tA('savingBtn')}`
+
+  const r = await window.api.armaWriteSettings(changes, getManualPath())
+  btn.disabled = false
+
+  if (r.ok) {
+    btn.innerHTML = `<i class="fa fa-check"></i> ${tA('savedBtn')}`
+    document.getElementById('path-status').innerHTML = `<i class="fa fa-check" style="color:#2ECC71"></i> ${r.path}`
+    showSaveBanner()
+    for (const def of DEFS) {
+      const el = document.getElementById(`sval-${def.key}`)
+      if (el) currentVals[def.key] = el.value
+      document.getElementById(`srow-${def.key}`)?.classList.remove('is-changed')
+    }
+    trackChanges()
+    setTimeout(() => { btn.innerHTML = `<i class="fa fa-floppy-disk"></i> ${tA('saveBtn')}`; btn.disabled = false }, 2500)
+  } else {
+    btn.innerHTML = `<i class="fa fa-xmark"></i> ${tA('saveError')}`
+    document.getElementById('path-status').innerHTML = `<i class="fa fa-triangle-exclamation" style="color:#E74C3C"></i> ${r.reason || 'Save failed'}`
+    setTimeout(() => { btn.innerHTML = `<i class="fa fa-floppy-disk"></i> ${tA('saveBtn')}`; btn.disabled = false }, 2500)
+  }
+}
+
+function showSaveBanner() {
+  document.getElementById('save-confirm-banner')?.remove()
+  const b = document.createElement('div')
+  b.id = 'save-confirm-banner'
+  b.style.cssText = 'background:rgba(46,204,113,0.08);border:1px solid rgba(46,204,113,0.25);border-radius:8px;padding:10px 14px;display:flex;align-items:center;gap:10px;font-size:11px'
+  b.innerHTML = `<i class="fa fa-circle-check" style="color:#2ECC71;font-size:14px;flex-shrink:0"></i><div style="flex:1;line-height:1.5"><strong style="color:#2ECC71">${tA('savedMsg')}</strong><br><span style="color:#8a8a9a">${tA('savedNote')}</span></div><button onclick="this.closest('#save-confirm-banner').remove()" style="background:none;border:none;color:#555;cursor:pointer;font-size:13px">✕</button>`
+  document.getElementById('content').insertBefore(b, document.getElementById('settings-body'))
+}
+
+function applyTranslationsA() {
+  const t = (id, key) => { const el = document.getElementById(id); if (el) el.textContent = tA(key) }
+  t('lbl-load-btn', 'loadBtn')
+  t('lbl-presets', 'presetsLabel')
+  t('lbl-preset-quality', 'presetQuality')
+  t('lbl-preset-performance', 'presetPerformance')
+  t('lbl-preset-recommended', 'presetRecommended')
+  t('lbl-empty-title', 'emptyTitle')
+  t('lbl-empty-small', 'emptySmall')
+  t('lbl-save-btn', 'saveBtn')
+  const pd = document.getElementById('path-display'); if (pd && !pd.textContent) pd.textContent = tA('noFile')
+  const mp = document.getElementById('manual-path'); if (mp) mp.placeholder = tA('pathPlaceholder')
+}
+
+window.addEventListener('DOMContentLoaded', async () => {
+  applyTranslationsA()
+  try {
+    sysInfo = await window.api.getSystemInfo()
+    if (sysInfo) {
+      const tier = getSystemTier()
+      const tierColor = tier === 'high' ? '#2ECC71' : tier === 'mid' ? '#F39C12' : '#E74C3C'
+      const tierLabel = tier === 'high' ? tA('tierHigh') : tier === 'mid' ? tA('tierMid') : tA('tierBudget')
+      const vramStr = sysInfo.vramMB >= 1024 ? `${Math.round(sysInfo.vramMB/1024)}GB VRAM` : `${sysInfo.vramMB || '?'}MB VRAM`
+      document.getElementById('sysinfo-bar').style.display = 'flex'
+      document.getElementById('sysinfo-text').innerHTML =
+        `${sysInfo.cpu || '?'} · ${sysInfo.gpu || '?'} (${vramStr}) · ${sysInfo.ramGB || '?'}GB RAM · Tier: <strong style="color:${tierColor}">${tierLabel}</strong>`
+    }
+  } catch {}
+  loadSettings()
+})
+</script>
+</body>
+</html>
