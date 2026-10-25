@@ -269,3 +269,44 @@
 .j-grid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); }
 .j-muted { color: var(--c-text-tertiary); }
 .j-grow { flex: 1; }
+
+/* ═══ Main-window shell wiring (legacy ids #app / #body / #main / #page-content stay) ═══ */
+#app { background: var(--surface-0); }
+.j-logo { display: flex; align-items: center; gap: 8px; margin-right: 6px; }
+.j-logo-mark { display: flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 6px; background: var(--c-accent-muted); color: var(--c-accent); font-size: 11px; }
+.j-logo-text { font: 600 var(--fs-3)/1 var(--font); letter-spacing: -.01em; }
+.j-titlebar > .j-jump { margin: 0 auto; }
+.j-titlebar #admin-badge { -webkit-app-region: no-drag; height: 22px; padding: 0 8px; display: inline-flex; align-items: center; gap: 5px; border-radius: var(--r-pill); font: 500 var(--fs-1)/1 var(--font); letter-spacing: .02em; }
+.j-titlebar #admin-badge.admin { color: var(--c-success); background: var(--c-success-muted); border: 0; }
+.j-titlebar #admin-badge.noadmin { color: var(--c-warning); background: var(--c-warning-muted); border: 0; }
+
+.j-menu-wrap { position: relative; }
+.j-menu { position: absolute; top: calc(100% + 6px); right: 0; z-index: var(--z-toast); min-width: 200px; padding: 4px; background: var(--surface-2); border: 1px solid var(--hairline-strong); border-radius: var(--r-md); box-shadow: var(--shadow-lifted); opacity: 0; transform: translateY(-4px); pointer-events: none; transition: opacity var(--dur-fast), transform var(--dur-fast) var(--ease-out); }
+.j-menu.j-open { opacity: 1; transform: none; pointer-events: auto; }
+.j-menu-item { display: flex; align-items: center; gap: 10px; width: 100%; height: 30px; padding: 0 10px; border: 0; border-radius: var(--r-sm); background: none; font: 400 var(--fs-2)/1 var(--font); color: var(--c-text-secondary); text-align: left; cursor: pointer; }
+.j-menu-item i { width: 14px; text-align: center; color: var(--c-text-tertiary); }
+.j-menu-item:hover { background: var(--surface-3); color: var(--c-text-primary); }
+#adv-toggle-btn.adv-on i { color: var(--c-accent); }
+
+.j-sidebar { width: var(--shell-sidebar-w); flex: none; transition: width var(--dur-base) var(--ease-out); }
+.j-sidebar.j-collapsed { width: var(--shell-rail-w); }
+.j-nav { display: flex; flex: 1; flex-direction: column; gap: 2px; min-height: 0; }
+.j-sidebar .sidebar-footer { padding: 8px 10px 0; font: 400 var(--fs-1)/1.4 var(--font-mono); color: var(--c-text-tertiary); white-space: nowrap; overflow: hidden; }
+.j-collapsed .sidebar-footer { display: none; }
+.j-nav-item { position: relative; }
+.j-nav-item .nav-aom-badge { margin-left: auto; font: 500 var(--fs-1)/1 var(--font-mono); color: var(--c-text-tertiary); }
+.j-nav-item .health-score-badge, .j-nav-item .nav-badge-dot { margin-left: auto; }
+.j-collapsed .j-nav-item .nav-aom-badge { display: none; }
+
+#j-head .j-section-head { padding: 20px 32px 0; position: static; }
+#main { min-width: 0; }
+#page-content { flex: 1; }
+.j-statusbar { height: var(--shell-statusbar-h); flex: none; }
+.j-statusbar .log-dot { display: inline-block; margin-left: 4px; }
+.j-drawer .j-drawer-body { white-space: pre-wrap; }
+
+/* Beat legacy id rules (css/style.css, css/pro.css) that still target the same elements until those files are deleted */
+#log-pane.j-drawer { height: auto; flex-shrink: 1; background: var(--surface-1); border-top: 0; transition: transform var(--dur-base) var(--ease-out), opacity var(--dur-base); overflow: hidden; }
+#log-output.j-drawer-body { padding: 12px 16px; font-size: var(--fs-2); }
+.j-drawer #log-clear, .j-drawer #log-toggle-btn { margin: 0; font-size: var(--fs-2); color: var(--c-text-secondary); }
+.j-sidebar .sidebar-footer { margin-top: 0; border-top: 0; letter-spacing: 0; }

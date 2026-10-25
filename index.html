@@ -454,158 +454,77 @@
 </div>
 
 <div id="app" class="hidden">
-  <!-- Titlebar -->
-  <div id="titlebar">
-    <div class="logo">
-      <div class="logo-icon" style="background:var(--pink-dim);box-shadow:0 0 14px rgba(var(--pink-rgb),0.22);border:1px solid rgba(var(--pink-rgb),0.55)"><i class="fa fa-bolt" style="color:var(--pink)"></i></div>
-      <div>
-        <span class="logo-text">Jylli Tool</span>
-        <span style="display:block;font-size:9px;color:var(--gray);margin-top:1px" id="titlebar-ver">v…</span>
+  <!-- Title bar -->
+  <div class="j-titlebar">
+    <div class="j-logo">
+      <div class="j-logo-mark"><i class="fa fa-bolt"></i></div>
+      <span class="j-logo-text">Jylli Tool</span>
+    </div>
+    <div class="j-crumb" id="j-crumb"></div>
+    <button class="j-jump" type="button" onclick="openCmdPalette()"><i class="fa fa-magnifying-glass" aria-hidden="true"></i><span data-i18n="shellJump">Search or jump to…</span><kbd class="j-kbd">Ctrl K</kbd></button>
+    <div class="j-pill" id="j-state" data-state="idle"><span class="j-dot"></span><span data-i18n="shellStatusIdle">Idle</span></div>
+    <div id="admin-badge" class="admin"><i class="fa fa-lock"></i> <span data-i18n="topAdmin">ADMIN</span></div>
+    <div class="j-menu-wrap">
+      <button class="j-btn j-btn-ghost j-btn-icon j-btn-sm" id="j-more-btn" type="button" onclick="toggleMoreMenu(event)" aria-label="More" data-i18n-tooltip="shellMore" data-tooltip="More" aria-haspopup="menu"><i class="fa fa-ellipsis" aria-hidden="true"></i></button>
+      <div class="j-menu" id="j-more-menu" role="menu">
+        <button class="j-menu-item" role="menuitem" onclick="showWhatsNew()"><i class="fa fa-star" aria-hidden="true"></i><span data-i18n="topWhatsNew">What's New</span></button>
+        <button class="j-menu-item" role="menuitem" onclick="showBugReport()"><i class="fa fa-bug" aria-hidden="true"></i><span data-i18n="topReportBug">Report a bug</span></button>
+        <button class="j-menu-item" role="menuitem" onclick="toggleLogPane()"><i class="fa fa-terminal" aria-hidden="true"></i><span data-i18n="shellActivity">Activity log</span></button>
+        <button class="j-menu-item" role="menuitem" id="adv-toggle-btn" onclick="toggleAdvancedMode()"><i class="fa fa-gear" aria-hidden="true"></i><span data-i18n="shellAdvanced">Advanced mode</span></button>
       </div>
     </div>
-    <div class="spacer"></div>
-    <!-- HUD chips — inline in titlebar -->
-    <div id="specs-hud" style="-webkit-app-region:no-drag;display:flex;align-items:center;gap:4px;">
-      <div class="hud-chip" id="hud-cpu" onclick="hudOpen('cpu',this)">
-        <span class="hud-key">CPU</span>
-        <span id="hud-cpu-label">—</span>
-        <span id="hud-cpu-sub" class="hud-sub"></span>
-      </div>
-      <div class="hud-divider"></div>
-      <div class="hud-chip" id="hud-gpu" onclick="hudOpen('gpu',this)">
-        <span class="hud-key">GPU</span>
-        <span id="hud-gpu-label">—</span>
-        <span id="hud-gpu-sub" class="hud-sub"></span>
-      </div>
-      <div class="hud-divider"></div>
-      <div class="hud-chip" id="hud-ram" onclick="hudOpen('ram',this)">
-        <span class="hud-key">RAM</span>
-        <span id="hud-ram-label">—</span>
-        <span id="hud-ram-sub" class="hud-sub"></span>
-      </div>
-      <div class="hud-divider"></div>
-      <div class="hud-chip" id="hud-storage" onclick="hudOpen('storage',this)">
-        <span class="hud-key">Storage</span>
-        <span id="hud-storage-label">—</span>
-        <span id="hud-storage-sub" class="hud-sub"></span>
-      </div>
-    </div>
-    <div style="-webkit-app-region:no-drag;display:flex;align-items:center;gap:3px;margin-left:8px">
-      <button class="search-btn" onclick="openCmdPalette()" style="width:auto;min-width:0;padding:4px 10px;gap:6px;">
-        <i class="fa fa-magnifying-glass"></i>
-        <kbd>Ctrl+K</kbd>
-      </button>
-    </div>
-    <div style="-webkit-app-region:no-drag;display:flex;align-items:center;gap:2px;margin-left:4px">
-      <button id="adv-toggle-btn" class="header-btn-icon" onclick="toggleAdvancedMode()" data-tooltip="Show/hide advanced tabs" data-i18n-tooltip="ttShowAdvanced"><i class="fa fa-gear"></i></button>
-      <button class="header-btn-icon btn-icon-star" onclick="showWhatsNew()" data-tooltip="What's New"><i class="fa fa-star"></i></button>
-      <button class="header-btn-icon btn-icon-bug" onclick="showBugReport()" data-tooltip="Report Bug"><i class="fa fa-bug"></i></button>
-      <button class="header-btn-icon" onclick="toggleLogPane()" id="log-dot-btn" data-tooltip="Output log"><i class="fa fa-terminal"></i><span id="log-dot" class="log-dot"></span></button>
-    </div>
-    <div style="-webkit-app-region:no-drag;display:flex;align-items:center;gap:5px;margin-left:8px;padding-right:6px">
-      <div id="admin-badge" class="admin"><i class="fa fa-lock"></i> <span data-i18n="topAdmin">ADMIN</span></div>
-      <button class="win-btn" id="btn-minimize" onclick="api.minimize()" data-i18n-tooltip="winMinimize" data-tooltip="Minimize" aria-label="Minimize"><svg width="11" height="11" viewBox="0 0 11 11" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" aria-hidden="true"><path d="M1.5 5.5h8"/></svg></button>
-      <button class="win-btn" id="btn-maximize" onclick="api.maximize()" data-i18n-tooltip="winMaximize" data-tooltip="Maximize" aria-label="Maximize"><svg width="11" height="11" viewBox="0 0 11 11" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" aria-hidden="true"><rect x="1.5" y="1.5" width="8" height="8" rx="1.6"/></svg></button>
-      <button class="win-btn" id="btn-close" onclick="api.close()" data-i18n-tooltip="winClose" data-tooltip="Close" aria-label="Close"><svg width="11" height="11" viewBox="0 0 11 11" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" aria-hidden="true"><path d="M2 2l7 7M9 2L2 9"/></svg></button>
+    <div class="j-winbtns">
+      <button class="j-winbtn" id="btn-minimize" onclick="api.minimize()" data-i18n-tooltip="winMinimize" data-tooltip="Minimize" aria-label="Minimize"><svg width="11" height="11" viewBox="0 0 11 11" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" aria-hidden="true"><path d="M1.5 5.5h8"/></svg></button>
+      <button class="j-winbtn" id="btn-maximize" onclick="api.maximize()" data-i18n-tooltip="winMaximize" data-tooltip="Maximize" aria-label="Maximize"><svg width="11" height="11" viewBox="0 0 11 11" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" aria-hidden="true"><rect x="1.5" y="1.5" width="8" height="8" rx="1.6"/></svg></button>
+      <button class="j-winbtn j-winbtn-close" id="btn-close" onclick="api.close()" data-i18n-tooltip="winClose" data-tooltip="Close" aria-label="Close"><svg width="11" height="11" viewBox="0 0 11 11" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" aria-hidden="true"><path d="M2 2l7 7M9 2L2 9"/></svg></button>
     </div>
   </div>
-  <!-- HUD popover (shared, repositioned by JS) -->
+  <!-- Legacy spec chips: kept hidden because init code still fills them; the status bar and Home replace them -->
+  <div id="specs-hud" hidden>
+    <div class="hud-chip" id="hud-cpu"><span id="hud-cpu-label">—</span><span id="hud-cpu-sub"></span></div>
+    <div class="hud-chip" id="hud-gpu"><span id="hud-gpu-label">—</span><span id="hud-gpu-sub"></span></div>
+    <div class="hud-chip" id="hud-ram"><span id="hud-ram-label">—</span><span id="hud-ram-sub"></span></div>
+    <div class="hud-chip" id="hud-storage"><span id="hud-storage-label">—</span><span id="hud-storage-sub"></span></div>
+  </div>
   <div id="hud-popover"></div>
+  <span id="titlebar-ver" hidden></span>
 
   <div id="body">
-    <!-- Sidebar — intent-based navigation -->
-    <nav id="sidebar">
-      <div class="sidebar-section-label" data-i18n="sidebarOverview">Overview</div>
-      <button class="nav-btn active" data-page="dashboard" data-label="Home" onclick="showPage('dashboard')">
-        <span class="nav-icon"><i class="fa fa-house"></i></span><span class="nav-label" data-i18n-title="dashboard">Home</span>
-      </button>
-      <button class="nav-btn" data-page="preflight" data-label="Pre-Flight" onclick="showPage('preflight')">
-        <span class="nav-icon"><i class="fa fa-stethoscope"></i></span><span class="nav-label" data-i18n-title="preflight">Pre-Flight</span>
-        <span class="nav-badge" id="badge-preflight" style="display:none">!</span>
-      </button>
-      <button class="nav-btn" data-page="fixes" data-label="Fixes" onclick="showPage('fixes')">
-        <span class="nav-icon"><i class="fa fa-wrench"></i></span><span class="nav-label" data-i18n-title="fixes">Fixes</span>
-      </button>
-      <button class="nav-btn" data-page="restore-points" data-label="System Restore" onclick="showPage('restore-points')">
-        <span class="nav-icon"><i class="fa fa-rotate-left"></i></span><span class="nav-label" data-i18n-title="restore-points">System Restore</span>
-      </button>
-      <div class="sidebar-section-label" data-i18n="sidebarOptimize">Optimize</div>
-      <button class="nav-btn" data-page="performance" data-label="Performance" onclick="showPage('performance')">
-        <span class="nav-icon"><i class="fa fa-gauge-high"></i></span><span class="nav-label" data-i18n-title="performance">Performance</span>
-      </button>
-      <button class="nav-btn" data-page="gaming" data-label="Gaming" onclick="showPage('gaming')">
-        <span class="nav-icon"><i class="fa fa-gamepad"></i></span><span class="nav-label" data-i18n-title="gaming">Gaming</span>
-      </button>
-      <button class="nav-btn" data-page="network" data-label="Networking" onclick="showPage('network')">
-        <span class="nav-icon"><i class="fa fa-globe"></i></span><span class="nav-label" data-i18n-title="network">Networking</span>
-      </button>
-      <button class="nav-btn" data-page="privacy-cleanup" data-label="Privacy & Cleanup" onclick="showPage('privacy-cleanup')">
-        <span class="nav-icon"><i class="fa fa-shield-halved"></i></span><span class="nav-label" data-i18n-title="privacy-cleanup">Privacy & Cleanup</span>
-      </button>
-      <div class="sidebar-section-label" data-i18n="sidebarSystem">System</div>
-      <button class="nav-btn" data-page="startup-manager" data-label="Startups" onclick="showPage('startup-manager')">
-        <span class="nav-icon"><i class="fa fa-rocket"></i></span><span class="nav-label" data-i18n-title="startup-manager">Startups</span>
-      </button>
-      <button class="nav-btn" data-page="process-manager" data-label="Processes" onclick="showPage('process-manager')">
-        <span class="nav-icon"><i class="fa fa-diagram-project"></i></span><span class="nav-label" data-i18n-title="process-manager">Processes</span>
-        <span class="nav-badge" id="badge-boost" style="display:none">LIVE</span>
-      </button>
-      <button class="nav-btn" data-page="latency-monitor" data-label="Latency" data-advanced="true" onclick="showPage('latency-monitor')">
-        <span class="nav-icon"><i class="fa fa-wave-square"></i></span><span class="nav-label" data-i18n-title="latency-monitor">Latency</span>
-      </button>
-      <button class="nav-btn" data-page="bios-tuner" data-label="BIOS Tuner" data-advanced="true" onclick="showPage('bios-tuner')">
-        <span class="nav-icon"><i class="fa fa-server"></i></span><span class="nav-label" data-i18n-title="bios-tuner">BIOS Tuner</span>
-      </button>
-      <div class="sidebar-section-label" data-i18n="sidebarTools">Tools</div>
-      <button class="nav-btn" data-page="pulse" data-label="Pulse" onclick="showPage('pulse')">
-        <span class="nav-icon"><i class="fa fa-bolt"></i></span><span class="nav-label" data-i18n-title="pulse">Pulse</span>
-      </button>
-      <button class="nav-btn" data-page="fivem" data-label="FiveM" onclick="showPage('fivem')">
-        <span class="nav-icon"><i class="fa fa-car-side"></i></span><span class="nav-label" data-i18n-title="fivem">FiveM</span>
-      </button>
-      <button class="nav-btn" data-page="scheduler" data-label="Scheduler" onclick="showPage('scheduler')">
-        <span class="nav-icon"><i class="fa fa-clock"></i></span><span class="nav-label" data-i18n-title="scheduler">Scheduler</span>
-      </button>
-      <button class="nav-btn" data-page="changelog" data-label="Tweak History" onclick="showPage('changelog')">
-        <span class="nav-icon"><i class="fa fa-clipboard-list"></i></span><span class="nav-label" data-i18n-title="changelog">Tweak History</span>
-      </button>
-      <div class="sidebar-divider"></div>
-      <button class="nav-btn" data-page="settings" data-label="Settings" onclick="showPage('settings')">
-        <span class="nav-icon"><i class="fa fa-gear"></i></span><span class="nav-label" data-i18n-title="settings">Settings</span>
-      </button>
-      <button class="sidebar-toggle-btn state-layer" id="sidebar-toggle-btn" onclick="toggleSidebar()" data-tooltip="Toggle sidebar">
-        <span id="sidebar-toggle-icon"><i class="fa fa-angles-left"></i></span>
-        <span id="sidebar-toggle-label" class="nav-label" style="font-size:11px;margin-left:4px" data-i18n="sidebarCollapse">Collapse</span>
-      </button>
+    <nav class="j-sidebar" id="j-sidebar" aria-label="Main">
+      <div id="j-nav" class="j-nav"></div>
       <div class="sidebar-footer" id="sidebar-ver">v… · Jylli Tool</div>
     </nav>
 
-    <!-- Main -->
     <div id="main">
-      <div id="page-header">
-        <div id="page-title-wrap">
-          <div id="page-title">Dashboard</div>
-          <div id="page-subtitle">System overview</div>
-        </div>
-        <button class="header-btn primary" id="create-rp-btn" onclick="quickCreateRP()" style="display:none"><i class="fa fa-shield-halved"></i> <span data-i18n="createRp">Create RP</span></button>
-      </div>
+      <div id="j-head"></div>
       <div id="page-content"></div>
-      <div id="log-pane">
-        <div id="log-header">
-          <span data-i18n="logTitle">OUTPUT LOG</span>
-          <span class="log-legend" data-i18n="logLegend">✓=ok   ⚠=warn   ✗=err   ◆=section</span>
-          <button id="log-clear" onclick="clearLog()" data-i18n="logClear">Clear</button>
-          <button id="log-toggle-btn" onclick="toggleLogPane()"><i class="fa fa-chevron-down" id="log-toggle-icon"></i></button>
-        </div>
-        <div id="log-output"></div>
-      </div>
     </div>
   </div>
+
+  <footer class="j-statusbar" id="j-statusbar">
+    <span id="sb-cpu">CPU —</span><span id="sb-ram">RAM —</span><span id="sb-gpu">GPU —</span>
+    <span class="j-grow"></span>
+    <button type="button" onclick="toggleLogPane()"><i class="fa fa-terminal" aria-hidden="true"></i> <span data-i18n="shellActivity">Activity log</span> <span id="log-dot" class="log-dot"></span></button>
+  </footer>
+
+  <!-- Activity drawer (replaces the old bottom log pane; #log-output is unchanged) -->
+  <aside class="j-drawer" id="log-pane" aria-label="Activity log">
+    <div class="j-drawer-head">
+      <span data-i18n="logTitle">Activity</span>
+      <span class="j-hstack">
+        <button class="j-btn j-btn-ghost j-btn-sm" id="log-clear" onclick="clearLog()" data-i18n="logClear">Clear</button>
+        <button class="j-btn j-btn-ghost j-btn-icon j-btn-sm" id="log-toggle-btn" onclick="toggleLogPane()" aria-label="Close"><i class="fa fa-xmark" id="log-toggle-icon" aria-hidden="true"></i></button>
+      </span>
+    </div>
+    <div class="j-drawer-body" id="log-output"></div>
+  </aside>
 </div>
 
 <script src="js/esc.js"></script>
 <script src="js/theme-sync.js"></script>
 <script src="js/ui.js"></script>
+<script src="js/routes.js"></script>
+<script src="js/shell.js"></script>
 <script src="js/ui-helpers.js"></script>
 <script src="js/fivem-logic.js"></script>
 <script>
@@ -634,6 +553,8 @@ const LANG = {
     },
     sections: {},
     ui: {
+      // 2.0 shell
+      navHome:'Home', navOptimize:'Optimize', navGaming:'Gaming', navClean:'Clean', navSystem:'System', navSettings:'Settings', navHomeSub:'System overview', navOptimizeSub:'Tweaks, hardware, network and fixes', navGamingSub:'Pulse, game profiles, FiveM and latency', navCleanSub:'Cleanup, debloat and startup apps', navSystemSub:'Diagnostics, processes, BIOS, scheduler and history', navSettingsSub:'App preferences', tabNetwork:'Network', tabFixes:'Fixes', tabPulse:'Pulse', tabGames:'Games', tabApps:'Apps', tabLatency:'Latency', tabStartup:'Startup', tabDiagnostics:'Diagnostics', tabProcesses:'Processes', tabBios:'BIOS', tabScheduler:'Scheduler', tabRestore:'Restore points', tabHistory:'History', shellJump:'Search or jump to…', shellMore:'More', shellActivity:'Activity log', shellAdvanced:'Advanced mode', shellStatusIdle:'Idle', shellStatusGame:'Game running', shellStatusPulse:'Pulse active',
       apply:'Apply', restore:'Restore', runFix:'Run Fix', done:'Done', running:'Running…',
       confirm:'Confirm', back:'Back', next:'Next', close:'Close',
       advanced:'Advanced', language:'Language', langCode:'EN',
@@ -2990,6 +2911,8 @@ const LANG = {
     },
     sections: {},
     ui: {
+      // 2.0 shell
+      navHome:'Etusivu', navOptimize:'Optimoi', navGaming:'Pelaaminen', navClean:'Siivous', navSystem:'Järjestelmä', navSettings:'Asetukset', navHomeSub:'Järjestelmän yleiskatsaus', navOptimizeSub:'Säädöt, laitteisto, verkko ja korjaukset', navGamingSub:'Pulse, peliprofiilit, FiveM ja viive', navCleanSub:'Siivous, bloatware ja käynnistyssovellukset', navSystemSub:'Diagnostiikka, prosessit, BIOS, ajastin ja historia', navSettingsSub:'Sovelluksen asetukset', tabNetwork:'Verkko', tabFixes:'Korjaukset', tabPulse:'Pulse', tabGames:'Pelit', tabApps:'Sovellukset', tabLatency:'Viive', tabStartup:'Käynnistys', tabDiagnostics:'Diagnostiikka', tabProcesses:'Prosessit', tabBios:'BIOS', tabScheduler:'Ajastin', tabRestore:'Palautuspisteet', tabHistory:'Historia', shellJump:'Hae tai siirry…', shellMore:'Lisää', shellActivity:'Toimintoloki', shellAdvanced:'Lisäasetustila', shellStatusIdle:'Lepotila', shellStatusGame:'Peli käynnissä', shellStatusPulse:'Pulse aktiivinen',
       apply:'Käytä', restore:'Palauta', runFix:'Suorita korjaus', done:'Valmis', running:'Käynnissä…',
       confirm:'Vahvista', back:'Takaisin', next:'Seuraava', close:'Sulje',
       advanced:'Lisäasetukset', language:'Kieli', langCode:'FI',
@@ -6250,6 +6173,8 @@ async function init(isPremium = false) {
   // System context detector — game-detected / game-exited toasts
   api.offGameDetected?.()
   api.onGameDetected?.(d => {
+    window._gameRunning = true
+    Shell.state(pulseIsActive ? 'pulse' : 'game')
     toast(tUI('gameDetectedMsg'), d.name || d.exe, 'ok', 4000)
     const ind = document.getElementById('game-watch-indicator')
     if (ind) ind.style.display = 'flex'
@@ -6257,6 +6182,8 @@ async function init(isPremium = false) {
   })
   api.offGameExited?.()
   api.onGameExited?.(d => {
+    window._gameRunning = false
+    Shell.state(pulseIsActive ? 'pulse' : 'idle')
     toast(tUI('gameExitedMsg'), d.name || d.exe, 'info', 4000)
     if (typeof _fivemHudOpen !== 'undefined') {
       _fivemHudOpen = false
@@ -6432,13 +6359,10 @@ function pcTierBadge() {
 let sidebarCollapsed = false
 function toggleSidebar() {
   sidebarCollapsed = !sidebarCollapsed
-  const sidebar = document.getElementById('sidebar')
+  const sidebar = document.getElementById('j-sidebar')
   const icon = document.getElementById('sidebar-toggle-icon')
-  const label = document.getElementById('sidebar-toggle-label')
-  sidebar.classList.toggle('collapsed', sidebarCollapsed)
-  icon.innerHTML = sidebarCollapsed ? '<i class="fa fa-angles-right"></i>' : '<i class="fa fa-angles-left"></i>'
-  if (label) label.textContent = sidebarCollapsed ? '' : tUI('sidebarCollapse')
-  document.documentElement.style.setProperty('--sidebar-w', sidebarCollapsed ? '52px' : '200px')
+  sidebar.classList.toggle('j-collapsed', sidebarCollapsed)
+  if (icon) icon.className = sidebarCollapsed ? 'fa fa-angles-right' : 'fa fa-angles-left'
 }
 
 // ─── Command Palette ──────────────────────────────────────────────────────────
@@ -6634,45 +6558,19 @@ const _PAGE_HUE = {
   'debloater': 45, 'hardware': 15, 'game-opti': -10, 'app-optimizer': -5, 'fivem': 30, 'cleanup': 40,
 }
 
-function showPage(page) {
-  // Update recent pages trail before changing currentPage
-  const recentEl = document.getElementById('recent-pages')
+function showPage(page, tabId) {
   const leavingPage = currentPage
-  if (recentEl && currentPage && currentPage !== page) {
-    _recentPages = [currentPage, ..._recentPages.filter(p => p !== currentPage && p !== page)].slice(0, 3)
-    recentEl.innerHTML = _recentPages.map(p => {
-      const label = LANG[currentLang]?.titles?.[p] || LANG.en.titles[p] || p
-      return `<button class="recent-pill" onclick="showPage('${p}')">${label}</button>`
-    }).join('')
+  // ROUTES: every legacy page id is a tab of a section (js/routes.js). Without an explicit tab, reopen the one last used in that section.
+  let route = JylliRoutes.resolve(page, tabId)
+  if (route && !tabId) {
+    const mem = (window._activeTab || {})[route.section]
+    const mt = JylliRoutes.section(route.section).tabs.find(t => t.id === mem && (JylliRoutes.ALIASES[page] || t.page === page))
+    if (mt) route = JylliRoutes.resolve(mt.page, mt.id)
   }
-
+  if (route) page = route.page
   currentPage = page
-  if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-    document.documentElement.style.setProperty('--c-page-accent-h', `${_PAGE_HUE[page] ?? 0}deg`)
-  }
-  document.querySelectorAll('.nav-btn').forEach(b => b.classList.toggle('active', b.dataset.page === page))
-  const activeNavBtn = document.querySelector(`.nav-btn[data-page="${page}"]`)
-  if (activeNavBtn) {
-    const hudDelay = leavingPage === 'dashboard' ? 160 : 0
-    if (hudDelay) setTimeout(() => slideNavPill(activeNavBtn), hudDelay)
-    else slideNavPill(activeNavBtn)
-    const sidebarEl = document.getElementById('sidebar')
-    if (sidebarEl) sidebarEl.scrollTop = activeNavBtn.offsetTop - sidebarEl.clientHeight / 2
-  }
+  if (route) Shell.render(route)
 
-  const t = LANG[currentLang]?.titles?.[page] || LANG.en.titles[page] || page
-  const titleEl = document.getElementById('page-title')
-  const subtitleEl = document.getElementById('page-subtitle')
-  titleEl.textContent = t
-  if (subtitleEl) {
-    const sub = tSub(page)
-    subtitleEl.textContent = sub
-    subtitleEl.style.display = sub ? '' : 'none'
-  }
-  const wrap = document.getElementById('page-title-wrap')
-  if (wrap) { wrap.classList.remove('title-enter'); void wrap.offsetWidth; wrap.classList.add('title-enter'); }
-  const createRpBtn = document.getElementById('create-rp-btn')
-  if (createRpBtn) createRpBtn.style.display = page === 'dashboard' ? '' : 'none'
   if (metricsInterval && page !== 'dashboard' && page !== 'process-manager') { clearInterval(metricsInterval); metricsInterval = null }
   if (page === 'dashboard' || page === 'process-manager') startMetrics()
   if (page !== 'latency-monitor') stopLatencyPolling()
@@ -6707,7 +6605,7 @@ function showPage(page) {
     }
 
     // Remove AOM nav badge for the page being opened
-    document.querySelector(`.nav-btn[data-page="${page}"] .nav-aom-badge`)?.remove()
+    if (route) document.querySelector(`.j-nav-item[data-section="${route.section}"] .nav-aom-badge`)?.remove()
 
     c.style.overflow = ''
     c.innerHTML = ''
@@ -6742,7 +6640,7 @@ function showPage(page) {
       if (page === 'startup-manager') _startupRewireAfterCacheRestore(c)
     } else {
       try {
-        await builders[page]?.(c)
+        await (route ? Shell.TAB_BUILDERS[route.tab] : builders[page])?.(c)
       } catch (e) {
         if (window._navToken !== navToken) return   // the user already moved on; don't paint an error onto another page
         c.innerHTML = `<div class="empty-state"><i class="fa fa-triangle-exclamation" style="color:var(--danger);font-size:28px;margin-bottom:10px"></i><p style="color:var(--muted)">${escHtml(e.message || tUI('pageLoadFailed'))}</p><button class="btn btn-ghost btn-sm" onclick="showPage(${jsArg(page)})"><i class="fa fa-rotate-right"></i> ${tUI('pageRetry')}</button></div>`
@@ -6815,20 +6713,15 @@ function initPersonalization() {
 }
 
 function initAdvancedMode() {
-  const sidebar = document.getElementById('sidebar')
-  const btn = document.getElementById('adv-toggle-btn')
-  if (settings.advancedMode) {
-    sidebar?.classList.add('advanced')
-    if (btn) btn.classList.add('adv-on')
-  }
+  document.getElementById('adv-toggle-btn')?.classList.toggle('adv-on', !!settings.advancedMode)
 }
 
 function toggleAdvancedMode() {
-  const sidebar = document.getElementById('sidebar')
   const btn = document.getElementById('adv-toggle-btn')
-  const isOn = sidebar?.classList.toggle('advanced')
+  const isOn = !settings.advancedMode
   if (btn) btn.classList.toggle('adv-on', isOn)
   settings.advancedMode = isOn
+  Shell.refresh()
   api.saveSettings(settings)
   // Keep Settings page Advanced toggle in sync
   const advCh = document.getElementById('settings-adv-check')
@@ -8821,6 +8714,7 @@ function _pulseFeedAppendChip(msg, level, ts) {
 }
 
 function syncPulseUIState() {
+  Shell.state(pulseIsActive ? 'pulse' : (window._gameRunning ? 'game' : 'idle'))
   // Restore button visibility to match pulseIsActive on page re-enter
   const startBtn = document.getElementById('pulse-start-btn')
   const stopBtn  = document.getElementById('pulse-stop-btn')
@@ -8947,7 +8841,7 @@ async function doGameBoost() {
     boostActive = true
     btn.innerHTML = `<i class="fa fa-check"></i> ${tUI('boostActiveLabel')}`
     document.getElementById('boost-restore-btn')?.removeAttribute('disabled')
-    document.getElementById('badge-boost').style.display = ''
+    { const b = document.getElementById('badge-boost'); if (b) b.style.display = '' }
     toast(tUI('gameBoostActiveTitle'), tUI('gameBoostActiveBody'), 'ok')
     loadProcesses()
   } catch {
@@ -8960,7 +8854,7 @@ async function doBoostRestore() {
   boostActive = false
   document.getElementById('boost-btn')?.innerHTML && (document.getElementById('boost-btn').innerHTML = '<i class="fa fa-bolt"></i> Activate Boost')
   if (document.getElementById('boost-restore-btn')) document.getElementById('boost-restore-btn').disabled = true
-  document.getElementById('badge-boost').style.display = 'none'
+  { const b = document.getElementById('badge-boost'); if (b) b.style.display = 'none' }
   toast(tUI('gameBoostEndedTitle'), tUI('gameBoostEndedBody'), 'info')
 }
 
@@ -14426,11 +14320,11 @@ function updateAomNavBadges(appliedIds) {
   const counts = {}
   for (const id of appliedIds) {
     const entry = SEARCH_INDEX.find(r => r.id === id)
-    const pg = entry?.page
-    if (pg) counts[pg] = (counts[pg] || 0) + 1
+    const sec = entry?.page && JylliRoutes.resolve(entry.page)?.section
+    if (sec) counts[sec] = (counts[sec] || 0) + 1
   }
   for (const [pg, n] of Object.entries(counts)) {
-    const btn = document.querySelector(`.nav-btn[data-page="${pg}"]`)
+    const btn = document.querySelector(`.j-nav-item[data-section="${pg}"]`)
     if (btn) btn.insertAdjacentHTML('beforeend', `<span class="nav-aom-badge">${n}</span>`)
   }
 }
@@ -14544,17 +14438,13 @@ function clearLog() {
 let logPaneCollapsed = true
 function toggleLogPane() {
   logPaneCollapsed = !logPaneCollapsed
-  const pane = document.getElementById('log-pane')
-  const icon = document.getElementById('log-toggle-icon')
-  pane.classList.toggle('collapsed', logPaneCollapsed)
-  if (icon) icon.className = logPaneCollapsed ? 'fa fa-chevron-up' : 'fa fa-chevron-down'
+  document.getElementById('log-pane').classList.toggle('j-open', !logPaneCollapsed)
 }
-;(function initLogPane() {
-  const pane = document.getElementById('log-pane')
-  const icon = document.getElementById('log-toggle-icon')
-  if (pane) pane.classList.add('collapsed')
-  if (icon) icon.className = 'fa fa-chevron-up'
-})()
+function toggleMoreMenu(e) {
+  e?.stopPropagation()
+  document.getElementById('j-more-menu').classList.toggle('j-open')
+}
+document.addEventListener('click', e => { if (!e.target.closest('.j-menu-wrap')) document.getElementById('j-more-menu')?.classList.remove('j-open') })
 
 // ─── Smart Conflict Engine ────────────────────────────────────────────────────
 // Each rule: { ids, check(ctx, sysInfo) → bool, title, body, severity, icon }
@@ -15288,6 +15178,7 @@ async function updateMetrics() {
   try {
     const m = await api.getMetrics()
     window._lastMetrics = m
+    Shell.metrics(m)
 
     // Metric tiles
     const cpuPct = m.cpu || 0, gpuPct = m.gpu || 0, ramPct = m.ram || 0
