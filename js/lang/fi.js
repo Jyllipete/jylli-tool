@@ -42,6 +42,7 @@ LANG.fi = {
     sections: {},
     ui: {
       // 2.0 shell
+      settingsCatGeneral:'Yleiset',settingsCatGaming:'Pelaaminen',settingsCatPrivacy:'Yksityisyys',
       navHome:'Etusivu', navOptimize:'Optimoi', navGaming:'Pelaaminen', navClean:'Siivous', navSystem:'Järjestelmä', navSettings:'Asetukset', navHomeSub:'Järjestelmän yleiskatsaus', navOptimizeSub:'Säädöt, laitteisto, verkko ja korjaukset', navGamingSub:'Pulse, peliprofiilit, FiveM ja viive', navCleanSub:'Siivous, bloatware ja käynnistyssovellukset', navSystemSub:'Diagnostiikka, prosessit, BIOS, ajastin ja historia', navSettingsSub:'Sovelluksen asetukset', tabNetwork:'Verkko', tabFixes:'Korjaukset', tabPulse:'Pulse', tabGames:'Pelit', tabApps:'Sovellukset', tabLatency:'Viive', tabStartup:'Käynnistys', tabDiagnostics:'Diagnostiikka', tabProcesses:'Prosessit', tabBios:'BIOS', tabScheduler:'Ajastin', tabRestore:'Palautuspisteet', tabHistory:'Historia', shellJump:'Hae tai siirry…', shellMore:'Lisää', shellActivity:'Toimintoloki', shellAdvanced:'Lisäasetustila', shellStatusIdle:'Lepotila', shellStatusGame:'Peli käynnissä', shellStatusPulse:'Pulse aktiivinen',
       apply:'Käytä', restore:'Palauta', runFix:'Suorita korjaus', done:'Valmis', running:'Käynnissä…',
       confirm:'Vahvista', back:'Takaisin', next:'Seuraava', close:'Sulje',

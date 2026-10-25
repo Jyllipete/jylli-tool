@@ -22,6 +22,7 @@ LANG.en = {
     sections: {},
     ui: {
       // 2.0 shell
+      settingsCatGeneral:'General',settingsCatGaming:'Gaming',settingsCatPrivacy:'Privacy',
       navHome:'Home', navOptimize:'Optimize', navGaming:'Gaming', navClean:'Clean', navSystem:'System', navSettings:'Settings', navHomeSub:'System overview', navOptimizeSub:'Tweaks, hardware, network and fixes', navGamingSub:'Pulse, game profiles, FiveM and latency', navCleanSub:'Cleanup, debloat and startup apps', navSystemSub:'Diagnostics, processes, BIOS, scheduler and history', navSettingsSub:'App preferences', tabNetwork:'Network', tabFixes:'Fixes', tabPulse:'Pulse', tabGames:'Games', tabApps:'Apps', tabLatency:'Latency', tabStartup:'Startup', tabDiagnostics:'Diagnostics', tabProcesses:'Processes', tabBios:'BIOS', tabScheduler:'Scheduler', tabRestore:'Restore points', tabHistory:'History', shellJump:'Search or jump to…', shellMore:'More', shellActivity:'Activity log', shellAdvanced:'Advanced mode', shellStatusIdle:'Idle', shellStatusGame:'Game running', shellStatusPulse:'Pulse active',
       apply:'Apply', restore:'Restore', runFix:'Run Fix', done:'Done', running:'Running…',
       confirm:'Confirm', back:'Back', next:'Next', close:'Close',
