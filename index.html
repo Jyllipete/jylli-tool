@@ -18236,7 +18236,7 @@ async function aomRenderStep2() {
               <div class="aom-tweak-icon ${t.alreadyApplied ? 'done' : 'run'}">
                 <i class="fa ${t.alreadyApplied ? 'fa-circle-check' : t.icon}"></i>
               </div>
-              <span class="aom-tweak-name">${tName(t.id) || t.label}${t.alreadyApplied ? ` <span style="font-size:var(--font-size-xs);color:var(--c-text-tertiary)">${tWizard('aomAlreadyApplied')}</span>` : ''}</span>
+              <span class="aom-tweak-name">${tName(t.id) || t.label}${t.alreadyApplied ? ` <span style="margin-left:8px;font-size:var(--font-size-xs);color:var(--c-text-tertiary)">${tWizard('aomAlreadyApplied')}</span>` : ''}</span>
               <span class="aom-safety-badge t1">SAFE</span>
             </div>`).join('')}
         </div>`).join('')}
