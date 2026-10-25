@@ -984,7 +984,7 @@ function updateTrayMenu() {
           for (const [k, v] of Object.entries(profile.tweaks)) {
             if (v === 'applied') {
               const tweakId = k.replace(/^tweak_/, '')
-              if (TWEAKS[tweakId]?.apply) await TWEAKS[tweakId].apply().catch(() => {})
+              if (hasTweak(tweakId) && !isPlanExcluded(tweakId)) await invokeTweak(tweakId, 'apply', () => {}).catch(() => {})
             }
           }
         }
@@ -2052,8 +2052,8 @@ ipcMain.handle('load-game-bundle', async (_, name) => {
       for (const [k, v] of Object.entries(tweakProfile.tweaks)) {
         if (v === 'applied') {
           const tweakId = k.replace(/^tweak_/, '')
-          if (TWEAKS[tweakId]?.apply) {
-            await TWEAKS[tweakId].apply().catch(() => {})
+          if (hasTweak(tweakId) && !isPlanExcluded(tweakId)) {
+            await invokeTweak(tweakId, 'apply', () => {}).catch(() => {})
           }
         }
       }
@@ -2145,7 +2145,9 @@ ipcMain.handle('discord-set-active-game', (_, gameName) => {
 })
 
 // ─── Tweak execution handler ──────────────────────────────────────────────────
-ipcMain.handle('run-tweak', async (_, { id, action }) => {
+ipcMain.handle('run-tweak', async (_, req) => {
+  const { id, action } = req || {}
+  if (typeof id !== 'string' || typeof action !== 'string') return { ok: false, error: 'invalid_request' }
   const send = (msg, level = 'info') => {
     mainWindow?.webContents.send('log', { msg, level, ts: new Date().toLocaleTimeString(), source: id })
   }
@@ -2158,10 +2160,9 @@ ipcMain.handle('run-tweak', async (_, { id, action }) => {
     return { ok: false, reason: 'premium_required' }
   }
 
-  let ok = false
+  if (!hasTweak(id, action)) return { ok: false, error: 'unknown_tweak_or_action' }
   try {
-    const result = await TWEAKS[id]?.[action]?.(send, runPS, runCmd, regAdd, regDelete)
-    ok = true
+    const result = await invokeTweak(id, action, send)
     return { ok: true, result }
   } catch (e) {
     send(`Error in ${id}: ${e.message}`, 'err')
@@ -3567,7 +3568,7 @@ ipcMain.handle('fivem-import-pack', async () => {
       if (typeof id !== 'string' || !id.startsWith('fivem-') || !Object.prototype.hasOwnProperty.call(TWEAKS, id) || !TWEAKS[id].apply) continue
       try {
         const msgs = []
-        await TWEAKS[id].apply(m => msgs.push(m), runPS, runCmd, regAdd, regDelete)
+        await invokeTweak(id, 'apply', m => msgs.push(m))
         const s = loadSettings(); s[`tweak_${id}`] = 'applied'; saveSettings(s)
         results.tweaks.push(id)
       } catch {}
@@ -3720,20 +3721,36 @@ ipcMain.handle('fivem-cfx-server-info', async (_, shortcode) => {
 
 // ─── Auto-Optimization ────────────────────────────────────────────────────────
 // ─── Run Planner ─────────────────────────────────────────────────────────────
+/**
+ * The ONE way to run a tweak. Looks the id up safely, validates the action and always passes the full helper set
+ * (apply/restore functions take (send, runPS, runCmd, regAdd, regDelete); calling them with no arguments silently does nothing).
+ */
+function hasTweak(id, action = 'apply') {
+  return typeof id === 'string' && Object.prototype.hasOwnProperty.call(TWEAKS, id) && (action === 'apply' || action === 'restore') && typeof TWEAKS[id][action] === 'function'
+}
+async function invokeTweak(id, action = 'apply', send) {
+  if (!hasTweak(id, action)) throw new Error(`Unknown tweak or action: ${String(id).slice(0, 60)}/${String(action).slice(0, 12)}`)
+  const log = send || ((msg, level = 'info') => mainWindow?.webContents.send('log', { msg, level, ts: new Date().toLocaleTimeString(), source: id }))
+  return TWEAKS[id][action](log, runPS, runCmd, regAdd, regDelete)
+}
+
+// Actions rather than persistent tweaks, or choices that belong to the user (which DNS provider, wiping logs/history,
+// deleting Windows.old, resetting the network stack, rebooting). They are NEVER part of an automatic plan, in any mode.
+const PLAN_EXCLUDED_IDS = new Set(['reboot-now', 'winsock-reset', 'disable-ipv6', 'clean-browser-history', 'clean-eventlogs', 'clean-old-windows', 'clean-winsxs'])
+const isPlanExcluded = id => PLAN_EXCLUDED_IDS.has(id) || id.startsWith('fix-') || id.startsWith('dns-')
+
 function buildRunPlan(runMode, ctx, sysInfo, appliedIds = new Set()) {
   const plan = []
   for (const [id, tweak] of Object.entries(TWEAKS)) {
     if (!tweak.apply) continue
     if (appliedIds.has(id)) continue
+    if (isPlanExcluded(id)) continue
     const cat   = tweak.category    || 'gaming'
-    const tier  = tweak.safetyTier  || 1
+    const tier  = tweak.safetyTier  ?? 3          // fail closed: an untagged tweak is treated as the riskiest tier
     const impact = tweak.gamerImpact || 'low'
 
     if (runMode === 'smart') {
-      // Skip tier-3 (spectre-meltdown) and purely destructive one-shot ops
       if (tier === 3) continue
-      if (['reboot-now','fix-wifi','fix-bluetooth','fix-winsock','fix-2502','fix-ms-store','fix-audio',
-           'fix-windows-defender','fix-print-spooler','fix-search'].includes(id)) continue
     } else if (runMode === 'gaming') {
       // Only high-impact gaming/latency/input/gpu/cpu tier-1
       if (tier > 1) continue
@@ -3778,7 +3795,13 @@ ipcMain.handle('build-run-plan', async (_, { runMode = 'smart', sysInfo = {} } =
   return { ok: true, plan, context: _systemContext }
 })
 
+let _autoOptiRunning = false
 ipcMain.handle('run-auto-opti', async (_, sysInfo) => {
+  if (_autoOptiRunning) return { ok: false, aborted: true, reason: 'already-running' }
+  _autoOptiRunning = true
+  try { return await runAutoOptiInner(sysInfo) } finally { _autoOptiRunning = false }
+})
+async function runAutoOptiInner(sysInfo) {
   const send = (msg, level) => mainWindow?.webContents.send('log', { msg, level, ts: new Date().toLocaleTimeString() })
   const progress = (step, total, label, id = '', status = 'running') => mainWindow?.webContents.send('auto-opti-progress', { step, total, label, id, status })
 
@@ -3822,8 +3845,26 @@ ipcMain.handle('run-auto-opti', async (_, sysInfo) => {
     }
   }
 
+  // Server-side guard: whatever the renderer sends, automatic runs never include actions, DNS choices or tier-3 (security-reducing) tweaks.
+  if (Array.isArray(selected)) {
+    const before = selected.length
+    selected = selected.filter(id => typeof id === 'string' && hasTweak(id) && !isPlanExcluded(id) && (TWEAKS[id].safetyTier ?? 3) < 3)
+    if (selected.length < before) send(`  [safety] ${before - selected.length} tweak(s) removed from the plan (unknown, manual-only or expert-tier)`, 'warn')
+  }
+
   const failedTasks = []
   const taskTimeout = (ms) => new Promise((_, rej) => setTimeout(() => rej(new Error(`Timed out after ${ms / 1000}s`)), ms))
+  // A timed-out tweak keeps running in the background; give it a bounded grace period so two tweaks never overlap.
+  const runTask = async (fn, label) => {
+    const p = Promise.resolve().then(fn)
+    try { return await Promise.race([p, taskTimeout(30000)]) } catch (e) {
+      if (/Timed out/.test(e.message)) {
+        send(`    ${label} is slow — waiting for it to finish before continuing…`, 'warn')
+        await Promise.race([p.catch(() => {}), new Promise(r => setTimeout(r, 90000))])
+      }
+      throw e
+    }
+  }
   if (selected && Array.isArray(selected) && selected.length > 0) {
     for (let i = 0; i < selected.length; i++) {
       const id = selected[i]
@@ -3843,13 +3884,7 @@ ipcMain.handle('run-auto-opti', async (_, sysInfo) => {
               continue
             }
           }
-          await Promise.race([
-            tweak.apply(
-              (msg, lvl) => send(`    ${msg}`, lvl || 'ok'),
-              runPS, runCmd, regAdd, regDelete
-            ),
-            taskTimeout(30000)
-          ])
+          await runTask(() => invokeTweak(id, 'apply', (msg, lvl) => send(`    ${msg}`, lvl || 'ok')), id)
           progress(i + 1, selected.length, label, id, 'ok')
         } catch (e) {
           send(`    Skipped: ${e.message}`, 'warn')
@@ -3869,7 +3904,7 @@ ipcMain.handle('run-auto-opti', async (_, sysInfo) => {
       progress(i + 1, steps.length, label, '', 'running')
       send(`  [${i+1}/${steps.length}] ${label}`, 'info')
       try {
-        await Promise.race([fn(send, runPS, runCmd, regAdd, regDelete), taskTimeout(30000)])
+        await runTask(() => fn(send, runPS, runCmd, regAdd, regDelete), label)
         progress(i + 1, steps.length, label, '', 'ok')
       } catch (e) {
         send(`    Skipped: ${e.message}`, 'warn')
@@ -3906,7 +3941,7 @@ ipcMain.handle('run-auto-opti', async (_, sysInfo) => {
   const includedFiveM  = (selected || []).some(id => id.startsWith('fivem-'))
   sessionTweaksCount  += tweakCount
   return { ok: true, failedTasks }
-})
+}
 
 async function createRestorePointInternal(send) {
   await ensureSREnabled(send)
@@ -3927,7 +3962,9 @@ async function createRestorePointInternal(send) {
     }
   `)
   const out = r.out?.trim() || ''
-  if (out.startsWith('RP_OK') || r.ok) {
+  // The script catches its own errors and exits 0, so r.ok proves nothing — only the RP_OK marker does.
+  await regDelete('HKLM', 'SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\SystemRestore', 'SystemRestorePointCreationFrequency').catch(() => {})   // back to the 24h Windows default
+  if (out.startsWith('RP_OK')) {
     send('✓ Restore Point created — system is safe to optimise.', 'ok')
     return { ok: true }
   }
@@ -6632,7 +6669,7 @@ const TWEAKS = {
     category: 'service',
     safetyTier: 1,
     gamerImpact: 'low',
-    apply: async (s, ps, _, cmd) => {
+    apply: async (s, ps, cmd) => {
       s('Restarting audio services…', 'info')
       await ps('Stop-Service -Name AudioSrv,Audiosrv,AudioEndpointBuilder -Force -EA SilentlyContinue')
       await ps(`
@@ -6675,7 +6712,7 @@ const TWEAKS = {
     category: 'service',
     safetyTier: 1,
     gamerImpact: 'low',
-    apply: async (s, ps, _, cmd) => {
+    apply: async (s, ps, cmd) => {
       s('Restoring Windows Defender…', 'info')
       await ps('Set-ItemProperty -Path "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows Defender" -Name DisableAntiSpyware -Value 0 -Force -EA SilentlyContinue')
       await ps('Remove-ItemProperty -Path "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows Defender" -Name DisableAntiSpyware -EA SilentlyContinue')
@@ -6692,7 +6729,7 @@ const TWEAKS = {
     category: 'service',
     safetyTier: 1,
     gamerImpact: 'low',
-    apply: async (s, ps, _, cmd) => {
+    apply: async (s, ps, cmd) => {
       await cmd('net stop Spooler')
       await ps('Remove-Item -Path "C:\\Windows\\System32\\spool\\PRINTERS\\*" -Recurse -Force -EA SilentlyContinue')
       await cmd('net start Spooler')
@@ -6705,7 +6742,7 @@ const TWEAKS = {
     category: 'service',
     safetyTier: 1,
     gamerImpact: 'low',
-    apply: async (s, ps, _, cmd) => {
+    apply: async (s, ps, cmd) => {
       await cmd('sc stop WSearch')
       await ps(`
         $dbPath = "$env:ProgramData\\Microsoft\\Search\\Data\\Applications\\Windows\\Windows.edb"
@@ -6724,7 +6761,7 @@ const TWEAKS = {
     category: 'input',
     safetyTier: 1,
     gamerImpact: 'medium',
-    apply: async (s, ps, _, cmd) => {
+    apply: async (s, ps, cmd) => {
       // ── 1. Get active scheme GUID upfront (needed for /setactive at the end) ──
       const activeScheme = await runPS(`(powercfg /getactivescheme) -replace '.*GUID:\\s+(\\S+).*','$1'`).then(r => r.out.trim()).catch(() => '')
       const allSchemes   = await runPS(`powercfg /list | Select-String 'Power Scheme GUID' | ForEach-Object { ($_ -split ':\\s+')[1].Split(' ')[0] }`).then(r => r.out.trim().split(/\r?\n/).filter(Boolean)).catch(() => [])
@@ -7084,6 +7121,7 @@ if ($r.Count -eq 0) { Write-Output "NONE_FOUND" } else { foreach ($x in $r) { Wr
 
   // ── New General Tweaks (from screenshots) ─────────────────────────────────
   'raw-aim-curve': {
+    safetyTier: 1,
     apply: async (s, ps) => {
       await ps('Set-ItemProperty -Path "HKCU:\\Control Panel\\Mouse" -Name MouseSpeed -Value "0" -Force')
       await ps('Set-ItemProperty -Path "HKCU:\\Control Panel\\Mouse" -Name MouseThreshold1 -Value "0" -Force')
@@ -7100,6 +7138,7 @@ if ($r.Count -eq 0) { Write-Output "NONE_FOUND" } else { foreach ($x in $r) { Wr
     }
   },
   'proximity-deny': {
+    safetyTier: 1,
     apply: async (s, ps) => {
       await ps('Set-ItemProperty -Path "HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\CapabilityAccessManager\\ConsentStore\\proximity" -Name Value -Value "Deny" -Force -EA SilentlyContinue')
       await ps('Set-ItemProperty -Path "HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\CapabilityAccessManager\\ConsentStore\\bluetoothSync" -Name Value -Value "Deny" -Force -EA SilentlyContinue')
@@ -7112,7 +7151,8 @@ if ($r.Count -eq 0) { Write-Output "NONE_FOUND" } else { foreach ($x in $r) { Wr
     }
   },
   'reality-telephony-off': {
-    apply: async (s, ps, _, cmd) => {
+    safetyTier: 2,
+    apply: async (s, ps, cmd) => {
       await cmd('sc config MixedRealityOpenXRSvc start= disabled'); await cmd('sc stop MixedRealityOpenXRSvc')
       await cmd('sc config TapiSrv start= disabled'); await cmd('sc stop TapiSrv')
       await cmd('sc config PhoneSvc start= disabled'); await cmd('sc stop PhoneSvc')
@@ -7124,6 +7164,7 @@ if ($r.Count -eq 0) { Write-Output "NONE_FOUND" } else { foreach ($x in $r) { Wr
     }
   },
   'cloud-sync-off': {
+    safetyTier: 1,
     apply: async (s, ps) => {
       await ps('New-Item -Path "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\SettingSync" -Force -EA SilentlyContinue | Out-Null')
       await ps('Set-ItemProperty -Path "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\SettingSync" -Name DisableSettingSync -Value 2 -Force')
@@ -7136,6 +7177,7 @@ if ($r.Count -eq 0) { Write-Output "NONE_FOUND" } else { foreach ($x in $r) { Wr
     }
   },
   'do-solo-mode': {
+    safetyTier: 1,
     apply: async (s, ps) => {
       await ps('New-Item -Path "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\DeliveryOptimization" -Force -EA SilentlyContinue | Out-Null')
       await ps('Set-ItemProperty -Path "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\DeliveryOptimization" -Name DODownloadMode -Value 1 -Force')
@@ -7147,6 +7189,7 @@ if ($r.Count -eq 0) { Write-Output "NONE_FOUND" } else { foreach ($x in $r) { Wr
     }
   },
   'nudge-blocker': {
+    safetyTier: 1,
     apply: async (s, ps) => {
       const base = 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\ContentDeliveryManager'
       const keys = ['SoftLandingEnabled','SubscribedContent-338389Enabled','SubscribedContent-338388Enabled',
@@ -7163,6 +7206,7 @@ if ($r.Count -eq 0) { Write-Output "NONE_FOUND" } else { foreach ($x in $r) { Wr
     }
   },
   'rt-scan-trim': {
+    safetyTier: 2,
     apply: async (s, ps) => {
       await ps('Set-MpPreference -SubmitSamplesConsent 2 -EA SilentlyContinue')
       await ps('Set-MpPreference -MAPSReporting 0 -EA SilentlyContinue')
@@ -7179,6 +7223,7 @@ if ($r.Count -eq 0) { Write-Output "NONE_FOUND" } else { foreach ($x in $r) { Wr
     }
   },
   'search-box-local': {
+    safetyTier: 1,
     apply: async (s, ps) => {
       await ps('New-Item -Path "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\Windows Search" -Force -EA SilentlyContinue | Out-Null')
       await ps('Set-ItemProperty -Path "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\Windows Search" -Name DisableWebSearch -Value 1 -Force')
@@ -7192,6 +7237,7 @@ if ($r.Count -eq 0) { Write-Output "NONE_FOUND" } else { foreach ($x in $r) { Wr
     }
   },
   'search-cloud-off': {
+    safetyTier: 1,
     apply: async (s, ps) => {
       await ps('New-Item -Path "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\Windows Search" -Force -EA SilentlyContinue | Out-Null')
       await ps('Set-ItemProperty -Path "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\Windows Search" -Name AllowCloudSearch -Value 0 -Force')
@@ -7204,6 +7250,7 @@ if ($r.Count -eq 0) { Write-Output "NONE_FOUND" } else { foreach ($x in $r) { Wr
     }
   },
   'security-quiet': {
+    safetyTier: 2,
     apply: async (s, ps) => {
       await ps('New-Item -Path "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows Defender Security Center\\Notifications" -Force -EA SilentlyContinue | Out-Null')
       await ps('Set-ItemProperty -Path "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows Defender Security Center\\Notifications" -Name DisableNotifications -Value 1 -Force')
@@ -7216,6 +7263,7 @@ if ($r.Count -eq 0) { Write-Output "NONE_FOUND" } else { foreach ($x in $r) { Wr
     }
   },
   'security-toast-off': {
+    safetyTier: 2,
     apply: async (s, ps) => {
       await ps('New-Item -Path "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Notifications\\Settings\\Windows.SystemToast.SecurityAndMaintenance" -Force -EA SilentlyContinue | Out-Null')
       await ps('Set-ItemProperty -Path "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Notifications\\Settings\\Windows.SystemToast.SecurityAndMaintenance" -Name Enabled -Value 0 -Force')
@@ -7229,7 +7277,8 @@ if ($r.Count -eq 0) { Write-Output "NONE_FOUND" } else { foreach ($x in $r) { Wr
     }
   },
   'sensor-suite-off': {
-    apply: async (s, ps, _, cmd) => {
+    safetyTier: 2,
+    apply: async (s, ps, cmd) => {
       for (const svc of ['SensorService','SensrSvc','SensorDataService','lfsvc']) {
         await cmd(`sc config ${svc} start= disabled`); await cmd(`sc stop ${svc}`)
       }
@@ -7241,6 +7290,7 @@ if ($r.Count -eq 0) { Write-Output "NONE_FOUND" } else { foreach ($x in $r) { Wr
     }
   },
   'sticky-keys-guard': {
+    safetyTier: 1,
     apply: async (s, ps) => {
       await ps('Set-ItemProperty -Path "HKCU:\\Control Panel\\Accessibility\\StickyKeys" -Name Flags -Value "506" -Force -EA SilentlyContinue')
       await ps('Set-ItemProperty -Path "HKCU:\\Control Panel\\Accessibility\\ToggleKeys" -Name Flags -Value "58" -Force -EA SilentlyContinue')
@@ -7255,7 +7305,8 @@ if ($r.Count -eq 0) { Write-Output "NONE_FOUND" } else { foreach ($x in $r) { Wr
     }
   },
   'telemetry-zero': {
-    apply: async (s, ps, _, cmd) => {
+    safetyTier: 2,
+    apply: async (s, ps, cmd) => {
       await ps('New-Item -Path "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\DataCollection" -Force -EA SilentlyContinue | Out-Null')
       await ps('Set-ItemProperty -Path "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\DataCollection" -Name AllowTelemetry -Value 0 -Force')
       await cmd('sc config DiagTrack start= disabled'); await cmd('sc stop DiagTrack')
@@ -7271,7 +7322,8 @@ if ($r.Count -eq 0) { Write-Output "NONE_FOUND" } else { foreach ($x in $r) { Wr
     }
   },
   'biometrics-off': {
-    apply: async (s, ps, _, cmd) => {
+    safetyTier: 3,
+    apply: async (s, ps, cmd) => {
       await cmd('sc config WbioSrvc start= disabled'); await cmd('sc stop WbioSrvc')
       await ps('New-Item -Path "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Biometrics" -Force -EA SilentlyContinue | Out-Null')
       await ps('Set-ItemProperty -Path "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Biometrics" -Name Enabled -Value 0 -Force')
@@ -7283,7 +7335,8 @@ if ($r.Count -eq 0) { Write-Output "NONE_FOUND" } else { foreach ($x in $r) { Wr
     }
   },
   'bluetooth-hard-off': {
-    apply: async (s, ps, _, cmd) => {
+    safetyTier: 3,
+    apply: async (s, ps, cmd) => {
       for (const svc of ['bthserv','BthAvctpSvc','BluetoothUserService','BTAGService']) {
         await cmd(`sc config ${svc} start= disabled`); await cmd(`sc stop ${svc}`)
       }
@@ -7296,6 +7349,7 @@ if ($r.Count -eq 0) { Write-Output "NONE_FOUND" } else { foreach ($x in $r) { Wr
     }
   },
   'boot-sound-off': {
+    safetyTier: 1,
     apply: async (s, ps) => {
       await ps('Set-ItemProperty -Path "HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Authentication\\LogonUI\\BootAnimation" -Name DisableStartupSound -Value 1 -Force -EA SilentlyContinue')
       await ps('Set-ItemProperty -Path "HKCU:\\AppEvents\\Schemes\\Apps\\.Default\\WindowsLogon\\.Current" -Name "(Default)" -Value "" -Force -EA SilentlyContinue')
@@ -7307,6 +7361,7 @@ if ($r.Count -eq 0) { Write-Output "NONE_FOUND" } else { foreach ($x in $r) { Wr
     }
   },
   'compat-scanner-off': {
+    safetyTier: 1,
     apply: async (s, ps) => {
       await ps('Disable-ScheduledTask -TaskPath "\\Microsoft\\Windows\\Application Experience\\" -TaskName "ProgramDataUpdater" -EA SilentlyContinue')
       await ps('Disable-ScheduledTask -TaskPath "\\Microsoft\\Windows\\Application Experience\\" -TaskName "AitAgent" -EA SilentlyContinue')
@@ -7319,6 +7374,7 @@ if ($r.Count -eq 0) { Write-Output "NONE_FOUND" } else { foreach ($x in $r) { Wr
     }
   },
   'compat-tasks-off': {
+    safetyTier: 1,
     apply: async (s, ps) => {
       for (const task of ['ProgramDataUpdater','AitAgent','StartupAppTask']) {
         await ps(`Disable-ScheduledTask -TaskPath "\\Microsoft\\Windows\\Application Experience\\" -TaskName "${task}" -EA SilentlyContinue`)
@@ -7332,6 +7388,7 @@ if ($r.Count -eq 0) { Write-Output "NONE_FOUND" } else { foreach ($x in $r) { Wr
     }
   },
   'cortana-blackout': {
+    safetyTier: 1,
     apply: async (s, ps) => {
       await ps('New-Item -Path "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\Windows Search" -Force -EA SilentlyContinue | Out-Null')
       await ps('Set-ItemProperty -Path "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\Windows Search" -Name AllowCortana -Value 0 -Force')
@@ -7346,6 +7403,7 @@ if ($r.Count -eq 0) { Write-Output "NONE_FOUND" } else { foreach ($x in $r) { Wr
     }
   },
   'cortana-remnant-off': {
+    safetyTier: 1,
     apply: async (s, ps) => {
       const r = await ps('Get-AppxPackage -AllUsers -Name "Microsoft.549981C3F5F10" -EA SilentlyContinue | Remove-AppxPackage -AllUsers -EA SilentlyContinue; Write-Output "done"')
       s('Cortana app package (Microsoft.549981C3F5F10) removal attempted. Reboot to clear remnants.', r.ok ? 'ok' : 'warn')
@@ -7353,6 +7411,7 @@ if ($r.Count -eq 0) { Write-Output "NONE_FOUND" } else { foreach ($x in $r) { Wr
     restore: async (s) => s('Cannot restore removed AppX package. Reinstall from Microsoft Store.', 'info')
   },
   'cpu-focus-bias': {
+    safetyTier: 2,
     apply: async (s, ps) => {
       await ps('Set-ItemProperty -Path "HKLM:\\SYSTEM\\CurrentControlSet\\Control\\PriorityControl" -Name Win32PrioritySeparation -Value 38 -Force')
       s('Win32PrioritySeparation=38 (hex) — foreground quantum boost maximised. Scheduler favours active game.', 'ok')
@@ -7363,6 +7422,7 @@ if ($r.Count -eq 0) { Write-Output "NONE_FOUND" } else { foreach ($x in $r) { Wr
     }
   },
   'cursor-max-rate': {
+    safetyTier: 2,
     apply: async (s, ps) => {
       await ps(`
         $path = 'HKLM:\\SYSTEM\\CurrentControlSet\\Services\\mouclass\\Parameters'
@@ -7381,14 +7441,15 @@ if ($r.Count -eq 0) { Write-Output "NONE_FOUND" } else { foreach ($x in $r) { Wr
     }
   },
   'defender-core-off': {
-    apply: async (s, ps, _, cmd) => {
+    safetyTier: 3,
+    apply: async (s, ps, cmd) => {
       await ps('New-Item -Path "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows Defender" -Force -EA SilentlyContinue | Out-Null')
       await ps('Set-ItemProperty -Path "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows Defender" -Name DisableAntiSpyware -Value 1 -Force')
       await ps('Set-MpPreference -DisableRealtimeMonitoring $true -EA SilentlyContinue')
       await cmd('sc config WinDefend start= disabled')
       s('Defender core real-time protection disabled. SECURITY RISK — use only offline/tournament PCs. Reboot required.', 'warn')
     },
-    restore: async (s, ps, _, cmd) => {
+    restore: async (s, ps, cmd) => {
       await ps('Set-ItemProperty -Path "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows Defender" -Name DisableAntiSpyware -Value 0 -Force -EA SilentlyContinue')
       await ps('Remove-ItemProperty -Path "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows Defender" -Name DisableAntiSpyware -EA SilentlyContinue')
       await cmd('sc config WinDefend start= auto'); await cmd('sc start WinDefend')
@@ -7397,6 +7458,7 @@ if ($r.Count -eq 0) { Write-Output "NONE_FOUND" } else { foreach ($x in $r) { Wr
     }
   },
   'defender-quiet': {
+    safetyTier: 2,
     apply: async (s, ps) => {
       await ps('Set-MpPreference -MAPSReporting 0 -EA SilentlyContinue')
       await ps('Set-MpPreference -SubmitSamplesConsent 2 -EA SilentlyContinue')
@@ -7409,6 +7471,7 @@ if ($r.Count -eq 0) { Write-Output "NONE_FOUND" } else { foreach ($x in $r) { Wr
     }
   },
   'diag-tasks-off': {
+    safetyTier: 1,
     apply: async (s, ps) => {
       const tasks = [
         ['\\Microsoft\\Windows\\Diagnosis\\', 'Scheduled'],
@@ -7437,7 +7500,8 @@ if ($r.Count -eq 0) { Write-Output "NONE_FOUND" } else { foreach ($x in $r) { Wr
     }
   },
   'diagnostics-off': {
-    apply: async (s, ps, _, cmd) => {
+    safetyTier: 2,
+    apply: async (s, ps, cmd) => {
       await ps('New-Item -Path "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\WDI" -Force -EA SilentlyContinue | Out-Null')
       await ps('Set-ItemProperty -Path "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\WDI" -Name ScenarioExecutionEnabled -Value 0 -Force')
       await cmd('sc config WdiServiceHost start= disabled')
@@ -7454,6 +7518,7 @@ if ($r.Count -eq 0) { Write-Output "NONE_FOUND" } else { foreach ($x in $r) { Wr
 
   // ── New Advanced Tweaks (from screenshots) ───────────────────────────────
   'gpu-hags-off': {
+    safetyTier: 2,
     apply: async (s, ps) => {
       await ps('Set-ItemProperty -Path "HKLM:\\SYSTEM\\CurrentControlSet\\Control\\GraphicsDrivers" -Name HwSchMode -Value 1 -Force')
       await ps('New-Item -Path "HKCU:\\Software\\Microsoft\\DirectX\\UserGpuPreferences" -Force -EA SilentlyContinue | Out-Null')
@@ -7465,6 +7530,7 @@ if ($r.Count -eq 0) { Write-Output "NONE_FOUND" } else { foreach ($x in $r) { Wr
     }
   },
   'hvci-offload': {
+    safetyTier: 3,
     apply: async (s, ps) => {
       await ps(`
         $path = 'HKLM:\\SYSTEM\\CurrentControlSet\\Control\\DeviceGuard\\Scenarios\\HypervisorEnforcedCodeIntegrity'
@@ -7506,6 +7572,7 @@ if ($r.Count -eq 0) { Write-Output "NONE_FOUND" } else { foreach ($x in $r) { Wr
     }
   },
   'memory-guard-tune': {
+    safetyTier: 3,
     apply: async (s, ps) => {
       const base = 'HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Memory Management'
       await ps(`Set-ItemProperty -Path "${base}" -Name DisablePagingExecutive -Value 1 -Force`)
@@ -7524,6 +7591,7 @@ if ($r.Count -eq 0) { Write-Output "NONE_FOUND" } else { foreach ($x in $r) { Wr
     }
   },
   'nvidia-pstate-lock': {
+    safetyTier: 2,
     apply: async (s, ps) => {
       const base = 'HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Class\\{4d36e968-e325-11ce-bfc1-08002be10318}'
       for (const idx of ['0000','0001']) {
@@ -7544,6 +7612,7 @@ if ($r.Count -eq 0) { Write-Output "NONE_FOUND" } else { foreach ($x in $r) { Wr
     }
   },
   'full-mitigation-wipe': {
+    safetyTier: 3,
     apply: async (s, ps) => {
       await ps(`
         Set-ProcessMitigation -System -Disable CFG,StrictCFG,SEHOP,ForceRelocateImages,RequireInfo,NullPage -ErrorAction SilentlyContinue
@@ -7565,6 +7634,7 @@ if ($r.Count -eq 0) { Write-Output "NONE_FOUND" } else { foreach ($x in $r) { Wr
     }
   },
   'nvidia-profile': {
+    safetyTier: 2,
     apply: async (s, ps) => {
       const base = 'HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Class\\{4d36e968-e325-11ce-bfc1-08002be10318}'
       for (const idx of ['0000','0001']) {
@@ -7591,6 +7661,7 @@ if ($r.Count -eq 0) { Write-Output "NONE_FOUND" } else { foreach ($x in $r) { Wr
     }
   },
   'process-count-reduction': {
+    safetyTier: 2,
     apply: async (s, ps) => {
       const ramGB = require('os').totalmem() / (1024**3)
       const ramMB = Math.floor(ramGB * 1024)
@@ -7604,6 +7675,7 @@ if ($r.Count -eq 0) { Write-Output "NONE_FOUND" } else { foreach ($x in $r) { Wr
     }
   },
   'amd-chill-off': {
+    safetyTier: 2,
     apply: async (s, ps) => {
       const base = 'HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Class\\{4d36e968-e325-11ce-bfc1-08002be10318}'
       for (const idx of ['0000','0001']) {
@@ -7624,6 +7696,7 @@ if ($r.Count -eq 0) { Write-Output "NONE_FOUND" } else { foreach ($x in $r) { Wr
     }
   },
   'amd-power-hold': {
+    safetyTier: 2,
     apply: async (s, ps) => {
       const base = 'HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Class\\{4d36e968-e325-11ce-bfc1-08002be10318}'
       for (const idx of ['0000','0001']) {
@@ -7644,7 +7717,8 @@ if ($r.Count -eq 0) { Write-Output "NONE_FOUND" } else { foreach ($x in $r) { Wr
     }
   },
   'amd-service-trim': {
-    apply: async (s, ps, _, cmd) => {
+    safetyTier: 2,
+    apply: async (s, ps, cmd) => {
       for (const svc of ['AMD Crash Defender','AMD External Events Utility','AMD Log Utility']) {
         await cmd(`sc config "${svc}" start= disabled`)
         await cmd(`sc stop "${svc}"`)
@@ -7683,6 +7757,7 @@ if ($r.Count -eq 0) { Write-Output "NONE_FOUND" } else { foreach ($x in $r) { Wr
     }
   },
   'audio-exclusive-mode': {
+    safetyTier: 2,
     apply: async (s, ps) => {
       await ps(`Set-ItemProperty -Path 'HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Audio' -Name DisableProtectedAudioDG -Value 1 -Type DWord -Force`)
       s('Audio exclusive-mode sharing disabled — reduces audio processing latency.', 'ok')
@@ -7693,7 +7768,8 @@ if ($r.Count -eq 0) { Write-Output "NONE_FOUND" } else { foreach ($x in $r) { Wr
     }
   },
   'corsair-audio-off': {
-    apply: async (s, ps, _, cmd) => {
+    safetyTier: 2,
+    apply: async (s, ps, cmd) => {
       await cmd('sc config CorsairVBusDriver start= disabled')
       await cmd('sc config CorsairGamingAudioConfig start= disabled')
       await cmd('sc stop CorsairGamingAudioConfig')
@@ -7707,6 +7783,7 @@ if ($r.Count -eq 0) { Write-Output "NONE_FOUND" } else { foreach ($x in $r) { Wr
     }
   },
   'capability-ruleset': {
+    safetyTier: 2,
     apply: async (s, ps) => {
       await ps(`
         $base = 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Privacy'
@@ -7724,6 +7801,7 @@ if ($r.Count -eq 0) { Write-Output "NONE_FOUND" } else { foreach ($x in $r) { Wr
     }
   },
   'mmcss-proaudio': {
+    safetyTier: 1,
     apply: async (s, ps) => {
       const base = 'HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Multimedia\\SystemProfile\\Tasks\\Pro Audio'
       await ps(`New-Item -Path "${base}" -Force -EA SilentlyContinue | Out-Null`)
@@ -7741,6 +7819,7 @@ if ($r.Count -eq 0) { Write-Output "NONE_FOUND" } else { foreach ($x in $r) { Wr
     }
   },
   'defender-idle-priority': {
+    safetyTier: 3,
     apply: async (s, ps) => {
       const ifeo = 'HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\MsMpEng.exe\\PerfOptions'
       await ps(`New-Item -Path "${ifeo}" -Force -EA SilentlyContinue | Out-Null`)
@@ -7775,6 +7854,7 @@ if ($r.Count -eq 0) { Write-Output "NONE_FOUND" } else { foreach ($x in $r) { Wr
     }
   },
   'dpc-coalescing': {
+    safetyTier: 2,
     apply: async (s, ps) => {
       await ps('Set-ItemProperty -Path "HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Session Manager\\kernel" -Name CoalescingTimerInterval -Value 0 -Force')
       s('DPC coalescing disabled. Timer batching removed — reduces up to 15ms added DPC latency.', 'ok')
@@ -7785,6 +7865,7 @@ if ($r.Count -eq 0) { Write-Output "NONE_FOUND" } else { foreach ($x in $r) { Wr
     }
   },
   'gpu-preemption': {
+    safetyTier: 2,
     apply: async (s, ps) => {
       const base = 'HKLM:\\SYSTEM\\CurrentControlSet\\Control\\GraphicsDrivers\\Scheduler'
       await ps(`New-Item -Path "${base}" -Force -EA SilentlyContinue | Out-Null`)
@@ -7800,6 +7881,7 @@ if ($r.Count -eq 0) { Write-Output "NONE_FOUND" } else { foreach ($x in $r) { Wr
     }
   },
   'vrr-borderless': {
+    safetyTier: 1,
     apply: async (s, ps) => {
       const base = 'HKCU:\\Software\\Microsoft\\DirectX\\UserGpuPreferences'
       await ps(`New-Item -Path "${base}" -Force -EA SilentlyContinue | Out-Null`)
@@ -7831,6 +7913,7 @@ if ($r.Count -eq 0) { Write-Output "NONE_FOUND" } else { foreach ($x in $r) { Wr
     }
   },
   'pool-usage-max': {
+    safetyTier: 2,
     apply: async (s, ps) => {
       await ps('Set-ItemProperty -Path "HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Memory Management" -Name PoolUsageMaximum -Value 96 -Type DWord -Force')
       s('Kernel non-paged pool reclaim threshold raised to 96%. Fewer DX12/Vulkan command buffer stalls.', 'ok')
@@ -7899,6 +7982,7 @@ if ($r.Count -eq 0) { Write-Output "NONE_FOUND" } else { foreach ($x in $r) { Wr
     }
   },
   'wasapi-min-period': {
+    safetyTier: 2,
     apply: async (s, ps) => {
       await ps(`
         Get-ChildItem 'HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\MMDevices\\Audio\\Render' -EA SilentlyContinue |
@@ -7929,6 +8013,7 @@ if ($r.Count -eq 0) { Write-Output "NONE_FOUND" } else { foreach ($x in $r) { Wr
     }
   },
   'directstorage-nvme': {
+    safetyTier: 2,
     apply: async (s, ps) => {
       const storPort = 'HKLM:\\SYSTEM\\CurrentControlSet\\Control\\StorPort'
       await ps(`Set-ItemProperty -Path "${storPort}" -Name SrbTimeoutDelta -Value 0 -Type DWord -Force -EA SilentlyContinue`)
@@ -7982,7 +8067,8 @@ ipcMain.handle('run-fix', async (_, fixId) => {
   }
   send(`Running fix: ${fixId}`, 'head')
   try {
-    await TWEAKS[fixId]?.apply?.(send, runPS, runCmd, regAdd, regDelete)
+    if (!hasTweak(fixId)) return { ok: false, error: 'unknown_fix' }
+    await invokeTweak(fixId, 'apply', send)
     return { ok: true }
   } catch (e) {
     send(`Fix error: ${e.message}`, 'err')
@@ -9384,6 +9470,7 @@ ipcMain.handle('detect-av', async () => {
 const APP_OPTIMIZER_TWEAKS = {
   // ── Browsers ─────────────────────────────────────────────────────────────
   'edge-optimize': {
+    safetyTier: 2,
     apply: async (s, ps, cmd) => {
       await ps(`New-Item -Path 'HKLM:\\SOFTWARE\\Policies\\Microsoft\\Edge' -Force -EA SilentlyContinue | Out-Null
 Set-ItemProperty -Path 'HKLM:\\SOFTWARE\\Policies\\Microsoft\\Edge' -Name 'StartupBoostEnabled' -Value 0 -Force
@@ -9397,6 +9484,7 @@ Set-ItemProperty -Path 'HKLM:\\SOFTWARE\\Policies\\Microsoft\\Edge' -Name 'Hardw
     }
   },
   'chrome-optimize': {
+    safetyTier: 2,
     apply: async (s, ps) => {
       await ps(`New-Item -Path 'HKLM:\\SOFTWARE\\Policies\\Google\\Chrome' -Force -EA SilentlyContinue | Out-Null
 Set-ItemProperty -Path 'HKLM:\\SOFTWARE\\Policies\\Google\\Chrome' -Name 'HardwareAccelerationModeEnabled' -Value 0 -Force
@@ -9409,6 +9497,7 @@ Set-ItemProperty -Path 'HKLM:\\SOFTWARE\\Policies\\Google\\Chrome' -Name 'Backgr
     }
   },
   'firefox-optimize': {
+    safetyTier: 2,
     apply: async (s, ps) => {
       const ffProfiles = path.join(os.homedir(), 'AppData', 'Roaming', 'Mozilla', 'Firefox', 'Profiles')
       if (fs.existsSync(ffProfiles)) {
@@ -9445,6 +9534,7 @@ user_pref("browser.sessionhistory.max_total_viewers", 4);`
     }
   },
   'brave-optimize': {
+    safetyTier: 2,
     apply: async (s, ps) => {
       await ps(`New-Item -Path 'HKLM:\\SOFTWARE\\Policies\\BraveSoftware\\Brave' -Force -EA SilentlyContinue | Out-Null
 Set-ItemProperty -Path 'HKLM:\\SOFTWARE\\Policies\\BraveSoftware\\Brave' -Name 'HardwareAccelerationModeEnabled' -Value 0 -Force
@@ -9457,6 +9547,7 @@ Set-ItemProperty -Path 'HKLM:\\SOFTWARE\\Policies\\BraveSoftware\\Brave' -Name '
     }
   },
   'opera-gx-optimize': {
+    safetyTier: 2,
     apply: async (s, ps) => {
       await ps(`New-Item -Path 'HKLM:\\SOFTWARE\\Policies\\OperaSoftware\\OperaGX' -Force -EA SilentlyContinue | Out-Null
 Set-ItemProperty -Path 'HKLM:\\SOFTWARE\\Policies\\OperaSoftware\\OperaGX' -Name 'HardwareAccelerationModeEnabled' -Value 0 -Force`)
@@ -9469,6 +9560,7 @@ Set-ItemProperty -Path 'HKLM:\\SOFTWARE\\Policies\\OperaSoftware\\OperaGX' -Name
   },
   // ── Discord ───────────────────────────────────────────────────────────────
   'discord-optimize': {
+    safetyTier: 1,
     apply: async (s, ps) => {
       const appData = process.env.APPDATA || ''
       const discordCfg = path.join(appData, 'discord', 'settings.json')
@@ -9499,6 +9591,7 @@ Set-ItemProperty -Path 'HKLM:\\SOFTWARE\\Policies\\OperaSoftware\\OperaGX' -Name
     }
   },
   'discord-cpu-priority': {
+    safetyTier: 2,
     apply: async (s, ps) => {
       const base = 'HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options'
       await ps(`New-Item -Path "${base}\\Discord.exe\\PerfOptions" -Force -EA SilentlyContinue | Out-Null
@@ -9515,6 +9608,7 @@ if (-not (Get-ItemProperty -Path '${perfPath}' -EA SilentlyContinue | Select-Obj
   },
   // ── Spotify ───────────────────────────────────────────────────────────────
   'spotify-optimize': {
+    safetyTier: 2,
     apply: async (s, ps) => {
       await ps(`New-Item -Path 'HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\Spotify.exe\\PerfOptions' -Force -EA SilentlyContinue | Out-Null
 Set-ItemProperty -Path 'HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\Spotify.exe\\PerfOptions' -Name CpuPriorityClass -Value 1 -Force`)
@@ -9529,6 +9623,7 @@ if (-not (Get-ItemProperty -Path '${spotifyPerf}' -EA SilentlyContinue | Select-
   },
   // ── Steam ─────────────────────────────────────────────────────────────────
   'steam-optimize': {
+    safetyTier: 2,
     apply: async (s, ps, cmd) => {
       const steamPath = await ps('(Get-ItemProperty "HKLM:\\SOFTWARE\\WOW6432Node\\Valve\\Steam" -EA SilentlyContinue).InstallPath')
       if (steamPath.out.trim()) {
@@ -9557,6 +9652,7 @@ if (-not (Get-ItemProperty -Path '${steamPerf}' -EA SilentlyContinue | Select-Ob
   },
   // ── OBS ───────────────────────────────────────────────────────────────────
   'obs-optimize': {
+    safetyTier: 2,
     apply: async (s, ps) => {
       await ps(`New-Item -Path 'HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\obs64.exe\\PerfOptions' -Force -EA SilentlyContinue | Out-Null
 Set-ItemProperty -Path 'HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\obs64.exe\\PerfOptions' -Name CpuPriorityClass -Value 3 -Force`)
@@ -9571,6 +9667,7 @@ if (-not (Get-ItemProperty -Path '${obsPerf}' -EA SilentlyContinue | Select-Obje
   },
   // ── Windows Explorer ──────────────────────────────────────────────────────
   'explorer-optimize': {
+    safetyTier: 1,
     apply: async (s, ps) => {
       await ps(`Set-ItemProperty -Path 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced' -Name 'LaunchTo' -Value 1 -Force
 Set-ItemProperty -Path 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced' -Name 'HideFileExt' -Value 0 -Force
@@ -9585,6 +9682,7 @@ Remove-ItemProperty -Path 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\
   },
   // ── Epic Games ────────────────────────────────────────────────────────────
   'epic-optimize': {
+    safetyTier: 2,
     apply: async (s, ps) => {
       const base = 'HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options'
       await ps(`New-Item -Path "${base}\\EpicGamesLauncher.exe\\PerfOptions" -Force -EA SilentlyContinue | Out-Null
@@ -9620,6 +9718,7 @@ if (-not (Get-ItemProperty -Path '${epicPerf}' -EA SilentlyContinue | Select-Obj
   },
   // ── EA App ────────────────────────────────────────────────────────────────
   'ea-app-optimize': {
+    safetyTier: 2,
     apply: async (s, ps) => {
       const base = 'HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options'
       await ps(`New-Item -Path "${base}\\EADesktop.exe\\PerfOptions" -Force -EA SilentlyContinue | Out-Null
@@ -9641,6 +9740,7 @@ if (-not (Get-ItemProperty -Path '${eaBgPerf}' -EA SilentlyContinue | Select-Obj
   },
   // ── Riot Client ───────────────────────────────────────────────────────────
   'riot-optimize': {
+    safetyTier: 2,
     apply: async (s, ps) => {
       const base = 'HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options'
       await ps(`New-Item -Path "${base}\\RiotClientServices.exe\\PerfOptions" -Force -EA SilentlyContinue | Out-Null
@@ -9657,6 +9757,7 @@ if (-not (Get-ItemProperty -Path '${riotPerf}' -EA SilentlyContinue | Select-Obj
   },
   // ── NVIDIA App / GeForce Experience ──────────────────────────────────────
   'nvidia-app-optimize': {
+    safetyTier: 2,
     apply: async (s, ps) => {
       await ps(`Stop-Service -Name 'NvTelemetryContainer' -Force -EA SilentlyContinue
 Set-Service -Name 'NvTelemetryContainer' -StartupType Disabled -EA SilentlyContinue`)
@@ -9679,6 +9780,7 @@ if (-not (Get-ItemProperty -Path '${nvidiaPerf}' -EA SilentlyContinue | Select-O
   },
   // ── Playnite ──────────────────────────────────────────────────────────────
   'playnite-optimize': {
+    safetyTier: 2,
     apply: async (s, ps) => {
       const base = 'HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options'
       await ps(`New-Item -Path "${base}\\Playnite.DesktopApp.exe\\PerfOptions" -Force -EA SilentlyContinue | Out-Null
@@ -9695,6 +9797,7 @@ if (-not (Get-ItemProperty -Path '${playnitePerf}' -EA SilentlyContinue | Select
   },
   // ── VS Code ───────────────────────────────────────────────────────────────
   'vscode-optimize': {
+    safetyTier: 2,
     apply: async (s, ps) => {
       const base = 'HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options'
       await ps(`New-Item -Path "${base}\\Code.exe\\PerfOptions" -Force -EA SilentlyContinue | Out-Null
@@ -11580,9 +11683,8 @@ ipcMain.handle('start-game-watcher', async () => {
           for (const [k, v] of Object.entries(profile.tweaks)) {
             if (v === 'applied') {
               const tweakId = k.replace(/^tweak_/, '')
-              const TWEAKS_obj = TWEAKS
-              if (TWEAKS_obj[tweakId]?.apply) {
-                await TWEAKS_obj[tweakId].apply().catch(() => {})
+              if (hasTweak(tweakId) && !isPlanExcluded(tweakId)) {
+                await invokeTweak(tweakId, 'apply', () => {}).catch(() => {})
               }
             }
           }
