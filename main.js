@@ -12262,20 +12262,12 @@ ipcMain.handle('bios-scewin-read', async () => {
 })
 
 const biosDumpPath = () => path.join(app.getPath('userData'), 'bios_dump.txt')
-ipcMain.handle('bios-scewin-write', async (_, { token, value, settingName, oldValue }) => {
-  if (!requiresPremium('bios-scewin-write')) return { ok: false, reason: 'premium_required' }
-  const dumpPath = biosDumpPath()   // never taken from the renderer
-  if (typeof token !== 'string' || typeof value !== 'string' || token.length > 200 || value.length > 200) return { ok: false, error: 'invalid_request' }
-  const scewin     = assetPath('assets', 'scewin', 'SCEWIN_64.exe')
-  const backupPath = path.join(path.dirname(dumpPath), 'bios_dump_backup.txt')
-  if (!fs.existsSync(scewin))   return { ok: false, error: 'SCEWIN not found' }
-  if (!fs.existsSync(dumpPath)) return { ok: false, error: 'No BIOS dump — run scan first' }
-  // Backup dump before every write so we can auto-restore on failure
-  fs.copyFileSync(dumpPath, backupPath)
-  let raw = fs.readFileSync(dumpPath, 'utf8')
-  const tokenEsc = token.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-  const valueEsc = value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-  raw = raw.replace(
+const escRx = x => x.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+
+/** Moves the "*" selection marker inside the block of one token to the option with the given value. */
+function applyBiosChange(raw, token, value) {
+  const tokenEsc = escRx(token), valueEsc = escRx(value)
+  return raw.replace(
     new RegExp(`(Setup Question[^\\n]*\\n(?:(?!Setup Question)[^\\n]*\\n)*Token\\s+=\\s+${tokenEsc}[\\s\\S]*?)(?=\\r?\\n\\r?\\n|$)`, 'g'),
     (block) => {
       let b = block.replace(/^(\s+)\*/gm, '$1 ')
@@ -12283,6 +12275,37 @@ ipcMain.handle('bios-scewin-write', async (_, { token, value, settingName, oldVa
       return b
     }
   )
+}
+/**
+ * Writes must start from what the BIOS holds NOW — a dump from an earlier scan would silently revert any other setting that
+ * changed since (SCEWIN /i re-imports the whole dump). Also keeps timestamped copies (last 5) as a real way back.
+ */
+async function refreshBiosDump(scewin) {
+  const dumpPath = biosDumpPath()
+  const r = await runFile(scewin, ['/o', '/s', dumpPath], { timeout: 120000 })
+  if (!fs.existsSync(dumpPath) || (!r.ok && fs.statSync(dumpPath).size < 100)) return null
+  try {
+    const dir = path.join(app.getPath('userData'), 'bios-backups')
+    fs.mkdirSync(dir, { recursive: true })
+    fs.copyFileSync(dumpPath, path.join(dir, `bios_dump_${Date.now()}.txt`))
+    const olds = fs.readdirSync(dir).filter(f => /^bios_dump_\d+\.txt$/.test(f)).sort().slice(0, -5)
+    for (const f of olds) { try { fs.unlinkSync(path.join(dir, f)) } catch {} }
+  } catch {}
+  return fs.readFileSync(dumpPath, 'utf8')
+}
+ipcMain.handle('bios-scewin-write', async (_, { token, value, settingName, oldValue }) => {
+  if (!requiresPremium('bios-scewin-write')) return { ok: false, reason: 'premium_required' }
+  const dumpPath = biosDumpPath()   // never taken from the renderer
+  if (typeof token !== 'string' || typeof value !== 'string' || token.length > 200 || value.length > 200) return { ok: false, error: 'invalid_request' }
+  const scewin     = assetPath('assets', 'scewin', 'SCEWIN_64.exe')
+  const backupPath = path.join(path.dirname(dumpPath), 'bios_dump_backup.txt')
+  if (!fs.existsSync(scewin))   return { ok: false, error: 'SCEWIN not found' }
+  if (!/^[0-9A-Fa-fx]{1,12}$/.test(token) || !/^0x[0-9A-Fa-f]{1,8}$/.test(value)) return { ok: false, error: 'invalid_request' }
+  const current = await refreshBiosDump(scewin)
+  if (current === null) return { ok: false, error: 'Could not read the current BIOS settings — nothing was changed.' }
+  fs.copyFileSync(dumpPath, backupPath)   // exact pre-change dump so we can auto-restore on failure
+  const raw = applyBiosChange(current, token, value)
+  if (raw === current) return { ok: false, error: 'Setting or option not found in the BIOS dump — nothing was changed.' }
   fs.writeFileSync(dumpPath, raw, 'utf8')
   const r = await runFile(scewin, ['/i', '/s', dumpPath], { timeout: 180000 })
   if (!r.ok) {
@@ -12358,26 +12381,21 @@ ipcMain.handle('bios-load-profile', async (_, { name }) => {
   const profiles = loadBiosProfiles()
   const profile = profiles.find(p => p.name === name)
   if (!profile) return { ok: false, error: 'Profile not found' }
-  let written = 0, failed = 0
-  for (const { token, value } of (profile.settings || [])) {
-    try {
-      const backupPath = path.join(path.dirname(dumpPath), 'bios_dump_backup.txt')
-      fs.copyFileSync(dumpPath, backupPath)
-      let raw = fs.readFileSync(dumpPath, 'utf8')
-      const tokenEsc = token.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-      const valueEsc = value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-      raw = raw.replace(
-        new RegExp(`(Setup Question[^\\n]*\\n(?:(?!Setup Question)[^\\n]*\\n)*Token\\s+=\\s+${tokenEsc}[\\s\\S]*?)(?=\\r?\\n\\r?\\n|$)`, 'g'),
-        (block) => {
-          let b = block.replace(/^(\s+)\*/gm, '$1 ')
-          b = b.replace(new RegExp(`([ \\t]+) (${valueEsc}[ \\t])`), '$1*$2')
-          return b
-        }
-      )
-      fs.writeFileSync(dumpPath, raw, 'utf8')
-      const r = await runFile(scewin, ['/i', '/s', dumpPath], { timeout: 180000 })
-      if (r.ok) written++; else failed++
-    } catch { failed++ }
+  // ONE refresh, all changes applied to the same text, ONE NVRAM write (previously one full write per setting).
+  const current = await refreshBiosDump(scewin)
+  if (current === null) return { ok: false, error: 'Could not read the current BIOS settings — nothing was changed.' }
+  const backupPath = path.join(path.dirname(dumpPath), 'bios_dump_backup.txt')
+  fs.copyFileSync(dumpPath, backupPath)
+  let raw = current, written = 0, failed = 0
+  for (const e of (profile.settings || [])) {
+    if (!e || !/^[0-9A-Fa-fx]{1,12}$/.test(String(e.token)) || !/^0x[0-9A-Fa-f]{1,8}$/.test(String(e.value))) { failed++; continue }
+    const next = applyBiosChange(raw, e.token, e.value)
+    if (next === raw) { if (new RegExp(`Token\\s+=\\s+${escRx(e.token)}[\\s\\S]*?\\*${escRx(e.value)}\\b`).test(raw)) written++; else failed++ } else { raw = next; written++ }
+  }
+  if (raw !== current) {
+    fs.writeFileSync(dumpPath, raw, 'utf8')
+    const r = await runFile(scewin, ['/i', '/s', dumpPath], { timeout: 180000 })
+    if (!r.ok) { try { fs.copyFileSync(backupPath, dumpPath) } catch {}; return { ok: false, restored: true, error: 'SCEWIN write failed — nothing was changed.' } }
   }
   return { ok: true, written, failed }
 })
