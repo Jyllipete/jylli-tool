@@ -324,6 +324,9 @@ contextBridge.exposeInMainWorld('api', {
   // Game Shield / Update Guard
   toggleUpdateGuard:    (on)         => ipcRenderer.invoke('toggle-update-guard', on),
   onUpdateGuardStatus:  (cb)         => on('update-guard-status', cb),
+  onUpdateGuardWarning: (cb)         => on('update-guard-warning', cb),
+  onUnknownGameCandidate: (cb)       => on('unknown-game-candidate', cb),
+  blacklistUnknownGame: (exe)        => ipcRenderer.invoke('blacklist-unknown-game', exe),
   toggleGameShield:     (on)         => ipcRenderer.invoke('toggle-game-shield', on),
   getGameShieldExclusions: ()        => ipcRenderer.invoke('get-game-shield-exclusions'),
   setGameShieldExclusions: (list)    => ipcRenderer.invoke('set-game-shield-exclusions', list),

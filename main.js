@@ -154,15 +154,35 @@ let _systemContext = {
 let _lastProcessList = new Set()
 let _contextDetectorTimer = null
 
+// Unknown-game auto-learn: offers games running from a store library folder that the database, custom list and blacklist don't cover.
+const GameCandidate = require('./lib/gamecandidate')
+const _offeredCandidates = new Set()
+function _readUserList(file) {
+  try { const v = JSON.parse(fs.readFileSync(path.join(app.getPath('userData'), file), 'utf8')); return Array.isArray(v) ? v : [] } catch { return [] }
+}
+function _checkUnknownGame(psLines) {
+  const candidates = GameCandidate.parseCandidateLines(psLines)
+  if (!candidates.length) return
+  const known = new Set(GAME_DATABASE.map(g => g.exe))
+  for (const p of Object.values(PULSE_PRESETS)) known.add(String(p.exe).toLowerCase())
+  for (const g of _readUserList('custom-games.json')) known.add(String(g.exe).toLowerCase())
+  const pick = GameCandidate.pickCandidate(candidates, { known, blacklist: _readUserList('unknown-game-blacklist.json'), offered: _offeredCandidates })
+  if (!pick) return
+  _offeredCandidates.add(pick.exe)
+  mainWindow?.webContents.send('unknown-game-candidate', pick)
+}
+
 async function _updateSystemContext() {
   try {
     const { execFile } = require('child_process')
     const psOut = await new Promise((res) => {
       execFile('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command',
-        `Get-Process | Select-Object -ExpandProperty Name | ForEach-Object { $_.ToLower() + ".exe" }`
+        // Second output form "@@exe|path" is only emitted for processes running from a game-store library folder (unknown-game detection)
+        `Get-Process | ForEach-Object { $n = $_.Name.ToLower() + ".exe"; $n; if ($_.Path -match 'steamapps.common|Epic Games|GOG Galaxy.Games|GOG Games|XboxGames|Riot Games') { '@@' + $n + '|' + $_.Path } }`
       ], { windowsHide: true, timeout: 8000 }, (err, stdout) => res(err ? '' : stdout))
     })
-    const currentExes = new Set(psOut.split(/\r?\n/).map(l => l.trim()).filter(Boolean))
+    const psLines = psOut.split(/\r?\n/).map(l => l.trim()).filter(Boolean)
+    const currentExes = new Set(psLines.filter(l => !l.startsWith('@@')))
 
     // Only do the expensive lookup if the process list changed
     const changed = currentExes.size !== _lastProcessList.size ||
@@ -170,6 +190,7 @@ async function _updateSystemContext() {
 
     if (changed) {
       _lastProcessList = currentExes
+      _checkUnknownGame(psLines)
 
       // Game detection
       let foundGame = null
@@ -11593,7 +11614,14 @@ ipcMain.handle('start-game-watcher', async () => {
       const presetName = PULSE_PRESETS[detectedGame].name
       mainWindow?.webContents.send('game-watcher-event', { event: 'game-started', gameId: detectedGame })
       gameShieldActivate().catch(() => {})
-      if (loadSettings().updateGuardEnabled && auth && auth.isPremium()) updateGuardSession(true).catch(() => {})
+      if (loadSettings().updateGuardEnabled && auth && auth.isPremium()) {
+        // Count pending updates first (the search needs the Windows Update service), warn, then hold updates — unless the game already closed
+        countPendingUpdates()
+          .then(count => { if (count > 0) mainWindow?.webContents.send('update-guard-warning', { count }) })
+          .catch(() => {})
+          .then(() => { if (activeGameProfile) return updateGuardSession(true) })
+          .catch(() => {})
+      }
       mainWindow?.webContents.send('log', { msg: `🎮 Game detected: ${presetName} — applying optimizations…`, level: 'head', ts: new Date().toLocaleTimeString() })
 
       // Update Discord presence to show the active game
@@ -13694,6 +13722,12 @@ async function setUpdateGuard(on) {
   snapshots.remove('update-guard')
   return r.ok
 }
+// Pending-update count from the local update cache (offline search: no network scan while a game is starting). 0 on any failure.
+async function countPendingUpdates() {
+  const r = await runPS(`$q = (New-Object -ComObject Microsoft.Update.Session).CreateUpdateSearcher(); $q.Online = $false; $q.Search('IsInstalled=0 and IsHidden=0').Updates.Count`, 15000)
+  const n = parseInt(String(r.out || '').trim(), 10)
+  return Number.isFinite(n) && n > 0 ? n : 0
+}
 // Update Guard holds Windows Update off only while a game is running: armed by the toggle, activated by the game watcher, released on exit.
 let _ugActive = false
 async function updateGuardSession(on) {
@@ -13853,6 +13887,15 @@ ipcMain.handle('add-custom-game', async (_, { exe, name } = {}) => {
     fs.writeFileSync(customGamesPath, JSON.stringify(list, null, 2))
   }
   return { ok: true, games: list }
+})
+
+ipcMain.handle('blacklist-unknown-game', async (_, exe) => {
+  exe = String(exe || '').toLowerCase()
+  if (!/^[\w .\-()]{1,100}\.exe$/.test(exe)) return { ok: false, error: 'bad_exe' }
+  const listPath = path.join(app.getPath('userData'), 'unknown-game-blacklist.json')
+  const list = _readUserList('unknown-game-blacklist.json')
+  if (!list.includes(exe)) { list.push(exe); fs.writeFileSync(listPath, JSON.stringify(list, null, 2)) }
+  return { ok: true }
 })
 
 ipcMain.handle('get-game-history', async () => {

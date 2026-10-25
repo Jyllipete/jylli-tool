@@ -31,8 +31,9 @@ Launch: `env -u ELECTRON_RUN_AS_NODE npx --no-install electron . --remote-debugg
 
 ## NEXT
 1. JylliSensor.cs improvements (needs rebuild; never specified what) — optional.
-2. Remaining unwired renderer hooks behind `?.`: onUnknownGameCandidate, onUpdateGuardWarning (pending-updates count), onPulseCooldownTick.
-3. Slow first-load calls worth a spinner: health score ~6.7 s, core loads ~1 s warm.
+2. DONE: onUnknownGameCandidate (lib/gamecandidate.js, library-folder heuristic, blacklist file `unknown-game-blacklist.json`), onUpdateGuardWarning (offline pending-update count before the guard activates). STILL UNWIRED: onPulseCooldownTick — main has no Pulse cool-down feature, so there is nothing to emit; needs a decision on what "cool-down" should do.
+3. DONE: health-score spinner. Core loads (~1 s warm) have none.
+(Update Guard warning and unknown-game banner were verified only for API exposure/logic; not yet seen firing with a real game. Tests: 27.)
 4. Release: version bump/tag, `npm run build`, publish (user).
 
 ## Known limits to tell the user

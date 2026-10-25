@@ -1263,7 +1263,7 @@ const LANG = {
       timelineLastCleaned:'Last cleaned: {date} · freed {size}',
       timelineFull:'Estimated full: ~{date} at current rate',
       timelineDiskUsed:'{pct}% used · {free} free',
-      healthScoreLabel:'Score', healthScoreGood:'Looking good', healthScoreFair:'A few things to improve', healthScorePoor:'Needs attention',
+      healthScoreLoading:'Checking your system…', healthScoreLabel:'Score',healthScoreGood:'Looking good', healthScoreFair:'A few things to improve', healthScorePoor:'Needs attention',
       diskUsageTitle:'Disk Usage Analyzer', diskUsageSub:'See where your disk space is going — scan top folders for sizes.',
       diskUsageScan:'Scan', diskUsageEmpty:'No data found.',
       diskUsageOpen:'Open folder',
@@ -1779,6 +1779,7 @@ const LANG = {
       genSearchPlaceholder:'Search tweaks…', startupSearchPh:'Search startup items…',
       ugFrozenLabel:'Windows Update frozen for this session',
       ugRescheduled:'Update rescheduled to {when}', ugActiveHours:'Active hours set: {hours}',
+      ugPendingOne:'{n} pending Windows update — Update Guard will hold it', ugPendingMany:'{n} pending Windows updates — Update Guard will hold them', ugPendingMsg:'Windows Update frozen for this session',
       gsFreedT:'Game Shield freed {mb}MB RAM', gsFreedB:'Stopped {n} background process(es) this session',
       dlOverwriteT:'Overwrite Profile?', dlOverwriteB:'A profile named <strong>"{name}"</strong> already exists. Overwrite it?', dlOverwrite:'Overwrite', dlApplyProfT:'Apply Profile: {name}', dlApplyProfB:'This will apply {n} tweaks from the "{name}" profile.', dlApplyAll:'Apply All', dlCloneT:'Clone Profile', dlCloneB:'New name for the copy of <strong>"{name}"</strong>:', dlClone:'Clone', dlCopySuffix:'(copy)', dlRenameT:'Rename Profile', dlRenameB:'New name for <strong>"{name}"</strong>:', dlRename:'Rename', dlPingT:'Custom Ping Host', dlPingB:'Enter IP or hostname to ping:', dlDnsPriT:'Custom DNS — Primary Server', dlDnsPriB:'Enter primary IPv4 DNS address (e.g. 8.8.8.8):', dlDnsSecT:'Custom DNS — Secondary Server', dlDnsSecB:'Enter secondary IPv4 DNS address (optional — leave blank to skip):', dlReEnableT:'Re-enable {name}', dlReEnableSvcB:'Service "{name}" will be restored to "{start}" start and started.', dlReEnableTaskB:'Task "{name}" will be re-enabled in Task Scheduler.', dlReEnable:'Re-enable', tkFailedName:'Failed: {name}',
       tkUgOn:'Update Guard enabled', tkUgOff:'Update Guard disabled', tkGsOn:'Game Shield enabled', tkGsOff:'Game Shield disabled', tkUgOnLong:'Update Guard enabled — Windows Update blocked during gaming',
@@ -3576,7 +3577,7 @@ const LANG = {
       timelineLastCleaned:'Viimeksi siivottu: {date} · vapautettu {size}',
       timelineFull:'Arvioitu täyttyminen: ~{date} nykyisellä nopeudella',
       timelineDiskUsed:'{pct}% käytetty · {free} vapaana',
-      healthScoreLabel:'Pisteet', healthScoreGood:'Näyttää hyvältä', healthScoreFair:'Muutama asia parannettavaksi', healthScorePoor:'Tarvitsee huomiota',
+      healthScoreLoading:'Tarkistetaan järjestelmää…', healthScoreLabel:'Pisteet',healthScoreGood:'Näyttää hyvältä', healthScoreFair:'Muutama asia parannettavaksi', healthScorePoor:'Tarvitsee huomiota',
       diskUsageTitle:'Levytilan analysaattori', diskUsageSub:'Katso mihin levytilasi menee — skannaa kansioiden koot.',
       diskUsageScan:'Skannaa', diskUsageEmpty:'Ei löydetty tietoja.',
       diskUsageOpen:'Avaa kansio',
@@ -4135,6 +4136,7 @@ const LANG = {
       genSearchPlaceholder:'Hae säätöjä…', startupSearchPh:'Hae käynnistyskohteita…',
       ugFrozenLabel:'Windows Update jäädytetty tämän session ajaksi',
       ugRescheduled:'Päivitys siirretty: {when}', ugActiveHours:'Aktiiviset tunnit asetettu: {hours}',
+      ugPendingOne:'{n} odottava Windows-päivitys — Update Guard pidättää sen', ugPendingMany:'{n} odottavaa Windows-päivitystä — Update Guard pidättää ne', ugPendingMsg:'Windows Update jäädytetty tämän istunnon ajaksi',
       gsFreedT:'Game Shield vapautti {mb} Mt RAMia', gsFreedB:'Pysäytettiin {n} taustaprosessia tämän session aikana',
       dlOverwriteT:'Korvataanko profiili?', dlOverwriteB:'Profiili <strong>"{name}"</strong> on jo olemassa. Korvataanko se?', dlOverwrite:'Korvaa', dlApplyProfT:'Ota profiili käyttöön: {name}', dlApplyProfB:'Tämä ottaa käyttöön {n} säätöä profiilista "{name}".', dlApplyAll:'Ota kaikki käyttöön', dlCloneT:'Kopioi profiili', dlCloneB:'Uusi nimi kopiolle: <strong>"{name}"</strong>:', dlClone:'Kopioi', dlCopySuffix:'(kopio)', dlRenameT:'Nimeä profiili uudelleen', dlRenameB:'Uusi nimi: <strong>"{name}"</strong>:', dlRename:'Nimeä', dlPingT:'Oma ping-osoite', dlPingB:'Anna IP-osoite tai isäntänimi:', dlDnsPriT:'Oma DNS — ensisijainen palvelin', dlDnsPriB:'Anna ensisijainen IPv4 DNS-osoite (esim. 8.8.8.8):', dlDnsSecT:'Oma DNS — toissijainen palvelin', dlDnsSecB:'Anna toissijainen IPv4 DNS-osoite (valinnainen — jätä tyhjäksi ohittaaksesi):', dlReEnableT:'Ota takaisin käyttöön: {name}', dlReEnableSvcB:'Palvelu "{name}" palautetaan tilaan "{start}" ja käynnistetään.', dlReEnableTaskB:'Tehtävä "{name}" otetaan takaisin käyttöön Tehtävienajastimessa.', dlReEnable:'Ota käyttöön', tkFailedName:'Epäonnistui: {name}',
       tkUgOn:'Update Guard päällä', tkUgOff:'Update Guard pois päältä', tkGsOn:'Game Shield päällä', tkGsOff:'Game Shield pois päältä', tkUgOnLong:'Update Guard päällä — Windows Update estetty pelatessa',
@@ -6154,8 +6156,8 @@ async function init(isPremium = false) {
   // Update Guard: pending update risk warning (fired async after pre-game sweep)
   api.onUpdateGuardWarning?.(({ count }) => {
     if (count > 0) toast(
-      `${count} pending Windows update${count > 1 ? 's' : ''} — Update Guard will hold them`,
-      'Windows Update frozen for this session', 'info', 6000
+      tUIf(count > 1 ? 'ugPendingMany' : 'ugPendingOne', { n: count }),
+      tUI('ugPendingMsg'), 'info', 6000
     )
   })
 
@@ -15724,9 +15726,11 @@ async function initHealthScoreRing() {
   const factorsEl = document.getElementById('health-score-factors')
   if (!arc || !numEl) return
 
+  // The first scan takes several seconds: show progress instead of a bare dash
+  if (msgEl) msgEl.innerHTML = `<i class="fa fa-spinner fa-spin" aria-hidden="true"></i> ${tUI('healthScoreLoading')}`
   let result
-  try { result = await api.getHealthScore(settings, getPreflightStates()) } catch { return }
-  if (!result) return
+  try { result = await api.getHealthScore(settings, getPreflightStates()) } catch { result = null }
+  if (!result) { if (msgEl) msgEl.textContent = '—'; return }
 
   const score = Math.max(0, Math.min(100, Math.round(result.total ?? 0)))
   window._lastHealthScore = score
