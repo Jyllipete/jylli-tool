@@ -656,7 +656,15 @@ ipcMain.handle('submit-bug-report', (_, data) => {
 })
 
 // Wire up global error handlers
-process.on('uncaughtException',  (err) => { webhookError('crash', err) })
+const _recentCrashes = []
+process.on('uncaughtException',  (err) => {
+  webhookError('crash', err)
+  debugLog('[uncaughtException] ' + (err?.stack || err))
+  const now = Date.now()
+  _recentCrashes.push(now)
+  while (_recentCrashes.length && now - _recentCrashes[0] > 60000) _recentCrashes.shift()
+  if (_recentCrashes.length >= 5) { try { shutdownBackground() } catch {}; setTimeout(() => app.exit(1), 800) }   // 5 crashes in a minute = give up cleanly
+})
 process.on('unhandledRejection', (err) => { webhookError('unhandledRejection', err) })
 
 // ─── LibreHardwareMonitor lifecycle ──────────────────────────────────────────
@@ -1191,9 +1199,21 @@ foreach ($id in @(${ids.join(',')})) { try { [ProcFreeze]::NtResumeProcess((Get-
   _frozenPids.clear(); _frozenAt.clear()
 }
 
+// Every background timer / child process Jylli Tool starts. Windows does not kill children when the parent exits.
+function shutdownBackground() {
+  for (const t of [discordRetryTimer, _contextDetectorTimer, discordOverrideCycleTimer, _sensorHzTimer, _metricsInterval, _tierRefreshInterval, _hudPingInterval,
+                   _livePingInterval, gameWatcherInterval, _thermalTimer, _effTimer, _latTimer, _historySamplerTimer, _ariaTimer, _ariaFpsTimer, _updateGuardTimer]) {
+    try { if (t) { clearInterval(t); clearTimeout(t) } } catch {}
+  }
+  try { if (_historyDirty > 0) saveHistory() } catch {}
+  try { stopPresentMon(_pmSessionProc); _pmSessionProc = null } catch {}
+  try { stopPresentMon(_pmTweakProc); _pmTweakProc = null } catch {}
+}
+
 app.on('will-quit', (e) => {
+  if (_installingUpdate) return          // second pass, triggered by quitAndInstall: let Electron quit normally
   e.preventDefault()
-  clearInterval(_metricsInterval)
+  shutdownBackground()
   stopLhm()
   stopSensorBridge()
   const duration = Date.now() - sessionStartTime
@@ -1202,7 +1222,13 @@ app.on('will-quit', (e) => {
     : Promise.resolve()
   const cleanup = Promise.all([(sessionEndPromise || Promise.resolve()).finally(() => destroyDiscordRPC().catch(() => {})), resumeAllFrozen(), snapshots?.load('update-guard') ? setUpdateGuard(false) : null])
   const timeout = new Promise(resolve => setTimeout(resolve, 6500))
-  Promise.race([cleanup, timeout]).finally(() => app.exit(0))
+  Promise.race([cleanup, timeout]).finally(() => {
+    if (_updateReady && autoUpdater) {
+      _installingUpdate = true
+      try { autoUpdater.quitAndInstall(true, false); return } catch {}
+    }
+    app.exit(0)
+  })
 })
 
 // ── Session tracking IPC ─────────────────────────────────────────────────────
@@ -2320,11 +2346,13 @@ Write-Output "GPU_TEMP=0"
     metrics.cpuTemp = (_sensorValues.cpu_package_temp > 0) ? _sensorValues.cpu_package_temp
                     : (rawCpuTemp > 0) ? rawCpuTemp : 0
     const netRb = kn('NET_RB'), netSb = kn('NET_SB')
+    const _netNow = Date.now()
     if (_netPrevBytes && netRb > 0) {
-      metrics.netDown = Math.max(0, Math.round((netRb - _netPrevBytes.rb) / 3))
-      metrics.netUp   = Math.max(0, Math.round((netSb - _netPrevBytes.sb) / 3))
+      const dt = Math.max(0.5, (_netNow - _netPrevBytes.t) / 1000)
+      metrics.netDown = Math.max(0, Math.round((netRb - _netPrevBytes.rb) / dt))
+      metrics.netUp   = Math.max(0, Math.round((netSb - _netPrevBytes.sb) / dt))
     }
-    _netPrevBytes = { rb: netRb, sb: netSb }
+    _netPrevBytes = { rb: netRb, sb: netSb, t: _netNow }
 
     // Parse GPU load result
     const gMatch = gpuR.out.match(/GPU_LOAD=(\d+)/)
@@ -2373,8 +2401,11 @@ function pauseBackgroundPolling() {
 }
 
 function resumeBackgroundPolling() {
-  if (!_metricsInterval) _metricsInterval = setInterval(collectMetrics, 3000)
-  if (!_contextDetectorTimer) startContextDetector()
+  // In low-resource mode pauseBackgroundPolling() installed 30 s timers; the old guard saw them as "running" and never restored normal polling.
+  if (_metricsInterval) { clearInterval(_metricsInterval); _metricsInterval = null }
+  if (_contextDetectorTimer) { clearInterval(_contextDetectorTimer); _contextDetectorTimer = null }
+  _metricsInterval = setInterval(collectMetrics, 3000)
+  startContextDetector()
 }
 
 ipcMain.handle('set-low-resource-mode', () => {})
@@ -8428,6 +8459,8 @@ ipcMain.handle('run-preflight-scan', async () => {
 //   Jylli Tool Setup.exe
 //   Jylli Tool Setup.exe.blockmap
 let autoUpdater = null
+let _updateReady = false        // a downloaded update is waiting to be installed
+let _installingUpdate = false
 try {
   const { autoUpdater: au } = require('electron-updater')
   autoUpdater = au
@@ -8440,7 +8473,7 @@ try {
   autoUpdater.on('update-available',     (info) => { sendLog(`Update available: v${info.version} — click "Update" to download`); mainWindow?.webContents.send('update-available', info) })
   autoUpdater.on('update-not-available', ()     => {}) // silent
   autoUpdater.on('download-progress',    (p)    => mainWindow?.webContents.send('update-progress', p))
-  autoUpdater.on('update-downloaded',    (info) => mainWindow?.webContents.send('update-downloaded', info))
+  autoUpdater.on('update-downloaded',    (info) => { _updateReady = true; mainWindow?.webContents.send('update-downloaded', info) })
   autoUpdater.on('error', (err) => {
     // Suppress routine network errors (offline, rate-limited, 404) — these flood the output log
     const msg = err?.message || ''
@@ -12844,9 +12877,10 @@ let _historySamplerTimer = null
 function getHistoryPath() {
   if (_historyPath) return _historyPath
   try {
-    const dir = path.join(app.getPath('userData'), 'Jylli Tool')
-    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true })
+    const dir = app.getPath('userData')
+    const legacy = path.join(dir, 'Jylli Tool', 'metrics-history.json')
     _historyPath = path.join(dir, 'metrics-history.json')
+    if (!fs.existsSync(_historyPath) && fs.existsSync(legacy)) { try { fs.copyFileSync(legacy, _historyPath) } catch {} }   // migrate the old nested location
   } catch {
     _historyPath = path.join(os.tmpdir(), 'jylli-metrics-history.json')
   }
@@ -12864,7 +12898,11 @@ function loadHistory() {
   } catch { _historyData = [] }
 }
 
+let _historyDirty = 0
+// The history file is ~2 MB at full size; rewriting it every minute meant gigabytes of SSD writes per day. Flush every 10 samples and on quit.
+function saveHistoryDebounced() { if (++_historyDirty >= 10) saveHistory() }
 function saveHistory() {
+  _historyDirty = 0
   try {
     const tmp = getHistoryPath() + '.tmp'
     fs.writeFileSync(tmp, JSON.stringify(_historyData), 'utf8')
@@ -12889,7 +12927,7 @@ Write-Output "RAM=$ramPct"
     if (_historyData.length > HISTORY_MAX_POINTS) {
       _historyData = _historyData.slice(_historyData.length - HISTORY_MAX_POINTS)
     }
-    saveHistory()
+    saveHistoryDebounced()
   } catch {}
 }
 
@@ -13037,7 +13075,6 @@ function spawnPresentMon(outputFile, gamePid) {
 
 function stopPresentMon(proc) {
   try { proc?.kill() } catch {}
-  try { require('child_process').execFileSync('taskkill', ['/F', '/IM', 'PresentMon.exe'], { windowsHide: true, timeout: 3000 }) } catch {}
 }
 
 // Load persisted insights from settings
