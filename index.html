@@ -6572,7 +6572,6 @@ async function buildPremiumBanner(c, tabKey) {
   const url     = await api.getPremiumUrl().catch(() => 'https://jyllitool.netlify.app/')
   const tabName = (PREMIUM_TAB_NAMES[currentLang] || PREMIUM_TAB_NAMES.en)[tabKey] || tabKey
   // Telemetry: log which locked tab STANDARD user attempted to open
-  try { api.sendAnalytics?.({ event: 'premium_tab_view', page: tabKey, userId: settings.discordUserId }) } catch {}
   // Scrim: position:absolute inset:0 on #page-content (position:relative).
   // Disable scroll on #page-content so inset:0 covers the full visible area.
   const scrim = document.createElement('div')
@@ -6599,7 +6598,6 @@ async function buildPremiumBanner(c, tabKey) {
 async function _buildTabPremiumLock(c, tabKey) {
   const url = await api.getPremiumUrl().catch(() => 'https://jyllitool.netlify.app/')
   const tabName = (PREMIUM_TAB_NAMES[currentLang] || PREMIUM_TAB_NAMES.en)[tabKey] || tabKey
-  try { api.sendAnalytics?.({ event: 'premium_tab_view', page: tabKey, userId: settings.discordUserId }) } catch {}
   const lock = document.createElement('div')
   lock.className = 'tab-premium-lock'
   lock.innerHTML = `

@@ -2764,8 +2764,10 @@ ipcMain.handle('get-unused-devices', async () => {
 ipcMain.handle('remove-devices', async (_, ids) => {
   const send = (msg, level) => mainWindow?.webContents.send('log', { msg, level, ts: new Date().toLocaleTimeString() })
   if (!Array.isArray(ids) || ids.length > 500) return { ok: false }
+  let _done = 0
+  const progress = ok => { _done++; mainWindow?.webContents.send('device-remove-progress', { current: _done, total: ids.length, ok }) }
   for (const id of ids) {
-    if (!V.isDeviceInstanceId(id)) { send('  Skipped invalid device id', 'warn'); continue }
+    if (!V.isDeviceInstanceId(id)) { send('  Skipped invalid device id', 'warn'); progress(false); continue }
     // pnputil permanently removes the device node (works on ghost/non-present devices). Argument array → no shell.
     let ok = (await runFile('pnputil.exe', ['/remove-device', id])).ok
     if (!ok) {
@@ -2779,6 +2781,7 @@ ipcMain.handle('remove-devices', async (_, ids) => {
       ok = r.out.includes('OK')
     }
     send(`  ${ok ? 'Removed' : 'Could not remove'}: ${id.split('\\').pop()}`, ok ? 'ok' : 'warn')
+    progress(ok)
   }
   return { ok: true }
 })
@@ -3030,6 +3033,54 @@ $results | ConvertTo-Json -Compress
   try {
     const data = JSON.parse(r.out)
     return Array.isArray(data) ? data : [data]
+  } catch { return [] }
+})
+
+// Auto-Optimize pre-answers: what this PC actually uses. Only keys that can be detected reliably are returned; the rest keep the saved answer.
+// Locale-independent (registry values, CIM classes, process/package names): the app is used on Finnish Windows too.
+ipcMain.handle('autodetect-aom-answers', async () => {
+  const r = await runPS(`
+    $o = [ordered]@{}
+    $prog = (Get-ItemProperty 'HKCU:\\Software\\Microsoft\\Windows\\Shell\\Associations\\UrlAssociations\\http\\UserChoice' -EA SilentlyContinue).ProgId
+    $o.useEdge   = [bool](($prog -match 'MSEdge') -or (Get-Process msedge -EA SilentlyContinue))
+    $o.useChrome = [bool](($prog -match 'Chrome') -or (Get-Process chrome -EA SilentlyContinue))
+    $o.useOneDrive = [bool](Get-Process OneDrive -EA SilentlyContinue)
+    $bt = Get-PnpDevice -Class Bluetooth -Status OK -EA SilentlyContinue | Where-Object { $_.FriendlyName -and $_.FriendlyName -notmatch 'Enumerator|Radio|Adapter|Generic|RFCOMM|Transport|LE ' }
+    $o.useBluetooth = [bool]($bt | Select-Object -First 1)
+    $pr = Get-CimInstance Win32_Printer -EA SilentlyContinue | Where-Object { $_.Name -notmatch 'PDF|XPS|OneNote|Fax' }
+    $o.usePrinter = [bool]($pr | Select-Object -First 1)
+    $o.useXbox = [bool](Get-AppxPackage -Name Microsoft.GamingApp -EA SilentlyContinue)
+    $o | ConvertTo-Json -Compress
+  `, 20000).catch(() => ({ out: '' }))
+  try {
+    const j = JSON.parse(r.out || '{}')
+    const out = {}
+    for (const k of ['useEdge', 'useChrome', 'useOneDrive', 'useBluetooth', 'usePrinter', 'useXbox']) if (typeof j[k] === 'boolean') out[k] = j[k]
+    return out
+  } catch { return {} }
+})
+
+// Pulse: per-core load for the heatmap ({ "0": 12, "1": 40, ... }). CIM instead of Get-Counter so it works on any Windows language.
+ipcMain.handle('pulse-get-core-loads', async () => {
+  if (!requiresPremium('pulse-get-core-loads')) return {}
+  const r = await runPS("Get-CimInstance Win32_PerfFormattedData_PerfOS_Processor -EA SilentlyContinue | Where-Object { $_.Name -ne '_Total' } | Sort-Object { [int](($_.Name -split ',')[-1]) } | Select-Object -ExpandProperty PercentProcessorTime | ConvertTo-Json -Compress", 8000)
+  try {
+    const v = JSON.parse(r.out || '[]')
+    const arr = Array.isArray(v) ? v : [v]
+    const out = {}
+    arr.forEach((x, i) => { if (Number.isFinite(Number(x))) out[i] = Math.max(0, Math.min(100, Math.round(Number(x)))) })
+    return out
+  } catch { return {} }
+})
+
+// Pulse: recent sessions for the history card (written by pulse-save-session).
+ipcMain.handle('pulse-get-history', async () => {
+  if (!requiresPremium('pulse-get-history')) return []
+  try {
+    const h = JSON.parse(fs.readFileSync(path.join(app.getPath('userData'), 'game-history.json'), 'utf8'))
+    return (Array.isArray(h) ? h : []).slice(0, 10).map(x => ({
+      ts: x.ts, presetName: x.displayName || x.game || null, elapsedMs: x.durationMs || 0, avgFps: x.avgFps || null, smoothness: null,
+    }))
   } catch { return [] }
 })
 
