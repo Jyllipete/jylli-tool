@@ -9269,7 +9269,7 @@ function renderStartupRow(item) {
   // Abbreviate long command paths; preserve full path in title for hover
   let displayCmd = item.Command || ''
   if (displayCmd.length > 60) {
-    const stripped = displayCmd.replace(/^"([^"]+)".*/, '$1').replace(/^(\S+).*/, '$1')
+    const stripped = displayCmd.startsWith('"') ? displayCmd.replace(/^"([^"]+)".*/, '$1') : displayCmd.replace(/^(\S+).*/, '$1')   // quoted paths may contain spaces
     const parts = stripped.replace(/\\/g, '/').split('/')
     if (parts.length >= 2) displayCmd = `…\\${parts.slice(-2).join('\\')}`
   }
