@@ -529,6 +529,7 @@
 <script src="js/shell.js"></script>
 <script src="js/pages/home.js"></script>
 <script src="js/pages/settings.js"></script>
+<script src="js/pages/system-processes.js"></script>
 <script src="js/ui-helpers.js"></script>
 <script src="js/fivem-logic.js"></script>
 <script>
@@ -3123,58 +3124,6 @@ function _pulseThermalUpdate() {
 let boostActive = false
 
 
-function buildProcessManager(c) {
-  c.innerHTML = `
-  <!-- ProcessFreeze: CPU Hog Rail -->
-  <div id="pf-hog-rail" style="background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:14px 16px;margin-bottom:12px">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-      <span style="font-size:11px;font-weight:700;color:var(--accent);letter-spacing:0.08em;text-transform:uppercase"><i class="fa fa-snowflake" style="margin-right:6px"></i>CPU Hog Rail</span>
-      <span style="font-size:10px;color:var(--muted)">Freeze any process — auto-restores when your game exits</span>
-    </div>
-    <div id="pf-hog-cards" style="display:flex;gap:8px;flex-wrap:wrap">
-      <div style="font-size:11px;color:var(--muted);padding:8px 0">${tUI('pmScanning')}</div>
-    </div>
-    <div id="pf-session-report" style="display:none;margin-top:10px;padding:8px 10px;background:rgba(0,212,180,0.05);border:1px solid rgba(0,212,180,0.2);border-radius:8px;font-size:11px;color:var(--muted)"></div>
-  </div>
-  <!-- Process list -->
-  <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:12px;overflow:hidden">
-    <div style="display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--border)">
-      <span style="font-size:11px;font-weight:700;color:#888;letter-spacing:0.05em;flex:1">${tUI('pmRunningProcesses')}</span>
-      <input id="proc-filter" type="text" placeholder="${tUI('pmFilter')}" oninput="filterProcesses(this.value)"
-        style="background:var(--bg-dark);border:1px solid var(--border);border-radius:5px;padding:4px 10px;color:var(--white);font-size:10px;font-family:inherit;outline:none;width:140px">
-      <button class="btn btn-ghost btn-sm" onclick="loadProcesses(this)"><i class="fa fa-arrows-rotate"></i> ${tUI('startupRefresh')}</button>
-      <span id="proc-count" style="font-size:10px;color:var(--muted)"></span>
-    </div>
-    <div style="overflow-x:auto;max-height:500px;overflow-y:auto">
-      <table class="process-table" id="proc-table">
-        <thead><tr>
-          <th onclick="sortProcesses('name')" id="th-name">${tUI('pmColProcess')}<span class="sort-arrow" id="sa-name">▼</span></th>
-          <th onclick="sortProcesses('cpu')" style="width:80px" id="th-cpu">${tUI('pmColCpu')}<span class="sort-arrow" id="sa-cpu">▼</span></th>
-          <th onclick="sortProcesses('ram')" style="width:90px" id="th-ram">${tUI('pmColRam')}<span class="sort-arrow" id="sa-ram">▼</span></th>
-          <th style="width:50px">${tUI('pmColPid')}</th>
-          <th style="width:44px"></th>
-        </tr></thead>
-        <tbody id="proc-tbody"><tr><td colspan="5" style="text-align:center;color:var(--muted);padding:24px">${tUI('pmLoading')}</td></tr></tbody>
-      </table>
-    </div>
-  </div>
-  `
-
-  loadProcesses()
-  startPfHogRail()
-
-  // Sync Launch Rules checkboxes and arm count after DOM is ready
-  syncLaunchRuleChecks()
-
-  // If a game is already running when Pulse tab is opened, light up immediately
-  api.getSystemContext().then(ctx => {
-    if (ctx?.gameRunning) {
-      setLaunchRuleDots(true)
-      _gwStripShow(ctx.gameName || ctx.gameExe || '')
-    }
-  }).catch(() => {})
-}
-
 // ─── ProcessFreeze: CPU Hog Rail logic ───────────────────────────────────────
 let _pfHogInterval = null
 let _pfFrozenLocal = {}  // pid → { name, frozenAt, lastCpu }
@@ -3206,19 +3155,13 @@ async function _pfUpdateHogRail() {
       .sort((a, b) => (frozenPids.has(b.Id) ? 1 : b.CPU) - (frozenPids.has(a.Id) ? 1 : a.CPU))
       .slice(0, 6)
     if (hogs.length === 0) {
-      container.innerHTML = `<div style="font-size:11px;color:var(--muted);padding:8px 0">${tUI('pmNoHogs')}</div>`
+      container.innerHTML = `<div class="j-muted">${tUI('pmNoHogs')}</div>`
       return
     }
     container.innerHTML = hogs.map(p => {
       const frozen = frozenPids.has(p.Id)
       const savings = _pfFrozenSavings[p.Id] ? ` · Saved ${Math.round(_pfFrozenSavings[p.Id] / 1000)}s CPU` : ''
-      return `<div style="background:var(--bg-dark);border:1px solid ${frozen ? 'rgba(100,200,255,0.4)' : 'var(--border)'};border-radius:8px;padding:9px 12px;min-width:130px;cursor:default">
-        <div style="font-size:10px;font-weight:600;color:${frozen ? '#5ecfff' : 'var(--text)'};margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:120px" title="${escAttr(p.Name)}">${escHtml(p.Name)}</div>
-        <div style="font-size:9px;color:var(--muted);margin-bottom:6px">${frozen ? `<span style="color:#5ecfff">❄ ${tUI('pmFrozen')}</span>` : `CPU ${p.CPU?.toFixed(1) || '0.0'}%`}${savings}</div>
-        <button class="btn btn-ghost btn-xs" onclick="pfToggleFreeze(${Number(p.Id) || 0},${jsArg(p.Name)},${Number(p.CPU) || 0})" style="font-size:9px;padding:2px 8px;gap:4px">
-          <i class="fa ${frozen ? 'fa-play' : 'fa-snowflake'}"></i> ${frozen ? tUI('pmDefrost') : tUI('pmFreeze')}
-        </button>
-      </div>`
+      return pfHogCardHtml(p, frozen, savings)
     }).join('')
   } catch {} finally { _pfHogBusy = false }
 }
@@ -3249,7 +3192,7 @@ function pfShowSessionReport(frozenStats) {
   const el = document.getElementById('pf-session-report')
   if (!el || !frozenStats || Object.keys(frozenStats).length === 0) return
   const lines = Object.entries(frozenStats).map(([n, ms]) => `${n}: ${tUI('pmCpuFreed').replace('{s}', Math.round(ms/1000))}`)
-  el.innerHTML = `<i class="fa fa-check-circle" style="color:var(--accent);margin-right:6px"></i><strong>${tUI('pmSessionSavings')}</strong> ${lines.join(' · ')}`
+  el.innerHTML = `<i class="fa fa-check-circle" aria-hidden="true"></i><div><strong>${tUI('pmSessionSavings')}</strong> ${lines.map(escHtml).join(' · ')}</div>`
   el.style.display = 'block'
 }
 
@@ -3503,7 +3446,7 @@ async function loadProcesses(btn) {
   } catch {
     procData = []
     const tbody = document.getElementById('proc-tbody')
-    if (tbody) tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--danger);padding:16px">${tUI('pmLoadError')}</td></tr>`
+    if (tbody) tbody.innerHTML = `<tr><td colspan="5" class="j-center">${tUI('pmLoadError')}</td></tr>`
   } finally {
     if (btn) { btn.innerHTML = `<i class="fa fa-arrows-rotate"></i> ${tUI('startupRefresh')}`; btn.disabled = false }
   }
@@ -3528,37 +3471,6 @@ function _updateSortIndicators() {
     th.classList.toggle('sort-active', procSort.key === k)
     sa.classList.toggle('asc', procSort.key === k && procSort.dir === 1)
   })
-}
-
-function renderProcessTable(data) {
-  const tbody = document.getElementById('proc-tbody')
-  if (!tbody) return
-  const sorted = [...data].sort((a, b) => {
-    const va = procSort.key === 'name' ? (a.Name||'') : procSort.key === 'cpu' ? (a.CPU||0) : (a.RAM||0)
-    const vb = procSort.key === 'name' ? (b.Name||'') : procSort.key === 'cpu' ? (b.CPU||0) : (b.RAM||0)
-    return procSort.key === 'name' ? va.localeCompare(vb) * procSort.dir : (va - vb) * procSort.dir
-  })
-  const maxRam = Math.max(...sorted.map(p => p.RAM||0), 1)
-  const maxCpu = Math.max(...sorted.map(p => p.CPU||0), 1)
-  tbody.innerHTML = sorted.slice(0, 60).map(p => {
-    const ramPct = Math.round((p.RAM||0) / maxRam * 100)
-    const cpuPct = Math.min(100, Math.round((p.CPU||0) / maxCpu * 100))
-    const ramColor = ramPct > 70 ? 'var(--danger)' : ramPct > 40 ? 'var(--warning)' : 'var(--info)'
-    return `<tr>
-      <td>${escHtml(p.Name || '?')}</td>
-      <td class="cpu-bar-cell">
-        <div class="cpu-bar-wrap"><div class="cpu-bar-fill" style="width:${cpuPct}%;background:var(--pink)"></div></div>
-        <div style="font-size:9px;color:var(--muted);margin-top:2px">${p.CPU||0}%</div>
-      </td>
-      <td>
-        <div class="cpu-bar-wrap"><div class="cpu-bar-fill" style="width:${ramPct}%;background:${ramColor}"></div></div>
-        <div style="font-size:9px;color:var(--muted);margin-top:2px">${(p.RAM||0).toFixed(0)} MB</div>
-      </td>
-      <td style="font-size:10px;color:var(--muted)">${p.Id||'?'}</td>
-      <td><button class="kill-btn" onclick="doKillProcess(${Number(p.Id) || 0},${jsArg(String(p.Name || ''))})"><i class="fa fa-xmark"></i></button></td>
-    </tr>`
-  }).join('')
-  _updateSortIndicators()
 }
 
 async function doKillProcess(pid, name) {
