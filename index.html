@@ -10092,7 +10092,7 @@ async function buildScheduler(c) {
       </div>
       <div style="margin-top:10px">
         <div style="font-size:10px;color:var(--muted);margin-bottom:5px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px">${tUI('schedLabelLabel')}</div>
-        <input type="text" class="styled-select" id="sched-label" placeholder="${tUI('schedLabelPlaceholder')}" maxlength="255" style="width:100%">
+        <input type="text" class="styled-select" id="sched-label" placeholder="${escAttr(tUI('schedLabelPlaceholder'))}" maxlength="255" style="width:100%">
       </div>
       <div style="margin-top:12px;text-align:right">
         <button class="btn btn-primary" onclick="doScheduleTask()">${tUI('schedAdd')}</button>
@@ -12366,41 +12366,41 @@ async function buildBiosTuner(c) {
 
   // ── Recovery Guide ─────────────────────────────────────────────────────────
   const recoveryGuide = document.createElement('div')
-  recoveryGuide.style.cssText = 'background:#081414;border:1.5px solid #1a6060;border-radius:10px;padding:0;margin-bottom:16px;overflow:hidden'
+  recoveryGuide.style.cssText = 'background:var(--c-bg-elevated);border:1px solid var(--c-border-subtle);border-radius:10px;padding:0;margin-bottom:16px;overflow:hidden'
   recoveryGuide.innerHTML = `
     <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 16px;cursor:pointer;user-select:none" onclick="this.parentElement.querySelector('.recovery-body').style.display = this.parentElement.querySelector('.recovery-body').style.display==='none' ? '' : 'none'; this.querySelector('.recovery-chevron').style.transform = this.parentElement.querySelector('.recovery-body').style.display==='' ? 'rotate(180deg)' : ''">
       <div style="display:flex;align-items:center;gap:10px">
-        <i class="fa fa-life-ring" style="color:#3ab8b8;font-size:15px"></i>
-        <span style="font-size:12px;font-weight:700;color:#3ab8b8;letter-spacing:0.3px">${tUI('biosRecoveryTitle')}</span>
+        <i class="fa fa-life-ring" style="color:var(--c-accent);font-size:15px"></i>
+        <span style="font-size:12px;font-weight:700;color:var(--c-accent);letter-spacing:0.3px">${tUI('biosRecoveryTitle')}</span>
       </div>
-      <i class="fa fa-chevron-down recovery-chevron" style="color:#3ab8b8;font-size:11px;transition:transform 0.2s;transform:rotate(180deg)"></i>
+      <i class="fa fa-chevron-down recovery-chevron" style="color:var(--c-accent);font-size:11px;transition:transform 0.2s;transform:rotate(180deg)"></i>
     </div>
-    <div class="recovery-body" style="padding:0 16px 14px;border-top:1px solid #1a4040">
+    <div class="recovery-body" style="padding:0 16px 14px;border-top:1px solid var(--c-border-subtle)">
       <div style="display:grid;gap:10px;margin-top:12px">
-        <div style="background:#0a1f1f;border-radius:7px;padding:10px 14px">
-          <div style="font-size:11px;font-weight:700;color:#3ab8b8;margin-bottom:5px"><i class="fa fa-power-off"></i> ${tUI('biosRecNoBoot')}</div>
-          <ol style="margin:0;padding-left:16px;font-size:10.5px;color:#b0c8c8;line-height:1.8">
+        <div style="background:var(--c-bg-raised, rgba(255,255,255,0.03));border-radius:7px;padding:10px 14px">
+          <div style="font-size:11px;font-weight:700;color:var(--c-accent);margin-bottom:5px"><i class="fa fa-power-off"></i> ${tUI('biosRecNoBoot')}</div>
+          <ol style="margin:0;padding-left:16px;font-size:10.5px;color:var(--c-text-secondary);line-height:1.8">
             <li>${tUI('biosRecNoBootStep1')}</li>
             <li>${tUI('biosRecNoBootStep2')}</li>
             <li>${tUI('biosRecNoBootStep3')}</li>
             <li>${tUI('biosRecNoBootStep4')}</li>
           </ol>
         </div>
-        <div style="background:#0a1f1f;border-radius:7px;padding:10px 14px">
-          <div style="font-size:11px;font-weight:700;color:#3ab8b8;margin-bottom:5px"><i class="fa fa-display"></i> ${tUI('biosRecBlackScreen')}</div>
-          <div style="font-size:10.5px;color:#b0c8c8;line-height:1.8">${tUI('biosRecBlackScreenDesc')}</div>
+        <div style="background:var(--c-bg-raised, rgba(255,255,255,0.03));border-radius:7px;padding:10px 14px">
+          <div style="font-size:11px;font-weight:700;color:var(--c-accent);margin-bottom:5px"><i class="fa fa-display"></i> ${tUI('biosRecBlackScreen')}</div>
+          <div style="font-size:10.5px;color:var(--c-text-secondary);line-height:1.8">${tUI('biosRecBlackScreenDesc')}</div>
         </div>
-        <div style="background:#0a1f1f;border-radius:7px;padding:10px 14px">
-          <div style="font-size:11px;font-weight:700;color:#3ab8b8;margin-bottom:5px"><i class="fa fa-memory"></i> ${tUI('biosRecXmpCrash')}</div>
-          <div style="font-size:10.5px;color:#b0c8c8;line-height:1.8">${tUI('biosRecXmpCrashDesc')}</div>
+        <div style="background:var(--c-bg-raised, rgba(255,255,255,0.03));border-radius:7px;padding:10px 14px">
+          <div style="font-size:11px;font-weight:700;color:var(--c-accent);margin-bottom:5px"><i class="fa fa-memory"></i> ${tUI('biosRecXmpCrash')}</div>
+          <div style="font-size:10.5px;color:var(--c-text-secondary);line-height:1.8">${tUI('biosRecXmpCrashDesc')}</div>
         </div>
-        <div style="background:#0a1f1f;border-radius:7px;padding:10px 14px">
-          <div style="font-size:11px;font-weight:700;color:#3ab8b8;margin-bottom:5px"><i class="fa fa-brands fa-windows"></i> ${tUI('biosRecHyperV')}</div>
-          <div style="font-size:10.5px;color:#b0c8c8;line-height:1.8">${tUI('biosRecHyperVDesc')}</div>
+        <div style="background:var(--c-bg-raised, rgba(255,255,255,0.03));border-radius:7px;padding:10px 14px">
+          <div style="font-size:11px;font-weight:700;color:var(--c-accent);margin-bottom:5px"><i class="fa fa-brands fa-windows"></i> ${tUI('biosRecHyperV')}</div>
+          <div style="font-size:10.5px;color:var(--c-text-secondary);line-height:1.8">${tUI('biosRecHyperVDesc')}</div>
         </div>
-        <div style="background:#0a1f1f;border-radius:7px;padding:10px 14px">
-          <div style="font-size:11px;font-weight:700;color:#3ab8b8;margin-bottom:5px"><i class="fa fa-microchip"></i> ${tUI('biosRecScewin')}</div>
-          <div style="font-size:10.5px;color:#b0c8c8;line-height:1.8">${tUI('biosRecScewinDesc')}</div>
+        <div style="background:var(--c-bg-raised, rgba(255,255,255,0.03));border-radius:7px;padding:10px 14px">
+          <div style="font-size:11px;font-weight:700;color:var(--c-accent);margin-bottom:5px"><i class="fa fa-microchip"></i> ${tUI('biosRecScewin')}</div>
+          <div style="font-size:10.5px;color:var(--c-text-secondary);line-height:1.8">${tUI('biosRecScewinDesc')}</div>
         </div>
       </div>
     </div>`

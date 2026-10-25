@@ -263,3 +263,9 @@ input[type="range"] { accent-color: var(--c-accent); }
 .qw-card, .qw-card.qw-done { background: var(--c-bg-elevated); box-shadow: none; border: 1px solid var(--c-border-subtle); }
 .qw-card:hover { transform: none; box-shadow: none; border-color: var(--c-border-strong); }
 .qw-card.qw-done { border-left: 3px solid rgba(46,204,113,0.55); }
+
+/* ── Pulse launch rules: inline 9–10px type was unreadable; scale up and lift the dark rail colours ── */
+#pulse-launch-rules .lr-card [style*="font-size:10px"] { font-size: 12.5px !important; filter: brightness(1.45); }
+#pulse-launch-rules .lr-card [style*="font-size:9px"] { font-size: 11.5px !important; color: var(--c-text-tertiary) !important; }
+#pulse-launch-rules .pulse-section-label, #pulse-launch-rules-armed { font-size: 11px !important; }
+#pulse-launch-rules .lr-card { padding-top: 11px; padding-bottom: 11px; }
