@@ -1715,7 +1715,7 @@ Write-Output "DISK_SIZE_GB=$([math]::Round($disk.Size / 1GB, 0))"
       if (key === 'CPU_THREADS' && parseInt(val)) info.cpuThreads = parseInt(val)
       if (key === 'OS_CAPTION' && val) info.osCaption = val
       if (key === 'NIC_NAME' && val) info.nicName = val
-      if (key === 'NIC_SPEED' && parseInt(val)) info.nicSpeed = Math.round(parseInt(val) / 1e9)
+      if (key === 'NIC_SPEED' && parseInt(val)) info.nicSpeed = Math.round(parseInt(val) / 1e8) / 10
       if (key === 'NIC_DRIVER' && val) info.nicDriver = val
       if (key === 'GPU_DRIVER' && val) info.gpuDriver = val
       if (key === 'RAM_SPEED' && parseInt(val)) info.ramHz = parseInt(val)

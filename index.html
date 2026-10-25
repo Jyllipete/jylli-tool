@@ -21515,7 +21515,7 @@ async function gpRenderBundles() {
   const el = document.getElementById('gp-bundle-list')
   if (!el) return
   const bundles = await api.listGameBundles().catch(() => ({}))
-  const entries = Object.values(bundles || {})
+  const entries = Object.values(bundles || {}).filter(b => b && typeof b === 'object' && b.name)
   if (entries.length === 0) {
     el.innerHTML = `<div style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--bg-card2);border:1px dashed var(--border);border-radius:8px">
       <span style="font-size:16px;opacity:0.4"><i class="fa fa-layer-group"></i></span>
@@ -21639,7 +21639,7 @@ async function doGPScan(btn, auto = false) {
   try {
     const found = await api.detectGames()
     gpScanned = true
-    found.forEach(f => {
+    ;(Array.isArray(found) ? found : []).forEach(f => {
       const g = GAME_LIST.find(g => g.id === f.id)
       if (g) { g.installed = f.installed; g.running = f.isRunning; g.installPath = f.installPath; g.lastPlayed = f.lastPlayed }
     })

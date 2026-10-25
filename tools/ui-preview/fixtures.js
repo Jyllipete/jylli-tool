@@ -9,7 +9,7 @@ const sysInfo = {
   gpu: 'NVIDIA GeForce RTX 4070 Ti', gpuBrand: 'nvidia', gpuDriver: '561.09', vramMB: 12288,
   diskType: 'NVMe SSD', nvme: true, diskModel: 'Samsung SSD 990 PRO 2TB', diskSizeGB: 1863, diskTotalGB: 1863, diskUsedGB: 812,
   displayRes: '2560x1440', displayRefresh: 165, isLaptop: false, isWifi: false, onBattery: false,
-  hasEthernet: true, hasBluetooth: true, hasInternet: true, nicName: 'Intel(R) Ethernet Controller I225-V', nicSpeed: '2.5 Gbps', nicDriver: '1.1.4.43',
+  hasEthernet: true, hasBluetooth: true, hasInternet: true, nicName: 'Intel(R) Ethernet Controller I225-V', nicSpeed: 2.5, nicDriver: '1.1.4.43',
   fivemInstalled: true, hwInfoStatus: 'ok',
 }
 
@@ -73,7 +73,8 @@ function respond(name, args, ctx) {
     case 'getHealthScore': return { total: 78, breakdown: { temp: { score: 14, max: 20, label: 'Temps' }, startup: { score: 9, max: 20, label: 'Startup' }, tweaks: { score: 18, max: 20, label: 'Tweaks' } } }
     case 'getMetricsHistory': return Array.from({ length: 48 }, (_, i) => ({ ts: now - (48 - i) * 1800000, cpu: 20 + Math.round(15 * Math.abs(Math.sin(i / 4))), ram: 42 + Math.round(6 * Math.sin(i / 7)) }))
     case 'getPremiumUrl': return 'https://jyllitool.netlify.app/'
-    case 'detectGames': return { ok: true, games: [] }
+    case 'detectGames': return [{ id: 'fortnite', installed: true, isRunning: false, installPath: 'C:/Games/Fortnite', lastPlayed: '10/24/2026' }, { id: 'cs2', installed: true, isRunning: false, installPath: 'D:/Steam/cs2', lastPlayed: '10/25/2026' }]
+    case 'listGameBundles': return { 'Comp CS2': { name: 'Comp CS2', gameId: 'cs2', tweakProfileName: 'Gaming Mode', pulsePreset: 'cs2' } }
     case 'getGameWatcherStatus': return { running: false }
     case 'pulseGetPresets': return [{ id: 'fivem', name: 'FiveM', exe: 'FiveM_GTAProcess' }, { id: 'valorant', name: 'Valorant', exe: 'VALORANT-Win64-Shipping' }, { id: 'fortnite', name: 'Fortnite', exe: 'FortniteClient' }]
     case 'pulseDetectGame': return { ok: true, game: null }
