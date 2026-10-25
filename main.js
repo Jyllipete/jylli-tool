@@ -1158,7 +1158,7 @@ app.whenReady().then(() => {
       const result = await createRestorePointInternal(send)
       if (result.ok !== false) {
         const updated = { ...loadSettings(), lastAutoSnapshot: now.toISOString() }
-        fs.writeFileSync(SETTINGS_PATH, JSON.stringify(updated, null, 2), 'utf8')
+        saveSettings(updated)
         mainWindow?.webContents.send('auto-snapshot-done', { ts: now.toISOString() })
       }
     } catch {}
@@ -1411,22 +1411,32 @@ function migrateSettings(s) {
   return s
 }
 
+// A settings file that fails to parse must never be silently replaced by {} (the next save from any of ~50 writers would then wipe
+// tweak states and preferences). The broken file is kept as *.corrupt-<time>, and the last good backup is used instead.
 function loadSettings() {
+  if (!fs.existsSync(SETTINGS_PATH)) return {}
   try {
-    if (fs.existsSync(SETTINGS_PATH)) {
-      const raw = JSON.parse(fs.readFileSync(SETTINGS_PATH, 'utf8'))
-      const migrated = migrateSettings(raw)
-      // Persist the migration if schema version changed
-      if (raw.__schemaVersion !== SETTINGS_SCHEMA_VERSION) {
-        saveSettings(migrated)
-      }
-      return migrated
-    }
-  } catch {}
-  return {}
+    const raw = JSON.parse(fs.readFileSync(SETTINGS_PATH, 'utf8'))
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) throw new Error('settings root is not an object')
+    const migrated = migrateSettings(raw)
+    if (raw.__schemaVersion !== SETTINGS_SCHEMA_VERSION) saveSettings(migrated)   // persist the migration
+    return migrated
+  } catch (e) {
+    debugLog('[Settings] unreadable: ' + e.message)
+    try { fs.renameSync(SETTINGS_PATH, SETTINGS_PATH + '.corrupt-' + Date.now()) } catch {}
+    try {
+      const bak = JSON.parse(fs.readFileSync(SETTINGS_PATH + '.bak', 'utf8'))
+      if (bak && typeof bak === 'object' && !Array.isArray(bak)) { fs.writeFileSync(SETTINGS_PATH, JSON.stringify(bak, null, 2)); return migrateSettings(bak) }
+    } catch {}
+    return {}
+  }
 }
+let _settingsBakAt = 0
 function saveSettings(data) {
   try {
+    if (!data || typeof data !== 'object' || Array.isArray(data)) return
+    // keep the previous good file as .bak (at most once a minute — a copy per save would double the writes)
+    if (Date.now() - _settingsBakAt > 60000 && fs.existsSync(SETTINGS_PATH)) { try { fs.copyFileSync(SETTINGS_PATH, SETTINGS_PATH + '.bak'); _settingsBakAt = Date.now() } catch {} }
     const tmp = SETTINGS_PATH + '.tmp'
     fs.writeFileSync(tmp, JSON.stringify(data, null, 2))
     fs.renameSync(tmp, SETTINGS_PATH)
@@ -1844,7 +1854,7 @@ ipcMain.handle('get-system-info', async () => {
   let settingsDirty = false
   if (cpu.includes('intel') && saved['tweak_amd-power-plan']) { delete saved['tweak_amd-power-plan']; settingsDirty = true }
   if (cpu.includes('amd')   && saved['tweak_intel-power-plan']) { delete saved['tweak_intel-power-plan']; settingsDirty = true }
-  if (settingsDirty) fs.writeFileSync(SETTINGS_PATH, JSON.stringify(saved, null, 2))
+  if (settingsDirty) saveSettings(saved)
 
   return info
 })
