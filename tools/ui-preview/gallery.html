@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Jylli UI gallery</title>
+<link rel="stylesheet" href="../../css/fonts.css">
+<link rel="stylesheet" href="../../css/tokens.css">
+<link rel="stylesheet" href="../../css/ui.css">
+<link rel="stylesheet" href="../../assets/fa/css/all.min.css">
+<style>
+  body { margin: 0; padding: 28px; background: var(--surface-0); font-family: var(--font); font-size: var(--fs-3); color: var(--c-text-primary); }
+  h2 { margin: 28px 0 10px; font: 500 var(--fs-1)/1 var(--font); letter-spacing: .06em; text-transform: uppercase; color: var(--c-text-tertiary); }
+  .cols { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; max-width: 1180px; }
+</style>
+</head>
+<body class="j-root">
+<div id="g"></div>
+<script src="../../js/theme-sync.js"></script>
+<script src="../../js/ui.js"></script>
+<script>
+const { html, raw } = ui
+const sec = (t, body) => html`<h2>${t}</h2>${body}`
+const spark = [4, 7, 5, 9, 12, 8, 14, 11, 17, 13, 19, 16]
+const out = html`
+<div class="cols">
+<div>
+${sec('Buttons', html`<div class="j-hstack" style="flex-wrap:wrap">
+  ${ui.button({ label: 'Optimize now', variant: 'primary', icon: 'bolt' })}${ui.button({ label: 'Secondary' })}${ui.button({ label: 'Ghost', variant: 'ghost' })}${ui.button({ label: 'Delete', variant: 'danger', icon: 'trash' })}
+  ${ui.button({ label: 'Small', size: 'sm' })}${ui.button({ label: 'Disabled', disabled: true })}${ui.button({ label: 'Settings', iconOnly: true, icon: 'gear', variant: 'ghost' })}
+</div>`)}
+${sec('Badges and keys', html`<div class="j-hstack" style="flex-wrap:wrap">
+  ${ui.badge('Neutral')}${ui.badge('Safe', 'ok')}${ui.badge('Medium', 'warn')}${ui.badge('Risky', 'danger')}${ui.badge('New', 'info')}${ui.badge('Applied', 'accent')}${ui.pro()}${ui.kbd('Ctrl')} ${ui.kbd('K')}
+</div>`)}
+${sec('Tabs and segmented', html`${ui.tabs([{ id: 'a', label: 'Windows' }, { id: 'b', label: 'CPU & Memory', count: 4 }, { id: 'c', label: 'GPU', pro: true }, { id: 'd', label: 'Network' }], 'b', 'void 0')}
+<div style="margin-top:12px">${ui.segmented([{ id: 'r', label: 'Recommended' }, { id: 'a', label: 'Applied' }, { id: 'all', label: 'All' }], 'a', 'void 0')}</div>`)}
+${sec('Settings group', ui.group('Behaviour', [
+  ui.row({ title: 'Game Shield', sub: 'Pauses background apps while a game is running', control: ui.switch({ checked: true, label: 'Game Shield' }) }),
+  ui.row({ title: 'Update Guard', sub: 'Blocks Windows Update during sessions', badges: ui.badge('Safe', 'ok'), control: ui.switch({ label: 'Update Guard' }) }),
+  ui.row({ title: 'Disable HPET', sub: 'Changes the system timer. Needs a reboot.', badges: [ui.badge('Medium', 'warn'), ui.pro()], control: ui.switch({ disabled: true, label: 'HPET' }), onclick: 'void 0', active: true }),
+]))}
+${sec('Callouts', html`<div class="j-stack">${ui.callout('Everything here can be undone from Restore points.', 'info')}${ui.callout('Settings applied.', 'ok')}${ui.callout('A reboot is needed for this to take effect.', 'warn')}${ui.callout('Could not write to the registry.', 'danger')}</div>`)}
+</div>
+<div>
+${sec('Stats', html`<div class="j-grid" style="grid-template-columns:repeat(2,1fr)">
+  ${ui.stat({ label: 'CPU', value: 34, unit: '%', sub: '62 °C', spark: ui.spark(spark, 160, 28) })}
+  ${ui.stat({ label: 'RAM', value: '11.2', unit: 'GB', sub: 'of 32 GB', spark: ui.spark(spark.slice().reverse(), 160, 28) })}
+  ${ui.stat({ label: 'Health', value: 91, tone: 'ok', sub: 'Good shape' })}
+  ${ui.stat({ label: 'Issues', value: 3, tone: 'warn', sub: '2 fixable now' })}
+</div>`)}
+${sec('Meters and ring', html`<div class="j-hstack" style="gap:24px;align-items:center">
+  ${ui.ring(87, '87', 'ok', 88)}${ui.ring(52, '52', 'accent', 88)}${ui.ring(18, '18', 'danger', 88)}
+  <div class="j-stack" style="flex:1">${ui.meter(30)}${ui.meter(60, 'ok')}${ui.meter(78, 'warn')}${ui.meter(95, 'danger')}</div>
+</div>`)}
+${sec('Card', ui.card({ title: 'Pulse', sub: 'Last session', actions: ui.button({ label: 'Open', size: 'sm' }), body: html`<div class="j-hstack" style="gap:24px"><div><div class="j-stat-label">Avg FPS</div><div class="j-stat-value">144</div></div><div><div class="j-stat-label">1% low</div><div class="j-stat-value">96</div></div></div>` }))}
+${sec('Table', ui.table({ columns: [{ key: 'n', label: 'Process', sortable: true }, { key: 'c', label: 'CPU', align: 'right', sortable: true }, { key: 'm', label: 'Memory', align: 'right', render: r => html`<span class="j-num">${r.m} MB</span>` }], sort: { key: 'c', dir: 'desc' }, onSort: 'void', rows: [{ n: 'chrome.exe', c: '12.4%', m: 812 }, { n: 'Discord.exe', c: '3.1%', m: 420 }, { n: 'System', c: '0.4%', m: 24 }] }))}
+${sec('Empty, lock, loading', html`<div class="j-card">${ui.empty({ icon: 'inbox', title: 'Nothing to clean', sub: 'Run a scan to see what can be removed.', action: ui.button({ label: 'Scan', variant: 'primary' }) })}</div>
+${ui.lock({ title: 'Pro feature', sub: 'Unlock BIOS tuning and the scheduler.', cta: 'See plans', onclick: 'void 0' })}
+<div class="j-hstack" style="gap:16px">${ui.spinner('Scanning…')}${ui.skeleton(160, 12)}${ui.skeleton(80, 12)}</div>`)}
+</div>
+</div>
+<div style="max-width:1180px;margin-top:20px">${ui.section({ title: 'Gaming', sub: 'Pulse, game profiles and latency', actions: ui.button({ label: 'Create restore point', size: 'sm' }), tabs: ui.tabs([{ id: 'p', label: 'Pulse' }, { id: 'g', label: 'Games' }, { id: 'a', label: 'Apps' }], 'p', 'void 0') })}</div>`
+document.getElementById('g').innerHTML = String(out)
+window.__galleryReady = true
+</script>
+</body>
+</html>

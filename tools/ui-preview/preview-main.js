@@ -20,6 +20,7 @@ const TAG = String(arg('tag', 'run'))
 // --overlay name=js;name2=js2 : after boot, run JS (e.g. open a dialog) and shoot it as overlay-<name>.png
 const OVERLAYS = arg('overlay', null) ? String(arg('overlay')).split(';').map(x => { const i = x.indexOf('='); return [x.slice(0, i), x.slice(i + 1)] }) : []
 const ACCENT = arg('accent', null)
+const GALLERY = !!arg('gallery', false)   // shoot tools/ui-preview/gallery.html (every component) instead of the app
 
 const PAGES = ['dashboard', 'preflight', 'fixes', 'restore-points', 'performance', 'gaming', 'network', 'privacy-cleanup', 'startup-manager', 'process-manager',
   'latency-monitor', 'bios-tuner', 'pulse', 'fivem', 'scheduler', 'changelog', 'settings']
@@ -77,6 +78,15 @@ async function main() {
   await app.whenReady()
   fs.mkdirSync(OUT, { recursive: true })
   const report = []
+  if (GALLERY) {
+    const { win, logs } = await makeWindow('tools/ui-preview/gallery.html', { lang: 'en', premium: true }, SIZES[0])
+    await sleep(800)
+    const h = await win.webContents.executeJavaScript('document.documentElement.scrollHeight')
+    win.setContentSize(SIZES[0][0], Math.min(h, 4000)); await sleep(400)
+    await shot(win, path.join(OUT, TAG, 'gallery.png'))
+    logs.forEach(l => report.push(l)); console.log(report.join('
+') || 'gallery ok'); win.destroy(); app.exit(0); return
+  }
   for (const lang of LANGS) for (const tier of TIERS) for (const size of SIZES) {
     const name = `${TAG}/${lang}-${tier}-${size.join('x')}`
     const ctx = { lang, premium: tier === 'premium', accent: ACCENT && ACCENT !== true ? ACCENT : null }
