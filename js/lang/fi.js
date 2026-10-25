@@ -592,7 +592,7 @@ LANG.fi = {
       aomUncheckAll:'Poista kaikki valinnat', aomCheckAll:'Valitse kaikki', aomSelectedCount:'{n} / {total} valittu',
       aomSkipForNow:'Ohita nyt', aomProceedAnyway:'Jatka silti',
       aomViewHistory:'Näytä historia', aomViewApplied:'Näytä sovelletut', aomUndoRun:'Kumoa', aomElapsed:'Kulunut:', aomEstTime:'Arvio ~{s}s',
-      lsWelcomeTo:'Tervetuloa', lsSubtitle:'Tämä sovellus vaatii jäsenyyttä Jylli Tool Discord-palvelimella.',
+      lsPoint1:'Hio Windows pelaamiseen muutamalla klikkauksella', lsPoint2:'Jokainen muutos on peruttavissa palautuspisteillä', lsPoint3:'Asetuksesi pysyvät tällä koneella', lsWelcomeTo:'Tervetuloa', lsSubtitle:'Tämä sovellus vaatii jäsenyyttä Jylli Tool Discord-palvelimella.',
       lsLinkBtn:'Yhdistä Discord', lsOpeningBrowser:'Avataan selain…', lsWaiting:'Odotetaan Discordia…',
       lsAuthorize:'Hyväksy äsken avautuneessa selainvälilehdessä.',
       lsBrowserFailed:'Selain ei auennut. Käytä alla olevaa linkkiä kirjautuaksesi.',

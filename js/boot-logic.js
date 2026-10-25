@@ -4,56 +4,39 @@
 function showLockScreen(deniedMsg) {
   const el = document.createElement('div')
   el.id = 'lock-screen'
-  el.style.cssText = 'position:fixed;inset:0;z-index:99999;background:var(--c-bg-base);opacity:0;transition:opacity 0.2s'
+  el.className = 'j-lockscreen'
   const appVer = typeof APP_VERSION !== 'undefined' ? APP_VERSION : ''
-  el.innerHTML = `
-    <div id="lock-left">
-      <div id="lock-left-logo">
-        <div style="width:56px;height:56px;background:var(--c-accent-muted);border:1.5px solid var(--c-accent);border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:26px;box-shadow:0 0 0 1px var(--c-accent-ring);color:var(--c-accent)"><i class="fa fa-bolt"></i></div>
-        <div>
-          <div style="font-size:20px;font-weight:700;color:var(--c-text-primary);margin-bottom:4px">Jylli Tool</div>
-          <div style="font-size:12px;color:var(--c-text-secondary);line-height:1.5;max-width:200px">${tUI('lsSubtitle')}</div>
-        </div>
-      </div>
-      <div id="lock-left-footer">${appVer ? 'v' + appVer : ''}</div>
-    </div>
+  const { html } = ui
+  const point = (ic, key) => html`<li><i class="fa fa-${ic}" aria-hidden="true"></i>${tUI(key)}</li>`
+  el.innerHTML = String(html`
+    <div class="j-lock-wrap">
+      <div class="j-lock-mark"><i class="fa fa-bolt" aria-hidden="true"></i></div>
+      <div class="j-lock-brand">Jylli Tool</div>
+      <p class="j-lock-lead">${tUI('lsSubtitle')}</p>
+      <ul class="j-lock-points">${point('gauge-high', 'lsPoint1')}${point('shield-halved', 'lsPoint2')}${point('rotate-left', 'lsPoint3')}</ul>
 
-    <div id="lock-right">
-      <span class="ls-welcome-pill">${tUI('lsWelcomeTo')}</span>
-      <div class="ls-title">Jylli Tool</div>
-
-      <div class="ls-card" id="lock-card">
-        <div class="ls-card-row" id="lock-row-idle">
-          <div class="ls-icon-circle"><i class="fa-regular fa-user"></i></div>
-          <div style="flex:1;font-size:14px;font-weight:600;color:var(--c-text-primary)">${tUI('lsLinkBtn')}</div>
-          <button id="lock-link-btn" style="background:var(--c-accent);color:var(--c-bg-base);border:none;border-radius:8px;padding:9px 18px;font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:7px;transition:filter .15s;white-space:nowrap"
-            onmouseenter="if(!this.disabled)this.style.filter='brightness(1.12)'"
-            onmouseleave="if(!this.disabled)this.style.filter=''">
-            <i class="fab fa-discord"></i> ${tUI('lsLinkBtn')}
-          </button>
+      <div class="j-lock-card" id="lock-card">
+        <div class="j-lock-row" id="lock-row-idle">
+          <button class="j-btn j-btn-primary j-lock-cta" id="lock-link-btn" type="button"><i class="fab fa-discord" aria-hidden="true"></i> ${tUI('lsLinkBtn')}</button>
         </div>
-        <div class="ls-card-row ls-card-row-auth" id="lock-row-auth" style="display:none">
-          <div class="ls-icon-circle"><i class="fa fa-rotate fa-spin" id="lock-spinner-icon"></i></div>
-          <div style="flex:1">
-            <div id="lock-status" style="font-size:13px;color:var(--c-text-secondary)"></div>
-            <div id="lock-denied-hint" style="display:none;font-size:11px;color:var(--c-text-secondary);margin-top:3px;line-height:1.5"></div>
+        <div class="j-lock-row j-lock-auth" id="lock-row-auth" hidden>
+          <i class="fa fa-rotate fa-spin j-lock-spin" id="lock-spinner-icon" aria-hidden="true"></i>
+          <div class="j-lock-auth-text">
+            <div id="lock-status" class="j-lock-status"></div>
+            <div id="lock-denied-hint" class="j-lock-hint" hidden></div>
           </div>
-          <button id="lock-cancel-btn" style="display:none;background:transparent;color:var(--c-text-secondary);border:1px solid var(--c-border-default);border-radius:7px;padding:6px 13px;font-size:12px;cursor:pointer;white-space:nowrap;transition:border-color .15s,color .15s"
-            onmouseenter="this.style.borderColor='var(--c-border-strong)';this.style.color='var(--c-text-primary)'"
-            onmouseleave="this.style.borderColor='var(--c-border-default)';this.style.color='var(--c-text-secondary)'">
-            ${tUI('lsCancel')}
-          </button>
+          <button class="j-btn j-btn-ghost j-btn-sm" id="lock-cancel-btn" type="button" hidden>${tUI('lsCancel')}</button>
         </div>
       </div>
 
-      <div class="ls-footer">
-        <div id="lock-manual-url" style="display:none;margin-bottom:6px">${tUI('lsBrowserFallback')} <a id="lock-open-url" href="#">${tUI('lsClickHere')}</a></div>
-        <div>${tUI('lsAlreadyHave')} <span id="lock-retry">${tUI('lsRetry')}</span></div>
+      <div class="j-lock-foot">
+        <div id="lock-manual-url" hidden>${tUI('lsBrowserFallback')} <a id="lock-open-url" href="#">${tUI('lsClickHere')}</a></div>
+        <div>${tUI('lsAlreadyHave')} <button class="j-link" id="lock-retry" type="button">${tUI('lsRetry')}</button></div>
+        <div class="j-lock-ver">${appVer ? 'v' + appVer : ''}</div>
       </div>
-    </div>
-  `
+    </div>`)
   document.body.appendChild(el)
-  requestAnimationFrame(() => { el.style.opacity = '1' })
+  requestAnimationFrame(() => { el.classList.add('j-lockscreen-in') })
 
   const rowIdle = document.getElementById('lock-row-idle')
   const rowAuth = document.getElementById('lock-row-auth')
@@ -66,30 +49,27 @@ function showLockScreen(deniedMsg) {
   let countdownTimer = null
 
   function showAuthRow() {
-    rowIdle.style.opacity = '0.35'
-    rowIdle.style.pointerEvents = 'none'
-    rowAuth.style.display = 'flex'
-    rowAuth.classList.remove('ls-card-row-auth')
+    rowIdle.classList.add('j-lock-dim')
+    rowAuth.hidden = false
+    rowAuth.classList.remove('j-lock-auth-in')
     void rowAuth.offsetWidth
-    rowAuth.classList.add('ls-card-row-auth')
+    rowAuth.classList.add('j-lock-auth-in')
   }
 
   function hideAuthRow() {
-    rowIdle.style.opacity = ''
-    rowIdle.style.pointerEvents = ''
-    rowAuth.style.display = 'none'
-    status.textContent = ''; status.style.color = ''
-    document.getElementById('lock-denied-hint').style.display = 'none'
-    cancelBtn.style.display = 'none'
+    rowIdle.classList.remove('j-lock-dim')
+    rowAuth.hidden = true
+    status.textContent = ''; status.classList.remove('j-lock-status-danger')
+    document.getElementById('lock-denied-hint').hidden = true
+    cancelBtn.hidden = true
   }
 
   function resetToIdle() {
     clearInterval(pollTimer); clearInterval(countdownTimer)
     pollTimer = null; countdownTimer = null
     btn.disabled = false
-    btn.innerHTML = `<i class="fab fa-discord"></i> ${tUI('lsLinkBtn')}`
-    btn.style.background = 'var(--c-accent)'
-    document.getElementById('lock-manual-url').style.display = 'none'
+    btn.innerHTML = `<i class="fab fa-discord" aria-hidden="true"></i> ${tUI('lsLinkBtn')}`
+    document.getElementById('lock-manual-url').hidden = true
     hideAuthRow()
   }
 
@@ -98,7 +78,7 @@ function showLockScreen(deniedMsg) {
   async function startAuth() {
     btn.disabled = true
     status.textContent = tUI('lsOpeningBrowser')
-    status.style.color = ''
+    status.classList.remove('j-lock-status-danger')
     showAuthRow()
     try {
       const r = await api.authStart()
@@ -113,14 +93,14 @@ function showLockScreen(deniedMsg) {
       if (r.url && manualDiv && manualLink) {
         manualLink.onclick = (e) => { e.preventDefault(); api.openExternal(r.url) }
         if (r.browserFailed) {
-          manualDiv.style.display = 'block'
+          manualDiv.hidden = false
           status.textContent = tUI('lsBrowserFailed')
         } else {
-          setTimeout(() => { if (document.getElementById('lock-manual-url')) manualDiv.style.display = 'block' }, 4000)
+          setTimeout(() => { if (document.getElementById('lock-manual-url')) manualDiv.hidden = false }, 4000)
         }
       }
 
-      cancelBtn.style.display = 'flex'
+      cancelBtn.hidden = false
       status.textContent = r.browserFailed ? tUI('lsBrowserFailed') : tUI('lsAuthorize')
 
       let secsLeft = 120
@@ -152,9 +132,9 @@ function showLockScreen(deniedMsg) {
             const card = document.getElementById('lock-card')
             if (card) {
               card.innerHTML = `
-                <div class="ls-card-row" style="justify-content:center;flex-direction:column;gap:10px;padding:28px 24px;text-align:center">
-                  <img src="${avatarUrl}" class="ls-avatar-reveal" style="width:52px;height:52px;border-radius:50%;border:2px solid var(--c-accent);margin:0 auto">
-                  <div style="color:var(--success);font-size:13px;font-weight:600">${tUI('lsGranted')}</div>
+                <div class="j-lock-row j-lock-granted">
+                  <img src="${avatarUrl}" class="j-lock-avatar" alt="">
+                  <div class="j-lock-ok">${tUI('lsGranted')}</div>
                 </div>`
             }
             setTimeout(() => {
@@ -165,11 +145,11 @@ function showLockScreen(deniedMsg) {
             }, 1200)
           } else if (p.status === 'denied') {
             clearInterval(pollTimer); clearInterval(countdownTimer)
-            status.style.color = 'var(--danger)'
+            status.classList.add('j-lock-status-danger')
             status.textContent = tUI('lsDenied')
             const hint = document.getElementById('lock-denied-hint')
-            if (hint) { hint.textContent = tUI('lsDeniedHint'); hint.style.display = 'block' }
-            cancelBtn.style.display = 'none'
+            if (hint) { hint.textContent = tUI('lsDeniedHint'); hint.hidden = false }
+            cancelBtn.hidden = true
             btn.disabled = false
           }
         } catch {}
@@ -182,7 +162,6 @@ function showLockScreen(deniedMsg) {
 
   btn.addEventListener('click', startAuth)
   retry.addEventListener('click', async () => {
-    retry.style.color = 'var(--c-text-secondary)'
     retry.textContent = tUI('lsChecking')
     const r = await api.authVerify().catch(() => ({ ok: false }))
     if (r.ok) {
@@ -191,7 +170,7 @@ function showLockScreen(deniedMsg) {
       document.getElementById('lock-screen')?.remove()
       init(r.isPremium === true)
     }
-    else { retry.style.color = 'var(--c-accent)'; retry.textContent = tUI('lsRetry') }
+    else { retry.textContent = tUI('lsRetry') }
   })
 }
 

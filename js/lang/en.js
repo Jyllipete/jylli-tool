@@ -614,7 +614,7 @@ LANG.en = {
       aomUncheckAll:'Uncheck All', aomCheckAll:'Check All', aomSelectedCount:'{n} / {total} selected',
       aomSkipForNow:'Skip for Now', aomProceedAnyway:'Proceed Anyway',
       aomViewHistory:'View History', aomViewApplied:'View Applied', aomUndoRun:'Undo', aomElapsed:'Elapsed:', aomEstTime:'Est. ~{s}s',
-      lsWelcomeTo:'Welcome to', lsSubtitle:'This app requires membership in the Jylli Tool Discord server.',
+      lsPoint1:'Fine-tune Windows for gaming in a few clicks', lsPoint2:'Every change is reversible with restore points', lsPoint3:'Your settings stay on this PC', lsWelcomeTo:'Welcome to', lsSubtitle:'This app requires membership in the Jylli Tool Discord server.',
       lsLinkBtn:'Link Discord', lsOpeningBrowser:'Opening browser…', lsWaiting:'Waiting for Discord…',
       lsAuthorize:'Authorize in the browser tab that just opened.',
       lsBrowserFailed:'Browser didn\'t open. Use the link below to authenticate.',

@@ -464,3 +464,33 @@
 .sched-day-chip.sched-day-active { background: var(--c-accent-muted); border-color: var(--c-accent-ring); color: var(--c-accent); }
 .j-sched-loading { padding: 16px; }
 .sched-bulk-bar { padding: 8px 16px 0; }
+
+/* ═══ Lock screen ═══ */
+#lock-screen.j-lockscreen { position: fixed; inset: 0; z-index: 99999; display: flex !important; align-items: center; justify-content: center; padding: 24px; background: var(--c-bg-base); font-family: var(--font); opacity: 0; transition: opacity .2s var(--ease-default); overflow: auto; }
+#lock-screen.j-lockscreen.j-lockscreen-in { opacity: 1; }
+.j-lockscreen [hidden] { display: none !important; }
+.j-lock-wrap { width: 100%; max-width: 380px; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 14px; }
+.j-lock-mark { width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; border-radius: var(--r-lg); background: var(--c-accent-muted); border: 1px solid var(--c-accent-ring); color: var(--c-accent); font-size: 20px; }
+.j-lock-brand { font: 600 var(--fs-7, 28px)/1.1 var(--font); letter-spacing: -.02em; color: var(--c-text-primary); }
+.j-lock-lead { max-width: 320px; font-size: var(--fs-3); line-height: 1.5; color: var(--c-text-secondary); }
+.j-lock-points { list-style: none; margin: 4px 0 6px; padding: 0; display: flex; flex-direction: column; gap: 8px; align-items: flex-start; }
+.j-lock-points li { display: flex; align-items: center; gap: 10px; font-size: var(--fs-2); color: var(--c-text-secondary); }
+.j-lock-points i { width: 16px; text-align: center; color: var(--c-accent); }
+.j-lock-card { width: 100%; background: var(--c-bg-elevated); border: 1px solid var(--c-border-default); border-radius: var(--r-lg); overflow: hidden; }
+.j-lock-row { display: flex; align-items: center; gap: 12px; padding: 14px; transition: opacity .15s; }
+.j-lock-row.j-lock-dim { opacity: .35; pointer-events: none; }
+.j-lock-cta { width: 100%; height: 38px; justify-content: center; }
+.j-lock-auth { border-top: 1px solid var(--c-border-default); text-align: left; }
+.j-lock-auth-in { animation: j-lock-in .2s var(--ease-snap) both; }
+@keyframes j-lock-in { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+.j-lock-spin { color: var(--c-text-tertiary); }
+.j-lock-auth-text { flex: 1; min-width: 0; }
+.j-lock-status { font-size: var(--fs-2); color: var(--c-text-secondary); }
+.j-lock-status-danger { color: var(--danger, #F2555A); }
+.j-lock-hint { margin-top: 3px; font-size: var(--fs-1); line-height: 1.5; color: var(--c-text-tertiary); }
+.j-lock-granted { flex-direction: column; gap: 10px; padding: 24px; justify-content: center; }
+.j-lock-avatar { width: 52px; height: 52px; border-radius: 50%; border: 2px solid var(--c-accent); animation: j-lock-in .3s var(--ease-snap) both; }
+.j-lock-ok { font-size: var(--fs-3); font-weight: 600; color: var(--success, #3DD68C); }
+.j-lock-foot { display: flex; flex-direction: column; gap: 6px; font-size: var(--fs-1); color: var(--c-text-tertiary); }
+.j-lock-foot a, .j-link { color: var(--c-accent); background: none; border: 0; padding: 0; font: inherit; cursor: pointer; text-decoration: underline; }
+.j-lock-ver { font-family: var(--font-mono); opacity: .7; }
