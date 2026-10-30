@@ -41,5 +41,8 @@ module.exports = String.raw`(() => {
   if (primary > 1) add('multiple-primary', String(primary))
   const lines = []
   for (const [k, v] of Object.entries(out)) { const u = [...new Set(v)]; lines.push(k + ' x' + v.length + ': ' + u.slice(0, 6).join(' | ') + (u.length > 6 ? ' …' : '')) }
-  return 'texts=' + texts + (lines.length ? '\n  ' + lines.join('\n  ') : ' clean')
+  // style signature of the rendered page: lets two CSS versions be compared (same signature = same computed styles)
+  let sig = 5381, count = 0
+  for (const el of root.querySelectorAll('*')) { if (!vis(el)) continue; const s = getComputedStyle(el); const str = el.tagName + s.display + s.color + s.backgroundColor + s.fontSize + s.fontWeight + s.borderTopWidth + s.borderLeftWidth + s.padding + s.margin + s.width + s.height; for (let i = 0; i < str.length; i++) sig = ((sig << 5) + sig + str.charCodeAt(i)) | 0; count++ }
+  return 'texts=' + texts + ' sig=' + (sig >>> 0).toString(16) + '/' + count + (lines.length ? '\n  ' + lines.join('\n  ') : ' clean')
 })()`
