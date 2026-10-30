@@ -14755,12 +14755,12 @@ async function buildGameOpti(c) {
     <div class="gp-watcher-body">
       <div class="gp-watcher-title">
         ${tUI('gpAutoProfilesTitle')}
-        ${autoPulseEnabled ? `<span style="font-size:11px;font-weight:700;background:rgba(46,204,113,0.12);color:var(--success);border:1px solid var(--success-bd);border-radius:9999px;padding:1px 7px">Auto-Pulse</span>` : ''}
+        ${autoPulseEnabled ? `<span class="j-badge j-badge-ok">${tUI('gpAutoPulseBadge')}</span>` : ''}
       </div>
       <div class="gp-watcher-sub">
         ${gameWatcherRunning ? tUI('gpWatcherActiveDesc') : tUI('gpAutoProfilesDesc')}
       </div>
-      ${autoPulseActive ? `<div style="display:flex;align-items:center;gap:6px;margin-top:6px;background:rgba(46,204,113,0.07);border:1px solid rgba(46,204,113,0.22);border-radius:6px;padding:4px 10px"><span style="width:6px;height:6px;border-radius:50%;background:var(--success);flex-shrink:0;animation:gpStatusPulse 1.4s ease-in-out infinite;display:inline-block"></span><span style="font-size:11px;font-weight:700;color:var(--success)">AUTO-PULSE ACTIVE</span></div>` : ''}
+      ${autoPulseActive ? `<div class="j-live-strip"><span class="j-live-dot"></span><span>${tUI('gpAutoPulseActive')}</span></div>` : ''}
     </div>
     <div id="gp-watcher-dot" class="gp-watcher-dot ${gameWatcherRunning ? 'running' : 'stopped'}" style="display:none"></div>
     <button class="btn btn-sm ${gameWatcherRunning ? 'btn-danger' : 'btn-info'}" id="gp-watcher-toggle-btn" onclick="toggleGameWatcher()">
@@ -14775,7 +14775,7 @@ async function buildGameOpti(c) {
   bundlesWrap.innerHTML = `
     <div class="gp-bundles-header">
       <span class="gp-bundles-label"><i class="fa fa-layer-group"></i>${tUI('gpBundlesTitle')}</span>
-      <button class="btn btn-ghost btn-sm" onclick="gpCreateBundle()" style="font-size:11px;color:var(--c-accent-fg);border-color:rgba(124,58,237,0.3)">
+      <button class="j-btn j-btn-sm j-btn-ghost" onclick="gpCreateBundle()">
         <i class="fa fa-plus"></i> ${tUI('gpBundleCreate')}
       </button>
     </div>
@@ -14793,7 +14793,7 @@ async function buildGameOpti(c) {
   leftPanel.innerHTML = `
     <div class="gp-list-header">
       <input class="gp-search" placeholder="${tUI('gpSearchPlaceholder')}" oninput="filterGPList(this.value)">
-      <button class="btn btn-ghost btn-sm" onclick="doGPScan(this)"><i class="fa fa-magnifying-glass"></i> ${tUI('gpScanBtn')}</button>
+      <button class="j-btn j-btn-sm j-btn-ghost" onclick="doGPScan(this)"><i class="fa fa-magnifying-glass"></i> ${tUI('gpScanBtn')}</button>
     </div>
     <div class="gp-items" id="gp-items"></div>`
 

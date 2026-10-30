@@ -656,3 +656,8 @@
 .j-legend { display: flex; align-items: center; gap: 6px; padding: 4px 18px 2px; flex-wrap: wrap; font-size: var(--fs-2); color: var(--c-text-tertiary); }
 .j-legend .startup-impact { cursor: default; margin-left: 4px; }
 .j-legend-label { margin-right: 2px; }
+
+/* Games: live strip */
+.j-live-strip { display: inline-flex; align-items: center; gap: 6px; margin-top: 6px; padding: 3px 10px; border-radius: var(--r-sm); background: var(--c-success-muted); color: var(--c-success); font-size: var(--fs-2); font-weight: 500; }
+.j-live-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--c-success); animation: gpStatusPulse 1.4s ease-in-out infinite; }
+.gp-watcher-card.state-running { background: var(--surface-1); border-color: var(--c-success-ring); }
