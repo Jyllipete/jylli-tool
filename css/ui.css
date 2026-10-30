@@ -42,7 +42,7 @@
 .j-badge-danger { color: var(--c-danger);  background: var(--c-danger-muted);  border-color: transparent; }
 .j-badge-info   { color: var(--c-info);    background: var(--c-info-muted);    border-color: transparent; }
 .j-badge-accent { color: var(--c-accent-fg);  background: var(--c-accent-muted);  border-color: transparent; }
-.j-badge-pro    { color: var(--c-accent-fg); background: transparent; border: 1px solid var(--c-accent-ring); letter-spacing: .04em; text-transform: uppercase; font-size: 10px; height: 16px; }
+.j-badge-pro    { color: var(--c-accent-fg); background: transparent; border: 1px solid var(--c-accent-ring); letter-spacing: .04em; text-transform: uppercase; font-size:11px; height: 16px; }
 .j-kbd {
   display: inline-flex; align-items: center; height: 18px; padding: 0 5px; border-radius: 4px;
   font: 500 var(--fs-1)/1 var(--font-mono); color: var(--c-text-tertiary); background: var(--surface-2); border: 1px solid var(--hairline-strong);
@@ -181,7 +181,7 @@
 .j-table .j-center { text-align: center; }
 .j-table th.j-sortable { cursor: pointer; user-select: none; }
 .j-table th.j-sortable:hover { color: var(--c-text-primary); }
-.j-table th i { margin-left: 4px; font-size: 9px; }
+.j-table th i { margin-left: 4px; font-size:11px; }
 
 /* ── Section header ── */
 .j-section-head { position: sticky; top: 0; z-index: 5; padding: 20px 28px 0; background: var(--surface-0); }
@@ -427,7 +427,7 @@
 .j-hog-state { color: var(--c-info); }
 .j-proc-wrap { max-height: 520px; border: 0; border-radius: 0; background: none; }
 .j-proc-val { margin-top: 3px; font-size: var(--fs-1); color: var(--c-text-tertiary); }
-.process-table .sort-arrow { margin-left: 4px; font-size: 9px; opacity: .35; }
+.process-table .sort-arrow { margin-left: 4px; font-size:11px; opacity: .35; }
 .process-table th.sort-active .sort-arrow { opacity: 1; color: var(--c-accent); }
 .process-table .sort-arrow.asc { display: inline-block; transform: rotate(180deg); }
 .j-card-actions .j-input { width: 160px; height: 26px; font-size: var(--fs-2); }
@@ -571,3 +571,20 @@
 
 /* Scrollbars follow the scheme */
 * { scrollbar-width: thin; scrollbar-color: var(--hairline-strong) transparent; }
+
+/* ── Legacy page normalization (pages not yet rebuilt on ui.*): quiet buttons, no glow, no side rails, sentence-case labels ── */
+#page-content :where(button, .btn, .section-card, .pulse-hero, .pulse-hero-badge, .lr-card, .startup-summary-bar, .rp-v2-hero, [class*="-hero"], [class*="-badge"], .pill-slider) { box-shadow: none; }
+#page-content .btn-primary { background: var(--c-accent-muted); color: var(--c-accent-fg); border: 1px solid var(--c-accent-ring); filter: none; font-weight: 500; }
+#page-content .btn-primary:hover:not(:disabled) { background: color-mix(in srgb, var(--c-accent) 22%, transparent); filter: none; }
+#page-content .btn-primary::after { display: none; }
+#page-content .btn-primary:disabled { background: var(--surface-2); color: var(--c-text-tertiary); border-color: var(--hairline); }
+#page-content :is(#pf-scan-btn, #rp-create-btn, #bios-scan-btn, #cleanup-run-btn, #net-apply-btn).btn-primary { background: var(--c-accent); color: var(--on-accent); border-color: transparent; font-weight: 600; }
+#page-content :where(*):not(.j-badge-pro) { text-transform: none; }
+#page-content :where([class*="label"], [class*="badge"], [class*="title"], th, [class*="stat"], [class*="pill"]) { letter-spacing: 0; }
+#page-content :is(.qh-row, .lr-card, .pulse-hero, .startup-summary-bar, .startup-warn-banner, [class*="lr-rail"], .section-header) { border-left-width: 1px; border-left-color: var(--hairline); }
+#page-content .qh-row { position: relative; padding-left: 28px; }
+#page-content .qh-row::before { content: ''; position: absolute; left: 12px; top: 50%; width: 6px; height: 6px; margin-top: -3px; border-radius: 50%; background: var(--c-text-tertiary); }
+#page-content .qh-row.good::before { background: var(--c-success); } #page-content .qh-row.warn::before { background: var(--c-warning); } #page-content .qh-row.bad::before { background: var(--c-danger); }
+#page-content :is(.temp-y-label, .temp-stat, .temp-stat span, .net-hero-score-title, .cleanup-row-size-num.size-small) { color: var(--c-text-tertiary); opacity: 1; }
+#page-content input[type="range"] { min-height: 20px; }
+#page-content .fix-rec-badge, #page-content .sort-arrow { font-size: 11px; }

@@ -20,6 +20,10 @@ const TAG = String(arg('tag', 'run'))
 // --overlay name=js;name2=js2 : after boot, run JS (e.g. open a dialog) and shoot it as overlay-<name>.png
 const OVERLAYS = arg('overlay', null) ? String(arg('overlay')).split(';').map(x => { const i = x.indexOf('='); return [x.slice(0, i), x.slice(i + 1)] }) : []
 const ACCENT = arg('accent', null)
+const SCHEME = String(arg('scheme', 'dark'))   // dark | light | system
+const SCALE = Number(arg('scale', 1)) || 1        // <1 shrinks screenshots (cheaper to view)
+const LINT = !!arg('lint', false)                 // run tools/ui-preview/lint-page.js on every page and put the text report in report.txt
+const NOSHOT = !!arg('noshot', false)             // skip PNGs (use with --lint)
 const GALLERY = !!arg('gallery', false)   // shoot tools/ui-preview/gallery.html (every component) instead of the app
 
 const PAGES = ['dashboard', 'preflight', 'fixes', 'restore-points', 'performance', 'gaming', 'network', 'privacy-cleanup', 'startup-manager', 'process-manager',
@@ -59,8 +63,10 @@ async function makeWindow(file, ctx, [w, h]) {
 }
 
 async function shot(win, file) {
+  if (NOSHOT) return
   fs.mkdirSync(path.dirname(file), { recursive: true })
-  const img = await win.webContents.capturePage()
+  let img = await win.webContents.capturePage()
+  if (SCALE !== 1) { const sz = img.getSize(); img = img.resize({ width: Math.round(sz.width * SCALE), quality: 'good' }) }
   fs.writeFileSync(file, img.toPNG())
 }
 
@@ -93,11 +99,13 @@ async function main() {
     const ready = await appReady(win)
     if (!ready) { report.push(`${name}: APP NEVER BECAME READY`); logs.forEach(l => report.push('   ' + l)); win.destroy(); continue }
     await sleep(1800)   // boot animation + first metrics
+    if (SCHEME !== 'dark') await win.webContents.executeJavaScript(`JylliTheme.applyScheme(${JSON.stringify(SCHEME)})`).catch(() => {})
     for (const page of (ONLY_PAGES || PAGES)) {
       logs.length = 0
       await win.webContents.executeJavaScript(`showPage(${JSON.stringify(page)})`).catch(e => logs.push('[showPage] ' + e.message))
       await sleep(1100)
       await shot(win, path.join(OUT, name, `${page}.png`))
+      if (LINT) { const r = await win.webContents.executeJavaScript(require('./lint-page')).catch(e => 'lint failed: ' + e.message); report.push(`LINT ${name}/${page}: ${r}`) }
       if (logs.length) { report.push(`${name}/${page}:`); logs.forEach(l => report.push('   ' + l)) }
     }
     for (const [oname, js] of OVERLAYS) {
@@ -124,6 +132,7 @@ async function main() {
   }
   const lines = [`# UI preview ${TAG}`, `output: ${OUT}`, '', ...report, '', 'API calls with no fixture (resolved to {ok:false}):',
     ...[...unknownCalls.entries()].sort((a, b) => b[1] - a[1]).map(([k, v]) => `  ${k} ×${v}`)]
+  fs.mkdirSync(path.join(OUT, TAG), { recursive: true })
   fs.writeFileSync(path.join(OUT, TAG, 'report.txt'), lines.join('\n'))
   console.log(lines.join('\n'))
   app.exit(0)

@@ -327,12 +327,35 @@ function _labelIconButtons(root) {
     if (label) { b.setAttribute('aria-label', label); b.setAttribute('data-auto-label', '1') }
   })
 }
+// Legacy pages: give unlabelled form controls a name, and make clickable non-buttons reachable from the keyboard.
+function _a11yEnhance(root) {
+  const scope = root && root.querySelectorAll ? root : document
+  scope.querySelectorAll('input:not([type=hidden]):not([type=checkbox]):not([type=radio]):not([aria-label]):not([aria-labelledby]), select:not([aria-label]):not([aria-labelledby]), textarea:not([aria-label])').forEach(el => {
+    if (el.labels && el.labels.length) return
+    let label = el.getAttribute('placeholder') || el.getAttribute('title')
+    if (!label) {
+      const row = el.closest('.j-row, .gs-slider-row, .slider-row, .form-row, .setting-row, label') || el.parentElement
+      const t = row && row.querySelector('.j-row-title, label, .slider-label, .gs-slider-label, .label, span, b')
+      label = t && t !== el && t.textContent.trim().slice(0, 80)
+    }
+    if (label) el.setAttribute('aria-label', label)
+  })
+  scope.querySelectorAll('[onclick]:not(button):not(a):not(input):not(select):not(label):not([tabindex])').forEach(el => {
+    el.setAttribute('tabindex', '0')
+    if (el.tagName !== 'TR' && el.tagName !== 'TH' && !el.getAttribute('role')) el.setAttribute('role', 'button')
+  })
+}
+document.addEventListener('keydown', e => {
+  if ((e.key !== 'Enter' && e.key !== ' ') || e.target.matches('input, textarea, select, button, a, [contenteditable]')) return
+  const el = e.target.closest && e.target.closest('[onclick][tabindex]')
+  if (el && el === e.target) { e.preventDefault(); el.click() }
+})
 document.addEventListener('DOMContentLoaded', () => {
-  _labelIconButtons(document)
+  _labelIconButtons(document); _a11yEnhance(document)
   let queued = false
   new MutationObserver(() => {
     if (queued) return
     queued = true
-    requestAnimationFrame(() => { queued = false; _labelIconButtons(document) })
+    requestAnimationFrame(() => { queued = false; _labelIconButtons(document); _a11yEnhance(document) })
   }).observe(document.body, { childList: true, subtree: true })
 })
