@@ -154,7 +154,7 @@ async function showWhatsNew(version) {
     _wnData = data
     const v = (version ? data.find(e => e.version === String(version)) : null) || data[0]
     document.getElementById('wn-sidebar').innerHTML = _wnRenderSidebar(data, v.version)
-    document.getElementById('wn-ver').textContent   = `Version ${v.version} · ${v.date}`
+    document.getElementById('wn-ver').textContent   = `Version ${v.version}${v.date ? " · " + v.date : ""}`
     document.getElementById('wn-items').innerHTML   = _wnRenderItems(v.items)
     _openModal('wn-overlay')
   } catch(e) {
