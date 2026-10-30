@@ -119,17 +119,6 @@ html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(-
 #admin-badge.noadmin { background: var(--danger-bg); color: var(--danger); border: 1px solid var(--c-danger-muted); }
 
 /* ─── Specs HUD — inline in titlebar ───────────────────────────────────── */
-#specs-hud { display: flex; align-items: center; gap: 3px; }
-.hud-chip {
-  display: flex; align-items: center; gap: 4px;
-  padding: 4px 9px; border-radius: var(--r-pill);
-  border: 1px solid var(--border2); background: transparent;
-  font-size: 11px; color: var(--gray);
-  cursor: pointer; transition: var(--motion-hover);
-  -webkit-app-region: no-drag;
-  white-space: nowrap;
-}
-.hud-chip:hover { background: var(--bg-card); color: var(--white); border-color: rgba(var(--pink-rgb),0.30); }
 
 /* ─── HUD chip per-hardware colors ──────────────────────────────────────── */
 
@@ -138,25 +127,6 @@ html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(-
 #btn-maximize:hover { background: rgba(var(--c-success-rgb),0.15) !important; color: var(--success) !important; }
 
 /* ─── HUD popover ───────────────────────────────────────────────────────── */
-#hud-popover {
-  position: fixed;
-  background: var(--bg-panel);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 14px 16px;
-  min-width: 220px;
-  max-width: 300px;
-  box-shadow: 0 8px 32px rgba(0,0,0,0.7);
-  z-index: var(--z-tooltip);
-  display: none;
-  animation: cardIn .15s ease;
-}
-#hud-popover.visible { display: block; }
-.hud-pop-title { font-size: 11px; font-weight: 700; color: var(--c-accent-fg); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px; }
-.hud-pop-row { display: flex; justify-content: space-between; align-items: baseline; padding: 4px 0; border-bottom: 1px solid var(--border2); font-size: 11px; }
-.hud-pop-row:last-child { border-bottom: none; }
-.hud-pop-key { color: var(--muted); }
-.hud-pop-val { color: var(--white); font-weight: 600; text-align: right; max-width: 160px; }
 #btn-close:hover { background: var(--danger); color: white; }
 
 /* ─── Body area ──────────────────────────────────────────────────────────── */

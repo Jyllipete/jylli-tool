@@ -475,14 +475,6 @@
       <button class="j-winbtn j-winbtn-close" id="btn-close" onclick="api.close()" data-i18n-tooltip="winClose" data-tooltip="Close" aria-label="Close"><svg width="11" height="11" viewBox="0 0 11 11" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" aria-hidden="true"><path d="M2 2l7 7M9 2L2 9"/></svg></button>
     </div>
   </div>
-  <!-- Legacy spec chips: kept hidden because init code still fills them; the status bar and Home replace them -->
-  <div id="specs-hud" hidden>
-    <div class="hud-chip" id="hud-cpu"><span id="hud-cpu-label">—</span><span id="hud-cpu-sub"></span></div>
-    <div class="hud-chip" id="hud-gpu"><span id="hud-gpu-label">—</span><span id="hud-gpu-sub"></span></div>
-    <div class="hud-chip" id="hud-ram"><span id="hud-ram-label">—</span><span id="hud-ram-sub"></span></div>
-    <div class="hud-chip" id="hud-storage"><span id="hud-storage-label">—</span><span id="hud-storage-sub"></span></div>
-  </div>
-  <div id="hud-popover"></div>
   <span id="titlebar-ver" hidden></span>
 
   <div id="body">
@@ -978,7 +970,6 @@ async function init(isPremium = false) {
   finishLoading()
 
   updateAdminBadge(sysInfo.isAdmin)
-  populateHud(sysInfo)
   api.adminDebugAppend?.({ sysInfoIsAdmin: sysInfo.isAdmin, badgeValue: sysInfo.isAdmin }).catch(() => {})
 
   appendLog(`Jylli Tool v${appVersion} ready.`, 'head')
@@ -8850,79 +8841,7 @@ function showHealthNudgeIfNeeded() {
   }
 }
 
-// ─── Specs HUD strip ──────────────────────────────────────────────────────────
-function populateHud(si) {
-  const cpuShort = si.cpu ? si.cpu.replace(/\s+processor$/i,'').replace('AMD ','').replace('Intel ','') : '—'
-  document.getElementById('hud-cpu-label').textContent = cpuShort
-  document.getElementById('hud-cpu-sub').textContent = si.cpuCores ? si.cpuCores + 'C' : ''
-
-  const gpuShort = si.gpu ? si.gpu.replace('NVIDIA ','').replace('AMD ','') : '—'
-  document.getElementById('hud-gpu-label').textContent = gpuShort
-  const vramGb = si.vramMB >= 1024 ? (si.vramMB / 1024).toFixed(si.vramMB >= 10240 ? 0 : 1) + ' GB' : si.vramMB > 0 ? si.vramMB + ' MB' : ''
-  document.getElementById('hud-gpu-sub').textContent = vramGb
-
-  document.getElementById('hud-ram-label').textContent = si.ramGB > 0 ? si.ramGB + ' GB' : '—'
-  document.getElementById('hud-ram-sub').textContent = si.ramSpec || (si.ramSpeed > 0 ? si.ramSpeed + ' MHz' : '')
-
-  document.getElementById('hud-storage-label').textContent = si.diskType || '—'
-  document.getElementById('hud-storage-sub').textContent = si.diskSizeGB > 0 ? si.diskSizeGB + ' GB' : ''
-}
-
-const HUD_POPOVER_DATA = {
-  cpu: si => ({ title: 'CPU', rows: [
-    ['Model',        si.cpu || '—'],
-    ['Cores',        si.cpuCores ? si.cpuCores + 'C / ' + (si.cpuThreads || '?') + 'T' : '—'],
-    ['Max Speed',    si.cpuSpeed ? si.cpuSpeed + ' MHz' : '—'],
-    ['Architecture', si.arch || '—'],
-  ]}),
-  gpu: si => ({ title: 'GPU', rows: [
-    ['Model',  si.gpu || '—'],
-    ['VRAM',   si.vramMB >= 1024 ? (si.vramMB/1024).toFixed(1) + ' GB' : si.vramMB > 0 ? si.vramMB + ' MB' : '—'],
-    ['Driver', si.gpuDriver ? 'v' + si.gpuDriver : '—'],
-  ]}),
-  ram: si => {
-    const speed = si.ramSpeed > 0 ? si.ramSpeed : si.ramHz > 0 ? si.ramHz : 0
-    const speedStr = speed > 0 ? speed + ' MHz' : '—'
-    const specStr = si.ramType && speed > 0 ? si.ramType + '-' + speed : si.ramSpec || '—'
-    return { title: 'RAM', rows: [
-      ['Capacity', si.ramGB > 0 ? si.ramGB + ' GB' : '—'],
-      ['Type',     si.ramType || '—'],
-      ['Speed',    speedStr],
-      ['Spec',     specStr],
-    ]}
-  },
-  storage: si => ({ title: 'Storage', rows: [
-    ['Model',    si.diskModel || '—'],
-    ['Type',     si.diskType || '—'],
-    ['Capacity', si.diskSizeGB > 0 ? si.diskSizeGB + ' GB' : '—'],
-    ['Used (C:)', si.diskUsedGB > 0 ? si.diskUsedGB + ' / ' + si.diskTotalGB + ' GB' : '—'],
-  ]}),
-}
-
-let _hudActiveChip = null
-function hudOpen(key, chipEl) {
-  const pop = document.getElementById('hud-popover')
-  if (_hudActiveChip === key && pop.classList.contains('visible')) { hudClose(); return }
-  _hudActiveChip = key
-  const si = sysInfo || {}
-  const data = HUD_POPOVER_DATA[key](si)
-  pop.innerHTML = `<div class="hud-pop-title">${data.title}</div>` +
-    data.rows.map(([k,v]) => `<div class="hud-pop-row"><span class="hud-pop-key">${k}</span><span class="hud-pop-val">${v}</span></div>`).join('')
-  const rect = chipEl.getBoundingClientRect()
-  pop.style.top  = (rect.bottom + 6) + 'px'
-  pop.style.left = rect.left + 'px'
-  pop.classList.add('visible')
-}
-function hudClose() {
-  _hudActiveChip = null
-  document.getElementById('hud-popover').classList.remove('visible')
-}
-document.addEventListener('click', e => {
-  if (!e.target.closest('.hud-chip') && !e.target.closest('#hud-popover')) hudClose()
-})
-
-
-// ─── Page: Dashboard ──────────────────────────────────────────────────────────
+// ─── Page: Dashboard ────────────────────────────────────────────────────
 async function loadAiAdvisor() {
   const card = document.getElementById('ai-advisor-card')
   if (!card) return

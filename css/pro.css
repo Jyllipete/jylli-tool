@@ -50,13 +50,6 @@ body::before, body::after { display: none !important; }            /* noise text
 #titlebar .logo-text { font-size: 13.5px; font-weight: 650; letter-spacing: -0.02em; }
 #titlebar .logo > div > span[id="titlebar-ver"] { font-size: 11px !important; color: var(--c-text-tertiary) !important; font-weight: 500; }
 
-.hud-chip {
-  height: 28px; padding: 0 10px; border-radius: 8px; gap: 6px;
-  background: rgba(var(--fx),0.03); border: 1px solid var(--c-border-subtle); color: var(--c-text-secondary);
-  font-size: 11.5px; transition: background .15s, border-color .15s, color .15s;
-}
-.hud-chip:hover { background: rgba(var(--fx),0.06); border-color: var(--c-border-default); color: var(--c-text-primary); }
-
 .header-btn-icon {
   width: 30px; height: 30px; border-radius: 8px; border: 1px solid transparent; background: transparent;
   color: var(--c-text-secondary); display: grid; place-items: center; transition: background .15s, color .15s;
@@ -199,10 +192,6 @@ input[type="range"] { accent-color: var(--c-accent); }
 #titlebar { min-width: 0; overflow: hidden; }
 #titlebar .logo { flex: 0 0 auto; white-space: nowrap; }
 #titlebar .logo > div { display: flex; flex-direction: column; line-height: 1.15; }
-#specs-hud { min-width: 0; flex: 0 1 auto; overflow: hidden; gap: 6px !important; margin-left: 16px; }
-.hud-chip { flex: 0 1 auto; min-width: 0; white-space: nowrap; }
-@media (max-width: 1180px) { #hud-storage { display: none; } }
-@media (max-width: 1040px) { #hud-ram { display: none; } }
 
 /* ── Tweak cards: flat surfaces, applied state shown by a thin accent edge instead of a green gradient ── */
 .tweak-card, .tweak-card.tc-applied, .tweak-card.tc-preapplied { background: var(--c-bg-elevated); box-shadow: none; }

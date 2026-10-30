@@ -590,7 +590,6 @@
 #page-content .fix-rec-badge, #page-content .sort-arrow { font-size: 11px; }
 
 /* Spec chips moved to Home (This PC) and the status bar; the element stays only because init code fills it */
-#specs-hud { display: none !important; }
 
 /* ── Fixes page ── */
 .j-lede { margin: 0 0 14px; max-width: 70ch; font-size: var(--fs-3); line-height: 1.5; color: var(--c-text-secondary); }
