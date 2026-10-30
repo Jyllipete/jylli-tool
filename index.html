@@ -529,6 +529,7 @@
 <script src="js/pages/system-scheduler.js"></script>
 <script src="js/pages/optimize-fixes.js"></script>
 <script src="js/pages/gaming-latency.js"></script>
+<script src="js/pages/system-diagnostics.js"></script>
 <script src="js/ui-helpers.js"></script>
 <script src="js/fivem-logic.js"></script>
 <script>
@@ -5110,71 +5111,6 @@ const PF_CATEGORIES = [
   },
 ]
 const pfGetFriendlyName = id => { for (const cat of PF_CATEGORIES) { if (cat.names[id]) return cat.names[id] } return id }
-
-function buildPreflight(c) {
-  const hero = document.createElement('div')
-  hero.style.cssText = 'background:linear-gradient(135deg,var(--surface-2),var(--surface-2));border:1px solid var(--hairline-strong);border-radius:10px;padding:14px 18px;margin-bottom:14px'
-  hero.innerHTML = `
-    <div style="font-size:16px;font-weight:800;color:var(--white);margin-bottom:4px"><i class="fa fa-stethoscope" style="color:var(--success)"></i> ${tUI('preflightHeroTitle')}</div>
-    <div style="font-size:11px;color:var(--gray);line-height:1.5">${tUI('preflightHeroSub')}</div>`
-  c.appendChild(hero)
-
-  const btnRow = document.createElement('div')
-  btnRow.style.cssText = 'margin-bottom:14px;display:flex;gap:8px;align-items:center'
-  btnRow.innerHTML = `
-    <button class="btn btn-primary" id="pf-scan-btn" onclick="runPreflightScan(this)"><i class="fa fa-magnifying-glass"></i> ${tUI('preflightRunScan')}</button>
-    <span id="pf-status" style="font-size:11px;color:var(--muted)">${tUI('preflightReady')}</span>`
-  c.appendChild(btnRow)
-
-  const scanBarWrap = document.createElement('div')
-  scanBarWrap.className = 'pf-scan-bar-wrap'
-  scanBarWrap.innerHTML = '<div id="pf-scan-bar"></div>'
-  c.appendChild(scanBarWrap)
-
-  const resultsDiv = document.createElement('div')
-  resultsDiv.id = 'pf-results'
-  c.appendChild(resultsDiv)
-
-  // Driver Update Checker card
-  const driverCard = makeSection(`<i class="fa fa-microchip"></i> ${tUI('pfDriverTitle')}`, tUI('pfDriverDesc'))
-  const driverBody = document.createElement('div')
-  driverBody.style.cssText = 'padding:12px 18px'
-  driverBody.innerHTML = `
-    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px">
-      <button class="btn btn-primary btn-sm" id="driver-scan-btn" onclick="doDriverScan()"><i class="fa fa-magnifying-glass"></i> ${tUI('pfDriverScanBtn')}</button>
-      <span id="driver-status" style="font-size:11px;color:var(--muted)">${tUI('pfDriverReady')}</span>
-      <span id="driver-last-scan" style="font-size:11px;color:var(--muted);margin-left:auto"></span>
-    </div>
-    <div id="driver-results"></div>`
-  driverCard.appendChild(driverBody)
-  c.appendChild(driverCard)
-  // Pre-populate last-scan timestamp from localStorage if available
-  const _driverTs = parseInt(localStorage.getItem('pf_driver_scan_ts') || '0')
-  if (_driverTs > 0) {
-    const _driverAgoMin = Math.round((Date.now() - _driverTs) / 60000)
-    const _driverAgoLabel = _driverAgoMin < 60 ? `${_driverAgoMin}m` : `${Math.round(_driverAgoMin / 60)}h`
-    const _lastScanEl = document.getElementById('driver-last-scan')
-    if (_lastScanEl) _lastScanEl.textContent = tUI('pfDriverLastScan').replace('{t}', _driverAgoLabel)
-  }
-
-  // Benchmark card
-  const benchCard = makeSection(`<i class="fa fa-gauge-high"></i> ${tUI('pfBenchTitle')}`, tUI('pfBenchDesc'))
-  const benchBody = document.createElement('div')
-  benchBody.style.cssText = 'padding:12px 18px'
-  benchBody.innerHTML = `
-    <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px">
-      <button class="btn btn-primary btn-sm" id="bench-run-btn" onclick="doBenchmark()"><i class="fa fa-play"></i> ${tUI('pfBenchRunBtn')}</button>
-      <span id="bench-status" style="font-size:11px;color:var(--muted)">${tUI('pfBenchTime')}</span>
-    </div>
-    <div id="bench-progress" style="display:none;margin-bottom:8px">
-      <div style="height:4px;background:var(--border);border-radius:2px;overflow:hidden">
-        <div id="bench-bar" style="height:100%;width:0%;background:var(--pink);transition:width 0.5s linear"></div>
-      </div>
-    </div>
-    <div id="bench-results"></div>`
-  benchCard.appendChild(benchBody)
-  c.appendChild(benchCard)
-}
 
 async function doDriverScan() {
   const btn = document.getElementById('driver-scan-btn')
