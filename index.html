@@ -16010,9 +16010,9 @@ function buildCleanup(c) {
       <span class="cleanup-hero-size-label">${tUI('cleanupFreeable') || 'freeable'}</span>
     </div>
     <div class="cleanup-hero-actions">
-      <button class="btn btn-sm" style="background:rgba(52,152,219,0.14);color:var(--c-info);border:1px solid rgba(52,152,219,0.3)" onclick="doQuickClean()"><i class="fa fa-broom"></i> ${tUI('cleanupQuickCleanBtn')}</button>
-      <button class="btn btn-ghost btn-sm" id="cleanup-scan-sizes-btn" style="font-size:11px" onclick="scanCleanupSizes()"><i class="fa fa-ruler"></i> ${tUI('cleanupScanSizesBtn')}</button>
-      <button class="btn btn-ghost btn-sm" style="font-size:11px" onclick="estimateCleanupSize()"><i class="fa fa-calculator"></i> ${tUI('cleanupEstimateBtn')}</button>
+      ${ui.button({ label: tUI('cleanupQuickCleanBtn'), icon: 'broom', variant: 'primary', size: 'sm', id: 'cleanup-run-btn', onclick: 'doQuickClean()' })}
+      ${ui.button({ label: tUI('cleanupScanSizesBtn'), icon: 'ruler', variant: 'ghost', size: 'sm', id: 'cleanup-scan-sizes-btn', onclick: 'scanCleanupSizes()' })}
+      ${ui.button({ label: tUI('cleanupEstimateBtn'), icon: 'calculator', variant: 'ghost', size: 'sm', onclick: 'estimateCleanupSize()' })}
     </div>
   `
   c.appendChild(hero)
