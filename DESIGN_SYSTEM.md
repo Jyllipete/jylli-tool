@@ -42,7 +42,7 @@ Rules: accent text always uses `--accent-text` (contrast); status colours are ne
 120–200ms, ease-out (`cubic-bezier(.16,1,.3,1)`), opacity plus 4px translate for entering, scale .99 on press, switch thumb slides. Only transform and opacity animate. `prefers-reduced-motion` collapses everything to ~0. The existing snappy/smooth setting still scales durations.
 
 ## Icons
-Lucide, 1.6px stroke, 14/16/18px, drawn from a local SVG sprite (`ui.icon(name, size)`), so no CDN. Font Awesome is removed once no page uses it. Icons accompany labels; icon-only buttons get an `aria-label` and a tooltip.
+One set: Font Awesome Free (solid), already bundled and used by every page, at 12/14/16px. The plan to move to a Lucide sprite was dropped: it would mean rewriting about 1,400 icon references in pages that are otherwise unchanged, for little visual gain. Icon-only buttons get an `aria-label` (automatic from the title) and a tooltip (`data-tip`).
 
 ## Components
 Buttons: primary, secondary, ghost, danger, icon; sizes sm 28, md 32, lg 36; states default, hover, focus-visible, active, disabled, loading. Inputs, search, select, checkbox, switch, segmented control, slider. Cards, dense list rows (expandable), table (sticky head), tabs, badges, impact bars, stat tile, meter, ring, sparkline, avatar, tooltip, toast (with undo), modal (sm/md/lg), command palette, skeleton, empty and error states, kbd.

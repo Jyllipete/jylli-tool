@@ -1,5 +1,19 @@
 # Changelog
 
+## Julkaisematon (UI 2.0)
+
+### 🎨 Ulkoasu
+- **Vaalea teema**: Asetukset › Ulkoasu › Teema (Järjestelmä / Tumma / Vaalea). Tumma on oletus. Pelien HUD-ikkunat pysyvät aina tummina
+- 5 päävalikkoa (Etusivu, Optimoi, Pelaaminen, Siivous, Järjestelmä) ja välilehdet; mitään ominaisuutta ei poistettu
+- Korjaukset-sivu tiiviiksi listaksi, Pulse: pelin valinta ja Käynnistä ensin, säännöt luettavia myös pois päältä
+- Ei hehkuja, ei värillisiä reunaviivoja, kaikki tekstit vähintään 11 px, parempi kontrasti (tarkistetaan: `npm run check`)
+- Komentopaletti käännetty (EN/FI), uusi toiminto "Vaihda teemaa"; pikanäppäimet Ctrl+1…5, Ctrl+, ja Ctrl+Shift+L
+- Näppäimistöllä käytettävät rivit ja nimetyt kentät kaikilla sivuilla
+
+### 🔧 Tekniset
+- Uusi asetus `colorScheme`; sivujen ikkunat saavat `?scheme=`-parametrin
+- Esikatselutyökalu: `--lint`, `--scheme`, `--scale`, `--noshot`; `tools/check-contrast.js` osana `npm run check`
+
 ## v1.6.0 (nykyinen)
 
 ### 🎨 Uusi ulkoasu
