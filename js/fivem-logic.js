@@ -22,7 +22,7 @@ async function buildFiveM(c) {
     banner.innerHTML = `
       <i class="fa fa-lightbulb"></i>
       <span style="flex:1;color:var(--c-text-secondary)">${tUI('fivemOrderTip')}</span>
-      <button class="fivem-order-banner-dismiss" onclick="localStorage.setItem('fivem_order_dismissed','1');document.getElementById('fivem-order-banner').remove()"><i class="fa fa-xmark"></i></button>
+      <button class="fivem-order-banner-dismiss" aria-label="${tUI('abClose')}" onclick="localStorage.setItem('fivem_order_dismissed','1');document.getElementById('fivem-order-banner').remove()"><i class="fa fa-xmark"></i></button>
     `
     c.appendChild(banner)
   }

@@ -2395,7 +2395,7 @@ canvas.radar-canvas { width: 180px; height: 180px; }
 .net-hero-stats { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; flex-shrink: 0; }
 .net-hero-stat-chips { display: flex; gap: 6px; }
 .net-hero-stat-chip { font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: var(--r-pill); white-space: nowrap; }
-.net-hero-stat-chip.applied { background: rgba(76,175,80,0.12); border: 1px solid rgba(76,175,80,0.28); color: #66bb6a; }
+.net-hero-stat-chip.applied { background: rgba(76,175,80,0.12); border: 1px solid rgba(76,175,80,0.28); color: var(--c-success); }
 .net-hero-stat-chip.pending { background: rgba(243,156,18,0.10); border: 1px solid rgba(243,156,18,0.28); color: var(--c-warning); }
 .net-diag-divider { display: flex; align-items: center; gap: 12px; margin: 18px 0 8px; padding: 0 2px; }
 .net-diag-divider-line { flex: 1; height: 1px; background: var(--c-border-subtle); }
