@@ -30,6 +30,9 @@
 
   // Canvas/SVG code reads token values at draw time through this
   window.cssVar = (name, fallback) => (getComputedStyle(document.documentElement).getPropertyValue(name) || '').trim() || fallback || ''
+  // Status colours resolved from the active scheme. Returns a hex value, so callers may append an alpha suffix or paint on a canvas.
+  const STATUS_VARS = { ok: ['--c-success', '#3DD68C'], warn: ['--c-warning', '#F5A524'], err: ['--c-danger', '#F2555A'], info: ['--c-info', '#4C9EFF'], accent: ['--c-accent', '#8B7CF6'], muted: ['--c-text-secondary', '#A9A9B0'] }
+  window.jStatus = k => { const v = STATUS_VARS[k] || STATUS_VARS.muted; return window.cssVar(v[0], v[1]) }
 
   async function init() {
     const q = new URLSearchParams(location.search)

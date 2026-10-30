@@ -1018,7 +1018,7 @@ async function fivemRunServerHealth() {
   if (btn) { btn.disabled = false; btn.innerHTML = `<i class="fa fa-play"></i> ${tUI('fivemHealthRunBtn')}` }
   if (!r || !r.ok) { body.innerHTML = `<div class="jx-163">${tUI('fivemHealthTestFailed')}</div>`; return }
 
-  const statusColor = { good: '#2ecc71', medium: '#f39c12', high: '#e74c3c', timeout: '#888', loss: '#e74c3c' }
+  const statusColor = { good: jStatus('ok'), medium: jStatus('warn'), high: jStatus('err'), timeout: '#888', loss: jStatus('err') }
   const statusLabel = { good: tUI('fivemHealthGood'), medium: tUI('fivemHealthMedium'), high: tUI('fivemHealthHigh'), timeout: tUI('fivemHealthTimeout'), loss: tUI('fivemHealthLoss') }
 
   let tips = []
@@ -1091,7 +1091,7 @@ async function fivemRefreshCacheInfo() {
       </div>`
     const ageDays = info.lastWrite ? Math.round((Date.now() - info.lastWrite) / 86400000) : null
     const ageStr = ageDays !== null ? `${ageDays}d ${tUI('fivemSmartCacheAge')}` : ''
-    const sizeColor = info.sizeMB > 2000 ? '#e74c3c' : info.sizeMB > 500 ? '#f39c12' : '#2ecc71'
+    const sizeColor = info.sizeMB > 2000 ? jStatus('err') : info.sizeMB > 500 ? jStatus('warn') : jStatus('ok')
     const shouldClear = (info.sizeMB > 1000 && ageDays !== null && ageDays > 3) || info.sizeMB > 3000
     const recBadge = shouldClear
       ? `<span style="font-size:8px;padding:1px 5px;border-radius:3px;background:rgba(243,156,18,0.15);color:var(--c-warning);margin-right:2px"><i class="fa fa-lightbulb"></i> Recommended</span>`

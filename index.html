@@ -1005,7 +1005,7 @@ async function init(isPremium = false) {
     if (el) {
       const ageDays = Math.round((Date.now() - new Date(last.ts).getTime()) / 86400000)
       const agoStr = ageDays === 0 ? 'today' : ageDays === 1 ? 'yesterday' : `${ageDays}d ago`
-      const dotColor = n => n >= 10 ? '#2ecc71' : n >= 5 ? '#f39c12' : '#e74c3c'
+      const dotColor = n => n >= 10 ? jStatus('ok') : n >= 5 ? jStatus('warn') : jStatus('err')
       const dots = runs.slice().reverse().map((r, i) => {
         const n = r.tweakCount || 0
         const cx = 8 + i * 14
@@ -2566,7 +2566,7 @@ function buildWizardSteps() {
         api.offWindowsHealthProgress()
         api.onWindowsHealthProgress(({ msg, level }) => {
           if (statusEl) {
-            const colors = { ok:'var(--success)', warn:'#e67e22', err:'var(--danger)', info:'var(--muted)' }
+            const colors = { ok:'var(--success)', warn:jStatus('warn'), err:'var(--danger)', info:'var(--muted)' }
             statusEl.style.color = colors[level] || colors.info
             statusEl.innerHTML = `<i class="fa fa-spinner fa-spin"></i> ${msg}`
           }
@@ -3073,7 +3073,7 @@ async function togglePulseBeforeAfter(btn) {
     const delta = after - before
     const improved = lowerIsBetter ? delta < 0 : delta > 0
     const neutral  = Math.abs(delta) < 1
-    const color = neutral ? 'rgba(255,255,255,0.4)' : improved ? '#2ecc71' : '#e74c3c'
+    const color = neutral ? 'rgba(255,255,255,0.4)' : improved ? jStatus('ok') : jStatus('err')
     const sign  = delta > 0 ? '+' : ''
     return `<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid rgba(var(--fx),0.05)">
       <span style="font-size:11px;color:rgba(var(--fx),0.45);width:60px">${label}</span>
@@ -3347,7 +3347,7 @@ function computePulseScore() {
 
   valEl.textContent = score
   // Color: green ≥800, yellow 600–799, red <600
-  const scoreColor = score >= 800 ? '#2ecc71' : score >= 600 ? '#f39c12' : '#e74c3c'
+  const scoreColor = score >= 800 ? jStatus('ok') : score >= 600 ? jStatus('warn') : jStatus('err')
   valEl.style.color = scoreColor
   if (barEl) { barEl.style.width = `${score / 10}%`; barEl.style.background = scoreColor }
 
@@ -3358,7 +3358,7 @@ function computePulseScore() {
       [tUI('pulseScoreOpti'),    Math.round(optiApplied  * 2.5)],
     ]
     bdEl.innerHTML = chips.map(([label, val]) => {
-      const c = val >= 280 ? '#2ecc71' : val >= 175 ? '#f39c12' : '#e74c3c'
+      const c = val >= 280 ? jStatus('ok') : val >= 175 ? jStatus('warn') : jStatus('err')
       return `<div class="pulse-score-chip"><span class="psc-label">${label}</span><span class="psc-val" style="color:${c}">${val}</span></div>`
     }).join('')
   }
@@ -3383,7 +3383,7 @@ function _pulseFeedAppendChip(msg, level, ts) {
   const feed = document.getElementById('pulse-feed-chips')
   if (!feed) return
   const icons  = { ok: 'fa-check', head: 'fa-bolt', info: 'fa-circle-info', warn: 'fa-triangle-exclamation', err: 'fa-xmark' }
-  const colors = { ok: '#2ecc71', head: 'var(--c-accent)', info: '#3498db', warn: '#f39c12', err: '#e74c3c' }
+  const colors = { ok: jStatus('ok'), head: 'var(--c-accent)', info: jStatus('info'), warn: jStatus('warn'), err: jStatus('err') }
   const icon  = icons[level]  || icons.info
   const color = colors[level] || colors.info
   const chip = document.createElement('div')
@@ -3823,7 +3823,7 @@ function drawPingHistogram(canvasId, samples, avg, p95) {
     if (!count) return
     const ms = i * binSize
     const barH = Math.max(2, (count / maxCount) * (H - 4))
-    const col = ms < (avg || 0) ? '#27ae60' : ms < (p95 || 999) ? '#f39c12' : '#e74c3c'
+    const col = ms < (avg || 0) ? jStatus('ok') : ms < (p95 || 999) ? jStatus('warn') : jStatus('err')
     ctx.fillStyle = col
     ctx.fillRect(i * barW + 1, H - barH, barW - 2, barH)
   })
@@ -4363,7 +4363,7 @@ const PF_CATEGORIES = [
     }
   },
   {
-    id: 'hardware', label: 'Hardware', icon: 'fa-microchip', color: '#e74c3c', page: 'hardware',
+    id: 'hardware', label: 'Hardware', icon: 'fa-microchip', color: jStatus('err'), page: 'hardware',
     ids: ['gpu-hwsch','gpu-hags-off','tdr-delay','nvidia-max-perf','nvidia-low-latency','disable-hdcp',
           'nvidia-pstate-lock','nvidia-profile','amd-chill-off','amd-power-hold','amd-service-trim',
           'amd-ulps-disable','corsair-audio-off','hvci-offload','vbs-disable','memory-guard-tune','full-mitigation-wipe',
@@ -4386,7 +4386,7 @@ const PF_CATEGORIES = [
     }
   },
   {
-    id: 'network', label: 'Network', icon: 'fa-wifi', color: '#27ae60', page: 'network',
+    id: 'network', label: 'Network', icon: 'fa-wifi', color: jStatus('ok'), page: 'network',
     ids: ['nic-offloads','nic-interrupt-mod','nic-flow-control','nic-energy-efficient',
           'disable-netbios','disable-ipv6','disable-wpad','qos-reserve','dns-cloudflare','dns-google'],
     names: {
@@ -4398,7 +4398,7 @@ const PF_CATEGORIES = [
     }
   },
   {
-    id: 'fivem', label: 'FiveM', icon: 'fa-gamepad', color: '#9b59b6', page: 'fivem',
+    id: 'fivem', label: 'FiveM', icon: 'fa-gamepad', color: jStatus('accent'), page: 'fivem',
     ids: ['fivem-priority','fivem-io-priority','fivem-defender','fivem-hang-fix','fivem-network',
           'fivem-mmcss','fivem-fso','fivem-gpu','fivem-vm','fivem-streaming-mem',
           'fivem-worker-threads','fivem-disable-crash-reporter','fivem-disable-anticheat-upload',
@@ -5260,7 +5260,7 @@ async function loadGameHistory() {
     const d = new Date(e.ts)
     const date = `${d.getMonth()+1}/${d.getDate()} ${d.getHours()}:${String(d.getMinutes()).padStart(2,'0')}`
     const scoreVal = e.pulseScore != null ? e.pulseScore : null
-    const scoreColor = scoreVal == null ? 'rgba(255,255,255,0.25)' : scoreVal >= 800 ? '#2ecc71' : scoreVal >= 600 ? '#f39c12' : '#e74c3c'
+    const scoreColor = scoreVal == null ? 'rgba(255,255,255,0.25)' : scoreVal >= 800 ? jStatus('ok') : scoreVal >= 600 ? jStatus('warn') : jStatus('err')
     const scoreStr = scoreVal != null ? `<span style="color:${scoreColor};font-weight:700">${scoreVal}</span>` : `<span class="jx-110">—</span>`
     const tempStr = e.peakCpuTemp != null ? `<span style="color:${e.peakCpuTemp > 90 ? 'var(--c-danger)' : e.peakCpuTemp > 75 ? 'var(--c-warning)' : 'rgba(var(--fx),0.4)'}">${Math.round(e.peakCpuTemp)}°</span>` : `<span class="jx-110">—</span>`
     return `<div style="display:grid;grid-template-columns:1fr auto auto auto auto auto auto;gap:4px 8px;align-items:center;padding:3px 0;border-bottom:1px solid rgba(var(--fx),0.04);font-size:11px">
@@ -5528,7 +5528,7 @@ function drawBiosThermalGraph() {
   ctx.beginPath(); ctx.moveTo(0, y95); ctx.lineTo(w, y95); ctx.stroke()
   ctx.setLineDash([])
 
-  drawLine(_biosThermGpu, '#3ab8b8')
+  drawLine(_biosThermGpu, jStatus('accent'))
   drawLine(_biosThermCpu, 'var(--pink)')
 }
 
@@ -5570,7 +5570,7 @@ const _THERMAL_ARCHETYPES = [
     id: 'hot-idle',
     name: 'Hot Idler',
     icon: 'fa-fire',
-    color: '#e74c3c',
+    color: jStatus('err'),
     desc: 'Your CPU is already running hot before any load. This usually means dried thermal paste, poor airflow, or a stuck power state keeping the CPU from sleeping properly.',
     action: 'Check CPU cooler contact, repaste, and review minimum processor state (should be ≤ 5%) in Windows Power Options.',
     match: (s) => s.idleAvg > 60
@@ -5579,7 +5579,7 @@ const _THERMAL_ARCHETYPES = [
     id: 'thin-throttle',
     name: 'Thin & Throttle',
     icon: 'fa-bolt-lightning',
-    color: '#e67e22',
+    color: jStatus('warn'),
     desc: 'Your cooling system cannot sustain a load — temperatures spike and the CPU is forced to throttle. Performance is being left on the table.',
     action: 'Clean your laptop fans/vents. Consider a cooling pad. Disable C-States only if you have adequate cooling.',
     match: (s) => s.isLaptop && s.riseRate > 2.5 && s.peakTemp > 88
@@ -5588,7 +5588,7 @@ const _THERMAL_ARCHETYPES = [
     id: 'spiker',
     name: 'Unpredictable Spiker',
     icon: 'fa-chart-line',
-    color: '#9b59b6',
+    color: jStatus('accent'),
     desc: 'Your temperatures jump erratically without clear cause. This is a sign of dried thermal paste creating hot spots, background processes spiking load, or unstable voltage.',
     action: 'Repaste the CPU. Check Task Manager for runaway background processes. Verify voltage settings in BIOS are stable.',
     match: (s) => s.variance > 64 && s.idleAvg < 65
@@ -5597,7 +5597,7 @@ const _THERMAL_ARCHETYPES = [
     id: 'cold-sleeper',
     name: 'Cold Sleeper',
     icon: 'fa-snowflake',
-    color: '#3ab8b8',
+    color: jStatus('accent'),
     desc: 'Your cooling is excellent — temperatures barely move. You have thermal headroom to push performance further if you want.',
     action: 'You can safely run performance presets in RyzenAdj, enable XMP/EXPO, or increase Turbo Boost aggressiveness.',
     match: (s) => s.idleAvg < 42 && s.peakTemp < 55
@@ -5606,7 +5606,7 @@ const _THERMAL_ARCHETYPES = [
     id: 'voltage-hungry',
     name: 'Voltage Hungry',
     icon: 'fa-plug',
-    color: '#f39c12',
+    color: jStatus('warn'),
     desc: 'Your CPU runs warm even under light load. High voltage draw even at low utilisation — often from aggressive boost behaviour or a high minimum voltage floor.',
     action: 'Try applying a negative Curve Optimizer offset (e.g. -10 to -20 on AMD) to reduce voltage without losing performance.',
     match: (s) => s.idleAvg > 48 && s.idleAvg <= 60 && s.variance < 30
@@ -5615,7 +5615,7 @@ const _THERMAL_ARCHETYPES = [
     id: 'steady',
     name: 'Steady Climber',
     icon: 'fa-arrow-trend-up',
-    color: '#2ecc71',
+    color: jStatus('ok'),
     desc: 'Your thermal behaviour is textbook healthy. Temperatures rise gradually and settle predictably. Your cooling solution is working as designed.',
     action: 'No action needed. Your system is thermally well-balanced.',
     match: () => true  // fallback
@@ -5735,9 +5735,9 @@ async function startBiosLhmPolling() {
     if (warn) warn.style.display = 'none'
     if (grid) grid.style.display = ''
     if (tsEl) tsEl.textContent = new Date().toLocaleTimeString()
-    if (fansEl) fansEl.innerHTML = r.fans.map(f => _renderLhmSensorBadge(f.name, f.value, 'RPM', '#3ab8b8')).join('')
-    if (pwrEl) pwrEl.innerHTML = r.powers.map(p => _renderLhmSensorBadge(p.name, p.value, 'W', '#e67e22')).join('')
-    if (voltEl) voltEl.innerHTML = r.volts.map(v => _renderLhmSensorBadge(v.name, parseFloat(v.value).toFixed(3) !== 'NaN' ? parseFloat(v.value).toFixed(3) : v.value, 'V', '#9b59b6')).join('')
+    if (fansEl) fansEl.innerHTML = r.fans.map(f => _renderLhmSensorBadge(f.name, f.value, 'RPM', jStatus('accent'))).join('')
+    if (pwrEl) pwrEl.innerHTML = r.powers.map(p => _renderLhmSensorBadge(p.name, p.value, 'W', jStatus('warn'))).join('')
+    if (voltEl) voltEl.innerHTML = r.volts.map(v => _renderLhmSensorBadge(v.name, parseFloat(v.value).toFixed(3) !== 'NaN' ? parseFloat(v.value).toFixed(3) : v.value, 'V', jStatus('accent'))).join('')
   }
   await doTick()
   _biosLhmInterval = setInterval(doTick, 3000)
@@ -5809,10 +5809,10 @@ function renderBiosScore() {
     return
   }
   let tier, color, pulse = false
-  if (score >= 85) { tier = tUI('biosScoreTierMaster'); color = '#d63bbf'; pulse = true }
-  else if (score >= 65) { tier = tUI('biosScoreTierOptimized'); color = '#27ae60' }
-  else if (score >= 40) { tier = tUI('biosScoreTierPartial'); color = '#e67e22' }
-  else { tier = tUI('biosScoreTierUnoptimized'); color = '#e74c3c' }
+  if (score >= 85) { tier = tUI('biosScoreTierMaster'); color = jStatus('accent'); pulse = true }
+  else if (score >= 65) { tier = tUI('biosScoreTierOptimized'); color = jStatus('ok') }
+  else if (score >= 40) { tier = tUI('biosScoreTierPartial'); color = jStatus('warn') }
+  else { tier = tUI('biosScoreTierUnoptimized'); color = jStatus('err') }
 
   const barW = score + '%'
   el.innerHTML = `
@@ -6152,7 +6152,7 @@ async function buildBiosTuner(c) {
             <div class="jx-18">${tUI('ryzenTctl')}</div>
             <div class="jx-1">${tUI('ryzenTctlDesc')}</div>
           </div>
-          <input type="range" id="ryzen-tctl" min="60" max="105" value="95" oninput="document.getElementById('ryzen-tctl-val').textContent=this.value+'°C';this.style.accentColor=this.value>=95?'#e74c3c':this.value>=85?'#e67e22':'#27ae60'" style="flex:1;accent-color:var(--c-success)">
+          <input type="range" id="ryzen-tctl" min="60" max="105" value="95" oninput="document.getElementById('ryzen-tctl-val').textContent=this.value+'°C';this.style.accentColor=this.value>=95?jStatus('err'):this.value>=85?jStatus('warn'):jStatus('ok')" style="flex:1;accent-color:var(--c-success)">
           <span id="ryzen-tctl-val" style="width:48px;text-align:right;font-size:12px;font-weight:700;color:var(--white)">95°C</span>
         </div>
         <div class="jx-31">
@@ -6548,27 +6548,27 @@ async function doBiosScan() {
   const chipsetLower = (info.chipset || '').toLowerCase()
   const hasModernPcie = /x570|b550|x670|b650|z490|z590|z690|z790|b760|h670|b760/i.test(chipsetLower)
   if (info.ramActual > 0 && info.ramRated > 0 && info.ramActual < info.ramRated * 0.95)
-    recs.push({ icon: 'fa-bolt', color: '#f39c12', text: tUI('biosRecXmpOff').replace('{actual}', info.ramActual).replace('{rated}', info.ramRated) })
+    recs.push({ icon: 'fa-bolt', color: jStatus('warn'), text: tUI('biosRecXmpOff').replace('{actual}', info.ramActual).replace('{rated}', info.ramRated) })
   else if (info.ramActual > 0)
-    recs.push({ icon: 'fa-check', color: '#2ecc71', text: tUI('biosRecXmpOn').replace('{actual}', info.ramActual) })
+    recs.push({ icon: 'fa-check', color: jStatus('ok'), text: tUI('biosRecXmpOn').replace('{actual}', info.ramActual) })
   if (hasModernPcie)
-    recs.push({ icon: 'fa-bolt', color: '#f39c12', text: tUI('biosRecReBar') })
+    recs.push({ icon: 'fa-bolt', color: jStatus('warn'), text: tUI('biosRecReBar') })
   if (!info.uefi)
-    recs.push({ icon: 'fa-triangle-exclamation', color: '#e74c3c', text: tUI('biosRecLegacyBios') })
+    recs.push({ icon: 'fa-triangle-exclamation', color: jStatus('err'), text: tUI('biosRecLegacyBios') })
   if (info.uefi && !info.secureBoot)
-    recs.push({ icon: 'fa-circle-info', color: '#3498db', text: tUI('biosRecSecureBoot') })
+    recs.push({ icon: 'fa-circle-info', color: jStatus('info'), text: tUI('biosRecSecureBoot') })
   if (!info.tpmPresent)
-    recs.push({ icon: 'fa-triangle-exclamation', color: '#e74c3c', text: tUI('biosRecNoTpm') })
+    recs.push({ icon: 'fa-triangle-exclamation', color: jStatus('err'), text: tUI('biosRecNoTpm') })
   if (info.hyperV)
-    recs.push({ icon: 'fa-circle-info', color: '#9b59b6', text: tUI('biosRecHyperV') })
+    recs.push({ icon: 'fa-circle-info', color: jStatus('accent'), text: tUI('biosRecHyperV') })
   if (sysInfo?.isLaptop)
-    recs.push({ icon: 'fa-triangle-exclamation', color: '#e67e22', text: tUI('biosRecLaptop') })
+    recs.push({ icon: 'fa-triangle-exclamation', color: jStatus('warn'), text: tUI('biosRecLaptop') })
   else
-    recs.push({ icon: 'fa-circle-info', color: '#3498db', text: tUI('biosRecDesktop') })
+    recs.push({ icon: 'fa-circle-info', color: jStatus('info'), text: tUI('biosRecDesktop') })
   if (cpuLower.includes('amd') || cpuLower.includes('ryzen'))
-    recs.push({ icon: 'fa-check', color: '#2ecc71', text: tUI('biosRecAmd') })
+    recs.push({ icon: 'fa-check', color: jStatus('ok'), text: tUI('biosRecAmd') })
   else if (cpuLower.includes('intel'))
-    recs.push({ icon: 'fa-check', color: '#2ecc71', text: tUI('biosRecIntel') })
+    recs.push({ icon: 'fa-check', color: jStatus('ok'), text: tUI('biosRecIntel') })
 
   if (recs.length) {
     const recDiv = document.createElement('div')
@@ -6764,9 +6764,9 @@ function renderBiosAgeAlert(info) {
   const el = document.getElementById('bios-age-alert-row')
   if (!el || !info?.biosDate) return
   const ageDays = Math.floor((Date.now() - new Date(info.biosDate)) / 86400000)
-  let color = '#2ecc71', icon = 'fa-check', label = tUI('biosBiosAgeCurrent')
-  if (ageDays > 545) { color = '#e74c3c'; icon = 'fa-triangle-exclamation'; label = tUI('biosBiosAgeOld') }
-  else if (ageDays > 365) { color = '#e67e22'; icon = 'fa-triangle-exclamation'; label = tUI('biosBiosAgeWarn') }
+  let color = jStatus('ok'), icon = 'fa-check', label = tUI('biosBiosAgeCurrent')
+  if (ageDays > 545) { color = jStatus('err'); icon = 'fa-triangle-exclamation'; label = tUI('biosBiosAgeOld') }
+  else if (ageDays > 365) { color = jStatus('warn'); icon = 'fa-triangle-exclamation'; label = tUI('biosBiosAgeWarn') }
 
   // Manufacturer update URL
   let updateUrl = null
@@ -6976,10 +6976,10 @@ async function doBiosBootChronicle() {
 
   // Build timeline segments
   const segments = [
-    { label:'BIOS POST',       ms: bios,     color:'#9b59b6' },
-    { label:'Kernel Load',     ms: kernel,   color:'#3498db' },
-    { label:'Services',        ms: services, color:'#e67e22' },
-    { label:'Desktop Ready',   ms: desktop,  color:'#2ecc71' },
+    { label:'BIOS POST',       ms: bios,     color:jStatus('accent') },
+    { label:'Kernel Load',     ms: kernel,   color:jStatus('info') },
+    { label:'Services',        ms: services, color:jStatus('warn') },
+    { label:'Desktop Ready',   ms: desktop,  color:jStatus('ok') },
   ].filter(s => s.ms > 0)
 
   const totalSeg = segments.reduce((a,s) => a + s.ms, 0) || 1
@@ -7054,7 +7054,7 @@ async function doBiosStabilityCheck() {
 
   _stabilityResult = r
   const score = r.score
-  const color = score >= 90 ? '#2ecc71' : score >= 70 ? '#e67e22' : '#e74c3c'
+  const color = score >= 90 ? jStatus('ok') : score >= 70 ? jStatus('warn') : jStatus('err')
   const label = score >= 90 ? 'Stable' : score >= 70 ? 'Mostly Stable' : 'Potentially Unstable'
   const signalRows = (r.signals || []).map(s => `
     <div style="display:flex;align-items:flex-start;gap:8px;padding:4px 0;border-bottom:1px solid var(--hairline-strong)">
@@ -7562,7 +7562,7 @@ function renderSpikeLog() {
   el.innerHTML = [..._dpcSpikeLog].reverse().map(e => {
     const t = new Date(e.ts)
     const timeStr = t.toLocaleTimeString()
-    const sevColor = e.dpc > 8 ? 'var(--danger)' : e.dpc > 5 ? 'var(--warning)' : '#f39c12'
+    const sevColor = e.dpc > 8 ? 'var(--danger)' : e.dpc > 5 ? 'var(--warning)' : jStatus('warn')
     const sevBg    = e.dpc > 8 ? 'rgba(231,76,60,0.15)' : e.dpc > 5 ? 'rgba(241,196,15,0.15)' : 'rgba(243,156,18,0.12)'
     const sevLabel = e.dpc > 8 ? tUI('latencySpikeSevCritical') : e.dpc > 5 ? tUI('latencySpikeSevHigh') : tUI('latencySpikeSevMed')
     return `<div style="display:flex;align-items:center;gap:8px;padding:5px 8px;background:rgba(var(--fx),0.02);border:1px solid var(--border);border-radius:6px;font-size:11px">
@@ -9023,7 +9023,7 @@ async function initHealthScoreRing() {
   const offset = circumference - (score / 100) * circumference
 
   // Color: red below 40, amber 40-70, green/cyan above 70
-  const color = score < 40 ? '#e74c3c' : score < 70 ? '#f39c12' : 'var(--success)'
+  const color = score < 40 ? jStatus('err') : score < 70 ? jStatus('warn') : 'var(--success)'
   arc.style.stroke = color
   arc.style.strokeDashoffset = String(circumference)  // start at 0
   requestAnimationFrame(() => { arc.style.strokeDashoffset = String(offset) })
@@ -9256,7 +9256,7 @@ async function loadAiAdvisor() {
       row.style.cssText = 'display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;background:var(--bg-card2);border:1px solid var(--border)'
       const pct = Math.round(rec.score * 100)
       const confLabel = pct >= 85 ? tUI('aiMatchStrong') : pct >= 70 ? tUI('aiMatchGood') : tUI('aiMatchPossible')
-      const confColor = pct >= 85 ? '#2ECC71'           : pct >= 70 ? '#F39C12'          : 'var(--muted)'
+      const confColor = pct >= 85 ? jStatus('ok')           : pct >= 70 ? jStatus('warn')          : 'var(--muted)'
       row.innerHTML = `
         <div class="jx-6">
           <div style="display:flex;align-items:center;gap:6px;margin-bottom:3px">
@@ -9316,7 +9316,7 @@ function ariaRenderJournal() {
       const insights = []
       if (j.avgFps && prevAvgFps && Math.abs(j.avgFps - prevAvgFps) > 3) {
         const delta = j.avgFps - prevAvgFps
-        const col = delta > 0 ? '#2ecc71' : '#e74c3c'
+        const col = delta > 0 ? jStatus('ok') : jStatus('err')
         const arrow = delta > 0 ? '↑' : '↓'
         insights.push(`<span style="color:${col}">${arrow} Avg FPS ${j.avgFps} vs ${prevAvgFps} prev avg</span>`)
       }
@@ -9391,9 +9391,9 @@ async function buildWeeklyReport() {
 
     statsEl.innerHTML = [
       statTile('fa-bolt', tUI('weeklyReportTweaks'), tweaksThisWeek, 'var(--pink)'),
-      sessionCount > 0 ? statTile('fa-gamepad', tUI('weeklyReportSessions'), sessionCount, '#2ecc71') : '',
-      avgFps != null && avgFps > 0 ? statTile('fa-gauge-high', tUI('weeklyReportAvgFps'), avgFps + ' FPS', '#3498db') : '',
-      streak > 0 ? statTile('fa-fire', tUI('weeklyReportStreak'), streak + 'd', '#f39c12') : '',
+      sessionCount > 0 ? statTile('fa-gamepad', tUI('weeklyReportSessions'), sessionCount, jStatus('ok')) : '',
+      avgFps != null && avgFps > 0 ? statTile('fa-gauge-high', tUI('weeklyReportAvgFps'), avgFps + ' FPS', jStatus('info')) : '',
+      streak > 0 ? statTile('fa-fire', tUI('weeklyReportStreak'), streak + 'd', jStatus('warn')) : '',
     ].filter(Boolean).join('')
 
     card.style.display = ''
@@ -9477,9 +9477,9 @@ function showFrameSession({ game, stats }) {
     </div>`
 
   statsEl.innerHTML =
-    tile(tUI('dashFrameSessionMean'), fmtMs(stats.mean), '#c0c0c0') +
-    tile(tUI('dashFrameSessionP1'),   fmtMs(stats.p1Low), stats.p1Low < 16.7 ? '#2ecc71' : stats.p1Low < 33.3 ? '#f39c12' : '#e74c3c') +
-    tile(tUI('dashFrameSessionP01'),  fmtMs(stats.p01Low), stats.p01Low < 33.3 ? '#9b59b6' : '#e74c3c') +
+    tile(tUI('dashFrameSessionMean'), fmtMs(stats.mean), jStatus('muted')) +
+    tile(tUI('dashFrameSessionP1'),   fmtMs(stats.p1Low), stats.p1Low < 16.7 ? jStatus('ok') : stats.p1Low < 33.3 ? jStatus('warn') : jStatus('err')) +
+    tile(tUI('dashFrameSessionP01'),  fmtMs(stats.p01Low), stats.p01Low < 33.3 ? jStatus('accent') : jStatus('err')) +
     (stats.samples ? `<div style="display:flex;align-items:flex-end;padding:0 4px;font-size:11px;color:var(--muted)">${stats.samples.toLocaleString()} ${tUI('dashFrameSessionSamples')}</div>` : '')
 
   // Draw a simple sparkline of frame time distribution using the percentiles
@@ -9490,9 +9490,9 @@ function showFrameSession({ game, stats }) {
     // Draw 3 bars representing mean, p1Low, p01Low relative to 33.3ms (30fps target)
     const maxMs = 33.3
     const bars = [
-      { label: tUI('dashFrameSessionMean'), val: stats.mean,   color: '#9b59b6' },
-      { label: tUI('dashFrameSessionP1'),   val: stats.p1Low,  color: '#2ecc71' },
-      { label: tUI('dashFrameSessionP01'),  val: stats.p01Low, color: '#e74c3c' },
+      { label: tUI('dashFrameSessionMean'), val: stats.mean,   color: jStatus('accent') },
+      { label: tUI('dashFrameSessionP1'),   val: stats.p1Low,  color: jStatus('ok') },
+      { label: tUI('dashFrameSessionP01'),  val: stats.p01Low, color: jStatus('err') },
     ]
     const bw = Math.floor(W / bars.length) - 8
     bars.forEach((b, i) => {
@@ -9559,15 +9559,15 @@ function showAriaSessionSummary(data) {
       + ' (' + Object.entries(data.anomalyCounts || {}).map(([k,v])=>`${k.toUpperCase()}×${v}`).join(', ') + ')'
 
   body.innerHTML =
-    pill(tUI('ariaSessionSummaryDuration'), `${mins} min`, '#c0c0c0') +
+    pill(tUI('ariaSessionSummaryDuration'), `${mins} min`, jStatus('muted')) +
     `<span class="jx-129">
       <span class="jx-3">${tUI('ariaSessionSummaryAnomalies')}: </span>${anomalyStr}
     </span>` +
-    pill(tUI('ariaSessionSummaryInsights'), data.insightsApplied || 0, '#9b59b6') +
-    (data.peaks?.cpuTemp > 0 ? pill('Peak CPU Temp', `${Math.round(data.peaks.cpuTemp)}°C`, data.peaks.cpuTemp > 90 ? '#e74c3c' : data.peaks.cpuTemp > 75 ? '#f39c12' : '#2ecc71') : '') +
-    (data.peaks?.cpu > 0 ? pill('Peak CPU', `${Math.round(data.peaks.cpu)}%`, data.peaks.cpu > 90 ? '#e74c3c' : '#c0c0c0') : '') +
-    (data.fps?.avgFps ? pill(tUI('ariaAvgFps'), `${data.fps.avgFps}`, '#2ecc71') : '') +
-    (data.fps?.low1Fps ? pill(tUI('ariaLow1Fps'), `${data.fps.low1Fps}`, data.fps.low1Fps >= 60 ? '#2ecc71' : data.fps.low1Fps >= 30 ? '#f39c12' : '#e74c3c') : '') +
+    pill(tUI('ariaSessionSummaryInsights'), data.insightsApplied || 0, jStatus('accent')) +
+    (data.peaks?.cpuTemp > 0 ? pill('Peak CPU Temp', `${Math.round(data.peaks.cpuTemp)}°C`, data.peaks.cpuTemp > 90 ? jStatus('err') : data.peaks.cpuTemp > 75 ? jStatus('warn') : jStatus('ok')) : '') +
+    (data.peaks?.cpu > 0 ? pill('Peak CPU', `${Math.round(data.peaks.cpu)}%`, data.peaks.cpu > 90 ? jStatus('err') : jStatus('muted')) : '') +
+    (data.fps?.avgFps ? pill(tUI('ariaAvgFps'), `${data.fps.avgFps}`, jStatus('ok')) : '') +
+    (data.fps?.low1Fps ? pill(tUI('ariaLow1Fps'), `${data.fps.low1Fps}`, data.fps.low1Fps >= 60 ? jStatus('ok') : data.fps.low1Fps >= 30 ? jStatus('warn') : jStatus('err')) : '') +
     `<span style="font-size:11px;color:var(--muted);align-self:center;margin-left:4px">${gameName}</span>`
 
   // Save enriched session record to game-history.json
@@ -9599,11 +9599,11 @@ async function ariaShowSessionCoach() {
   const data = await api.ariaGetSessionCoach().catch(() => null)
   if (!data) return
 
-  const gradeColor = { A: '#2ecc71', B: '#27ae60', C: '#f39c12', D: '#e67e22', F: '#e74c3c' }[data.grade] || '#c0c0c0'
+  const gradeColor = { A: jStatus('ok'), B: jStatus('ok'), C: jStatus('warn'), D: jStatus('warn'), F: jStatus('err') }[data.grade] || jStatus('muted')
   const trendIcon  = data.trend === 'up' ? '↑' : data.trend === 'down' ? '↓' : '→'
-  const trendColor = data.trend === 'up' ? '#2ecc71' : data.trend === 'down' ? '#e74c3c' : '#c0c0c0'
+  const trendColor = data.trend === 'up' ? jStatus('ok') : data.trend === 'down' ? jStatus('err') : jStatus('muted')
   const bottleneckLabel = { gpu: 'GPU-bound', cpu: 'CPU-bound', ram: 'RAM-bound', balanced: 'Balanced' }[data.bottleneck] || '—'
-  const bottleneckColor = { gpu: '#9b59b6', cpu: '#3498db', ram: '#e67e22', balanced: '#2ecc71' }[data.bottleneck] || '#c0c0c0'
+  const bottleneckColor = { gpu: jStatus('accent'), cpu: jStatus('info'), ram: jStatus('warn'), balanced: jStatus('ok') }[data.bottleneck] || jStatus('muted')
 
   const mins = data.elapsedMs ? Math.round(data.elapsedMs / 60000) : 0
 
@@ -9792,7 +9792,7 @@ function ariaFpsSparklineDraw() {
   const max = Math.max(...vals, 1), min = Math.min(...vals, 0)
   const range = max - min || 1
   ctx.beginPath()
-  ctx.strokeStyle = '#f39c12'
+  ctx.strokeStyle = jStatus('warn')
   ctx.lineWidth = 1.5
   vals.forEach((v, i) => {
     const x = (i / (vals.length - 1)) * W
@@ -9822,8 +9822,8 @@ const ARIA_METRIC_ICON = {
   updateguard: 'fa-shield-halved', gameshield: 'fa-shield-halved',
 }
 const ARIA_METRIC_COLOR = {
-  cpu: '#e74c3c', gpu: '#e74c3c', ram: '#e74c3c', cpuTemp: '#e74c3c',
-  updateguard: '#27ae60', gameshield: '#27ae60',
+  cpu: jStatus('err'), gpu: jStatus('err'), ram: jStatus('err'), cpuTemp: jStatus('err'),
+  updateguard: jStatus('ok'), gameshield: jStatus('ok'),
 }
 
 function ariaRefreshAnomalyFeed() {
@@ -9837,7 +9837,7 @@ function ariaRefreshAnomalyFeed() {
     const label = (ARIA_METRIC_LABEL[e.metric] || (() => e.metric))()
     const unit  = ARIA_METRIC_UNIT[e.metric] || ''
     const time  = new Date(e.ts).toLocaleTimeString()
-    const color = ARIA_METRIC_COLOR[e.metric] || '#e74c3c'
+    const color = ARIA_METRIC_COLOR[e.metric] || jStatus('err')
     const icon  = ARIA_METRIC_ICON[e.metric] || 'fa-triangle-exclamation'
     const isGuard = e.metric === 'updateguard' || e.metric === 'gameshield'
     return `
@@ -9910,7 +9910,7 @@ async function ariaRefreshInsights() {
         const fmtDelta = (d, lowerIsBetter = true) => {
           if (d == null) return ''
           const sign = d > 0 ? '+' : ''
-          const cls = (lowerIsBetter ? d < -0.5 : d > 0.5) ? 'color:#2ecc71' : (Math.abs(d) < 0.5 ? 'color:var(--muted)' : 'color:#e74c3c')
+          const cls = (lowerIsBetter ? d < -0.5 : d > 0.5) ? 'color:var(--c-success)' : (Math.abs(d) < 0.5 ? 'color:var(--muted)' : 'color:var(--c-danger)')
           return `<span style="${cls};font-size:11px;margin-left:3px">(${sign}${d.toFixed(1)}ms)</span>`
         }
         frameRow = `<div style="margin-top:5px;padding-top:5px;border-top:1px solid rgba(var(--fx),0.06);font-size:11px;color:var(--muted)">
@@ -9923,7 +9923,7 @@ async function ariaRefreshInsights() {
       let fpsRow = ''
       if (ins.fpsDelta) {
         const fd = ins.fpsDelta
-        const fmtFps = (n) => { const sign = n >= 0 ? '+' : ''; const col = n > 0 ? '#2ecc71' : n < 0 ? '#e74c3c' : 'var(--muted)'; return `<span style="color:${col};font-weight:700">${sign}${n} FPS</span>` }
+        const fmtFps = (n) => { const sign = n >= 0 ? '+' : ''; const col = n > 0 ? jStatus('ok') : n < 0 ? jStatus('err') : 'var(--muted)'; return `<span style="color:${col};font-weight:700">${sign}${n} FPS</span>` }
         fpsRow = `<div style="margin-top:4px;font-size:11px;color:var(--muted)">
           <span style="font-weight:700;color:var(--c-success);margin-right:6px"><i class="fa fa-tachometer-alt jx-4"></i> FPS</span>
           <span class="jx-83">${tUI('ariaAvgFps')}: ${fd.avgBefore} → ${fd.avgAfter} (${fmtFps(fd.avgAfter - fd.avgBefore)})</span>
@@ -9984,7 +9984,7 @@ async function loadHistoryChart(range) {
       </div>`
     requestAnimationFrame(() => {
       drawHistorySparkline('hist-canvas-cpu', data.map(s => s.cpu), 'hist-stat-cpu', (getComputedStyle(document.documentElement).getPropertyValue('--c-accent').trim() || '#8B7CF6'))
-      drawHistorySparkline('hist-canvas-ram', data.map(s => s.ram), 'hist-stat-ram', '#3498db')
+      drawHistorySparkline('hist-canvas-ram', data.map(s => s.ram), 'hist-stat-ram', jStatus('info'))
     })
   } catch {
     body.innerHTML = String(ui.empty({ icon: 'clock-rotate-left', title: tUI('dashHistoryEmpty') }))
@@ -10692,7 +10692,7 @@ async function aomRenderStepFiveM() {
   aomFivemSettingsPath = res.ok ? res.path : null
   aomFivemCurrentVals = res.ok ? (res.vals || {}) : {}
 
-  const impactColor = { 'very high': '#e74c3c', 'high': '#e67e22', 'medium': '#f1c40f', 'low': '#2ecc71' }
+  const impactColor = { 'very high': jStatus('err'), 'high': jStatus('warn'), 'medium': jStatus('warn'), 'low': jStatus('ok') }
   const impactLabel = { 'very high': 'VERY HIGH', 'high': 'HIGH', 'medium': 'MED', 'low': 'LOW' }
 
   const _fivemRec = buildFivemRec(sysInfo)
@@ -11334,7 +11334,7 @@ async function aomRun(tweakIds) {
   const passCount = (result?.appliedIds?.length) ?? (tweakIds.length - failCount)
   const needReboot = passCount > 0
   const _grsScore = Math.min(100, Math.round((passCount / Math.max(tweakIds.length, 1)) * 85 + 10))
-  const _grsColor = _grsScore >= 70 ? 'var(--success)' : _grsScore >= 45 ? '#f39c12' : 'var(--danger)'
+  const _grsColor = _grsScore >= 70 ? 'var(--success)' : _grsScore >= 45 ? jStatus('warn') : 'var(--danger)'
 
   // Collect after metrics
   let _afterMetrics = {}
@@ -12194,8 +12194,8 @@ function spwStep6() {
   _spwSaveDraft(6)
   spwSetIndicators(6)
   const safeOpts = [
-    { id:'safe',   icon:'fa-shield-halved', label: tWizard('spwSafeOnly'),     desc: tWizard('spwSafeOnlyDesc'),     color:'#2ecc71'      },
-    { id:'review', icon:'fa-shield',        label: tWizard('spwIncludeReview'),desc: tWizard('spwIncludeReviewDesc'), color:'#f39c12'      },
+    { id:'safe',   icon:'fa-shield-halved', label: tWizard('spwSafeOnly'),     desc: tWizard('spwSafeOnlyDesc'),     color:jStatus('ok')      },
+    { id:'review', icon:'fa-shield',        label: tWizard('spwIncludeReview'),desc: tWizard('spwIncludeReviewDesc'), color:jStatus('warn')      },
     { id:'deep',   icon:'fa-shield-virus',  label: tWizard('spwDeep'),         desc: tWizard('spwDeepDesc'),          color:'var(--danger)' },
   ]
   document.getElementById('spw-body').innerHTML = `
@@ -12234,8 +12234,8 @@ async function spwStep7() {
     if (res?.plan) res.plan.forEach(t => { metaMap[t.id] = t })
   } catch (_) {}
 
-  const impactColor = { high:'#2ecc71', medium:'#f39c12', low:'#3498db' }
-  const tierColor   = { 1:'#2ecc71', 2:'#f39c12', 3:'var(--danger)' }
+  const impactColor = { high:jStatus('ok'), medium:jStatus('warn'), low:jStatus('info') }
+  const tierColor   = { 1:jStatus('ok'), 2:jStatus('warn'), 3:'var(--danger)' }
   const impactLabel = { high: tWizard('aomRunPlanHigh'), medium: tWizard('aomRunPlanMed'), low: tWizard('aomRunPlanLow') }
   const tierLabel   = { 1: tWizard('aomRunPlanSafe'), 2: tWizard('aomRunPlanReview'), 3: tWizard('aomRunPlanAggr') }
 
@@ -12315,7 +12315,7 @@ async function spwStep8() {
   const failCount = result?.failedTasks?.length || 0
   const passCount = tweakIds.length - failCount
   const rawScore  = Math.min(100, Math.round((passCount / Math.max(tweakIds.length, 1)) * 85 + 10))
-  const scoreColor = rawScore >= 70 ? '#2ecc71' : rawScore >= 45 ? '#f39c12' : 'var(--danger)'
+  const scoreColor = rawScore >= 70 ? jStatus('ok') : rawScore >= 45 ? jStatus('warn') : 'var(--danger)'
 
   if (log) {
     log.innerHTML += `<div class="jx-143"><i class="fa fa-check"></i> ${tWizard('aomComplete')}</div>`
@@ -15432,7 +15432,7 @@ async function loadDiskUsage(btn) {
       ? 'linear-gradient(90deg,var(--c-danger),var(--c-danger))'
       : row.bytes >= 1073741824
         ? 'linear-gradient(90deg,var(--c-warning),var(--c-warning))'
-        : 'linear-gradient(90deg,#3498db,#00D4FF)'
+        : 'linear-gradient(90deg,var(--c-info),#00D4FF)'
     const labelColor = row.bytes >= 10737418240 ? 'var(--c-danger)' : row.bytes >= 1073741824 ? 'var(--c-warning)' : 'var(--c-info)'
     const openBtn = row.path ? `<button class="btn btn-ghost" style="font-size:11px;padding:1px 5px;border-radius:4px;line-height:1.4;margin-left:4px" onclick="api.openPath(${jsArg(row.path)})" title="${tUI('diskUsageOpen')}"><i class="fa fa-folder-open"></i></button>` : ''
     return `<div class="jx-38">
@@ -17305,7 +17305,7 @@ function _bloatRefreshCard(card) {
   const { score, uwpInstalled, svcActive, taskActive } = computeBloatScore()
   // Map score → 4-tier system (clean / moderate / bloated / critical)
   const tier = score <= 25 ? 'clean' : score <= 55 ? 'moderate' : score <= 80 ? 'bloated' : 'critical'
-  const color = { clean:'#2ECC71', moderate:'#f39c12', bloated:'#e74c3c', critical:'#ff4444' }[tier]
+  const color = { clean:jStatus('ok'), moderate:jStatus('warn'), bloated:jStatus('err'), critical:jStatus('err') }[tier]
   const circ = 220
   card.score.textContent      = score
   card.scoreRight.textContent = score
