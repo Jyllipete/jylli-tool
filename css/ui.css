@@ -663,3 +663,14 @@
 .gp-watcher-card.state-running { background: var(--surface-1); border-color: var(--c-success-ring); }
 #page-content .gp-item.active { border-left-width: 1px; border-left-color: var(--hairline); background: var(--surface-3); }
 #page-content :is(.gp-hero-medallion, .gp-tip-v2) { border-left-width: 1px; border-left-color: var(--hairline); }
+
+/* Utilities used by Pulse (replacing repeated inline styles) */
+#page-content .u-mr4 { margin-right: 4px; }
+#page-content .u-fill { flex: 1; min-width: 0; }
+#page-content .u-grow { flex: 1; }
+#page-content .u-noshrink { flex-shrink: 0; }
+#page-content .u-min0 { min-width: 0; }
+#page-content .u-row10 { display: flex; align-items: center; gap: 10px; }
+#page-content .u-row7 { display: flex; align-items: center; gap: 7px; }
+#page-content .u-cap { font-size: 11px; color: var(--c-text-tertiary); }
+#page-content .u-ellip { font-size: 11px; color: var(--c-text-tertiary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

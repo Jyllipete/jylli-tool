@@ -2800,7 +2800,7 @@ async function buildPulse(c) {
   <div id="pulse-panel" style="background:var(--bg-card);border:1px solid var(--border);border-radius:12px;margin-bottom:14px;overflow:hidden">
     <div id="pulse-hero" class="pulse-hero">
       <div class="pulse-hero-badge"><i class="fa fa-bolt"></i></div>
-      <div style="flex:1">
+      <div class="u-grow">
         <div style="font-size:13px;font-weight:700;color:var(--white)">Pulse</div>
         <div style="font-size:11px;color:var(--gray)">${tUI('pulseSubtitle')}</div>
       </div>
@@ -2811,7 +2811,7 @@ async function buildPulse(c) {
     <!-- Pulse Score Row (premium, hidden until active) -->
     <div id="pulse-score-row" style="display:none;padding:10px 16px;border-bottom:1px solid var(--border);background:linear-gradient(135deg,rgba(124,58,237,0.05),transparent)">
       <div style="display:flex;align-items:center;gap:12px">
-        <div style="flex:1">
+        <div class="u-grow">
           <div style="font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:3px">
             <i class="fa fa-star" style="margin-right:4px;color:var(--c-accent-fg)"></i>${tUI('pulseScoreLabel')}
           </div>
@@ -2830,7 +2830,7 @@ async function buildPulse(c) {
     <!-- Now Gaming Session Strip -->
     <div id="gw-session-strip" class="gw-strip" style="display:none">
       <span class="gw-strip-dot"></span>
-      <div style="flex:1;min-width:0">
+      <div class="u-fill">
         <div class="gw-strip-label">${tUI('nowGamingLabel')}</div>
         <div style="display:flex;align-items:center;gap:8px;margin-top:1px">
           <span id="gw-strip-game" style="font-size:11px;font-weight:700;color:var(--white);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:120px"></span>
@@ -2854,16 +2854,16 @@ async function buildPulse(c) {
 
         <!-- Update Guard card -->
         <div id="lr-card-ug" class="lr-card lr-rail-red">
-          <div style="display:flex;align-items:center;gap:10px">
+          <div class="u-row10">
             <div id="pulse-ug-dot" class="lr-dot"></div>
-            <div style="flex:1;min-width:0">
+            <div class="u-fill">
               <div style="font-size:11px;font-weight:700;color:var(--c-danger);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
-                <i class="fa fa-shield-halved" style="margin-right:4px"></i>${tUI('settingsUpdateGuard')}
+                <i class="fa fa-shield-halved u-mr4"></i>${tUI('settingsUpdateGuard')}
                 <span id="ug-block-count" style="display:none;margin-left:5px;background:var(--c-danger);color:#fff;border-radius:8px;padding:1px 5px;font-size:11px;font-weight:700;vertical-align:middle"></span>
               </div>
-              <div id="ug-status-sub" style="font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${tUI('settingsUpdateGuardDesc')}</div>
+              <div id="ug-status-sub" class="u-ellip">${tUI('settingsUpdateGuardDesc')}</div>
             </div>
-            <label class="toggle-pill" style="flex-shrink:0">
+            <label class="toggle-pill u-noshrink">
               <input type="checkbox" id="pulse-ug-check" onchange="launchRuleToggle('updateGuard', this.checked)">
               <span class="pill-slider"></span>
             </label>
@@ -2872,13 +2872,13 @@ async function buildPulse(c) {
 
         <!-- Game Shield card -->
         <div id="lr-card-gs" class="lr-card lr-rail-purple">
-          <div style="display:flex;align-items:center;gap:10px">
+          <div class="u-row10">
             <div id="pulse-gs-dot" class="lr-dot"></div>
-            <div style="flex:1;min-width:0">
-              <div style="font-size:11px;font-weight:700;color:var(--c-accent-fg);white-space:nowrap;overflow:hidden;text-overflow:ellipsis"><i class="fa fa-bolt" style="margin-right:4px"></i>${tUI('settingsGameShield')}</div>
-              <div style="font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${tUI('settingsGameShieldDesc')}</div>
+            <div class="u-fill">
+              <div style="font-size:11px;font-weight:700;color:var(--c-accent-fg);white-space:nowrap;overflow:hidden;text-overflow:ellipsis"><i class="fa fa-bolt u-mr4"></i>${tUI('settingsGameShield')}</div>
+              <div class="u-ellip">${tUI('settingsGameShieldDesc')}</div>
             </div>
-            <label class="toggle-pill" style="flex-shrink:0">
+            <label class="toggle-pill u-noshrink">
               <input type="checkbox" id="pulse-gs-check" onchange="launchRuleToggle('gameShield', this.checked)">
               <span class="pill-slider"></span>
             </label>
@@ -2890,7 +2890,7 @@ async function buildPulse(c) {
 
             <!-- Always Keep Alive section -->
             <div style="margin-bottom:10px">
-              <div style="font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--c-text-tertiary);margin-bottom:5px"><i class="fa fa-heart" style="margin-right:4px"></i>${tUI('gsExclusionsLabel')}</div>
+              <div style="font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--c-text-tertiary);margin-bottom:5px"><i class="fa fa-heart u-mr4"></i>${tUI('gsExclusionsLabel')}</div>
               <div id="gs-exclusions-row" style="display:flex;align-items:flex-start;gap:6px;flex-wrap:wrap">
                 <div id="gs-exclusion-pills" style="display:flex;flex-wrap:wrap;gap:3px"></div>
                 <input id="gs-exclusion-input" type="text" placeholder="${tUI('gsExclusionsPlaceholder')}"
@@ -2901,15 +2901,15 @@ async function buildPulse(c) {
 
             <!-- RAM Thresholds section -->
             <div>
-              <div style="font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--c-text-tertiary);margin-bottom:7px"><i class="fa fa-gauge-high" style="margin-right:4px"></i>${tUI('gsSettingsLabel')}</div>
+              <div style="font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--c-text-tertiary);margin-bottom:7px"><i class="fa fa-gauge-high u-mr4"></i>${tUI('gsSettingsLabel')}</div>
               <div style="display:flex;flex-direction:column;gap:8px">
                 <!-- Tier 3 slider -->
                 <div>
                   <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:3px">
                     <span style="font-size:11px;color:var(--c-text-secondary);font-weight:600">${tUI('gsThresholdTier3')}</span>
-                    <span style="font-size:11px;color:var(--c-text-tertiary)">${tUI('gsThresholdTier3Hint')}</span>
+                    <span class="u-cap">${tUI('gsThresholdTier3Hint')}</span>
                   </div>
-                  <div style="display:flex;align-items:center;gap:7px">
+                  <div class="u-row7">
                     <input id="gs-tier3-threshold" type="range" min="50" max="95" step="5" value="${settings.gameShieldTier3Threshold ?? 70}"
                       class="gs-slider" style="--gs-color:var(--c-accent);--gs-glow:rgba(142,68,173,0.28);--gs-fill-pct:${Math.round(((settings.gameShieldTier3Threshold ?? 70) - 50) / 45 * 100)}%"
                       oninput="gsUpdateThreshold('tier3', this.value)">
@@ -2920,9 +2920,9 @@ async function buildPulse(c) {
                 <div>
                   <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:3px">
                     <span style="font-size:11px;color:var(--c-text-secondary);font-weight:600">${tUI('gsThresholdMidSession')}</span>
-                    <span style="font-size:11px;color:var(--c-text-tertiary)">${tUI('gsThresholdMidSessionHint')}</span>
+                    <span class="u-cap">${tUI('gsThresholdMidSessionHint')}</span>
                   </div>
-                  <div style="display:flex;align-items:center;gap:7px">
+                  <div class="u-row7">
                     <input id="gs-midsession-threshold" type="range" min="50" max="95" step="5" value="${settings.gameShieldMidSessionThreshold ?? 80}"
                       class="gs-slider" style="--gs-color:var(--c-danger);--gs-glow:rgba(231,76,60,0.28);--gs-fill-pct:${Math.round(((settings.gameShieldMidSessionThreshold ?? 80) - 50) / 45 * 100)}%"
                       oninput="gsUpdateThreshold('midSession', this.value)">
@@ -2936,13 +2936,13 @@ async function buildPulse(c) {
 
         <!-- Game Watcher card -->
         <div id="lr-card-gw" class="lr-card lr-rail-cyan">
-          <div style="display:flex;align-items:center;gap:10px">
+          <div class="u-row10">
             <div id="pulse-gw-dot" class="lr-dot"></div>
-            <div style="flex:1;min-width:0">
+            <div class="u-fill">
               <div style="font-size:11px;font-weight:700;color:var(--white);white-space:nowrap;overflow:hidden;text-overflow:ellipsis"><i class="fa fa-eye" style="margin-right:4px;color:var(--c-accent-fg)"></i>${tUI('settingsGameWatcher')}</div>
-              <div style="font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${tUI('settingsGameWatcherDesc')}</div>
+              <div class="u-ellip">${tUI('settingsGameWatcherDesc')}</div>
             </div>
-            <label class="toggle-pill" style="flex-shrink:0">
+            <label class="toggle-pill u-noshrink">
               <input type="checkbox" id="pulse-gw-check" onchange="launchRuleToggle('gameWatcher', this.checked)">
               <span class="pill-slider"></span>
             </label>
@@ -2951,23 +2951,23 @@ async function buildPulse(c) {
 
         <!-- Auto-Pulse card (Premium only) -->
         ${settings.isPremium ? `<div id="lr-card-ap" class="lr-card lr-rail-green">
-          <div style="display:flex;align-items:center;gap:10px">
+          <div class="u-row10">
             <div id="pulse-ap-dot" class="lr-dot"></div>
-            <div style="flex:1;min-width:0">
-              <div style="font-size:11px;font-weight:700;color:var(--c-success);white-space:nowrap;overflow:hidden;text-overflow:ellipsis"><i class="fa fa-wand-magic-sparkles" style="margin-right:4px"></i>${tUI('settingsAutoPulse')}</div>
-              <div style="font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${tUI('settingsAutoPulseDesc')}</div>
+            <div class="u-fill">
+              <div style="font-size:11px;font-weight:700;color:var(--c-success);white-space:nowrap;overflow:hidden;text-overflow:ellipsis"><i class="fa fa-wand-magic-sparkles u-mr4"></i>${tUI('settingsAutoPulse')}</div>
+              <div class="u-ellip">${tUI('settingsAutoPulseDesc')}</div>
             </div>
-            <label class="toggle-pill" style="flex-shrink:0">
+            <label class="toggle-pill u-noshrink">
               <input type="checkbox" id="pulse-ap-check" onchange="launchRuleToggle('autoPulse', this.checked)">
               <span class="pill-slider"></span>
             </label>
           </div>
           <!-- Auto-Pulse active badge + per-game preset override -->
           <div id="auto-pulse-badge" style="display:none;align-items:center;gap:8px;background:rgba(46,204,113,0.08);border:1px solid rgba(46,204,113,0.25);border-radius:6px;padding:5px 10px;font-size:11px;color:var(--c-success);margin-top:6px">
-            <i class="fa fa-wand-magic-sparkles" style="flex-shrink:0"></i>
+            <i class="fa fa-wand-magic-sparkles u-noshrink"></i>
             <span>${tUI('autoPulseActiveLabel') || 'Auto-Pulse active:'}</span>
             <strong class="apb-game" style="color:#fff"></strong>
-            <div style="flex:1"></div>
+            <div class="u-grow"></div>
             <select id="ap-preset-override" onchange="applyAutoPulsePresetOverride(this)"
               style="background:var(--bg-dark);border:1px solid var(--border);border-radius:4px;color:var(--white);font-size:11px;padding:2px 4px;cursor:pointer;max-width:90px">
               <option value="">${tUI('autoPulseDefaultPreset') || 'Default preset'}</option>
@@ -2989,7 +2989,7 @@ async function buildPulse(c) {
     <!-- Thermal Headroom Card -->
     <div id="pulse-thermal-card" style="display:none">
       <i id="pulse-thermal-icon" class="fa fa-thermometer-half" style="font-size:18px;flex-shrink:0"></i>
-      <div style="min-width:0">
+      <div class="u-min0">
         <div id="pulse-thermal-label" style="font-size:11px;font-weight:700"></div>
         <div id="pulse-thermal-sub" style="font-size:11px;color:var(--muted);margin-top:2px;white-space:normal;line-height:1.4"></div>
       </div>
@@ -3016,7 +3016,7 @@ async function buildPulse(c) {
       <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:11px;color:var(--gray)">
         <input type="checkbox" id="pulse-kill-bg" checked style="accent-color:var(--pink)"> ${tUI('pulseKillBg')}
       </label>
-      <div style="flex:1"></div>
+      <div class="u-grow"></div>
       <div id="pulse-active-label" style="font-size:11px;color:var(--gray);display:none">
         ${tUI('pulseActiveLabel')} <strong id="pulse-active-name" style="color:var(--c-accent-fg)"></strong>
       </div>
