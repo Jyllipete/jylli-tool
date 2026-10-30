@@ -13898,7 +13898,7 @@ function hwFilterTweaks(query) {
 // ─── Page: Network ────────────────────────────────────────────────────────────
 function buildNetwork(c) {
   const si = sysInfo
-  const wifiWarn = si.isWifi ? tUI('networkWifiTip').replace('{adapter}', si.wifiAdapter || 'wireless adapter') : ''
+  const wifiWarn = si.isWifi ? tUI('networkWifiTip').replace('{adapter}', si.wifiAdapter || tUI('netWirelessAdapter')) : ''
 
   // ── Network Hero Card (adapter + score ring + stats) ──────────────────────
   const NET_TWEAK_IDS = [
@@ -13922,7 +13922,7 @@ function buildNetwork(c) {
     const sigClass  = signalPct >= 70 ? 'chip-signal-good' : signalPct >= 40 ? 'chip-signal-warn' : 'chip-signal-bad'
     adapterChipsHtml = `${si.wifiBand ? `<span class="net-hero-chip">${si.wifiBand}</span>` : ''}<span class="net-hero-chip ${sigClass}">${si.wifiSignal || '—'}</span>`
   } else {
-    adapterName = si.nicName || 'Ethernet Adapter'
+    adapterName = si.nicName || tUI('netEthernetAdapter')
     const speedGbps = si.nicSpeed ? (si.nicSpeed >= 1 ? `${si.nicSpeed} Gbps` : `${si.nicSpeed * 1000} Mbps`) : ''
     adapterChipsHtml = `${speedGbps ? `<span class="net-hero-chip">${speedGbps}</span>` : ''}${si.nicDriver ? `<span class="net-hero-chip" style="font-family:monospace;font-size:11px">${si.nicDriver}</span>` : ''}`
   }
@@ -13984,7 +13984,7 @@ function buildNetwork(c) {
 
   c.appendChild(makeTip(tUI('netTipTitle'), 'info'))
 
-  if (si.isWifi) c.appendChild(makeTip(`<i class="fa fa-triangle-exclamation"></i> ${tUI('networkWifiTip').replace('{adapter}', si.wifiAdapter || 'wireless adapter')}`, 'warning'))
+  if (si.isWifi) c.appendChild(makeTip(`<i class="fa fa-triangle-exclamation"></i> ${tUI('networkWifiTip').replace('{adapter}', si.wifiAdapter || tUI('netWirelessAdapter'))}`, 'warning'))
 
   const searchWrap = document.createElement('div')
   searchWrap.className = 'fivem-search-wrap'
@@ -14489,7 +14489,7 @@ function updateNetworkScore() {
   if (numEl)  numEl.textContent  = pct + '%'
   if (barEl)  barEl.style.width  = pct + '%'
   if (tierEl) tierEl.textContent = tierLabel
-  if (subEl)  subEl.textContent  = `${applied} / ${total} tweaks active`
+  if (subEl)  subEl.textContent  = `${applied} / ${total} ${tUI('netTweaksActive')}`
   if (chips[0]) chips[0].textContent = `${applied} ${tUI('netHeroApplied')}`
   if (chips[1]) chips[1].textContent = `${pending} ${tUI('netHeroPending')}`
 }
