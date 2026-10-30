@@ -3826,7 +3826,7 @@ function renderStartupRow(item) {
       <div class="startup-cmd" title="${escAttr(item.Command || '')}">${escHtml(displayCmd)}</div>
     </div>
     <div class="startup-row-actions">${openBtn}${delayBtn}</div>
-    <span class="startup-impact ${effectiveImpact.toLowerCase()}">${effectiveImpact}</span>
+    <span class="startup-impact ${effectiveImpact.toLowerCase()}">${({ High: tUI('startupImpHigh'), Medium: tUI('startupImpMed'), Low: tUI('startupImpLow') })[effectiveImpact] || effectiveImpact}</span>
     <label class="toggle-pill" title="${item.Enabled ? tUI('startupToastDisabled') : tUI('startupToastEnabled')}">
       <input type="checkbox" ${item.Enabled ? 'checked' : ''} onchange="toggleStartup(this)">
       <span class="pill-slider"></span>
