@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, dialog, shell, Tray, Menu, nativeImage, Notification, safeStorage } = require('electron')
+const { app, BrowserWindow, ipcMain, dialog, shell, Tray, Menu, nativeImage, Notification, safeStorage, nativeTheme } = require('electron')
 const path = require('path')
 const { exec, execFile, spawn } = require('child_process')
 const fs = require('fs')
@@ -934,7 +934,7 @@ function createWindow() {
     minHeight: 660,
     frame: false,
     transparent: false,
-    backgroundColor: '#09090B',
+    backgroundColor: windowBg(),
     show: false,
     icon: path.join(__dirname, 'assets', 'icon.png'),
     webPreferences: {
@@ -9993,7 +9993,7 @@ ipcMain.handle('open-pulse-window', () => {
     minHeight: 600,
     frame: false,
     transparent: false,
-    backgroundColor: '#09090B',
+    backgroundColor: windowBg(),
     show: false,
     focusable: true,
     skipTaskbar: true,
@@ -10007,7 +10007,7 @@ ipcMain.handle('open-pulse-window', () => {
       devTools: false
     }
   })
-  pulseWindow.loadFile('pulse.html', { query: { lang: windowLang(), accent: windowAccent(), theme: windowTheme() } })
+  pulseWindow.loadFile('pulse.html', { query: { lang: windowLang(), accent: windowAccent(), theme: windowTheme(), scheme: windowScheme() } })
   pulseWindow.once('ready-to-show', () => pulseWindow.show())
   pulseWindow.on('closed', () => { pulseWindow = null })
 })
@@ -10055,7 +10055,7 @@ function openFivemHud() {
       devTools: false
     }
   })
-  fivemHudWindow.loadFile('fivem-hud.html', { query: { lang: windowLang(), accent: windowAccent(), theme: windowTheme() } })
+  fivemHudWindow.loadFile('fivem-hud.html', { query: { lang: windowLang(), accent: windowAccent(), theme: windowTheme(), scheme: windowScheme() } })
   fivemHudWindow.setAlwaysOnTop(true, 'screen-saver')
   fivemHudWindow.once('ready-to-show', () => {
     fivemHudWindow?.show()
@@ -10094,7 +10094,7 @@ ipcMain.handle('open-fivem-settings', () => {
     minHeight: 500,
     frame: false,
     transparent: false,
-    backgroundColor: '#09090B',
+    backgroundColor: windowBg(),
     show: false,
     focusable: true,
     skipTaskbar: false,
@@ -10108,7 +10108,7 @@ ipcMain.handle('open-fivem-settings', () => {
       devTools: false
     }
   })
-  fivemSettingsWindow.loadFile('fivem-settings.html', { query: { lang: windowLang(), accent: windowAccent(), theme: windowTheme() } })
+  fivemSettingsWindow.loadFile('fivem-settings.html', { query: { lang: windowLang(), accent: windowAccent(), theme: windowTheme(), scheme: windowScheme() } })
   fivemSettingsWindow.once('ready-to-show', () => fivemSettingsWindow.show())
   fivemSettingsWindow.on('closed', () => { fivemSettingsWindow = null })
 })
@@ -10133,7 +10133,7 @@ ipcMain.handle('open-arma-settings', () => {
     minHeight: 520,
     frame: false,
     transparent: false,
-    backgroundColor: '#09090B',
+    backgroundColor: windowBg(),
     show: false,
     focusable: true,
     skipTaskbar: true,
@@ -10147,7 +10147,7 @@ ipcMain.handle('open-arma-settings', () => {
       devTools: false
     }
   })
-  armaSettingsWindow.loadFile('arma-settings.html', { query: { lang: windowLang(), accent: windowAccent(), theme: windowTheme() } })
+  armaSettingsWindow.loadFile('arma-settings.html', { query: { lang: windowLang(), accent: windowAccent(), theme: windowTheme(), scheme: windowScheme() } })
   armaSettingsWindow.once('ready-to-show', () => armaSettingsWindow.show())
   armaSettingsWindow.on('closed', () => { armaSettingsWindow = null })
 })
@@ -12423,6 +12423,9 @@ const windowLang = () => (loadSettings().language === 'fi' ? 'fi' : 'en')
 // Accent colour for secondary windows (validated hex or empty; js/theme-sync.js falls back to the theme preset)
 const windowAccent = () => { const a = loadSettings().accentColor; return typeof a === 'string' && /^#[0-9a-f]{6}$/i.test(a) ? a : '' }
 const windowTheme = () => String(loadSettings().theme || '').replace(/[^a-z]/g, '')
+// Colour scheme preference for windows (dark | light | system); the BrowserWindow background follows it so there is no flash
+const windowScheme = () => { const c = loadSettings().colorScheme; return c === 'light' || c === 'system' ? c : 'dark' }
+const windowBg = () => { const c = windowScheme(); return c === 'light' || (c === 'system' && !nativeTheme.shouldUseDarkColors) ? '#F1F1F3' : '#09090B' }
 const biosDumpPath = () => path.join(app.getPath('userData'), 'bios_dump.txt')
 const escRx = x => x.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 
@@ -13344,7 +13347,7 @@ function createFpsHud() {
     show: false,
     webPreferences: { preload: path.join(__dirname, 'preload-overlay.js'), contextIsolation: true, nodeIntegration: false, sandbox: true, devTools: false },
   })
-  _fpsHudWindow.loadFile(path.join(__dirname, 'fps-hud.html'), { query: { lang: windowLang(), accent: windowAccent(), theme: windowTheme() } })
+  _fpsHudWindow.loadFile(path.join(__dirname, 'fps-hud.html'), { query: { lang: windowLang(), accent: windowAccent(), theme: windowTheme(), scheme: windowScheme() } })
   _fpsHudWindow.setAlwaysOnTop(true, 'screen-saver')
   _fpsHudWindow.once('ready-to-show', () => {
     _fpsHudWindow?.show()
@@ -13647,7 +13650,7 @@ ipcMain.handle('open-fps-hud-settings', async () => {
       webPreferences: { preload: path.join(__dirname, 'preload-overlay.js'), contextIsolation: true, nodeIntegration: false, sandbox: true, devTools: false },
       parent: mainWindow, modal: false, show: false,
     })
-    _fpsHudSettingsWindow.loadFile(path.join(__dirname, 'fps-hud-settings.html'), { query: { lang: windowLang(), accent: windowAccent(), theme: windowTheme() } })
+    _fpsHudSettingsWindow.loadFile(path.join(__dirname, 'fps-hud-settings.html'), { query: { lang: windowLang(), accent: windowAccent(), theme: windowTheme(), scheme: windowScheme() } })
     _fpsHudSettingsWindow.once('ready-to-show', () => _fpsHudSettingsWindow?.show())
     _fpsHudSettingsWindow.on('closed', () => { _fpsHudSettingsWindow = null })
     return { ok: true }

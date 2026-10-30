@@ -225,3 +225,41 @@ body.motion-smooth {
     animation-iteration-count: 1 !important;
   }
 }
+
+/* ── Semantic additions shared by both schemes ── */
+:root {
+  --on-accent: #0B0A14;                                                   /* text on an accent fill */
+  --c-accent-fg: color-mix(in oklab, var(--c-accent) 78%, white);         /* accent used as text */
+  --scrim: rgba(4,4,6,.62);
+  color-scheme: dark;
+}
+
+/* ── Light scheme: <html data-scheme="light"> (set by js/theme-sync.js from settings.colorScheme or the OS) ── */
+:root[data-scheme="light"] {
+  color-scheme: light;
+  --c-bg-base: #F1F1F3; --c-bg-elevated: #FFFFFF; --c-bg-raised: #F5F5F7; --c-bg-glass: rgba(255,255,255,0.8);
+  --c-bg-deep: #E9E9EC; --c-bg-overlay: rgba(30,30,40,0.38); --c-bg-hover: rgba(0,0,0,0.04);
+  --c-text-primary: #17171A; --c-text-secondary: #4F4F58; --c-text-tertiary: #646470;
+  --c-border-subtle: rgba(0,0,0,0.075); --c-border-default: rgba(0,0,0,0.11); --c-border-strong: rgba(0,0,0,0.18);
+  --c-overlay: rgba(30,30,40,0.38); --scrim: rgba(30,30,40,0.28);
+  --c-accent-fg: color-mix(in oklab, var(--c-accent) 72%, black);
+
+  --surface-0: #F1F1F3; --surface-1: #FFFFFF; --surface-2: #F5F5F7; --surface-3: #EBEBEE; --surface-sunken: #E9E9EC;
+  --hairline: rgba(0,0,0,0.075); --hairline-strong: rgba(0,0,0,0.12); --hairline-top: none;
+
+  --c-success: #137333; --c-success-muted: rgba(21,128,61,0.10); --c-success-ring: rgba(21,128,61,0.30);
+  --c-warning: #A34A08; --c-warning-muted: rgba(180,83,9,0.10); --c-warning-ring: rgba(180,83,9,0.30);
+  --c-danger:  #C62222; --c-danger-muted:  rgba(220,38,38,0.09); --c-danger-ring:  rgba(220,38,38,0.30);
+  --c-info:    #2563EB; --c-info-muted:    rgba(37,99,235,0.09); --c-info-ring:    rgba(37,99,235,0.30);
+
+  --gray-50: rgba(0,0,0,0.92); --gray-100: rgba(0,0,0,0.80); --gray-200: rgba(0,0,0,0.66); --gray-300: rgba(0,0,0,0.52);
+  --gray-400: rgba(0,0,0,0.38); --gray-500: rgba(0,0,0,0.26); --gray-600: rgba(0,0,0,0.16); --gray-700: rgba(0,0,0,0.10);
+  --gray-800: rgba(0,0,0,0.06); --gray-900: rgba(0,0,0,0.03); --gray-950: rgba(0,0,0,0.015);
+
+  --shadow-1: 0 1px 2px rgba(20,20,30,0.10);
+  --shadow-2: 0 4px 16px rgba(20,20,30,0.10);
+  --shadow-3: 0 12px 40px rgba(20,20,30,0.14);
+  --shadow-modal: 0 24px 64px rgba(20,20,30,0.18), 0 0 0 1px rgba(0,0,0,0.08);
+  --shadow-card: 0 1px 2px rgba(20,20,30,0.06);
+  --shadow-lifted: 0 8px 24px rgba(20,20,30,0.12), 0 0 0 1px rgba(0,0,0,0.06);
+}

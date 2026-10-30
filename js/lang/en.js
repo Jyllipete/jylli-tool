@@ -795,6 +795,7 @@ LANG.en = {
       settingsUiSounds:'UI Sounds',
       settingsUiSoundsDesc:'Subtle audio feedback on button interactions',
       motionMode:'Animation Speed',
+      colorScheme:'Theme', colorSchemeDesc:'Dark is the default. System follows your Windows setting.', schemeSystem:'System', schemeDark:'Dark', schemeLight:'Light',
       motionSnappy:'Snappy',
       motionDefault:'Default',
       motionSmooth:'Smooth',

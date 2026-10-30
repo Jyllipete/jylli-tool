@@ -1801,6 +1801,7 @@ function applyTheme(themeKey, { animate = true } = {}) {
 function applyAccentColor(hex) { JylliTheme.applyAccent(hex) }
 
 function initPersonalization() {
+  JylliTheme.applyScheme(settings.colorScheme)
   applyTheme(settings.theme || 'jylli')
   applyMotionMode(settings.motionMode || 'default')
   if (settings.accentColor) applyAccentColor(settings.accentColor)
@@ -2138,6 +2139,13 @@ function settingsToggleUiSounds(on) {
   settings.uiSounds = on
   api.saveSettings(settings)
   toast(on ? tUI('settingsUiSounds') + ' enabled' : tUI('settingsUiSounds') + ' disabled', '', on ? 'ok' : 'info')
+}
+
+function settingsSetScheme(v) {
+  settings.colorScheme = v === 'light' || v === 'system' ? v : 'dark'
+  api.saveSettings(settings)
+  JylliTheme.applyScheme(settings.colorScheme)
+  document.querySelectorAll('[data-scheme]').forEach(b => b.classList.toggle('j-seg-active', b.dataset.scheme === settings.colorScheme))
 }
 
 function settingsSetMotionMode(mode) {

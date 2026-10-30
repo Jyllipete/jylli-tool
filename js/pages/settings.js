@@ -46,6 +46,7 @@ function buildSettings(c) {
       <div class="j-theme-grid" id="theme-grid"></div>
       ${ui.group('', [
         row(tUI('settingsCustomAccent'), tUI('settingsAccentHint'), html`<div class="tc-accent-row" id="accent-row"><div class="tc-accent-swatch-wrap" id="accent-swatch-wrap"><div class="tc-accent-swatch-circle" id="accent-swatch-circle"></div><input type="color" id="accent-color-picker"></div>${ui.button({ label: tUI('settingsReset'), size: 'sm', onclick: 'resetAccentColor()' })}</div>`),
+        row(tUI('colorScheme'), tUI('colorSchemeDesc'), html`<div class="j-seg">${['system', 'dark', 'light'].map(v => html`<button type="button" data-scheme="${v}" class="${ui.cls('j-seg-item', (settings.colorScheme || 'dark') === v && 'j-seg-active')}" onclick="settingsSetScheme('${v}')">${tUI('scheme' + v.charAt(0).toUpperCase() + v.slice(1))}</button>`)}</div>`),
         row(tUI('motionMode'), tUI('motionModeDesc'), html`<div class="j-seg">${motionBtns}</div>`),
       ])}`)}
 

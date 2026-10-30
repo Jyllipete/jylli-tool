@@ -773,6 +773,7 @@ LANG.fi = {
       settingsUiSounds:'Käyttöliittymääänet',
       settingsUiSoundsDesc:'Hienovarainen äänipalaute painikkeiden käytöstä',
       motionMode:'Animaationopeus',
+      colorScheme:'Teema', colorSchemeDesc:'Tumma on oletus. Järjestelmä seuraa Windowsin asetusta.', schemeSystem:'Järjestelmä', schemeDark:'Tumma', schemeLight:'Vaalea',
       motionSnappy:'Nopea',
       motionDefault:'Oletus',
       motionSmooth:'Pehmeä',

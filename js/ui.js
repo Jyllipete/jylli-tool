@@ -34,8 +34,8 @@
 
   const ui = { html, raw, esc, SafeHtml, attrs, cls, icon }
 
-  // variant: primary | secondary | ghost | danger   size: sm | md
-  ui.button = ({ label, icon: ic, variant = 'secondary', size = 'md', onclick, id, title, disabled, iconOnly, extra } = {}) => html`<button class="${cls('j-btn', 'j-btn-' + variant, size === 'sm' && 'j-btn-sm', iconOnly && 'j-btn-icon')}" type="button" ${raw(attrs({ id, title, onclick, disabled, 'aria-label': iconOnly ? (title || label) : null, ...extra }))}>${icon(ic)}${iconOnly ? '' : label}</button>`
+  // variant: primary | secondary | ghost | danger   size: sm | md | lg   loading: shows a spinner and blocks clicks
+  ui.button = ({ label, icon: ic, variant = 'secondary', size = 'md', onclick, id, title, disabled, iconOnly, loading, tip, extra } = {}) => html`<button class="${cls('j-btn', 'j-btn-' + variant, size === 'sm' && 'j-btn-sm', size === 'lg' && 'j-btn-lg', iconOnly && 'j-btn-icon', loading && 'j-btn-loading')}" type="button" ${raw(attrs({ id, title: tip ? null : title, 'data-tip': tip || (iconOnly ? title : null), onclick, disabled, 'aria-busy': loading ? 'true' : null, 'aria-label': iconOnly ? (title || label) : null, ...extra }))}>${icon(ic)}${iconOnly ? '' : label}</button>`
 
   // tone: neutral | ok | warn | danger | info | accent
   ui.badge = (text, tone = 'neutral') => html`<span class="${cls('j-badge', 'j-badge-' + tone)}">${text}</span>`
@@ -73,6 +73,10 @@
   ui.segmented = (items, active, onSwitch) => html`<div class="j-seg" role="tablist">${items.map(t => html`<button class="${cls('j-seg-item', t.id === active && 'j-seg-active')}" type="button" onclick="${String(onSwitch).replace(/\{id\}/g, String(t.id).replace(/[^\w-]/g, ''))}">${t.label}</button>`)}</div>`
 
   ui.empty = ({ icon: ic = 'inbox', title, sub, action } = {}) => html`<div class="j-empty">${ic ? html`<div class="j-empty-icon">${icon(ic)}</div>` : ''}<div class="j-empty-title">${title}</div>${sub ? html`<div class="j-empty-sub">${sub}</div>` : ''}${action ? html`<div class="j-empty-action">${action}</div>` : ''}</div>`
+  // Error state: what happened and what to do; the action is usually a Retry button
+  ui.error = ({ icon: ic = 'triangle-exclamation', title, sub, action } = {}) => html`<div class="j-error" role="alert"><div class="j-error-icon">${icon(ic)}</div><div class="j-error-title">${title}</div>${sub ? html`<div class="j-error-sub">${sub}</div>` : ''}${action ? html`<div class="j-error-action">${action}</div>` : ''}</div>`
+  // Impact bars: level 1-3 plus a label
+  ui.impact = (level, label) => { const n = Math.max(0, Math.min(3, Number(level) || 0)); return html`<span class="j-impact"><span class="j-bars" aria-hidden="true"><i class="${n >= 1 ? 'j-on' : ''}"></i><i class="${n >= 2 ? 'j-on' : ''}"></i><i class="${n >= 3 ? 'j-on' : ''}"></i></span>${label}</span>` }
   ui.skeleton = (w = '100%', h = 12) => html`<span class="j-skeleton" style="width:${typeof w === 'number' ? w + 'px' : esc(w)};height:${Number(h) || 12}px"></span>`
   ui.spinner = label => html`<span class="j-loading"><i class="fa fa-spinner fa-spin" aria-hidden="true"></i>${label ? html`<span>${label}</span>` : ''}</span>`
   ui.callout = (text, tone = 'info', ic) => html`<div class="${cls('j-callout', 'j-callout-' + tone)}">${icon(ic || ({ info: 'circle-info', ok: 'circle-check', warn: 'triangle-exclamation', danger: 'circle-exclamation' })[tone])}<div>${text}</div></div>`
