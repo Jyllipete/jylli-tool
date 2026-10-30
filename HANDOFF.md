@@ -2,6 +2,7 @@
 
 ## UI 2.0 status (2026-10-30)
 
+- Dialog a11y: `_openModal/_closeModal` (js/ui-helpers.js) give every modal role=dialog, aria-labelledby, focus in/out and a Tab trap; tablists support Arrow/Home/End; toast container is a polite live region; `tools/check-keys.js` guards translation keys of rebuilt pages.
 - Generated CSS: `css/inline-extract.css` holds 164 `jx-N` classes made from repeated static inline styles in index.html and js/fivem-logic.js (inline `style="` count 1790 -> 964; the rest are dynamic). Page style signatures were compared before and after.
 Docs: `DESIGN_AUDIT.md` (what was wrong), `DESIGN_SYSTEM.md` (tokens, rules, decisions), `design-preview.html` (approved mock), `design-comparison.html` (before/after screenshots).
 - Done: light theme (`colorScheme` setting, `js/theme-sync.js` applyScheme, `:root[data-scheme="light"]` in `css/tokens.css`), shell, Home/Settings/Processes/History/Scheduler on `ui.*`, Fixes, Latency, Diagnostics, Restore points and the Cleanup side cards rebuilt on `ui.*` (js/pages/optimize-fixes.js, gaming-latency.js, system-diagnostics.js, system-restore.js, clean-cleanup-aside.js); 458 unused CSS rules pruned (`deadcss.js` idea: drop rules whose class/id never appears in any source), Pulse order and readability, translated command palette + shortcuts, legacy CSS/inline colours mapped to tokens, automatic a11y labels (`_a11yEnhance` in `js/ui-helpers.js`), `tools/check-contrast.js`.
