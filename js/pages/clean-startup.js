@@ -32,9 +32,9 @@ function buildStartupManager(c) {
     </div>
     <div class="j-legend">
       <span class="j-legend-label">${tUI('startupLegendImpact')}</span>
-      ${ui.impact(3, tUI('startupImpHigh'))}<span>${tUI('startupLegendHigh')}</span>
-      ${ui.impact(2, tUI('startupImpMed'))}<span>${tUI('startupLegendMed')}</span>
-      ${ui.impact(1, tUI('startupImpLow'))}<span>${tUI('startupLegendLow')}</span>
+      <span class="j-legend-item">${ui.impact(3, tUI('startupImpHigh'))}<span>${tUI('startupLegendHigh')}</span></span>
+      <span class="j-legend-item">${ui.impact(2, tUI('startupImpMed'))}<span>${tUI('startupLegendMed')}</span></span>
+      <span class="j-legend-item">${ui.impact(1, tUI('startupImpLow'))}<span>${tUI('startupLegendLow')}</span></span>
     </div>
     <div class="j-su-search" id="startup-search-wrap">
       <label class="j-search"><i class="fa fa-magnifying-glass" aria-hidden="true"></i><input class="j-input" id="startup-search" type="search" autocomplete="off" placeholder="${tUI('startupSearchPh')}" aria-label="${tUI('startupSearchPh')}" oninput="startupFilter(this.value)" onkeydown="if(event.key==='Escape'){startupClearSearch()}"></label>

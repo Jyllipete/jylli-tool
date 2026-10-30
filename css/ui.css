@@ -837,3 +837,5 @@
 .j-bios-rec-steps { margin: 0; padding-left: 16px; font-size: var(--fs-2); line-height: 1.8; color: var(--c-text-secondary); }
 
 .j-keys { display: inline-flex; gap: 4px; }
+.j-legend-item { display: inline-flex; align-items: center; gap: 6px; margin-right: 14px; }
+.j-legend-item > span:last-child { color: var(--c-text-tertiary); }
