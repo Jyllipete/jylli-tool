@@ -9748,7 +9748,7 @@ async function initHealthScoreRing() {
     } else if (!existing) {
       const badge = document.createElement('span')
       badge.className = 'health-score-badge'
-      badge.style.cssText = `display:inline-block;width:7px;height:7px;border-radius:50%;background:${color};margin-left:5px;vertical-align:middle;flex-shrink:0`
+      badge.style.cssText = `display:inline-block;width:7px;height:7px;border-radius:50%;background:${color};margin-left:5px;vertical-align:middle;flex-shrink:0`;
       (navBtn.querySelector('.nav-label') || navBtn.querySelector('span'))?.appendChild(badge)
     }
   }
