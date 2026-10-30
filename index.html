@@ -9247,10 +9247,10 @@ function fmtUptime(sec) {
 }
 
 function tempColor(t) {
-  if (t >= 90) return '#ef4444'
-  if (t >= 75) return '#f97316'
-  if (t >= 60) return '#facc15'
-  return getComputedStyle(document.documentElement).getPropertyValue('--pink').trim() || '#FF2E63'
+  if (t >= 90) return 'var(--c-danger)'
+  if (t >= 75) return 'var(--c-warning)'
+  if (t >= 60) return 'var(--c-warning)'
+  return 'var(--c-accent-fg)'
 }
 
 const _sparkHistory = { cpu: [], gpu: [], ram: [], net: [] }
@@ -9829,14 +9829,14 @@ async function runWindowsHealthDash(btn) {
   banner.style.display = 'block'
   banner.style.background = 'rgba(52,152,219,0.07)'
   banner.style.border = '1px solid rgba(52,152,219,0.2)'
-  banner.style.color = '#3498db'
+  banner.style.color = 'var(--c-info)'
   banner.innerHTML = `<i class="fa fa-spinner fa-spin"></i> ${tUI('dashHealthRunning')}`
 
   api.offWindowsHealthProgress()
   api.onWindowsHealthProgress(({ msg, level }) => {
     const colors = { ok:'rgba(46,204,113,0.07)', warn:'rgba(230,126,34,0.07)', err:pinkA(0.07), info:'rgba(52,152,219,0.07)' }
     const borders = { ok:'rgba(46,204,113,0.2)', warn:'rgba(230,126,34,0.2)', err:pinkA(0.2), info:'rgba(52,152,219,0.2)' }
-    const textColors = { ok:'var(--success)', warn:'#e67e22', err:'var(--danger)', info:'#3498db' }
+    const textColors = { ok:'var(--success)', warn:'var(--c-warning)', err:'var(--c-danger)', info:'var(--c-info)' }
     if (banner) {
       banner.style.background = colors[level] || colors.info
       banner.style.border = `1px solid ${borders[level] || borders.info}`
@@ -9879,7 +9879,7 @@ function showHealthNudgeIfNeeded() {
     banner.innerHTML = `<i class="fa fa-triangle-exclamation"></i> <strong>${tUI('dashHealthNeverRun').split('—')[0].trim()}</strong> — ${tUI('dashHealthNeverRun').split('—').slice(1).join('—').trim()}`
   } else if (ageHours > 72) {
     banner.style.display = 'block'
-    banner.style.background = 'rgba(52,152,219,0.07)'; banner.style.border = '1px solid rgba(52,152,219,0.2)'; banner.style.color = '#3498db'
+    banner.style.background = 'rgba(52,152,219,0.07)'; banner.style.border = '1px solid rgba(52,152,219,0.2)'; banner.style.color = 'var(--c-info)'
     banner.innerHTML = `<i class="fa fa-clock-rotate-left"></i> ${tUI('dashHealthStale').replace('{h}', Math.round(ageHours))}`
   } else if (localStorage.getItem('health_check_ok') === '0') {
     banner.style.display = 'block'
