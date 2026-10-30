@@ -5856,9 +5856,9 @@ async function buildBiosTuner(c) {
         if (lastTick && bl.cpuTemp !== null && lastTick.cpuTemp !== null) {
           const delta = Math.round(bl.cpuTemp - lastTick.cpuTemp)
           const deltaCard = document.createElement('div')
-          deltaCard.style.cssText = 'background:rgba(0,212,180,0.04);border:1px solid rgba(0,212,180,0.2);border-radius:8px;padding:9px 12px;margin-bottom:12px;font-size:11px;color:var(--gray)'
+          deltaCard.className = 'j-note j-note-accent j-note-body'
           const dir = delta > 0 ? `↓ ${Math.abs(delta)}°C` : delta < 0 ? `↑ ${Math.abs(delta)}°C (warmer)` : 'unchanged'
-          deltaCard.innerHTML = `<i class="fa fa-chart-line" style="color:var(--accent);margin-right:6px"></i><strong class="jx-20">Since AutoTune:</strong> idle temp ${dir} · PPT set to ${bl.ppt}W`
+          deltaCard.innerHTML = `<i class="fa fa-chart-line j-note-ico" aria-hidden="true"></i> <strong class="jx-20">Since AutoTune:</strong> idle temp ${dir} · PPT set to ${bl.ppt}W`
           c.insertBefore(deltaCard, c.firstChild)
         }
       } catch {}
@@ -6176,14 +6176,14 @@ async function buildBiosTuner(c) {
         </div>
       </div>
       <!-- Ryzen AutoTune -->
-      <div style="margin-bottom:10px;padding:10px 12px;background:rgba(0,212,180,0.04);border:1px solid rgba(0,212,180,0.18);border-radius:8px">
+      <div class="j-note j-note-accent">
         <div class="jx-118">
           <button id="ryzen-autotune-btn" class="btn btn-primary btn-sm" onclick="doRyzenAutoTune()" style="font-size:11px;padding:4px 12px;gap:6px">
             <i class="fa fa-wand-magic-sparkles"></i> Tune for me
           </button>
-          <span id="ryzen-autotune-status" style="font-size:11px;color:var(--gray);flex:1">Analyzes your CPU's thermal headroom and recommends personalized power limits.</span>
+          <span id="ryzen-autotune-status" class="j-note-body jx-grow">Analyzes your CPU's thermal headroom and recommends personalized power limits.</span>
         </div>
-        <div id="ryzen-autotune-result" style="display:none;margin-top:8px;font-size:11px;color:var(--accent);background:rgba(0,212,180,0.06);border-radius:6px;padding:7px 10px;line-height:1.6"></div>
+        <div id="ryzen-autotune-result" class="j-note-body j-note-result" style="display:none"></div>
       </div>
       <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">
         <span style="font-size:11px;color:var(--gray);align-self:center;margin-right:4px">${tUI('ryzenPresets')}</span>
@@ -14653,17 +14653,16 @@ async function buildAppOptimizer(c) {
   // ── BackgroundBudget panel ────────────────────────────────────────────────
   const bbPanel = document.createElement('div')
   bbPanel.id = 'bb-panel'
-  bbPanel.style.cssText = 'background:rgba(0,20,10,0.7);border:1px solid rgba(0,212,180,0.15);border-radius:10px;padding:12px 16px;margin-bottom:12px;display:none'
+  bbPanel.className = 'j-note'
+  bbPanel.style.display = 'none'
   bbPanel.innerHTML = `
-    <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
-      <i class="fa fa-chart-bar" style="color:var(--accent);font-size:13px"></i>
-      <span class="jx-80">BackgroundBudget</span>
-      <span id="bb-live-badge" style="font-size:11px;font-weight:700;letter-spacing:0.08em;padding:2px 7px;border-radius:10px;background:rgba(0,212,180,0.12);border:1px solid rgba(0,212,180,0.3);color:var(--accent)">LIVE</span>
-      <span style="font-size:11px;color:var(--gray);margin-left:auto">CPU used vs. cap</span>
+    <div class="j-note-title"><i class="fa fa-chart-bar" aria-hidden="true"></i><span>BackgroundBudget</span>
+      <span id="bb-live-badge" class="j-badge j-badge-accent">${tUI('aoBbLive')}</span>
+      <span class="j-note-aside">${tUI('aoBbCpuVsCap')}</span>
     </div>
-    <div id="bb-bar-wrap" style="display:flex;height:14px;border-radius:7px;overflow:hidden;background:rgba(var(--fx),0.05);margin-bottom:8px;gap:1px"></div>
+    <div id="bb-bar-wrap" class="j-bb-bar"></div>
     <div id="bb-slots" class="jx-49"></div>
-    <div id="bb-report" style="display:none;margin-top:10px;padding:8px 10px;background:rgba(0,212,180,0.05);border:1px solid rgba(0,212,180,0.15);border-radius:8px;font-size:11px;color:var(--gray)"></div>
+    <div id="bb-report" class="j-note-body j-bb-report" style="display:none"></div>
   `
   c.appendChild(bbPanel)
   // Wire budget ticks for App Optimizer page
@@ -14691,14 +14690,14 @@ async function buildAppOptimizer(c) {
       const impact = conflictImpactMap[conf.id]
       let fixBtn = ''
       if (conf.fix) {
-        fixBtn = `<button class="btn btn-sm" style="background:var(--c-warning);color:#000;flex-shrink:0;white-space:nowrap" onclick="aoConflictFix('${conf.id}','${conf.fix}')"><i class="fa fa-bolt"></i> ${tUI('aoConflictFix')}</button>`
+        fixBtn = `<button class="j-btn j-btn-sm j-btn-primary" onclick="aoConflictFix('${conf.id}','${conf.fix}')"><i class="fa fa-bolt"></i> ${tUI('aoConflictFix')}</button>`
       } else if (conf.id === 'browser-gpu-pressure') {
         fixBtn = `<button class="btn btn-sm jx-61" onclick="aoConflictFixAll(['chrome-optimize','brave-optimize','edge-optimize','opera-gx-optimize','firefox-optimize'])"><i class="fa fa-bolt"></i> ${tUI('aoFixAllBrowsers')}</button>`
       } else if (conf.id === 'launcher-trio-unapplied') {
         fixBtn = `<button class="btn btn-sm jx-61" onclick="aoConflictFixAll(['steam-optimize','epic-optimize','ea-app-optimize','riot-optimize'])"><i class="fa fa-bolt"></i> ${tUI('aoFixAllLaunchers')}</button>`
       }
       row.innerHTML = `
-        <i class="fa ${conf.icon}" style="color:var(--c-warning);margin-top:2px;flex-shrink:0;font-size:13px"></i>
+        <i class="fa ${conf.icon} j-note-ico" aria-hidden="true"></i>
         <div class="jx-2">
           <div class="ao-conflict-title">${conf.title}${impact ? `<span class="ao-conflict-impact">${impact}</span>` : ''}</div>
           <div class="ao-conflict-body">${conf.body}</div>
@@ -14724,7 +14723,7 @@ async function buildAppOptimizer(c) {
         <div class="ao-running-bar-ttl">${tUI('aoRunningAppsTitle')}</div>
         <div class="ao-running-bar-sub">${runNamesDisplay}</div>
       </div>
-      <button class="btn btn-sm" style="background:var(--pink);color:#000;white-space:nowrap;flex-shrink:0" onclick="applyAllRunningApps(${jsArg(runningUnoptimized.map(a => a.id))})">
+      <button class="j-btn j-btn-sm j-btn-primary" onclick="applyAllRunningApps(${jsArg(runningUnoptimized.map(a => a.id))})">
         <i class="fa fa-bolt"></i> ${tUI('aoApplyAllRunning')}
       </button>`
     c.appendChild(applyAllBar)
@@ -14753,7 +14752,6 @@ async function buildAppOptimizer(c) {
       spb.style.display = ''
       spb.className = 'sec-progress-badge' + (catApplied === catApps.length ? ' spb-full' : catApplied > 0 ? ' spb-partial' : '')
     }
-    const catRgbMap = { Browsers:'74,158,255', Communication:'139,92,246', Media:'34,197,94', Launchers:'249,115,22', Streaming:'239,68,68', System:'148,163,184' }
     const catIconMap = { Browsers:'fa-globe', Communication:'fa-comments', Media:'fa-music', Launchers:'fa-rocket', Streaming:'fa-video', System:'fa-gear' }
     const grid = document.createElement('div')
     grid.className = 'ao-grid'
@@ -14763,7 +14761,7 @@ async function buildAppOptimizer(c) {
     // Category header row inside grid
     const catHeader = document.createElement('div')
     catHeader.className = 'ao-cat-header'
-    catHeader.style.cssText = `--ao-cat-rgb:${catRgbMap[cat] || 'var(--pink-rgb)'}`
+    catHeader.style.cssText = '--ao-cat-rgb:var(--c-accent-rgb)'
     catHeader.innerHTML = `
       <div class="ao-cat-stripe"></div>
       <div class="ao-cat-icon"><i class="fa ${catIconMap[cat] || 'fa-grid-2'}"></i></div>
@@ -14855,18 +14853,18 @@ async function buildAppOptimizer(c) {
       if (unreported.length > 0) {
         const fpBanner = document.createElement('div')
         fpBanner.id = 'ao-fp-banner'
-        fpBanner.style.cssText = 'background:rgba(99,102,241,0.07);border:1px solid rgba(99,102,241,0.25);border-radius:10px;padding:12px 16px;margin-bottom:12px'
-        fpBanner.innerHTML = `<div style="font-size:11.5px;font-weight:700;color:var(--c-info);margin-bottom:8px"><i class="fa fa-clock-rotate-left"></i> ${tUI('aoFingerprintTitle')}</div>`
+        fpBanner.className = 'j-note j-note-info'
+        fpBanner.innerHTML = `<div class="j-note-title"><i class="fa fa-clock-rotate-left" aria-hidden="true"></i> ${tUI('aoFingerprintTitle')}</div>`
 
         for (const [id, { driftedAt }] of unreported) {
           const driftDate = new Date(driftedAt).toLocaleDateString()
           const row = document.createElement('div')
           row.dataset.fpid = id
-          row.style.cssText = 'display:flex;align-items:center;gap:10px;margin-bottom:6px;padding:6px 8px;background:rgba(0,0,0,0.15);border-radius:6px'
+          row.className = 'j-note-row'
           row.innerHTML = `
-            <i class="fa fa-triangle-exclamation" style="color:var(--c-warning);flex-shrink:0;font-size:12px"></i>
-            <div class="fp-cause-text jx-109"><strong class="jx-20">${tAOName(id)}</strong> — ${driftDate} <i class="fa fa-spinner fa-spin" style="font-size:11px;opacity:0.5;margin-right:3px"></i>${tUI('aoFingerprintChecking')}</div>
-            <button class="btn btn-sm" style="font-size:11px;flex-shrink:0" onclick="aoFpRestore('${id}')"><i class="fa fa-rotate-right"></i> ${tUI('restore')}</button>`
+            <i class="fa fa-triangle-exclamation j-note-ico" aria-hidden="true"></i>
+            <div class="fp-cause-text jx-109"><strong class="jx-20">${tAOName(id)}</strong> — ${driftDate} <i class="fa fa-spinner fa-spin j-note-spin" aria-hidden="true"></i>${tUI('aoFingerprintChecking')}</div>
+            <button class="j-btn j-btn-sm" onclick="aoFpRestore('${id}')"><i class="fa fa-rotate-right"></i> ${tUI('restore')}</button>`
           fpBanner.appendChild(row)
 
           api.aoFingerprintDriftCause(id, driftedAt).then(({ updates }) => {
@@ -14901,10 +14899,10 @@ async function buildAppOptimizer(c) {
       if (stillActive.length > 0) {
         const stuckBanner = document.createElement('div')
         stuckBanner.id = 'ao-stuck-banner'
-        stuckBanner.style.cssText = 'background:rgba(239,68,68,0.07);border:1px solid rgba(239,68,68,0.3);border-radius:10px;padding:12px 16px;margin-bottom:12px'
-        stuckBanner.innerHTML = `<div style="font-size:11.5px;font-weight:700;color:var(--c-danger);margin-bottom:6px"><i class="fa fa-circle-exclamation"></i> ${tUI('aoStillActiveTitle') || 'Tweaks still active after restore'}</div>
-<div style="font-size:11px;color:var(--gray);margin-bottom:10px">${tUI('aoStillActiveBody') || 'These settings are still applied on your system even though you toggled them off. Run Restore to fully undo them.'}</div>
-<div class="jx-67">${stillActive.map(id => `<button class="btn btn-sm" style="font-size:11px;background:rgba(239,68,68,0.12);border-color:rgba(239,68,68,0.35);color:var(--c-danger)" onclick="doAppOpti('${id}','restore').then(()=>{ const b=document.getElementById('ao-stuck-banner'); if(b) b.remove() })"><i class="fa fa-rotate-left"></i> ${tAOName(id) || id}</button>`).join('')}</div>`
+        stuckBanner.className = 'j-note j-note-danger'
+        stuckBanner.innerHTML = `<div class="j-note-title"><i class="fa fa-circle-exclamation" aria-hidden="true"></i> ${tUI('aoStillActiveTitle')}</div>
+<div class="j-note-body">${tUI('aoStillActiveBody')}</div>
+<div class="jx-67">${stillActive.map(id => `<button class="j-btn j-btn-sm j-btn-danger" onclick="doAppOpti('${id}','restore').then(()=>{ const b=document.getElementById('ao-stuck-banner'); if(b) b.remove() })"><i class="fa fa-rotate-left"></i> ${tAOName(id) || id}</button>`).join('')}</div>`
         const refNode = document.getElementById('ao-conflict-banner') || document.getElementById('ao-fp-banner') || c.querySelector('.section-card') || null
         if (refNode) c.insertBefore(stuckBanner, refNode)
         else c.appendChild(stuckBanner)
@@ -14951,7 +14949,7 @@ function _bbUpdatePanel(d) {
     barWrap.innerHTML = d.slots.map(s => {
       const w = Math.max(2, Math.round((s.cap / total) * 100))
       const fill = Math.min(100, Math.round((s.cpuPct / s.cap) * 100))
-      const color = s.overBudget ? '#ff4444' : (fill > 80 ? '#ffb547' : 'var(--accent)')
+      const color = s.overBudget ? 'var(--c-danger)' : (fill > 80 ? 'var(--c-warning)' : 'var(--c-accent)')
       const displayName = tAOName(s.appId) || s.appId.replace(/-optimize$|-cpu-priority$/,'').replace(/-/g,' ')
       return `<div style="width:${w}%;background:rgba(var(--fx),0.07);border-radius:3px;overflow:hidden;position:relative;flex-shrink:0" title="${displayName}: ${s.cpuPct}% / ${s.cap}% cap">
         <div style="height:100%;width:${fill}%;background:${color};transition:width 0.4s ease,background 0.3s ease${s.overBudget ? ';animation:bbFlash 0.8s ease-in-out infinite' : ''}"></div>
@@ -14959,7 +14957,7 @@ function _bbUpdatePanel(d) {
     }).join('')
     slotsEl.innerHTML = d.slots.map(s => {
       const pct = Math.round((s.cpuPct / s.cap) * 100)
-      const color = s.overBudget ? 'var(--danger,#ff4444)' : (pct > 80 ? 'var(--warning,#ffb547)' : 'var(--accent)')
+      const color = s.overBudget ? 'var(--c-danger)' : (pct > 80 ? 'var(--c-warning)' : 'var(--c-accent)')
       const displayName = tAOName(s.appId) || s.appId.replace(/-optimize$|-cpu-priority$/,'').replace(/-/g,' ')
       return `<div style="display:flex;align-items:center;gap:8px;font-size:11px;min-height:22px;padding:2px 0">
         <span style="width:130px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--white);font-weight:600">${displayName}</span>
@@ -14973,7 +14971,7 @@ function _bbUpdatePanel(d) {
       const seg = barWrap.children[i]
       if (!seg) return
       const fill = Math.min(100, Math.round((s.cpuPct / s.cap) * 100))
-      const color = s.overBudget ? '#ff4444' : (fill > 80 ? '#ffb547' : 'var(--accent)')
+      const color = s.overBudget ? 'var(--c-danger)' : (fill > 80 ? 'var(--c-warning)' : 'var(--c-accent)')
       const bar = seg.firstElementChild
       if (bar) { bar.style.width = fill + '%'; bar.style.background = color }
     })
@@ -15024,14 +15022,14 @@ function _aoRebuildConflictBanner() {
     row.style.cssText = 'background:rgba(0,0,0,0.2);border-radius:8px;padding:10px 12px;margin-bottom:6px;display:flex;align-items:flex-start;gap:10px'
     let fixBtn = ''
     if (conf.fix) {
-      fixBtn = `<button class="btn btn-sm" style="background:var(--c-warning);color:#000;flex-shrink:0;white-space:nowrap" onclick="aoConflictFix('${conf.id}','${conf.fix}')"><i class="fa fa-bolt"></i> ${tUI('aoConflictFix')}</button>`
+      fixBtn = `<button class="j-btn j-btn-sm j-btn-primary" onclick="aoConflictFix('${conf.id}','${conf.fix}')"><i class="fa fa-bolt"></i> ${tUI('aoConflictFix')}</button>`
     } else if (conf.id === 'browser-gpu-pressure') {
       fixBtn = `<button class="btn btn-sm jx-61" onclick="aoConflictFixAll(['chrome-optimize','brave-optimize','edge-optimize','opera-gx-optimize','firefox-optimize'])"><i class="fa fa-bolt"></i> ${tUI('aoFixAllBrowsers')}</button>`
     } else if (conf.id === 'launcher-trio-unapplied') {
       fixBtn = `<button class="btn btn-sm jx-61" onclick="aoConflictFixAll(['steam-optimize','epic-optimize','ea-app-optimize','riot-optimize'])"><i class="fa fa-bolt"></i> ${tUI('aoFixAllLaunchers')}</button>`
     }
     row.innerHTML = `
-      <i class="fa ${conf.icon}" style="color:var(--c-warning);margin-top:2px;flex-shrink:0;font-size:13px"></i>
+      <i class="fa ${conf.icon} j-note-ico" aria-hidden="true"></i>
       <div class="jx-2">
         <div style="font-size:11.5px;font-weight:700;color:var(--white);margin-bottom:3px">${conf.title}</div>
         <div class="jx-73">${conf.body}</div>

@@ -738,3 +738,20 @@
 .j-su-skel { display: flex; align-items: center; gap: 12px; padding: 10px 0; }
 .j-su-skel > div { flex: 1; display: flex; flex-direction: column; gap: 6px; }
 .startup-row[hidden], .j-su-grp[hidden], .j-su-disabled[hidden], .startup-no-results[hidden] { display: none !important; }
+
+/* Notes: inline status panels on legacy pages (Apps, BIOS) */
+.j-note { margin-bottom: 12px; padding: 12px 16px; border: 1px solid var(--hairline); border-radius: var(--r-md); background: var(--surface-1); }
+.j-note-info { background: color-mix(in srgb, var(--c-info) 7%, transparent); border-color: color-mix(in srgb, var(--c-info) 28%, transparent); }
+.j-note-danger { background: color-mix(in srgb, var(--c-danger) 7%, transparent); border-color: color-mix(in srgb, var(--c-danger) 30%, transparent); }
+.j-note-accent { background: var(--c-accent-muted); border-color: var(--c-accent-ring); }
+.j-note-title { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; font: 600 var(--fs-2)/1.3 var(--font); color: var(--c-text-primary); }
+.j-note-title > i { color: var(--c-text-secondary); }
+.j-note-aside { margin-left: auto; font-size: var(--fs-1); font-weight: 400; color: var(--c-text-tertiary); }
+.j-note-body { font-size: var(--fs-2); line-height: 1.5; color: var(--c-text-tertiary); }
+.j-note-ico { flex: none; margin-top: 2px; color: var(--c-warning); font-size: var(--fs-2); }
+.j-note-spin { margin-right: 4px; opacity: .6; }
+.j-note-row { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; padding: 6px 8px; border-radius: var(--r-sm); background: var(--surface-2); }
+.j-note-result { margin-top: 8px; padding: 7px 10px; border-radius: var(--r-sm); background: var(--surface-2); color: var(--c-accent-fg); }
+.j-bb-bar { display: flex; gap: 1px; height: 14px; margin-bottom: 8px; border-radius: 7px; overflow: hidden; background: var(--surface-2); }
+.j-bb-report { margin-top: 10px; padding: 8px 10px; border: 1px solid var(--hairline); border-radius: var(--r-sm); background: var(--surface-2); }
+.jx-grow { flex: 1; }
