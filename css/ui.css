@@ -661,3 +661,5 @@
 .j-live-strip { display: inline-flex; align-items: center; gap: 6px; margin-top: 6px; padding: 3px 10px; border-radius: var(--r-sm); background: var(--c-success-muted); color: var(--c-success); font-size: var(--fs-2); font-weight: 500; }
 .j-live-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--c-success); animation: gpStatusPulse 1.4s ease-in-out infinite; }
 .gp-watcher-card.state-running { background: var(--surface-1); border-color: var(--c-success-ring); }
+#page-content .gp-item.active { border-left-width: 1px; border-left-color: var(--hairline); background: var(--surface-3); }
+#page-content :is(.gp-hero-medallion, .gp-tip-v2) { border-left-width: 1px; border-left-color: var(--hairline); }

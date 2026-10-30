@@ -15217,7 +15217,7 @@ async function buildAppOptimizer(c) {
   const _aoInitTotal   = APP_OPTI_DEFS.filter(a => _aoInitInstalled.has(a.id)).length
   const _aoInitApplied = APP_OPTI_DEFS.filter(a => _aoInitInstalled.has(a.id) && tweakState(a.id) === 'applied').length
   const _aoInitScore   = _aoInitTotal > 0 ? Math.round((_aoInitApplied / _aoInitTotal) * 100) : 0
-  const _aoScoreColor  = _aoInitScore === 100 ? '#4ade80' : _aoInitScore >= 67 ? 'var(--pink)' : _aoInitScore >= 34 ? '#f59e0b' : '#f87171'
+  const _aoScoreColor  = _aoInitScore === 100 ? 'var(--c-success)' : _aoInitScore >= 67 ? 'var(--c-accent-fg)' : _aoInitScore >= 34 ? 'var(--c-warning)' : 'var(--c-danger)'
   const _aoAllDone     = _aoInitApplied >= _aoInitTotal && _aoInitTotal > 0
 
   // Build category chip HTML
@@ -15763,7 +15763,7 @@ function _aoRefreshHero() {
   const total   = APP_OPTI_DEFS.filter(a => inst.has(a.id)).length
   const applied  = APP_OPTI_DEFS.filter(a => inst.has(a.id) && tweakState(a.id) === 'applied').length
   const score   = total > 0 ? Math.round((applied / total) * 100) : 0
-  const color   = score === 100 ? '#4ade80' : score >= 67 ? 'var(--pink)' : score >= 34 ? '#f59e0b' : '#f87171'
+  const color   = score === 100 ? 'var(--c-success)' : score >= 67 ? 'var(--c-accent-fg)' : score >= 34 ? 'var(--c-warning)' : 'var(--c-danger)'
   const fill    = document.getElementById('ao-ring-fill')
   const num     = document.getElementById('ao-ring-num')
   if (fill) { fill.style.strokeDashoffset = String(188 - (score / 100) * 188); fill.style.stroke = color }
@@ -16192,11 +16192,11 @@ async function loadDiskUsage(btn) {
   el.innerHTML = data.map(row => {
     const pct = Math.max(2, Math.round((row.bytes / maxBytes) * 100))
     const barColor = row.bytes >= 10737418240
-      ? 'linear-gradient(90deg,#f87171,#ef4444)'
+      ? 'linear-gradient(90deg,var(--c-danger),var(--c-danger))'
       : row.bytes >= 1073741824
-        ? 'linear-gradient(90deg,#fbbf24,#f59e0b)'
+        ? 'linear-gradient(90deg,var(--c-warning),var(--c-warning))'
         : 'linear-gradient(90deg,#3498db,#00D4FF)'
-    const labelColor = row.bytes >= 10737418240 ? '#f87171' : row.bytes >= 1073741824 ? '#fbbf24' : '#3498db'
+    const labelColor = row.bytes >= 10737418240 ? 'var(--c-danger)' : row.bytes >= 1073741824 ? 'var(--c-warning)' : 'var(--c-info)'
     const openBtn = row.path ? `<button class="btn btn-ghost" style="font-size:11px;padding:1px 5px;border-radius:4px;line-height:1.4;margin-left:4px" onclick="api.openPath(${jsArg(row.path)})" title="${tUI('diskUsageOpen')}"><i class="fa fa-folder-open"></i></button>` : ''
     return `<div style="margin-bottom:8px">
       <div style="display:flex;justify-content:space-between;align-items:center;font-size:12px;margin-bottom:3px">
@@ -16282,7 +16282,7 @@ async function loadCleanupTimeline(btn) {
 
   if (proj && proj.totalBytes > 0) {
     const usedPct = Math.round(((proj.totalBytes - proj.freeBytes) / proj.totalBytes) * 100)
-    const barColor = usedPct >= 90 ? '#f87171' : usedPct >= 70 ? '#fbbf24' : '#4ade80'
+    const barColor = usedPct >= 90 ? 'var(--c-danger)' : usedPct >= 70 ? 'var(--c-warning)' : 'var(--c-success)'
     html += `<div style="margin-bottom:10px">
       <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:4px">
         <span style="color:var(--c-text-tertiary)">${tUI('timelineDiskUsed').replace('{pct}', usedPct).replace('{free}', fmt(proj.freeBytes))}</span>
@@ -16372,7 +16372,7 @@ async function doQuickClean() {
 
   const doneMsg = tUI('cleanupProgressDone').replace('{done}', done)
   title.textContent = doneMsg
-  title.style.color = failed > 0 ? '#fbbf24' : '#4ade80'
+  title.style.color = failed > 0 ? 'var(--c-warning)' : 'var(--c-success)'
   bar.style.width = '100%'
 
   // Measure actual freed bytes via disk delta; fall back to pre-scan sizes if unavailable
@@ -16470,7 +16470,7 @@ async function scanCleanupSizes() {
       if (data.userFilePct >= 5) {
         badge.textContent = tUI('cleanupFpUserFiles')
         badge.style.background = 'rgba(248,113,113,0.15)'
-        badge.style.color      = '#f87171'
+        badge.style.color      = 'var(--c-danger)'
         badge.style.border     = '1px solid rgba(248,113,113,0.3)'
         badge.style.display    = 'block'
       } else if (data.userFilePct > 0 || data.oldPct < 50) {
@@ -16482,7 +16482,7 @@ async function scanCleanupSizes() {
       } else {
         badge.textContent = tUI('cleanupFpSafe')
         badge.style.background = 'rgba(74,222,128,0.15)'
-        badge.style.color      = '#4ade80'
+        badge.style.color      = 'var(--c-success)'
         badge.style.border     = '1px solid rgba(74,222,128,0.3)'
         badge.style.display    = 'block'
       }
@@ -16498,7 +16498,7 @@ function _markCleanupFreed(id) {
   const fmt = b => b >= 1073741824 ? `${(b/1073741824).toFixed(1)} GB` : b >= 1048576 ? `${Math.round(b/1048576)} MB` : `${Math.round(b/1024)} KB`
   numEl.textContent = `~${fmt(bytes)}`
   numEl.classList.remove('size-large', 'size-medium', 'size-small')
-  numEl.style.color = '#4ade80'
+  numEl.style.color = 'var(--c-success)'
   if (unitEl) unitEl.textContent = 'freed'
   window._cleanupSizes[id] = 0
 }
