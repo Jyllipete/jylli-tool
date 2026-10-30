@@ -61,6 +61,7 @@ function respond(name, args, ctx) {
     case 'freezeGetPids': return { ok: true, frozenPids: [] }
     case 'getStartupItems': return startupItems
     case 'getBootImpact': return { ok: true, items: [] }
+    case 'toggleStartupItem': return { ok: true }
     case 'listRestorePoints': return restorePoints
     case 'getChangelog': return [
       { id: 'game-dvr', action: 'apply', ts: now - 3600000 }, { id: 'mmcss', action: 'apply', ts: now - 3500000 }, { id: 'tcp-stack', action: 'restore', ts: now - 86400000 },
