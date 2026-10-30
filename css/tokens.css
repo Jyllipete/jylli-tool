@@ -119,6 +119,7 @@
   --c-info:           #4C9EFF;
   --c-info-muted:     rgba(76,158,255,0.12);
   --c-info-ring:      rgba(76,158,255,0.28);
+  --c-success-rgb: 61,214,140; --c-warning-rgb: 245,165,36; --c-danger-rgb: 242,85,90; --c-info-rgb: 76,158,255;   /* for rgba(var(--c-x-rgb), a) tints */
 
   /* ── Per-hardware semantic colors ── */
   --c-hw-cpu:      #3498DB;   --c-hw-cpu-bg:   rgba(52,152,219,0.10);
@@ -255,6 +256,7 @@ body.motion-smooth {
   --c-warning: #A34A08; --c-warning-muted: rgba(180,83,9,0.10); --c-warning-ring: rgba(180,83,9,0.30);
   --c-danger:  #C62222; --c-danger-muted:  rgba(220,38,38,0.09); --c-danger-ring:  rgba(220,38,38,0.30);
   --c-info:    #2563EB; --c-info-muted:    rgba(37,99,235,0.09); --c-info-ring:    rgba(37,99,235,0.30);
+  --c-success-rgb: 19,115,51; --c-warning-rgb: 163,74,8; --c-danger-rgb: 198,34,34; --c-info-rgb: 37,99,235;
 
   --gray-50: rgba(0,0,0,0.92); --gray-100: rgba(0,0,0,0.80); --gray-200: rgba(0,0,0,0.66); --gray-300: rgba(0,0,0,0.52);
   --gray-400: rgba(0,0,0,0.38); --gray-500: rgba(0,0,0,0.26); --gray-600: rgba(0,0,0,0.16); --gray-700: rgba(0,0,0,0.10);

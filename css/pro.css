@@ -209,10 +209,10 @@ input[type="range"] { accent-color: var(--c-accent); }
 .tweak-card { border: 1px solid var(--c-border-subtle); }
 .tweak-card:hover { transform: none; border-color: var(--c-border-strong, rgba(var(--fx),0.16)); box-shadow: none; }
 .tweak-card::before, .tweak-card.tc-applied::before { background: none; }
-.tweak-card.tc-applied { border-color: rgba(46,204,113,0.32); }
+.tweak-card.tc-applied { border-color: rgba(var(--c-success-rgb),0.32); }
 .qw-card, .qw-card.qw-done { background: var(--c-bg-elevated); box-shadow: none; border: 1px solid var(--c-border-subtle); }
 .qw-card:hover { transform: none; box-shadow: none; border-color: var(--c-border-strong); }
-.qw-card.qw-done { border-left: 3px solid rgba(46,204,113,0.55); }
+.qw-card.qw-done { border-left: 3px solid rgba(var(--c-success-rgb),0.55); }
 
 /* ── Pulse launch rules: inline 9–10px type was unreadable; scale up and lift the dark rail colours ── */
 #pulse-launch-rules .lr-card [style*="font-size:11px"] { font-size: 12.5px !important; filter: brightness(1.45); }

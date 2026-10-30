@@ -1234,8 +1234,8 @@ async function init(isPremium = false) {
       if (strip.style.display === 'none') {
         // Show cool-down strip
         strip.style.display = 'flex'
-        strip.style.background = 'linear-gradient(135deg,rgba(243,156,18,0.07),rgba(230,126,34,0.04))'
-        strip.style.borderBottomColor = 'rgba(243,156,18,0.2)'
+        strip.style.background = 'linear-gradient(135deg,rgba(var(--c-warning-rgb),0.07),rgba(var(--c-warning-rgb),0.04))'
+        strip.style.borderBottomColor = 'rgba(var(--c-warning-rgb),0.2)'
         const dot = strip.querySelector('span')
         if (dot) dot.style.background = 'var(--c-warning)'
         const gameEl = document.getElementById('gw-strip-game')
@@ -1284,9 +1284,9 @@ async function init(isPremium = false) {
         if (dot) dot.style.background = 'var(--c-text-tertiary)'
         // Flash pills green briefly then hide
         manifest.querySelectorAll('.gs-pill').forEach(p => {
-          p.style.background = 'rgba(46,204,113,0.18)'
+          p.style.background = 'rgba(var(--c-success-rgb),0.18)'
           p.style.color = 'var(--c-success)'
-          p.style.borderColor = 'rgba(46,204,113,0.35)'
+          p.style.borderColor = 'rgba(var(--c-success-rgb),0.35)'
         })
         setTimeout(() => { manifest.style.display = 'none'; manifest.innerHTML = '' }, 2000)
       } else if (action === 'mid-session-kill' && killed?.length) {
@@ -1296,7 +1296,7 @@ async function init(isPremium = false) {
           const pill = document.createElement('span')
           pill.className = 'gs-pill'
           pill.textContent = name
-          pill.style.cssText = 'font-size:8px;background:rgba(231,76,60,0.18);color:var(--c-danger);border:1px solid rgba(231,76,60,0.35);border-radius:10px;padding:1px 6px;white-space:nowrap'
+          pill.style.cssText = 'font-size:8px;background:rgba(var(--c-danger-rgb),0.18);color:var(--c-danger);border:1px solid rgba(var(--c-danger-rgb),0.35);border-radius:10px;padding:1px 6px;white-space:nowrap'
           manifest.appendChild(pill)
         })
       }
@@ -2680,9 +2680,9 @@ async function runWizardStep(step) {
 
         <!-- Auto-Optimize card -->
         <div onclick="wizardChooseAutoOpti()" id="wiz-choice-auto"
-          style="background:var(--surface-2);border:1px solid rgba(46,204,113,0.25);border-radius:12px;padding:16px 18px;cursor:pointer;transition:border-color .15s,background .15s"
-          onmouseenter="this.style.borderColor = 'rgba(46,204,113,0.6)';this.style.background = 'var(--surface-2)'"
-          onmouseleave="this.style.borderColor = 'rgba(46,204,113,0.25)';this.style.background = 'var(--surface-2)'">
+          style="background:var(--surface-2);border:1px solid rgba(var(--c-success-rgb),0.25);border-radius:12px;padding:16px 18px;cursor:pointer;transition:border-color .15s,background .15s"
+          onmouseenter="this.style.borderColor = 'rgba(var(--c-success-rgb),0.6)';this.style.background = 'var(--surface-2)'"
+          onmouseleave="this.style.borderColor = 'rgba(var(--c-success-rgb),0.25)';this.style.background = 'var(--surface-2)'">
           <div class="jx-100">
             <div class="jx-210"><i class="fa fa-rocket"></i></div>
             <div>
@@ -4804,13 +4804,13 @@ function renderPreflightDiff(prev, curr, prevTs) {
     <div class="jx-280">`
   nowApplied.forEach(k => {
     const name = pfGetFriendlyName(k)
-    diffHtml += `<span title="${escHtml(k)}" style="display:inline-flex;align-items:center;gap:4px;font-size:11px;background:rgba(46,204,113,0.1);border:1px solid rgba(46,204,113,0.3);color:var(--success);border-radius:4px;padding:3px 8px;font-weight:700">
+    diffHtml += `<span title="${escHtml(k)}" style="display:inline-flex;align-items:center;gap:4px;font-size:11px;background:rgba(var(--c-success-rgb),0.1);border:1px solid rgba(var(--c-success-rgb),0.3);color:var(--success);border-radius:4px;padding:3px 8px;font-weight:700">
       <i class="fa fa-plus jx-4"></i>${escHtml(name)}
     </span>`
   })
   nowRestored.forEach(k => {
     const name = pfGetFriendlyName(k)
-    diffHtml += `<span title="${escHtml(k)}" style="display:inline-flex;align-items:center;gap:4px;font-size:11px;background:rgba(243,156,18,0.1);border:1px solid rgba(243,156,18,0.3);color:var(--warning);border-radius:4px;padding:3px 8px;font-weight:700">
+    diffHtml += `<span title="${escHtml(k)}" style="display:inline-flex;align-items:center;gap:4px;font-size:11px;background:rgba(var(--c-warning-rgb),0.1);border:1px solid rgba(var(--c-warning-rgb),0.3);color:var(--warning);border-radius:4px;padding:3px 8px;font-weight:700">
       <i class="fa fa-minus jx-4"></i>${escHtml(name)}
     </span>`
   })
@@ -5074,7 +5074,7 @@ function gsExclusionRenderPills() {
   container.innerHTML = ''
   for (const exe of _gsExclusions) {
     const span = document.createElement('span')
-    span.style.cssText = 'font-size:8px;background:rgba(39,174,96,0.15);color:var(--c-success);border:1px solid rgba(39,174,96,0.35);border-radius:10px;padding:1px 6px;display:inline-flex;align-items:center;gap:3px'
+    span.style.cssText = 'font-size:8px;background:rgba(var(--c-success-rgb),0.15);color:var(--c-success);border:1px solid rgba(var(--c-success-rgb),0.35);border-radius:10px;padding:1px 6px;display:inline-flex;align-items:center;gap:3px'
     span.textContent = exe
     const btn = document.createElement('button')
     btn.style.cssText = 'background:none;border:none;color:var(--muted);cursor:pointer;font-size:11px;padding:0;line-height:1'
@@ -7281,7 +7281,7 @@ function renderSpikeLog() {
     const t = new Date(e.ts)
     const timeStr = t.toLocaleTimeString()
     const sevColor = e.dpc > 8 ? 'var(--danger)' : e.dpc > 5 ? 'var(--warning)' : jStatus('warn')
-    const sevBg    = e.dpc > 8 ? 'rgba(231,76,60,0.15)' : e.dpc > 5 ? 'rgba(241,196,15,0.15)' : 'rgba(243,156,18,0.12)'
+    const sevBg    = e.dpc > 8 ? 'rgba(var(--c-danger-rgb),0.15)' : e.dpc > 5 ? 'rgba(var(--c-warning-rgb),0.15)' : 'rgba(var(--c-warning-rgb),0.12)'
     const sevLabel = e.dpc > 8 ? tUI('latencySpikeSevCritical') : e.dpc > 5 ? tUI('latencySpikeSevHigh') : tUI('latencySpikeSevMed')
     return `<div class="jx-415">
       <span style="color:${sevColor};font-weight:700;min-width:52px">DPC ${e.dpc.toFixed(2)}%</span>
@@ -8786,15 +8786,15 @@ async function runWindowsHealthDash(btn) {
   btn.disabled = true
   btn.innerHTML = `<i class="fa fa-spinner fa-spin"></i> ${tUI('dashHealthChecking')}`
   banner.style.display = 'block'
-  banner.style.background = 'rgba(52,152,219,0.07)'
-  banner.style.border = '1px solid rgba(52,152,219,0.2)'
+  banner.style.background = 'rgba(var(--c-info-rgb),0.07)'
+  banner.style.border = '1px solid rgba(var(--c-info-rgb),0.2)'
   banner.style.color = 'var(--c-info)'
   banner.innerHTML = `<i class="fa fa-spinner fa-spin"></i> ${tUI('dashHealthRunning')}`
 
   api.offWindowsHealthProgress()
   api.onWindowsHealthProgress(({ msg, level }) => {
-    const colors = { ok:'rgba(46,204,113,0.07)', warn:'rgba(230,126,34,0.07)', err:pinkA(0.07), info:'rgba(52,152,219,0.07)' }
-    const borders = { ok:'rgba(46,204,113,0.2)', warn:'rgba(230,126,34,0.2)', err:pinkA(0.2), info:'rgba(52,152,219,0.2)' }
+    const colors = { ok:'rgba(var(--c-success-rgb),0.07)', warn:'rgba(var(--c-warning-rgb),0.07)', err:pinkA(0.07), info:'rgba(var(--c-info-rgb),0.07)' }
+    const borders = { ok:'rgba(var(--c-success-rgb),0.2)', warn:'rgba(var(--c-warning-rgb),0.2)', err:pinkA(0.2), info:'rgba(var(--c-info-rgb),0.2)' }
     const textColors = { ok:'var(--success)', warn:'var(--c-warning)', err:'var(--c-danger)', info:'var(--c-info)' }
     if (banner) {
       banner.style.background = colors[level] || colors.info
@@ -8815,7 +8815,7 @@ async function runWindowsHealthDash(btn) {
   localStorage.setItem('health_check_ok', result.ok ? '1' : '0')
 
   if (result.ok) {
-    banner.style.background = 'rgba(46,204,113,0.07)'; banner.style.border = '1px solid rgba(46,204,113,0.2)'; banner.style.color = 'var(--success)'
+    banner.style.background = 'rgba(var(--c-success-rgb),0.07)'; banner.style.border = '1px solid rgba(var(--c-success-rgb),0.2)'; banner.style.color = 'var(--success)'
     banner.innerHTML = `<i class="fa fa-circle-check"></i> <strong>${tUI('dashHealthOk')}</strong>`
     btn.innerHTML = `<i class="fa fa-circle-check jx-29"></i> ${tUI('dashHealthBtnHealthy')}`
   } else {
@@ -8834,11 +8834,11 @@ function showHealthNudgeIfNeeded() {
   if (!banner) return
   if (healthTs === 0) {
     banner.style.display = 'block'
-    banner.style.background = 'rgba(230,126,34,0.07)'; banner.style.border = '1px solid rgba(230,126,34,0.2)'; banner.style.color = 'var(--c-warning)'
+    banner.style.background = 'rgba(var(--c-warning-rgb),0.07)'; banner.style.border = '1px solid rgba(var(--c-warning-rgb),0.2)'; banner.style.color = 'var(--c-warning)'
     banner.innerHTML = `<i class="fa fa-triangle-exclamation"></i> <strong>${tUI('dashHealthNeverRun').split('—')[0].trim()}</strong> — ${tUI('dashHealthNeverRun').split('—').slice(1).join('—').trim()}`
   } else if (ageHours > 72) {
     banner.style.display = 'block'
-    banner.style.background = 'rgba(52,152,219,0.07)'; banner.style.border = '1px solid rgba(52,152,219,0.2)'; banner.style.color = 'var(--c-info)'
+    banner.style.background = 'rgba(var(--c-info-rgb),0.07)'; banner.style.border = '1px solid rgba(var(--c-info-rgb),0.2)'; banner.style.color = 'var(--c-info)'
     banner.innerHTML = `<i class="fa fa-clock-rotate-left"></i> ${tUI('dashHealthStale').replace('{h}', Math.round(ageHours))}`
   } else if (localStorage.getItem('health_check_ok') === '0') {
     banner.style.display = 'block'
@@ -14025,7 +14025,7 @@ async function gpRenderBundles() {
       <div class="jx-630">${tags || '<span class="jx-7">Empty bundle</span>'}</div>
       <div class="jx-631">
         <button class="btn btn-ghost btn-sm" style="font-size:11px;flex:1" onclick="gpActivateBundleBtn(this,${jsArg(b.name)})"><i class="fa fa-play"></i> ${tUI('gpBundleActivate')}</button>
-        <button class="btn btn-ghost btn-sm" style="font-size:11px;color:var(--danger);border-color:rgba(231,76,60,0.3)" onclick="gpDeleteBundle(${jsArg(b.name)})"><i class="fa fa-trash"></i></button>
+        <button class="btn btn-ghost btn-sm" style="font-size:11px;color:var(--danger);border-color:rgba(var(--c-danger-rgb),0.3)" onclick="gpDeleteBundle(${jsArg(b.name)})"><i class="fa fa-trash"></i></button>
       </div>
     </div>`
   }).join('')

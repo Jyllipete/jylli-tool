@@ -1165,7 +1165,7 @@ async function fivemIniEditorLoad() {
       const curDisplay = cur !== null ? escHtml(cur) : `<span class="jx-164">${tUI('fivemIniNotSet')}</span>`
       const recVal = def.recommended !== null && def.recommended !== undefined && def.recommended !== '' ? def.recommended : null
       const isDiff = cur !== null && recVal !== null && String(cur) !== String(recVal)
-      const rowBg = isDiff ? 'background:rgba(243,156,18,0.05);border-color:rgba(243,156,18,0.15)' : ''
+      const rowBg = isDiff ? 'background:rgba(var(--c-warning-rgb),0.05);border-color:rgba(var(--c-warning-rgb),0.15)' : ''
       const dangerWarn = def.dangerHint || null
       html += `
         <div class="cfx-ini-row" style="padding:8px 0;border-bottom:1px solid var(--hairline-strong);${rowBg}">
@@ -1187,7 +1187,7 @@ async function fivemIniEditorLoad() {
                 : `<input type="text" id="cfx-ini-input-${def.key}" value="${escAttr(cur !== null ? cur : '')}" placeholder="${def.default ?? ''}" style="width:100px;padding:3px 6px;border-radius:5px;border:1px solid var(--border);background:var(--bg-card2,var(--surface-2));color:var(--fg);font-size:11px" onkeydown="if(event.key==='Enter')fivemIniWriteText('${def.key}')">
                    <button class="btn btn-primary btn-sm" style="font-size:11px" onclick="fivemIniWriteText('${def.key}')">${tUI('apply')}</button>`
               }
-              ${recVal !== null && String(cur) !== String(recVal) ? `<button class="btn btn-ghost btn-sm" style="font-size:11px;color:var(--c-success);border-color:rgba(46,204,113,0.3)" onclick="fivemIniApplyRecommended('${def.key}', ${jsArg(recVal)})" title="${tUI('fivemIniApplyRec')}"><i class="fa fa-bolt"></i></button>` : ''}
+              ${recVal !== null && String(cur) !== String(recVal) ? `<button class="btn btn-ghost btn-sm" style="font-size:11px;color:var(--c-success);border-color:rgba(var(--c-success-rgb),0.3)" onclick="fivemIniApplyRecommended('${def.key}', ${jsArg(recVal)})" title="${tUI('fivemIniApplyRec')}"><i class="fa fa-bolt"></i></button>` : ''}
             </div>
           </div>
         </div>`
