@@ -694,3 +694,11 @@
 
 /* Cleanup side cards */
 .j-aside-ico { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; margin-right: 8px; border-radius: var(--r-sm); background: var(--surface-2); border: 1px solid var(--hairline); color: var(--c-text-secondary); font-size: var(--fs-2); }
+
+/* FiveM tool cards: one neutral look; colour only on the action link */
+#page-content .fivem-hero-card { border-color: var(--hairline); background: var(--surface-1); }
+#page-content .fivem-hero-card::before { display: none; }
+#page-content .fivem-hero-card:hover { border-color: var(--hairline-strong); background: var(--surface-2); transform: none; }
+#page-content .fivem-hero-card .fhc-icon { background: var(--surface-2); color: var(--c-text-secondary); border: 1px solid var(--hairline); }
+#page-content .fivem-hero-card .fhc-open { color: var(--c-accent-fg); }
+#page-content .fivem-hero-card .fhc-desc { color: var(--c-text-tertiary); }
