@@ -702,3 +702,9 @@
 #page-content .fivem-hero-card .fhc-icon { background: var(--surface-2); color: var(--c-text-secondary); border: 1px solid var(--hairline); }
 #page-content .fivem-hero-card .fhc-open { color: var(--c-accent-fg); }
 #page-content .fivem-hero-card .fhc-desc { color: var(--c-text-tertiary); }
+
+/* Info-coloured buttons follow the one-accent rule */
+#page-content .btn-info { background: var(--surface-2); color: var(--c-text-primary); border: 1px solid var(--hairline-strong); }
+#page-content .btn-info:hover:not(:disabled) { background: var(--surface-3); border-color: var(--c-border-strong); }
+#page-content .bloat-tier-actions .btn { background: var(--surface-2); color: var(--c-text-primary); border: 1px solid var(--hairline-strong); }
+#page-content .bloat-tier-actions .btn-info { background: var(--c-accent); color: var(--on-accent); border-color: transparent; font-weight: 600; }
