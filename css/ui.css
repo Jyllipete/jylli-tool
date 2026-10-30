@@ -619,3 +619,8 @@
 #page-content #pulse-panel > :has(#pulse-start-btn) { order: 2; border-bottom: 1px solid var(--hairline); }
 #page-content #pulse-start-btn.btn-primary { background: var(--c-accent); color: var(--on-accent); border-color: transparent; font-weight: 600; height: 36px; padding: 0 18px; }
 #page-content #pulse-start-btn.btn-primary:disabled { background: var(--surface-3); color: var(--c-text-tertiary); }
+
+/* Small targets and long translations */
+#page-content .rp-v2-del-btn, #page-content .fivem-order-banner-dismiss { min-width: 28px; min-height: 28px; }
+#page-content :is(.tweak-name, .tweak-desc) { overflow-wrap: anywhere; min-width: 0; }
+.j-settings a { display: inline-block; padding: 4px 0; }

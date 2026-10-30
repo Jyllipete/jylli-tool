@@ -10857,7 +10857,7 @@ async function ariaRefreshInsights() {
       const idleInsights = generateIdleInsights()
       if (idleInsights.length > 0 && !gameWatcherRunning) {
         el.innerHTML = idleInsights.map(text =>
-          `<div class="aria-idle-insight"><i class="fa fa-circle-info" style="margin-right:7px;color:rgba(52,152,219,0.7)"></i>${text}</div>`
+          `<div class="aria-idle-insight"><i class="fa fa-circle-info" style="margin-right:7px;color:var(--c-info)"></i>${text}</div>`
         ).join('')
       } else {
         el.innerHTML = `<div style="font-size:11px;color:var(--muted);padding:4px 0">${tUI('ariaNoInsights')}</div>`
@@ -15053,7 +15053,7 @@ async function buildGameOpti(c) {
   bundlesWrap.innerHTML = `
     <div class="gp-bundles-header">
       <span class="gp-bundles-label"><i class="fa fa-layer-group"></i>${tUI('gpBundlesTitle')}</span>
-      <button class="btn btn-ghost btn-sm" onclick="gpCreateBundle()" style="font-size:11px;color:rgba(124,58,237,0.9);border-color:rgba(124,58,237,0.3)">
+      <button class="btn btn-ghost btn-sm" onclick="gpCreateBundle()" style="font-size:11px;color:var(--c-accent-fg);border-color:rgba(124,58,237,0.3)">
         <i class="fa fa-plus"></i> ${tUI('gpBundleCreate')}
       </button>
     </div>
