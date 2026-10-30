@@ -1,0 +1,822 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Jylli Tool 2.0 preview</title>
+<style>
+@font-face { font-family: 'Geist'; src: url('assets/fonts/Geist-Variable.woff2') format('woff2'); font-weight: 100 900; font-display: swap; }
+@font-face { font-family: 'Geist Mono'; src: url('assets/fonts/GeistMono-Variable.woff2') format('woff2'); font-weight: 100 900; font-display: swap; }
+
+/* ── Preview chrome (not part of the app) ── */
+html, body { margin: 0; height: 100%; }
+body { background: #1a1a1d; color: #d4d4d8; font: 12px/1.4 'Geist', 'Segoe UI', system-ui, sans-serif; overflow: hidden; }
+body.pv-light { background: #d9d9de; color: #3f3f46; }
+.pv-bar { height: 48px; display: flex; align-items: center; gap: 18px; padding: 0 16px; border-bottom: 1px solid rgba(127,127,127,.2); overflow-x: auto; white-space: nowrap; }
+.pv-group { display: flex; align-items: center; gap: 6px; }
+.pv-group > span { opacity: .6; margin-right: 2px; }
+.pv-btn { font: inherit; color: inherit; background: transparent; border: 1px solid rgba(127,127,127,.28); border-radius: 6px; padding: 4px 9px; cursor: pointer; }
+.pv-btn[aria-pressed="true"] { background: rgba(127,127,127,.22); border-color: rgba(127,127,127,.5); }
+.pv-sw { width: 18px; height: 18px; border-radius: 50%; border: 2px solid transparent; cursor: pointer; padding: 0; }
+.pv-sw[aria-pressed="true"] { border-color: currentColor; }
+.pv-stage { position: absolute; inset: 48px 0 0 0; display: grid; place-items: center; }
+.pv-scaler { position: relative; }
+.pv-scaler > .app { position: absolute; top: 0; left: 0; transform-origin: 0 0; box-shadow: 0 30px 80px rgba(0,0,0,.45), 0 0 0 1px rgba(0,0,0,.4); }
+
+/* ── Tokens: dark (default) ── */
+.app {
+  --font: 'Geist', 'Segoe UI Variable', 'Segoe UI', system-ui, sans-serif;
+  --mono: 'Geist Mono', ui-monospace, 'Cascadia Mono', Consolas, monospace;
+  --accent: #8B7CF6;
+  --bg: #08080A; --panel: #0F0F11; --card: #141417; --raised: #1B1B1F; --s3: #232328;
+  --line: rgba(255,255,255,.07); --line-2: rgba(255,255,255,.11); --line-3: rgba(255,255,255,.17);
+  --hover: rgba(255,255,255,.04); --press: rgba(255,255,255,.07);
+  --t1: #EDEDEF; --t2: #B4B4BC; --t3: #858590;
+  --accent-text: color-mix(in oklab, var(--accent) 78%, white);
+  --accent-solid: color-mix(in oklab, var(--accent) 80%, black);
+  --accent-subtle: color-mix(in srgb, var(--accent) 14%, transparent);
+  --accent-line: color-mix(in srgb, var(--accent) 45%, transparent);
+  --ok: #3DD68C; --warn: #F5A524; --danger: #F2555A; --info: #4C9EFF;
+  --ok-bg: rgba(61,214,140,.12); --warn-bg: rgba(245,165,36,.12); --danger-bg: rgba(242,85,90,.12);
+  --shadow-pop: 0 16px 48px rgba(0,0,0,.55), 0 0 0 1px var(--line-2);
+  --scrim: rgba(4,4,6,.62);
+  --top-hl: inset 0 1px 0 rgba(255,255,255,.035);
+  --skel: rgba(255,255,255,.05); --skel-hl: rgba(255,255,255,.09);
+}
+.app.light {
+  --bg: #F1F1F3; --panel: #FFFFFF; --card: #FFFFFF; --raised: #F5F5F7; --s3: #EBEBEE;
+  --line: rgba(0,0,0,.075); --line-2: rgba(0,0,0,.11); --line-3: rgba(0,0,0,.18);
+  --hover: rgba(0,0,0,.035); --press: rgba(0,0,0,.06);
+  --t1: #17171A; --t2: #4F4F58; --t3: #6E6E78;
+  --accent-text: color-mix(in oklab, var(--accent) 72%, black);
+  --accent-solid: color-mix(in oklab, var(--accent) 82%, black);
+  --accent-subtle: color-mix(in srgb, var(--accent) 10%, transparent);
+  --ok: #15803D; --warn: #B45309; --danger: #DC2626; --info: #2563EB;
+  --ok-bg: rgba(21,128,61,.09); --warn-bg: rgba(180,83,9,.09); --danger-bg: rgba(220,38,38,.08);
+  --shadow-pop: 0 18px 44px rgba(20,20,30,.14), 0 2px 6px rgba(20,20,30,.06), 0 0 0 1px var(--line-2);
+  --scrim: rgba(30,30,40,.28);
+  --top-hl: none;
+  --skel: rgba(0,0,0,.05); --skel-hl: rgba(0,0,0,.09);
+}
+
+/* ── Shell ── */
+.app { display: grid; grid-template-columns: 216px minmax(0,1fr); grid-template-rows: 40px minmax(0,1fr) 26px; background: var(--bg); color: var(--t1); font: 400 13px/1.45 var(--font); letter-spacing: -.003em; overflow: hidden; border-radius: 10px; -webkit-font-smoothing: antialiased; font-feature-settings: 'ss01'; }
+.app * { box-sizing: border-box; }
+.app button { font: inherit; color: inherit; }
+.app :focus-visible { outline: 2px solid var(--accent-text); outline-offset: 2px; border-radius: 6px; }
+.num { font-family: var(--mono); font-variant-numeric: tabular-nums; letter-spacing: -.02em; }
+.i { fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+
+.tb { grid-column: 1 / -1; display: grid; grid-template-columns: 216px minmax(0,1fr) auto minmax(0,1fr) auto; align-items: center; -webkit-app-region: drag; }
+.brand { display: flex; align-items: center; gap: 9px; padding-left: 16px; font-weight: 600; font-size: 13px; letter-spacing: -.01em; }
+.mark { width: 20px; height: 20px; border-radius: 6px; background: var(--accent-solid); color: #fff; display: grid; place-items: center; font-size: 11px; font-weight: 700; }
+.crumb { display: flex; gap: 6px; align-items: center; color: var(--t3); padding-left: 12px; min-width: 0; }
+.crumb b { color: var(--t1); font-weight: 500; }
+.search { -webkit-app-region: no-drag; width: 340px; height: 28px; display: flex; align-items: center; gap: 8px; padding: 0 6px 0 10px; border-radius: 7px; background: var(--raised); border: 1px solid var(--line); color: var(--t3); cursor: pointer; text-align: left; }
+.search:hover { border-color: var(--line-2); color: var(--t2); }
+.search span { flex: 1; }
+.kbd { font: 500 11px/1 var(--mono); color: var(--t3); border: 1px solid var(--line-2); border-bottom-width: 2px; border-radius: 4px; padding: 2px 5px; background: var(--panel); }
+.tb-right { display: flex; align-items: center; justify-content: flex-end; gap: 6px; -webkit-app-region: no-drag; }
+.pill { display: inline-flex; align-items: center; gap: 6px; height: 24px; padding: 0 9px; border-radius: 99px; border: 1px solid var(--line); color: var(--t2); font-size: 12px; }
+.dot { width: 6px; height: 6px; border-radius: 50%; background: var(--t3); flex: none; }
+.dot.ok { background: var(--ok); } .dot.warn { background: var(--warn); } .dot.acc { background: var(--accent); }
+.icon-btn { width: 28px; height: 28px; display: grid; place-items: center; border: 0; background: transparent; border-radius: 6px; color: var(--t2); cursor: pointer; }
+.icon-btn:hover { background: var(--hover); color: var(--t1); }
+.win { display: flex; height: 40px; -webkit-app-region: no-drag; margin-left: 6px; }
+.win button { width: 46px; border: 0; background: transparent; color: var(--t2); display: grid; place-items: center; cursor: default; }
+.win button:hover { background: var(--hover); }
+.win button:last-child:hover { background: #E81123; color: #fff; }
+
+.sb { display: flex; flex-direction: column; padding: 6px 8px 10px; gap: 1px; min-height: 0; }
+.nav { display: flex; align-items: center; gap: 10px; height: 32px; padding: 0 10px; border-radius: 7px; border: 0; background: transparent; color: var(--t2); cursor: pointer; text-align: left; font-weight: 450; position: relative; }
+.nav:hover { background: var(--hover); color: var(--t1); }
+.nav[aria-current="page"] { background: var(--press); color: var(--t1); }
+.nav[aria-current="page"] .i { color: var(--accent-text); }
+.nav .count { margin-left: auto; font: 500 11px var(--mono); color: var(--t3); }
+.sb-label { font-size: 11px; color: var(--t3); padding: 14px 10px 6px; font-weight: 500; }
+.sb-spacer { flex: 1; }
+.acct { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 8px; margin-top: 6px; border-top: 1px solid var(--line); padding-top: 12px; }
+.avatar { width: 28px; height: 28px; border-radius: 50%; background: var(--s3); display: grid; place-items: center; font-weight: 600; font-size: 12px; color: var(--t1); flex: none; }
+.acct small { display: block; color: var(--t3); font-size: 11px; }
+
+.main { position: relative; margin: 0 8px 0 0; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; overflow: auto; min-height: 0; box-shadow: var(--top-hl); scrollbar-width: thin; scrollbar-color: var(--line-3) transparent; }
+.head { position: sticky; top: 0; z-index: 5; background: color-mix(in srgb, var(--panel) 92%, transparent); backdrop-filter: blur(8px); padding: 22px 32px 0; border-bottom: 1px solid var(--line); }
+.head-row { display: flex; align-items: flex-start; gap: 16px; max-width: 1160px; margin: 0 auto; }
+.head h1 { margin: 0; font-size: 22px; line-height: 1.2; font-weight: 600; letter-spacing: -.02em; }
+.head p { margin: 4px 0 0; color: var(--t2); }
+.head .actions { margin-left: auto; display: flex; gap: 8px; }
+.tabs { display: flex; gap: 2px; max-width: 1160px; margin: 16px auto 0; }
+.tab { position: relative; height: 36px; padding: 0 10px; border: 0; background: transparent; color: var(--t2); cursor: pointer; display: flex; align-items: center; gap: 6px; font-weight: 450; }
+.tab:hover { color: var(--t1); }
+.tab[aria-selected="true"] { color: var(--t1); }
+.tab[aria-selected="true"]::after { content: ''; position: absolute; left: 8px; right: 8px; bottom: -1px; height: 2px; border-radius: 2px; background: var(--accent); }
+.tab .num { color: var(--t3); font-size: 11px; }
+.pro { font: 600 9.5px/1 var(--font); letter-spacing: .04em; color: var(--accent-text); border: 1px solid var(--accent-line); padding: 2px 4px 2px; border-radius: 4px; text-transform: uppercase; }
+.page { max-width: 1160px; margin: 0 auto; padding: 24px 32px 40px; animation: enter .18s cubic-bezier(.16,1,.3,1); }
+@keyframes enter { from { opacity: 0; transform: translateY(4px); } }
+
+.st { grid-column: 1 / -1; display: flex; align-items: center; gap: 14px; padding: 0 14px 0 16px; color: var(--t3); font-size: 11.5px; }
+.st .num { color: var(--t2); }
+.st .sep { width: 1px; height: 12px; background: var(--line-2); }
+.st .grow { flex: 1; }
+.st .lnk { display: flex; align-items: center; gap: 6px; border: 0; background: transparent; color: var(--t3); cursor: pointer; padding: 2px 4px; border-radius: 4px; font-size: 11.5px; }
+.st .lnk:hover { color: var(--t1); }
+
+/* ── Primitives ── */
+.btn { height: 32px; display: inline-flex; align-items: center; justify-content: center; gap: 7px; padding: 0 12px; border-radius: 7px; border: 1px solid transparent; font-weight: 500; cursor: pointer; white-space: nowrap; transition: background .12s, border-color .12s, transform .06s; }
+.btn:active, .btn.is-active { transform: translateY(.5px) scale(.99); }
+.btn.lg { height: 36px; padding: 0 16px; }
+.btn.sm { height: 28px; padding: 0 10px; font-size: 12.5px; }
+.btn.primary { background: var(--accent-solid); color: #fff; box-shadow: inset 0 1px 0 rgba(255,255,255,.14), 0 1px 2px rgba(0,0,0,.2); }
+.btn.primary:hover, .btn.primary.is-hover { background: color-mix(in oklab, var(--accent-solid) 90%, white); }
+.btn.secondary { background: var(--raised); border-color: var(--line-2); color: var(--t1); box-shadow: var(--top-hl); }
+.btn.secondary:hover, .btn.secondary.is-hover { background: var(--s3); border-color: var(--line-3); }
+.btn.ghost { background: transparent; color: var(--t2); }
+.btn.ghost:hover, .btn.ghost.is-hover { background: var(--hover); color: var(--t1); }
+.btn.danger { background: transparent; border-color: color-mix(in srgb, var(--danger) 40%, transparent); color: var(--danger); }
+.btn.danger:hover, .btn.danger.is-hover { background: var(--danger-bg); }
+.btn.is-focus { outline: 2px solid var(--accent-text); outline-offset: 2px; }
+.btn:disabled { opacity: .45; cursor: not-allowed; transform: none; }
+.spin { width: 13px; height: 13px; border-radius: 50%; border: 1.5px solid currentColor; border-right-color: transparent; animation: spin .7s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--top-hl); }
+.card-h { display: flex; align-items: center; gap: 8px; padding: 14px 16px 10px; }
+.card-h h3 { margin: 0; font-size: 13px; font-weight: 600; letter-spacing: -.005em; }
+.card-h .more { margin-left: auto; }
+.muted { color: var(--t3); } .soft { color: var(--t2); }
+.badge { display: inline-flex; align-items: center; gap: 5px; height: 20px; padding: 0 7px; border-radius: 5px; font-size: 11.5px; font-weight: 500; white-space: nowrap; background: var(--raised); color: var(--t2); border: 1px solid var(--line); }
+.badge.ok { background: var(--ok-bg); color: var(--ok); border-color: transparent; }
+.badge.warn { background: var(--warn-bg); color: var(--warn); border-color: transparent; }
+.badge.danger { background: var(--danger-bg); color: var(--danger); border-color: transparent; }
+.badge.acc { background: var(--accent-subtle); color: var(--accent-text); border-color: transparent; }
+.impact { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--t2); white-space: nowrap; }
+.bars { display: inline-flex; gap: 2px; align-items: flex-end; }
+.bars i { width: 3px; border-radius: 1px; background: var(--line-3); }
+.bars i:nth-child(1) { height: 6px; } .bars i:nth-child(2) { height: 9px; } .bars i:nth-child(3) { height: 12px; }
+.bars i.on { background: var(--accent-text); }
+
+.switch { position: relative; width: 30px; height: 18px; border-radius: 99px; border: 0; padding: 0; background: var(--s3); box-shadow: inset 0 0 0 1px var(--line-2); cursor: pointer; flex: none; transition: background .15s; }
+.switch::after { content: ''; position: absolute; top: 3px; left: 3px; width: 12px; height: 12px; border-radius: 50%; background: var(--t2); transition: transform .18s cubic-bezier(.16,1,.3,1), background .15s; }
+.switch[aria-checked="true"] { background: var(--accent-solid); box-shadow: none; }
+.switch[aria-checked="true"]::after { transform: translateX(12px); background: #fff; }
+.switch:disabled { opacity: .4; cursor: not-allowed; }
+.check { width: 16px; height: 16px; border-radius: 4px; border: 1px solid var(--line-3); background: var(--raised); display: inline-grid; place-items: center; color: #fff; flex: none; }
+.check.on { background: var(--accent-solid); border-color: transparent; }
+.seg { display: inline-flex; padding: 2px; border-radius: 8px; background: var(--raised); border: 1px solid var(--line); }
+.seg button { height: 26px; padding: 0 10px; border: 0; border-radius: 6px; background: transparent; color: var(--t2); cursor: pointer; font-weight: 450; }
+.seg button[aria-pressed="true"] { background: var(--card); color: var(--t1); box-shadow: 0 1px 2px rgba(0,0,0,.18), 0 0 0 1px var(--line-2); }
+.input { height: 32px; display: flex; align-items: center; gap: 8px; padding: 0 10px; border-radius: 7px; background: var(--raised); border: 1px solid var(--line-2); color: var(--t3); min-width: 0; }
+.input input { all: unset; flex: 1; color: var(--t1); font-size: 13px; min-width: 0; }
+.input input::placeholder { color: var(--t3); }
+.input:focus-within, .input.is-focus { border-color: var(--accent-line); box-shadow: 0 0 0 3px var(--accent-subtle); }
+.input.err { border-color: color-mix(in srgb, var(--danger) 55%, transparent); }
+.meter { height: 4px; border-radius: 4px; background: var(--s3); overflow: hidden; }
+.meter > i { display: block; height: 100%; border-radius: 4px; background: var(--accent); transition: width .4s cubic-bezier(.16,1,.3,1); }
+
+/* ── Home ── */
+.grid-hero { display: grid; grid-template-columns: minmax(0,1.45fr) minmax(0,1fr); gap: 16px; }
+.hero { padding: 24px; display: flex; gap: 24px; align-items: center; }
+.ring { position: relative; width: 104px; height: 104px; flex: none; }
+.ring svg { transform: rotate(-90deg); }
+.ring .val { position: absolute; inset: 0; display: grid; place-items: center; text-align: center; }
+.ring .val b { font: 600 32px/1 var(--mono); letter-spacing: -.04em; }
+.ring .val small { display: block; font-size: 11px; color: var(--t3); margin-top: 4px; }
+.eyebrow { font-size: 12px; color: var(--t3); font-weight: 500; }
+.hero h2 { margin: 4px 0 6px; font-size: 20px; font-weight: 600; letter-spacing: -.02em; line-height: 1.25; }
+.hero p { margin: 0 0 18px; color: var(--t2); max-width: 46ch; }
+.row-actions { display: flex; gap: 8px; align-items: center; }
+.rec-list { list-style: none; margin: 0; padding: 0 6px 6px; }
+.rec-list li { display: flex; align-items: center; gap: 12px; padding: 10px; border-radius: 8px; }
+.rec-list li:hover { background: var(--hover); }
+.rec-ico { width: 30px; height: 30px; border-radius: 8px; background: var(--raised); border: 1px solid var(--line); display: grid; place-items: center; color: var(--t2); flex: none; }
+.rec-list .txt { flex: 1; min-width: 0; }
+.rec-list .txt b { display: block; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tiles { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 16px; margin-top: 16px; }
+.tile { padding: 14px 16px 0; overflow: hidden; }
+.tile-h { display: flex; align-items: center; gap: 7px; color: var(--t2); font-size: 12px; font-weight: 500; }
+.tile-h .badge { margin-left: auto; }
+.tile .v { font: 600 26px/1.1 var(--mono); letter-spacing: -.04em; margin-top: 10px; }
+.tile .v small { font-size: 13px; color: var(--t3); font-weight: 500; margin-left: 2px; letter-spacing: 0; }
+.tile .sub { color: var(--t3); font-size: 12px; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tile svg.spark { display: block; width: calc(100% + 32px); margin: 10px -16px 0; height: 40px; }
+.grid-3 { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 16px; margin-top: 16px; }
+.dl { display: grid; grid-template-columns: auto minmax(0,1fr); gap: 9px 16px; padding: 4px 16px 16px; margin: 0; }
+.dl dt { color: var(--t3); }
+.dl dd { margin: 0; text-align: right; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.feed { list-style: none; margin: 0; padding: 2px 16px 14px; }
+.feed li { display: grid; grid-template-columns: 14px minmax(0,1fr) auto; gap: 10px; align-items: baseline; padding: 6px 0; position: relative; }
+.feed li::before { content: ''; position: absolute; left: 3px; top: 20px; bottom: -8px; width: 1px; background: var(--line-2); }
+.feed li:last-child::before { display: none; }
+.feed .dot { margin-top: 1px; justify-self: start; position: relative; top: -1px; }
+.feed span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.stats { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 12px; padding: 4px 16px 0; }
+.stats b { display: block; font: 600 20px/1.2 var(--mono); letter-spacing: -.03em; }
+.stats span { font-size: 11.5px; color: var(--t3); }
+.fbars { display: flex; align-items: flex-end; gap: 2px; height: 44px; padding: 12px 16px 16px; box-sizing: content-box; }
+.fbars i { flex: 1; background: color-mix(in srgb, var(--accent) 55%, transparent); border-radius: 1.5px 1.5px 0 0; min-height: 2px; }
+.fbars i.low { background: var(--warn); }
+
+/* ── Tweak list ── */
+.toolbar { display: flex; gap: 10px; align-items: center; margin-bottom: 16px; }
+.toolbar .input { width: 280px; }
+.toolbar .grow { flex: 1; }
+.recpanel { display: flex; align-items: center; gap: 24px; padding: 16px 18px; margin-bottom: 24px; }
+.recpanel .txt { flex: 1; min-width: 0; }
+.recpanel b { font-weight: 600; }
+.recpanel .meter { margin: 10px 0 6px; max-width: 360px; }
+.group-h { display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 600; color: var(--t2); margin: 22px 0 8px; padding-left: 2px; }
+.group-h .num { color: var(--t3); font-weight: 500; }
+.list { border: 1px solid var(--line); border-radius: 12px; background: var(--card); overflow: hidden; box-shadow: var(--top-hl); }
+.trow { border-top: 1px solid var(--line); }
+.trow:first-child { border-top: 0; }
+.trow-main { display: grid; grid-template-columns: 18px minmax(0,1fr) 128px 96px 30px; align-items: center; gap: 14px; padding: 0 16px; min-height: 56px; cursor: pointer; }
+.trow-main:hover { background: var(--hover); }
+.chev { color: var(--t3); transition: transform .18s cubic-bezier(.16,1,.3,1); }
+.trow.open .chev { transform: rotate(90deg); color: var(--t1); }
+.trow .t { min-width: 0; padding: 9px 0; }
+.trow .t b { font-weight: 500; display: flex; align-items: center; gap: 8px; }
+.trow .t span { display: block; color: var(--t3); font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.recdot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
+.trow-detail { padding: 2px 16px 16px 48px; display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 16px; animation: enter .18s cubic-bezier(.16,1,.3,1); }
+.code { font: 12px/1.6 var(--mono); background: var(--raised); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; color: var(--t2); overflow-x: auto; white-space: nowrap; }
+.code em { font-style: normal; color: var(--accent-text); }
+.note { display: flex; gap: 8px; align-items: center; color: var(--t3); font-size: 12px; margin-top: 10px; }
+
+/* ── Pulse ── */
+.session { display: grid; grid-template-columns: minmax(0,1fr) 260px; }
+.session-l { padding: 22px 24px 24px; }
+.session-r { border-left: 1px solid var(--line); padding: 24px; display: flex; flex-direction: column; justify-content: center; gap: 12px; }
+.games { display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 10px; margin-top: 18px; }
+.game { height: 88px; border-radius: 10px; border: 1px solid var(--line-2); background: var(--raised); display: flex; flex-direction: column; justify-content: space-between; padding: 10px 12px; cursor: pointer; text-align: left; }
+.game:hover { border-color: var(--line-3); }
+.game[aria-pressed="true"] { border-color: var(--accent-line); box-shadow: 0 0 0 3px var(--accent-subtle); background: var(--card); }
+.game .mono { width: 28px; height: 28px; border-radius: 7px; display: grid; place-items: center; font: 700 11px var(--mono); background: var(--s3); color: var(--t1); letter-spacing: 0; }
+.game[aria-pressed="true"] .mono { background: var(--accent-solid); color: #fff; }
+.game span { font-size: 12px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.game.add { border-style: dashed; color: var(--t3); align-items: center; justify-content: center; gap: 6px; background: transparent; }
+.cols-2 { display: grid; grid-template-columns: minmax(0,1.3fr) minmax(0,1fr); gap: 16px; margin-top: 16px; }
+.srow { display: flex; align-items: center; gap: 14px; padding: 12px 16px; border-top: 1px solid var(--line); }
+.srow:first-of-type { border-top: 0; }
+.srow .t { flex: 1; min-width: 0; }
+.srow .t b { font-weight: 500; display: block; }
+.srow .t span { color: var(--t3); font-size: 12.5px; }
+
+/* ── Table / states ── */
+.tbl { width: 100%; border-collapse: collapse; }
+.tbl th { text-align: left; font-size: 12px; font-weight: 500; color: var(--t3); padding: 10px 16px; border-bottom: 1px solid var(--line); background: var(--card); position: sticky; top: 0; }
+.tbl td { padding: 10px 16px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+.tbl tr:last-child td { border-bottom: 0; }
+.tbl tbody tr:hover td { background: var(--hover); }
+.app-cell { display: flex; align-items: center; gap: 12px; }
+.app-ico { width: 28px; height: 28px; border-radius: 7px; background: var(--raised); border: 1px solid var(--line); display: grid; place-items: center; font: 600 11px var(--mono); color: var(--t2); flex: none; }
+.app-cell b { font-weight: 500; display: block; }
+.app-cell span { color: var(--t3); font-size: 12px; }
+.states { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 16px; }
+.state-box { min-height: 220px; display: flex; flex-direction: column; }
+.state-box .cap { padding: 10px 14px; border-bottom: 1px solid var(--line); font-size: 11.5px; color: var(--t3); font-weight: 500; }
+.state-body { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 20px 22px 22px; gap: 6px; }
+.state-body h4 { margin: 8px 0 0; font-size: 14px; font-weight: 600; letter-spacing: -.01em; }
+.state-body p { margin: 0 0 10px; color: var(--t2); font-size: 12.5px; max-width: 34ch; }
+.empty-ico { width: 40px; height: 40px; border-radius: 10px; border: 1px solid var(--line-2); background: var(--raised); display: grid; place-items: center; color: var(--t2); }
+.empty-ico.err { color: var(--danger); background: var(--danger-bg); border-color: transparent; }
+.skel { border-radius: 5px; background: linear-gradient(90deg, var(--skel) 0%, var(--skel-hl) 50%, var(--skel) 100%) 0 0 / 200% 100%; animation: shimmer 1.4s ease-in-out infinite; }
+@keyframes shimmer { from { background-position: 100% 0; } to { background-position: -100% 0; } }
+.skel-row { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-bottom: 1px solid var(--line); }
+
+/* ── Components sheet ── */
+.cs-sec { margin-bottom: 28px; }
+.cs-sec h3 { font-size: 13px; font-weight: 600; margin: 0 0 12px; }
+.cs-grid { display: grid; grid-template-columns: 90px repeat(6, minmax(0,1fr)); gap: 10px 12px; align-items: center; }
+.cs-grid .lbl { font-size: 11.5px; color: var(--t3); }
+.cs-row { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+.tip { position: relative; display: inline-block; }
+.tip-pop { position: absolute; bottom: calc(100% + 8px); left: 50%; transform: translateX(-50%); background: var(--s3); color: var(--t1); border-radius: 6px; padding: 5px 8px; font-size: 12px; white-space: nowrap; box-shadow: var(--shadow-pop); }
+
+/* ── Overlays ── */
+.ov { position: absolute; inset: 0; z-index: 50; background: var(--scrim); display: flex; justify-content: center; animation: fade .14s ease-out; }
+@keyframes fade { from { opacity: 0; } }
+.palette { margin-top: 84px; width: 580px; max-height: 440px; align-self: flex-start; background: var(--card); border-radius: 12px; box-shadow: var(--shadow-pop); overflow: hidden; display: flex; flex-direction: column; animation: pop .16s cubic-bezier(.16,1,.3,1); }
+@keyframes pop { from { opacity: 0; transform: translateY(-6px) scale(.985); } }
+.palette .pin { display: flex; align-items: center; gap: 10px; padding: 0 16px; height: 50px; border-bottom: 1px solid var(--line); color: var(--t3); }
+.palette .pin input { all: unset; flex: 1; font-size: 14px; color: var(--t1); }
+.palette .pin input::placeholder { color: var(--t3); }
+.pal-body { overflow: auto; padding: 6px; }
+.pal-g { font-size: 11.5px; color: var(--t3); padding: 10px 10px 4px; font-weight: 500; }
+.pal-i { display: flex; align-items: center; gap: 10px; height: 36px; padding: 0 10px; border-radius: 7px; color: var(--t2); cursor: pointer; }
+.pal-i.sel { background: var(--press); color: var(--t1); }
+.pal-i .r { margin-left: auto; display: flex; gap: 4px; align-items: center; color: var(--t3); font-size: 12px; }
+.pal-f { display: flex; gap: 14px; padding: 8px 14px; border-top: 1px solid var(--line); color: var(--t3); font-size: 11.5px; }
+.pal-f span { display: flex; gap: 5px; align-items: center; }
+.modal { align-self: center; width: 440px; background: var(--card); border-radius: 14px; box-shadow: var(--shadow-pop); animation: pop .16s cubic-bezier(.16,1,.3,1); }
+.modal-b { padding: 22px 22px 18px; }
+.modal h2 { margin: 0 0 6px; font-size: 16px; font-weight: 600; letter-spacing: -.015em; }
+.modal p { margin: 0; color: var(--t2); }
+.modal ul { list-style: none; margin: 14px 0 0; padding: 0; border: 1px solid var(--line); border-radius: 9px; }
+.modal li { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-top: 1px solid var(--line); }
+.modal li:first-child { border-top: 0; }
+.modal li span:last-child { margin-left: auto; }
+.modal-f { display: flex; justify-content: flex-end; gap: 8px; padding: 14px 22px; border-top: 1px solid var(--line); background: color-mix(in srgb, var(--raised) 50%, transparent); border-radius: 0 0 14px 14px; }
+.toast { position: absolute; right: 22px; bottom: 40px; z-index: 60; display: flex; align-items: center; gap: 12px; min-width: 300px; padding: 10px 10px 10px 14px; border-radius: 10px; background: var(--card); box-shadow: var(--shadow-pop); animation: pop .18s cubic-bezier(.16,1,.3,1); }
+.toast .ok-ico { width: 20px; height: 20px; border-radius: 50%; background: var(--ok-bg); color: var(--ok); display: grid; place-items: center; }
+.toast .t { flex: 1; font-weight: 500; }
+.toast.inline { position: static; animation: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  .app *, .app *::before, .app *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+}
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-home" viewBox="0 0 24 24"><path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"/><path d="M3 10a2 2 0 0 1 .709-1.528l7-5.999a2 2 0 0 1 2.582 0l7 5.999A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></symbol>
+  <symbol id="i-gauge" viewBox="0 0 24 24"><path d="m12 14 4-4"/><path d="M3.34 19a10 10 0 1 1 17.32 0"/></symbol>
+  <symbol id="i-gamepad" viewBox="0 0 24 24"><line x1="6" x2="10" y1="11" y2="11"/><line x1="8" x2="8" y1="9" y2="13"/><line x1="15" x2="15.01" y1="12" y2="12"/><line x1="18" x2="18.01" y1="10" y2="10"/><path d="M17.32 5H6.68a4 4 0 0 0-3.978 3.59c-.006.052-.01.101-.017.152C2.604 9.416 2 14.456 2 16a3 3 0 0 0 3 3c1 0 1.5-.5 2-1l1.414-1.414A2 2 0 0 1 9.828 16h4.344a2 2 0 0 1 1.414.586L17 18c.5.5 1 1 2 1a3 3 0 0 0 3-3c0-1.545-.604-6.584-.685-7.258-.007-.05-.011-.1-.017-.151A4 4 0 0 0 17.32 5z"/></symbol>
+  <symbol id="i-sparkles" viewBox="0 0 24 24"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/></symbol>
+  <symbol id="i-cpu" viewBox="0 0 24 24"><rect width="16" height="16" x="4" y="4" rx="2"/><rect width="6" height="6" x="9" y="9" rx="1"/><path d="M15 2v2M15 20v2M2 15h2M2 9h2M20 15h2M20 9h2M9 2v2M9 20v2"/></symbol>
+  <symbol id="i-settings" viewBox="0 0 24 24"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></symbol>
+  <symbol id="i-more" viewBox="0 0 24 24"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></symbol>
+  <symbol id="i-min" viewBox="0 0 24 24"><path d="M6 12h12"/></symbol>
+  <symbol id="i-max" viewBox="0 0 24 24"><rect width="12" height="12" x="6" y="6" rx="1"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></symbol>
+  <symbol id="i-chev" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol>
+  <symbol id="i-shield" viewBox="0 0 24 24"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/></symbol>
+  <symbol id="i-activity" viewBox="0 0 24 24"><path d="M22 12h-2.48a2 2 0 0 0-1.93 1.46l-2.35 8.36a.25.25 0 0 1-.48 0L9.24 2.18a.25.25 0 0 0-.48 0l-2.35 8.36A2 2 0 0 1 4.49 12H2"/></symbol>
+  <symbol id="i-zap" viewBox="0 0 24 24"><path d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z"/></symbol>
+  <symbol id="i-undo" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></symbol>
+  <symbol id="i-alert" viewBox="0 0 24 24"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></symbol>
+  <symbol id="i-play" viewBox="0 0 24 24"><polygon points="6 3 20 12 6 21 6 3"/></symbol>
+  <symbol id="i-monitor" viewBox="0 0 24 24"><rect width="20" height="14" x="2" y="3" rx="2"/><line x1="8" x2="16" y1="21" y2="21"/><line x1="12" x2="12" y1="17" y2="21"/></symbol>
+  <symbol id="i-ram" viewBox="0 0 24 24"><path d="M6 19v-3M10 19v-3M14 19v-3M18 19v-3M8 11V9M16 11V9M12 11V9M2 15h20M2 7a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v1.1a2 2 0 0 0 0 3.837V17a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-5.1a2 2 0 0 0 0-3.837Z"/></symbol>
+  <symbol id="i-wifi" viewBox="0 0 24 24"><path d="M12 20h.01"/><path d="M2 8.82a15 15 0 0 1 20 0"/><path d="M5 12.859a10 10 0 0 1 14 0"/><path d="M8.5 16.429a5 5 0 0 1 7 0"/></symbol>
+  <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></symbol>
+  <symbol id="i-lock" viewBox="0 0 24 24"><rect width="18" height="11" x="3" y="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></symbol>
+  <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></symbol>
+  <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></symbol>
+  <symbol id="i-panel" viewBox="0 0 24 24"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M15 3v18"/></symbol>
+  <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M5 12h14"/><path d="M12 5v14"/></symbol>
+  <symbol id="i-inbox" viewBox="0 0 24 24"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></symbol>
+  <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2m-7.07-14.07 1.41 1.41m11.32 11.32 1.41 1.41M2 12h2m16 0h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></symbol>
+  <symbol id="i-power" viewBox="0 0 24 24"><path d="M12 2v10"/><path d="M18.4 6.6a9 9 0 1 1-12.77.04"/></symbol>
+  <symbol id="i-enter" viewBox="0 0 24 24"><polyline points="9 10 4 15 9 20"/><path d="M20 4v7a4 4 0 0 1-4 4H4"/></symbol>
+  <symbol id="i-updown" viewBox="0 0 24 24"><path d="m7 15 5 5 5-5"/><path d="m7 9 5-5 5 5"/></symbol>
+</svg>
+
+<div class="pv-bar" id="pv"></div>
+<div class="pv-stage" id="stage"><div class="pv-scaler" id="scaler"><div class="app" id="app"></div></div></div>
+
+<script>
+const T = {
+  en: {
+    home: 'Home', optimize: 'Optimize', gaming: 'Gaming', clean: 'Clean', system: 'System', settings: 'Settings',
+    homeSub: 'System overview', optimizeSub: 'Tweaks, hardware, network and fixes', gamingSub: 'Pulse, game profiles, FiveM and latency', cleanSub: 'Cleanup, debloat and startup apps', systemSub: 'Diagnostics, processes, BIOS, scheduler and history',
+    search: 'Search or jump to…', idle: 'Idle', premium: 'Premium', activity: 'Activity', pulseIdle: 'Pulse idle', on: 'on',
+    greet: 'Good evening', health: 'Health score', of100: 'of 100', heroTitle: 'Your PC is in good shape', heroBody: '3 changes would make games feel smoother. Each one can be undone from History.',
+    optimizeNow: 'Optimize now', smartProfile: 'Smart profile', recommended: 'Recommended', apply: 'Apply', viewAll: 'View all',
+    rec1: 'Disable Game Bar capture', rec2: 'Ultimate Performance power plan', rec3: "Turn off Nagle's algorithm",
+    high: 'High impact', med: 'Medium impact', low: 'Low impact', safe: 'Safe', moderate: 'Moderate', advanced: 'Advanced',
+    network: 'Network', cpuSub: '4.6 GHz · 52 °C', gpuSub: 'RTX 4070 · 44 °C', ramSub: '13.1 of 32 GB in use', netSub: 'to 1.1.1.1 · 0% loss', live: 'Live',
+    thisPc: 'This PC', uptime: 'Uptime', uptimeV: '2 d 4 h', recent: 'Recent activity',
+    a1: 'Applied 4 tweaks', a2: 'Restore point created', a3: 'Cleaned 2.4 GB', a4: 'Pulse session · Counter-Strike 2', ago2h: '2 h ago', yesterday: 'Yesterday',
+    lastSession: 'Last session', avgFps: 'Average FPS', lowFps: '1% low', frametime: 'Frametime',
+    createRp: 'Create restore point', tWindows: 'Windows', tCpu: 'CPU & memory', tGpu: 'GPU', tPower: 'Power', tNetwork: 'Network', tFixes: 'Fixes',
+    filter: 'Filter tweaks', sRec: 'Recommended', sApplied: 'Applied', sAll: 'All', safeDefaults: 'Safe defaults',
+    recPanel: '{n} of {m} recommended tweaks applied', recBody: 'A restore point is created before anything changes.', review: 'Review changes', applyRest: 'Apply {n} remaining', allDone: 'All recommended tweaks applied',
+    gResp: 'Responsiveness', gBg: 'Background and privacy',
+    gamemode: 'Game Mode', gamemodeD: "Gives the game priority for CPU and GPU time",
+    gamebar: 'Disable Game Bar capture', gamebarD: 'Stops background recording that costs 2–5% FPS',
+    hags: 'Hardware-accelerated GPU scheduling', hagsD: 'Lower input latency on supported GPUs',
+    fso: 'Disable fullscreen optimizations', fsoD: 'Can fix stutter in older DirectX 11 games',
+    bgapps: 'Turn off background apps', bgappsD: 'Frees RAM and cuts CPU wakeups',
+    telemetry: 'Disable telemetry services', telemetryD: 'Stops diagnostic data uploads',
+    indexing: 'Pause Windows Search indexing', indexingD: 'Less disk activity while you play',
+    whatChanges: 'What changes', restart: 'Takes effect after a restart', undoFrom: 'Undo anytime from System › History', viewDiff: 'View diff', recTip: 'Recommended for your PC',
+    turnedOn: '{x} turned on', turnedOff: '{x} turned off', undo: 'Undo', applied: '{n} tweaks applied', undone: 'Change undone',
+    mTitle: 'Apply {n} tweaks?', mBody: 'Jylli creates a restore point first, so you can roll everything back.', cancel: 'Cancel', mConfirm: 'Apply {n} tweaks',
+    tPulse: 'Pulse', tGames: 'Games', tApps: 'Apps', tFivem: 'FiveM', tLatency: 'Latency',
+    session: 'Session', ready: 'Ready', running: 'Active', pickGame: 'Pick a game, then activate Pulse', pickBody: 'Pulse applies your game profile when the game starts and puts everything back when it closes.',
+    activate: 'Activate Pulse', deactivate: 'Stop Pulse', activeBody: 'Waiting for {g} to start. The live monitor opens with it.', readyBody: 'Opens the live monitor while you play.', addGame: 'Add game',
+    whenStart: 'When a game starts', p1: 'Raise game priority', p1d: 'High CPU priority for the game process', p2: 'Update Guard', p2d: 'Pauses Windows Update downloads',
+    p3: 'Game Shield', p3d: 'Closes background hogs · 3 apps kept alive', p4: 'Timer resolution 0.5 ms', p4d: 'Steadier frame pacing', openMonitor: 'Open live monitor',
+    tCleanup: 'Cleanup', tDebloat: 'Debloat', tStartup: 'Startup',
+    stSummary: '7 apps start with Windows', stSummary2: 'About 6.8 s added to boot time', disableHigh: 'Disable high impact',
+    cApp: 'App', cImpact: 'Impact', cDelay: 'Boot delay', cStarts: 'Starts with Windows', iHigh: 'High', iMed: 'Medium', iLow: 'Low',
+    states: 'Other states of this screen', sLoading: 'Loading', sEmpty: 'Empty', sError: 'Error',
+    emptyT: 'Nothing starts with Windows', emptyB: 'Boot time is as short as it gets. New startup apps show up here.', refresh: 'Refresh',
+    errT: "Couldn't read startup apps", errB: "Windows didn't answer in time. Try again, or restart Jylli as administrator.", retry: 'Try again',
+    palPh: 'Search pages, tweaks and actions', pPages: 'Pages', pTweaks: 'Tweaks', pActions: 'Actions', pNav: 'navigate', pOpen: 'open', pClose: 'close', toLight: 'Switch to light theme', toDark: 'Switch to dark theme',
+    comps: 'Components', compsSub: 'Every primitive in every state', buttons: 'Buttons', primary: 'Primary', secondary: 'Secondary', ghost: 'Ghost', danger: 'Danger',
+    stDefault: 'Default', stHover: 'Hover', stFocus: 'Focus', stPressed: 'Pressed', stDisabled: 'Disabled', stLoading: 'Loading', working: 'Working…',
+    inputs: 'Inputs', phName: 'Profile name', phErr: 'Name is already in use', selection: 'Selection', badges: 'Badges and status', feedback: 'Feedback', tipText: 'Applies after a restart', hoverMe: 'Tooltip',
+    delete: 'Delete profile', save: 'Save',
+  },
+  fi: {
+    home: 'Etusivu', optimize: 'Optimoi', gaming: 'Pelaaminen', clean: 'Siivous', system: 'Järjestelmä', settings: 'Asetukset',
+    homeSub: 'Järjestelmän yleiskatsaus', optimizeSub: 'Säädöt, laitteisto, verkko ja korjaukset', gamingSub: 'Pulse, peliprofiilit, FiveM ja viive', cleanSub: 'Siivous, bloatware ja käynnistyssovellukset', systemSub: 'Diagnostiikka, prosessit, BIOS, ajastin ja historia',
+    search: 'Hae tai siirry…', idle: 'Valmiina', premium: 'Premium', activity: 'Tapahtumat', pulseIdle: 'Pulse ei käynnissä', on: 'päällä',
+    greet: 'Hyvää iltaa', health: 'Kuntopisteet', of100: '/ 100', heroTitle: 'Tietokoneesi on hyvässä kunnossa', heroBody: '3 muutosta tekisi peleistä sulavampia. Jokaisen voi perua Historiasta.',
+    optimizeNow: 'Optimoi nyt', smartProfile: 'Älykäs profiili', recommended: 'Suositellut', apply: 'Käytä', viewAll: 'Näytä kaikki',
+    rec1: 'Poista Game Barin tallennus', rec2: 'Ultimate Performance -virrankäyttö', rec3: 'Poista Naglen algoritmi käytöstä',
+    high: 'Suuri vaikutus', med: 'Kohtalainen vaikutus', low: 'Pieni vaikutus', safe: 'Turvallinen', moderate: 'Kohtalainen', advanced: 'Edistynyt',
+    network: 'Verkko', cpuSub: '4,6 GHz · 52 °C', gpuSub: 'RTX 4070 · 44 °C', ramSub: '13,1 / 32 GB käytössä', netSub: 'kohteeseen 1.1.1.1 · 0 % hävikki', live: 'Live',
+    thisPc: 'Tämä tietokone', uptime: 'Käynnissä', uptimeV: '2 pv 4 h', recent: 'Viimeisimmät tapahtumat',
+    a1: '4 säätöä otettu käyttöön', a2: 'Palautuspiste luotu', a3: 'Siivottu 2,4 GB', a4: 'Pulse-istunto · Counter-Strike 2', ago2h: '2 h sitten', yesterday: 'Eilen',
+    lastSession: 'Edellinen istunto', avgFps: 'Keskim. FPS', lowFps: '1 % low', frametime: 'Ruutuaika',
+    createRp: 'Luo palautuspiste', tWindows: 'Windows', tCpu: 'CPU ja muisti', tGpu: 'GPU', tPower: 'Virta', tNetwork: 'Verkko', tFixes: 'Korjaukset',
+    filter: 'Suodata säätöjä', sRec: 'Suositellut', sApplied: 'Käytössä', sAll: 'Kaikki', safeDefaults: 'Turvalliset oletukset',
+    recPanel: '{n}/{m} suositellusta säädöstä käytössä', recBody: 'Palautuspiste luodaan ennen kuin mitään muutetaan.', review: 'Tarkista muutokset', applyRest: 'Ota loput {n} käyttöön', allDone: 'Kaikki suositellut säädöt käytössä',
+    gResp: 'Vasteaika', gBg: 'Tausta ja yksityisyys',
+    gamemode: 'Pelitila', gamemodeD: 'Antaa pelille etusijan CPU- ja GPU-aikaan',
+    gamebar: 'Poista Game Barin tallennus', gamebarD: 'Lopettaa taustatallennuksen, joka vie 2–5 % FPS:stä',
+    hags: 'Laitteistokiihdytetty GPU-ajoitus', hagsD: 'Pienempi syöteviive tuetuilla GPU:illa',
+    fso: 'Poista koko näytön optimoinnit', fsoD: 'Voi korjata nykimistä vanhemmissa DirectX 11 -peleissä',
+    bgapps: 'Poista taustasovellukset käytöstä', bgappsD: 'Vapauttaa RAM-muistia ja vähentää CPU-herätyksiä',
+    telemetry: 'Poista telemetriapalvelut käytöstä', telemetryD: 'Lopettaa diagnostiikkatietojen lähetyksen',
+    indexing: 'Keskeytä Windows Searchin indeksointi', indexingD: 'Vähemmän levyaktiivisuutta pelatessa',
+    whatChanges: 'Mitä muuttuu', restart: 'Tulee voimaan uudelleenkäynnistyksen jälkeen', undoFrom: 'Peru milloin tahansa: Järjestelmä › Historia', viewDiff: 'Näytä muutokset', recTip: 'Suositeltu tälle tietokoneelle',
+    turnedOn: '{x}: käytössä', turnedOff: '{x}: pois käytöstä', undo: 'Peru', applied: '{n} säätöä otettu käyttöön', undone: 'Muutos peruttu',
+    mTitle: 'Otetaanko {n} säätöä käyttöön?', mBody: 'Jylli luo ensin palautuspisteen, joten kaiken voi perua.', cancel: 'Peruuta', mConfirm: 'Ota {n} säätöä käyttöön',
+    tPulse: 'Pulse', tGames: 'Pelit', tApps: 'Sovellukset', tFivem: 'FiveM', tLatency: 'Viive',
+    session: 'Istunto', ready: 'Valmis', running: 'Aktiivinen', pickGame: 'Valitse peli ja käynnistä Pulse', pickBody: 'Pulse ottaa peliprofiilin käyttöön pelin käynnistyessä ja palauttaa kaiken, kun peli suljetaan.',
+    activate: 'Käynnistä Pulse', deactivate: 'Pysäytä Pulse', activeBody: 'Odotetaan, että {g} käynnistyy. Live-seuranta avautuu samalla.', readyBody: 'Avaa live-seurannan pelin ajaksi.', addGame: 'Lisää peli',
+    whenStart: 'Kun peli käynnistyy', p1: 'Nosta pelin prioriteettia', p1d: 'Korkea CPU-prioriteetti peliprosessille', p2: 'Update Guard', p2d: 'Keskeyttää Windows Update -lataukset',
+    p3: 'Game Shield', p3d: 'Sulkee raskaat taustasovellukset · 3 pidetään käynnissä', p4: 'Ajastimen tarkkuus 0,5 ms', p4d: 'Tasaisempi ruutujen ajoitus', openMonitor: 'Avaa live-seuranta',
+    tCleanup: 'Siivous', tDebloat: 'Bloatware', tStartup: 'Käynnistys',
+    stSummary: '7 sovellusta käynnistyy Windowsin mukana', stSummary2: 'Noin 6,8 s lisää käynnistysaikaa', disableHigh: 'Poista suuret käytöstä',
+    cApp: 'Sovellus', cImpact: 'Vaikutus', cDelay: 'Viive', cStarts: 'Käynnistyy Windowsin mukana', iHigh: 'Suuri', iMed: 'Kohtalainen', iLow: 'Pieni',
+    states: 'Näkymän muut tilat', sLoading: 'Ladataan', sEmpty: 'Tyhjä', sError: 'Virhe',
+    emptyT: 'Mikään ei käynnisty Windowsin mukana', emptyB: 'Käynnistysaika on niin lyhyt kuin voi. Uudet käynnistyssovellukset näkyvät tässä.', refresh: 'Päivitä',
+    errT: 'Käynnistyssovelluksia ei voitu lukea', errB: 'Windows ei vastannut ajoissa. Yritä uudelleen tai käynnistä Jylli järjestelmänvalvojana.', retry: 'Yritä uudelleen',
+    palPh: 'Hae sivuja, säätöjä ja toimintoja', pPages: 'Sivut', pTweaks: 'Säädöt', pActions: 'Toiminnot', pNav: 'siirry', pOpen: 'avaa', pClose: 'sulje', toLight: 'Vaihda vaaleaan teemaan', toDark: 'Vaihda tummaan teemaan',
+    comps: 'Komponentit', compsSub: 'Jokainen peruskomponentti kaikissa tiloissa', buttons: 'Painikkeet', primary: 'Ensisijainen', secondary: 'Toissijainen', ghost: 'Haamu', danger: 'Vaarallinen',
+    stDefault: 'Oletus', stHover: 'Hover', stFocus: 'Fokus', stPressed: 'Painettu', stDisabled: 'Pois käytöstä', stLoading: 'Ladataan', working: 'Käsitellään…',
+    inputs: 'Kentät', phName: 'Profiilin nimi', phErr: 'Nimi on jo käytössä', selection: 'Valinnat', badges: 'Merkit ja tila', feedback: 'Palaute', tipText: 'Tulee voimaan uudelleenkäynnistyksen jälkeen', hoverMe: 'Työkaluvihje',
+    delete: 'Poista profiili', save: 'Tallenna',
+  },
+}
+
+const S = {
+  screen: 'home', scheme: 'dark', accent: '#8B7CF6', size: [1280, 820], lang: 'en', overlay: null,
+  seg: 'all', q: '', open: 'hags', game: 'cs2', pulse: false, palSel: 0, applying: false,
+  tw: { gamemode: 1, gamebar: 0, hags: 1, fso: 0, bgapps: 1, telemetry: 0, indexing: 0 },
+  pr: { p1: 1, p2: 1, p3: 1, p4: 0 },
+  st: { discord: 1, steam: 1, spotify: 1, broadcast: 1, onedrive: 0, teams: 0, epic: 1 },
+  toast: null,
+}
+const ACCENTS = { jylli: '#8B7CF6', midnight: '#3B82F6', forest: '#22C55E', violet: '#9B59FF', slate: '#06B6D4', amber: '#F59E0B', rose: '#FB7185', neon: '#22D3EE' }
+const SIZES = [[1060, 660], [1280, 820], [1920, 1080]]
+const SCREENS = [['home', 'Home'], ['optimize', 'Optimize › Windows'], ['pulse', 'Gaming › Pulse'], ['startup', 'Clean › Startup + states'], ['components', 'Components']]
+const TWEAKS = [
+  { g: 'gResp', items: [['gamemode', 3, 'safe', 1], ['gamebar', 3, 'safe', 1], ['hags', 2, 'safe', 1], ['fso', 2, 'moderate', 0]] },
+  { g: 'gBg', items: [['bgapps', 1, 'safe', 1], ['telemetry', 1, 'safe', 1], ['indexing', 1, 'moderate', 1]] },
+]
+const REC = TWEAKS.flatMap(g => g.items).filter(x => x[3]).map(x => x[0])
+
+const t = (k, v) => { let s = (T[S.lang][k] ?? T.en[k] ?? k); if (v) for (const [a, b] of Object.entries(v)) s = s.replaceAll('{' + a + '}', b); return s }
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]))
+const ic = (n, s = 16) => `<svg class="i" width="${s}" height="${s}" aria-hidden="true"><use href="#i-${n}"/></svg>`
+const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches
+
+// Live data (random walks) for tiles and status bar
+const live = { cpu: walk(18, 6, 60), gpu: walk(7, 3, 40), ram: walk(41, 38, 46), net: walk(12, 8, 22) }
+function walk(start, lo, hi) { const a = []; let v = start; for (let i = 0; i < 40; i++) { v = Math.max(lo, Math.min(hi, v + (Math.random() - .5) * (hi - lo) * .25)); a.push(v) } return a }
+function sparkPath(a, w = 200, h = 40) {
+  const max = Math.max(...a) * 1.15, min = Math.min(...a) * .85, step = w / (a.length - 1)
+  const pts = a.map((v, i) => [i * step, h - 2 - ((v - min) / (max - min || 1)) * (h - 6)])
+  const line = pts.map((p, i) => (i ? 'L' : 'M') + p[0].toFixed(1) + ' ' + p[1].toFixed(1)).join(' ')
+  return { line, area: line + ` L${w} ${h} L0 ${h} Z` }
+}
+
+/* ── Shell ── */
+const NAV = [['home', 'home', 'home'], ['optimize', 'gauge', 'optimize'], ['gaming', 'gamepad', 'pulse'], ['clean', 'sparkles', 'startup'], ['system', 'cpu', 'components']]
+const sectionOf = s => ({ home: 'home', optimize: 'optimize', pulse: 'gaming', startup: 'clean', components: 'system' }[s])
+
+function titlebar() {
+  const sec = sectionOf(S.screen)
+  const tab = { optimize: t('tWindows'), pulse: t('tPulse'), startup: t('tStartup'), components: t('comps') }[S.screen]
+  return `<div class="tb">
+    <div class="brand"><span class="mark">J</span>Jylli Tool</div>
+    <div class="crumb">${tab ? `<span>${t(sec)}</span><span>/</span><b>${esc(tab)}</b>` : `<b>${t(sec)}</b>`}</div>
+    <button class="search" data-act="overlay:palette" aria-label="${t('search')}">${ic('search', 14)}<span>${t('search')}</span><kbd class="kbd">Ctrl K</kbd></button>
+    <div class="tb-right">
+      <span class="pill"><span class="dot ${S.pulse ? 'acc' : 'ok'}"></span>${S.pulse ? 'Pulse · ' + t('running') : t('idle')}</span>
+      <button class="icon-btn" aria-label="More">${ic('more')}</button>
+      <div class="win"><button aria-label="Minimize">${ic('min', 14)}</button><button aria-label="Maximize">${ic('max', 13)}</button><button aria-label="Close">${ic('x', 14)}</button></div>
+    </div>
+  </div>`
+}
+function sidebar() {
+  const cur = sectionOf(S.screen)
+  return `<nav class="sb" aria-label="Sections">
+    ${NAV.map(([id, icon, scr]) => `<button class="nav" data-act="screen:${scr}" ${cur === id ? 'aria-current="page"' : ''}>${ic(icon)}<span>${t(id)}</span>${id === 'system' ? '<span class="count">2</span>' : ''}</button>`).join('')}
+    <div class="sb-spacer"></div>
+    <button class="nav">${ic('settings')}<span>${t('settings')}</span></button>
+    <div class="acct"><span class="avatar">J</span><div><div>jylli</div><small>${t('premium')}</small></div></div>
+  </nav>`
+}
+function statusbar() {
+  const v = k => Math.round(live[k][live[k].length - 1])
+  return `<footer class="st">
+    <span>CPU <span class="num" id="sb-cpu">${v('cpu')}%</span></span><span>GPU <span class="num" id="sb-gpu">${v('gpu')}%</span></span><span>RAM <span class="num" id="sb-ram">${v('ram')}%</span></span><span class="num">52 °C</span>
+    <span class="sep"></span>
+    <span style="display:flex;gap:6px;align-items:center"><span class="dot ok"></span>Game Shield</span>
+    <span style="display:flex;gap:6px;align-items:center"><span class="dot ok"></span>Update Guard</span>
+    <span style="display:flex;gap:6px;align-items:center"><span class="dot ${S.pulse ? 'acc' : ''}"></span>${S.pulse ? 'Pulse · ' + t('running') : t('pulseIdle')}</span>
+    <span class="grow"></span>
+    <button class="lnk">${ic('panel', 13)}${t('activity')}</button>
+  </footer>`
+}
+function head(sec, tabs, active, actions = '') {
+  return `<div class="head"><div class="head-row"><div><h1>${t(sec)}</h1><p>${t(sec + 'Sub')}</p></div><div class="actions">${actions}</div></div>
+    ${tabs ? `<div class="tabs" role="tablist">${tabs.map(([k, extra]) => `<button class="tab" role="tab" aria-selected="${k === active}">${t(k)}${extra || ''}</button>`).join('')}</div>` : '<div style="height:20px"></div>'}</div>`
+}
+
+/* ── Screens ── */
+function home() {
+  const C = 2 * Math.PI * 46, score = 82
+  const tile = (k, icon, label, unit, sub) => {
+    const p = sparkPath(live[k])
+    return `<div class="card tile"><div class="tile-h">${ic(icon, 14)}${label}${k === 'cpu' ? `<span class="badge"><span class="dot ok"></span>${t('live')}</span>` : ''}</div>
+      <div class="v num"><span id="v-${k}">${Math.round(live[k].at(-1))}</span><small>${unit}</small></div><div class="sub">${sub}</div>
+      <svg class="spark" viewBox="0 0 200 40" preserveAspectRatio="none"><path id="sa-${k}" d="${p.area}" fill="var(--accent-subtle)"/><path id="sl-${k}" d="${p.line}" fill="none" stroke="var(--accent)" stroke-width="1.5" vector-effect="non-scaling-stroke"/></svg></div>`
+  }
+  const fb = [62, 70, 66, 74, 71, 78, 80, 76, 72, 81, 79, 84, 40, 77, 82, 85, 80, 78, 83, 86, 81, 79, 84, 82, 80, 85, 83, 79]
+  return head('home', null, null, `<button class="btn secondary sm" data-act="toast:a2">${ic('shield', 14)}${t('createRp')}</button>`) + `<div class="page">
+    <div class="grid-hero">
+      <section class="card hero">
+        <div class="ring"><svg width="104" height="104"><circle cx="52" cy="52" r="46" fill="none" stroke="var(--s3)" stroke-width="6"/><circle cx="52" cy="52" r="46" fill="none" stroke="var(--accent)" stroke-width="6" stroke-linecap="round" stroke-dasharray="${C}" stroke-dashoffset="${C * (1 - score / 100)}"/></svg><div class="val"><div><b class="num">${score}</b><small>${t('of100')}</small></div></div></div>
+        <div><div class="eyebrow">${t('greet')} · ${t('health')}</div><h2>${t('heroTitle')}</h2><p>${t('heroBody')}</p>
+          <div class="row-actions"><button class="btn primary lg" data-act="overlay:confirm">${ic('zap', 15)}${t('optimizeNow')}</button><button class="btn secondary lg">${t('smartProfile')}</button></div></div>
+      </section>
+      <section class="card"><div class="card-h"><h3>${t('recommended')}</h3><span class="badge num">3</span><button class="btn ghost sm more" data-act="screen:optimize">${t('viewAll')}${ic('arrow', 13)}</button></div>
+        <ul class="rec-list">
+          ${[['rec1', 'monitor', 'high', 'safe'], ['rec2', 'power', 'med', 'safe'], ['rec3', 'wifi', 'med', 'moderate']].map(([k, icon, imp, risk]) => `<li><span class="rec-ico">${ic(icon, 15)}</span><div class="txt"><b>${t(k)}</b><span class="impact">${bars(imp === 'high' ? 3 : 2)}${t(imp)} · <span style="color:var(--${risk === 'safe' ? 'ok' : 'warn'})">${t(risk)}</span></span></div><button class="btn secondary sm" data-act="toast:applied1">${t('apply')}</button></li>`).join('')}
+        </ul></section>
+    </div>
+    <div class="tiles">${tile('cpu', 'cpu', 'CPU', '%', t('cpuSub'))}${tile('gpu', 'monitor', 'GPU', '%', t('gpuSub'))}${tile('ram', 'ram', 'RAM', '%', t('ramSub'))}${tile('net', 'wifi', t('network'), 'ms', t('netSub'))}</div>
+    <div class="grid-3">
+      <section class="card"><div class="card-h"><h3>${t('thisPc')}</h3></div><dl class="dl">
+        <dt>CPU</dt><dd>AMD Ryzen 7 7800X3D</dd><dt>GPU</dt><dd>NVIDIA GeForce RTX 4070</dd><dt>RAM</dt><dd class="num">32 GB DDR5-6000</dd><dt>Windows</dt><dd>Windows 11 Pro 24H2</dd><dt>${t('uptime')}</dt><dd class="num">${t('uptimeV')}</dd></dl></section>
+      <section class="card"><div class="card-h"><h3>${t('recent')}</h3></div><ul class="feed">
+        ${[['a1', 'ago2h', 'acc'], ['a2', 'ago2h', ''], ['a3', 'yesterday', ''], ['a4', 'yesterday', '']].map(([a, w, d]) => `<li><span class="dot ${d}"></span><span>${t(a)}</span><span class="muted">${t(w)}</span></li>`).join('')}</ul></section>
+      <section class="card"><div class="card-h"><h3>${t('lastSession')}</h3><span class="muted" style="margin-left:auto;font-size:12px">Counter-Strike 2 · <span class="num">1 h 42 min</span></span></div>
+        <div class="stats"><div><b>241</b><span>${t('avgFps')}</span></div><div><b>168</b><span>${t('lowFps')}</span></div><div><b>4.1<span style="font-size:12px;color:var(--t3)"> ms</span></b><span>${t('frametime')}</span></div></div>
+        <div class="fbars">${fb.map(v => `<i style="height:${v}%" class="${v < 50 ? 'low' : ''}"></i>`).join('')}</div></section>
+    </div></div>`
+}
+const bars = n => `<span class="bars" aria-hidden="true"><i class="${n >= 1 ? 'on' : ''}"></i><i class="${n >= 2 ? 'on' : ''}"></i><i class="${n >= 3 ? 'on' : ''}"></i></span>`
+
+function optimize() {
+  const applied = REC.filter(k => S.tw[k]).length, left = REC.length - applied
+  const row = ([k, imp, risk, rec]) => {
+    const show = S.seg === 'all' || (S.seg === 'rec' && rec) || (S.seg === 'applied' && S.tw[k])
+    if (!show) return ''
+    const open = S.open === k
+    return `<div class="trow ${open ? 'open' : ''}" data-name="${esc(t(k).toLowerCase())}">
+      <div class="trow-main" data-act="expand:${k}">
+        <span class="chev">${ic('chev', 14)}</span>
+        <div class="t"><b>${t(k)}${rec && !S.tw[k] ? `<span class="recdot" title="${t('recTip')}"></span>` : ''}</b><span>${t(k + 'D')}</span></div>
+        <span class="impact">${bars(imp)}${t(['', 'low', 'med', 'high'][imp]).split(' ')[0]}</span>
+        <span><span class="badge ${risk === 'safe' ? 'ok' : 'warn'}">${t(risk)}</span></span>
+        <button class="switch" role="switch" aria-checked="${!!S.tw[k]}" aria-label="${t(k)}" data-act="tw:${k}"></button>
+      </div>
+      ${open ? `<div class="trow-detail"><div><div class="eyebrow" style="margin-bottom:8px">${t('whatChanges')}</div>
+        <div class="code">HKLM\\SYSTEM\\CurrentControlSet\\Control\\GraphicsDrivers&nbsp;&nbsp;<em>HwSchMode</em> = <span class="num">1</span> → <em class="num">2</em></div>
+        <div class="note">${ic('info', 13)}${t('restart')} · ${t('undoFrom')}</div></div>
+        <div><button class="btn ghost sm">${t('viewDiff')}</button></div></div>` : ''}
+    </div>`
+  }
+  return head('optimize', [['tWindows', ' <span class="num">24</span>'], ['tCpu', ' <span class="pro">Pro</span>'], ['tGpu', ' <span class="pro">Pro</span>'], ['tPower', ' <span class="pro">Pro</span>'], ['tNetwork'], ['tFixes', ' <span class="num">3</span>']], 'tWindows',
+    `<button class="btn secondary sm" data-act="toast:a2">${ic('shield', 14)}${t('createRp')}</button>`) + `<div class="page" style="max-width:1000px">
+    <div class="card recpanel"><div class="txt"><b>${left ? t('recPanel', { n: applied, m: REC.length }) : t('allDone')}</b>
+      <div class="meter"><i style="width:${applied / REC.length * 100}%"></i></div><span class="muted" style="font-size:12.5px">${t('recBody')}</span></div>
+      ${left ? `<button class="btn ghost">${t('review')}</button><button class="btn primary" data-act="overlay:confirm">${ic('zap', 14)}${t('applyRest', { n: left })}</button>` : `<span class="badge ok">${ic('check', 12)}${t('sApplied')}</span>`}</div>
+    <div class="toolbar"><label class="input">${ic('search', 14)}<input id="q" placeholder="${t('filter')}" value="${esc(S.q)}" aria-label="${t('filter')}"><kbd class="kbd">/</kbd></label>
+      <div class="seg" role="group">${[['rec', 'sRec'], ['applied', 'sApplied'], ['all', 'sAll']].map(([v, k]) => `<button aria-pressed="${S.seg === v}" data-act="seg:${v}">${t(k)}</button>`).join('')}</div>
+      <span class="grow"></span><button class="btn ghost sm">${ic('shield', 14)}${t('safeDefaults')}</button></div>
+    ${TWEAKS.map(g => { const rows = g.items.map(row).join(''); return rows ? `<div class="group-h">${t(g.g)}<span class="num">${g.items.length}</span></div><div class="list">${rows}</div>` : '' }).join('')}
+  </div>`
+}
+
+function pulse() {
+  const games = [['cs2', 'CS', 'Counter-Strike 2'], ['val', 'VA', 'Valorant'], ['fivem', 'FM', 'FiveM'], ['fn', 'FN', 'Fortnite'], ['apex', 'AP', 'Apex Legends']]
+  const g = games.find(x => x[0] === S.game)[2]
+  const prow = (k, icon) => `<div class="srow"><span class="rec-ico">${ic(icon, 15)}</span><div class="t"><b>${t(k)}</b><span>${t(k + 'd')}</span></div><button class="switch" role="switch" aria-checked="${!!S.pr[k]}" aria-label="${t(k)}" data-act="pr:${k}"></button></div>`
+  return head('gaming', [['tPulse'], ['tGames', ' <span class="num">12</span>'], ['tApps'], ['tFivem'], ['tLatency', ' <span class="pro">Pro</span>']], 'tPulse') + `<div class="page">
+    <section class="card session">
+      <div class="session-l"><div class="eyebrow" style="display:flex;gap:8px;align-items:center"><span class="dot ${S.pulse ? 'acc' : 'ok'}"></span>${t('session')} · ${S.pulse ? t('running') : t('ready')}</div>
+        <h2 style="margin:6px 0 4px;font-size:18px;font-weight:600;letter-spacing:-.015em">${t('pickGame')}</h2><p class="soft" style="margin:0;max-width:60ch">${t('pickBody')}</p>
+        <div class="games">${games.map(([id, m, n]) => `<button class="game" aria-pressed="${S.game === id}" data-act="game:${id}"><span class="mono">${m}</span><span>${n}</span></button>`).join('')}<button class="game add">${ic('plus', 15)}<span>${t('addGame')}</span></button></div></div>
+      <div class="session-r">
+        <button class="btn ${S.pulse ? 'secondary' : 'primary'} lg" style="width:100%" data-act="pulse">${ic(S.pulse ? 'power' : 'play', 14)}${S.pulse ? t('deactivate') : t('activate')}</button>
+        <p class="muted" style="margin:0;font-size:12.5px;text-align:center">${S.pulse ? esc(t('activeBody', { g })) : t('readyBody')}</p>
+        <button class="btn ghost sm" style="align-self:center">${ic('activity', 14)}${t('openMonitor')}</button>
+      </div>
+    </section>
+    <div class="cols-2">
+      <section class="card"><div class="card-h"><h3>${t('whenStart')}</h3></div>${prow('p1', 'zap')}${prow('p2', 'shield')}${prow('p3', 'lock')}${prow('p4', 'clock')}</section>
+      <section class="card"><div class="card-h"><h3>${t('lastSession')}</h3><span class="muted" style="margin-left:auto;font-size:12px">Counter-Strike 2</span></div>
+        <div class="stats"><div><b>241</b><span>${t('avgFps')}</span></div><div><b>168</b><span>${t('lowFps')}</span></div><div><b>4.1</b><span>${t('frametime')} (ms)</span></div></div>
+        <div class="fbars" style="height:88px">${[70, 74, 72, 77, 79, 75, 80, 83, 78, 81, 76, 84, 82, 45, 79, 85, 83, 80, 86, 84, 81, 87, 83, 85, 88, 84, 82, 86, 85, 83, 87, 84].map(v => `<i style="height:${v}%" class="${v < 50 ? 'low' : ''}"></i>`).join('')}</div></section>
+    </div></div>`
+}
+
+function startup() {
+  const apps = [['discord', 'DC', 'Discord', 'Discord Inc.', 'iHigh', '1.9'], ['steam', 'ST', 'Steam', 'Valve Corporation', 'iHigh', '1.6'], ['spotify', 'SP', 'Spotify', 'Spotify AB', 'iMed', '0.9'], ['broadcast', 'NV', 'NVIDIA Broadcast', 'NVIDIA Corporation', 'iMed', '0.8'], ['onedrive', 'OD', 'Microsoft OneDrive', 'Microsoft Corporation', 'iMed', '0.7'], ['teams', 'TM', 'Microsoft Teams', 'Microsoft Corporation', 'iHigh', '—'], ['epic', 'EG', 'Epic Games Launcher', 'Epic Games, Inc.', 'iLow', '0.4']]
+  const cls = { iHigh: 'danger', iMed: 'warn', iLow: '' }
+  const skel = Array.from({ length: 4 }, (_, i) => `<div class="skel-row"><span class="skel" style="width:28px;height:28px;border-radius:7px"></span><span style="flex:1;display:grid;gap:6px"><span class="skel" style="height:10px;width:${70 - i * 9}%"></span><span class="skel" style="height:8px;width:${45 - i * 5}%"></span></span><span class="skel" style="width:30px;height:18px;border-radius:99px"></span></div>`).join('')
+  return head('clean', [['tCleanup'], ['tDebloat'], ['tStartup', ' <span class="num">7</span>']], 'tStartup') + `<div class="page">
+    <div class="card recpanel"><div class="txt"><b>${t('stSummary')}</b><div class="muted" style="font-size:12.5px;margin-top:2px">${t('stSummary2')}</div></div><button class="btn secondary">${t('disableHigh')}</button></div>
+    <div class="list"><table class="tbl"><thead><tr><th>${t('cApp')}</th><th>${t('cImpact')}</th><th style="text-align:right">${t('cDelay')}</th><th style="text-align:right">${t('cStarts')}</th></tr></thead><tbody>
+      ${apps.map(([id, m, n, pub, imp, d]) => `<tr><td><div class="app-cell"><span class="app-ico">${m}</span><div><b>${n}</b><span>${pub}</span></div></div></td><td><span class="badge ${cls[imp]}">${t(imp)}</span></td><td class="num" style="text-align:right;color:var(--t2)">${d === '—' ? '—' : d + ' s'}</td><td style="text-align:right"><button class="switch" role="switch" aria-checked="${!!S.st[id]}" aria-label="${n}" data-act="st:${id}"></button></td></tr>`).join('')}
+    </tbody></table></div>
+    <div class="group-h" style="margin-top:32px">${t('states')}</div>
+    <div class="states">
+      <div class="card state-box"><div class="cap">${t('sLoading')}</div>${skel}</div>
+      <div class="card state-box"><div class="cap">${t('sEmpty')}</div><div class="state-body"><span class="empty-ico">${ic('inbox', 18)}</span><h4>${t('emptyT')}</h4><p>${t('emptyB')}</p><button class="btn secondary sm">${ic('refresh', 13)}${t('refresh')}</button></div></div>
+      <div class="card state-box"><div class="cap">${t('sError')}</div><div class="state-body"><span class="empty-ico err">${ic('alert', 18)}</span><h4>${t('errT')}</h4><p>${t('errB')}</p><button class="btn secondary sm">${ic('refresh', 13)}${t('retry')}</button></div></div>
+    </div></div>`
+}
+
+function components() {
+  const states = [['stDefault', ''], ['stHover', 'is-hover'], ['stFocus', 'is-focus'], ['stPressed', 'is-active is-hover'], ['stDisabled', 'disabled'], ['stLoading', 'loading']]
+  const btn = (v, label) => states.map(([, s]) => s === 'disabled' ? `<button class="btn ${v}" disabled>${label}</button>` : s === 'loading' ? `<button class="btn ${v}" aria-busy="true"><span class="spin"></span>${t('working')}</button>` : `<button class="btn ${v} ${s}">${label}</button>`).join('')
+  return `<div class="head"><div class="head-row"><div><h1>${t('comps')}</h1><p>${t('compsSub')}</p></div></div><div style="height:20px"></div></div><div class="page">
+    <div class="cs-sec"><h3>${t('buttons')}</h3><div class="cs-grid"><span></span>${states.map(([k]) => `<span class="lbl">${t(k)}</span>`).join('')}
+      <span class="lbl">${t('primary')}</span>${btn('primary', t('save'))}<span class="lbl">${t('secondary')}</span>${btn('secondary', t('save'))}<span class="lbl">${t('ghost')}</span>${btn('ghost', t('save'))}<span class="lbl">${t('danger')}</span>${btn('danger', t('delete').split(' ')[0])}</div>
+      <div class="cs-row" style="margin-top:14px"><button class="btn primary lg">${ic('zap', 15)}${t('optimizeNow')}</button><button class="btn secondary sm">${ic('shield', 13)}${t('createRp')}</button><button class="icon-btn" aria-label="More">${ic('more')}</button><button class="btn ghost sm">${t('viewAll')}${ic('arrow', 13)}</button></div></div>
+    <div class="cs-sec"><h3>${t('inputs')}</h3><div class="cs-row">
+      <label class="input" style="width:220px"><input placeholder="${t('phName')}" aria-label="${t('phName')}"></label>
+      <label class="input is-focus" style="width:220px"><input value="Competitive" aria-label="${t('phName')}"></label>
+      <div><label class="input err" style="width:220px"><input value="Default" aria-label="${t('phName')}"></label><div style="color:var(--danger);font-size:12px;margin-top:5px">${t('phErr')}</div></div>
+      <label class="input" style="width:220px">${ic('search', 14)}<input placeholder="${t('filter')}" aria-label="${t('filter')}"><kbd class="kbd">/</kbd></label></div></div>
+    <div class="cs-sec"><h3>${t('selection')}</h3><div class="cs-row">
+      <button class="switch" role="switch" aria-checked="true" aria-label="on"></button><button class="switch" role="switch" aria-checked="false" aria-label="off"></button><button class="switch" role="switch" aria-checked="true" disabled aria-label="disabled"></button>
+      <span class="check on">${ic('check', 11)}</span><span class="check"></span>
+      <div class="seg"><button aria-pressed="true">${t('sRec')}</button><button aria-pressed="false">${t('sApplied')}</button><button aria-pressed="false">${t('sAll')}</button></div>
+      <div style="width:200px"><div class="meter"><i style="width:62%"></i></div></div></div></div>
+    <div class="cs-sec"><h3>${t('badges')}</h3><div class="cs-row">
+      <span class="badge ok">${t('safe')}</span><span class="badge warn">${t('moderate')}</span><span class="badge danger">${t('advanced')}</span><span class="badge acc">${t('recommended')}</span><span class="badge">${t('iLow')}</span><span class="pro">Pro</span>
+      <span class="impact">${bars(3)}${t('high')}</span><span class="pill"><span class="dot ok"></span>${t('idle')}</span><kbd class="kbd">Ctrl K</kbd><span class="avatar">J</span></div></div>
+    <div class="cs-sec"><h3>${t('feedback')}</h3><div class="cs-row" style="align-items:flex-start;gap:28px;padding-top:34px">
+      <span class="tip"><button class="btn secondary sm">${t('hoverMe')}</button><span class="tip-pop" role="tooltip">${t('tipText')}</span></span>
+      <div class="toast inline"><span class="ok-ico">${ic('check', 12)}</span><span class="t">${t('applied', { n: 4 })}</span><button class="btn ghost sm">${ic('undo', 13)}${t('undo')}</button></div>
+      <div style="width:240px;display:grid;gap:8px"><span class="skel" style="height:12px;width:80%"></span><span class="skel" style="height:12px;width:60%"></span><span class="skel" style="height:12px;width:70%"></span></div></div></div>
+  </div>`
+}
+
+/* ── Overlays ── */
+function overlay() {
+  if (S.overlay === 'palette') {
+    const items = [
+      ['pPages', [['gauge', `${t('optimize')} › ${t('tWindows')}`, 'screen:optimize', 'Ctrl 2'], ['gamepad', `${t('gaming')} › Pulse`, 'screen:pulse', 'Ctrl 3'], ['sparkles', `${t('clean')} › ${t('tStartup')}`, 'screen:startup', 'Ctrl 4']]],
+      ['pTweaks', [['zap', t('gamemode'), 'screen:optimize', ''], ['monitor', t('hags'), 'screen:optimize', '']]],
+      ['pActions', [['shield', t('createRp'), 'toast:a2', ''], ['sun', S.scheme === 'dark' ? t('toLight') : t('toDark'), 'scheme', '']]],
+    ]
+    let n = 0
+    return `<div class="ov" data-act="close"><div class="palette" role="dialog" aria-label="Command palette" data-stop>
+      <div class="pin">${ic('search', 16)}<input id="pal-q" placeholder="${t('palPh')}" aria-label="${t('palPh')}"><kbd class="kbd">Esc</kbd></div>
+      <div class="pal-body">${items.map(([g, list]) => `<div class="pal-g">${t(g)}</div>${list.map(([icon, label, act, k]) => `<div class="pal-i ${n++ === S.palSel ? 'sel' : ''}" data-act="${act}">${ic(icon, 15)}<span>${esc(label)}</span><span class="r">${k ? `<kbd class="kbd">${k}</kbd>` : ''}</span></div>`).join('')}`).join('')}</div>
+      <div class="pal-f"><span>${ic('updown', 12)}${t('pNav')}</span><span>${ic('enter', 12)}${t('pOpen')}</span><span><kbd class="kbd">Esc</kbd>${t('pClose')}</span></div>
+    </div></div>`
+  }
+  if (S.overlay === 'confirm') {
+    const left = REC.filter(k => !S.tw[k])
+    const list = left.length ? left : ['gamebar', 'telemetry', 'indexing']
+    return `<div class="ov" data-act="close"><div class="modal" role="dialog" aria-modal="true" aria-labelledby="m-t" data-stop>
+      <div class="modal-b"><h2 id="m-t">${t('mTitle', { n: list.length })}</h2><p>${t('mBody')}</p>
+        <ul>${list.map(k => `<li>${ic('check', 14)}<span>${t(k)}</span><span class="badge ok">${t('safe')}</span></li>`).join('')}</ul></div>
+      <div class="modal-f"><button class="btn ghost" data-act="close">${t('cancel')}</button><button class="btn primary" data-act="applyAll" ${S.applying ? 'aria-busy="true"' : ''}>${S.applying ? `<span class="spin"></span>${t('working')}` : t('mConfirm', { n: list.length })}</button></div>
+    </div></div>`
+  }
+  return ''
+}
+function toast() {
+  if (!S.toast) return ''
+  return `<div class="toast" role="status"><span class="ok-ico">${ic('check', 12)}</span><span class="t">${esc(S.toast.text)}</span>${S.toast.undo ? `<button class="btn ghost sm" data-act="undo">${ic('undo', 13)}${t('undo')}</button>` : ''}</div>`
+}
+
+/* ── Render ── */
+const app = document.getElementById('app')
+function render() {
+  const scr = { home, optimize, pulse, startup, components }[S.screen]
+  const scroll = app.querySelector('.main')?.scrollTop || 0
+  app.className = 'app' + (S.scheme === 'light' ? ' light' : '')
+  app.style.setProperty('--accent', S.accent)
+  app.style.width = S.size[0] + 'px'; app.style.height = S.size[1] + 'px'
+  app.innerHTML = titlebar() + sidebar() + `<main class="main">${scr()}</main>` + statusbar() + overlay() + toast()
+  const m = app.querySelector('.main'); if (m && S.keepScroll) m.scrollTop = scroll
+  S.keepScroll = false
+  document.documentElement.lang = S.lang
+  document.body.classList.toggle('pv-light', S.scheme === 'light')
+  applyFilter(); renderBar(); fit()
+  if (S.overlay === 'palette') app.querySelector('#pal-q')?.focus()
+}
+function applyFilter() {
+  const q = S.q.trim().toLowerCase()
+  app.querySelectorAll('.trow').forEach(r => { r.hidden = q && !r.dataset.name.includes(q) })
+}
+function showToast(text, undo) {
+  S.toast = { text, undo }; clearTimeout(S.toastT)
+  S.toastT = setTimeout(() => { S.toast = null; S.keepScroll = true; render() }, 4200)
+}
+function renderBar() {
+  const b = (on, act, label) => `<button class="pv-btn" aria-pressed="${on}" data-pv="${act}">${label}</button>`
+  document.getElementById('pv').innerHTML =
+    `<div class="pv-group"><span>Screen</span>${SCREENS.map(([k, l]) => b(S.screen === k, 'screen:' + k, l)).join('')}</div>` +
+    `<div class="pv-group"><span>Overlay</span>${b(S.overlay === 'palette', 'overlay:palette', 'Command palette')}${b(S.overlay === 'confirm', 'overlay:confirm', 'Confirm modal')}${b(false, 'toast:demo', 'Toast')}</div>` +
+    `<div class="pv-group"><span>Theme</span>${b(S.scheme === 'dark', 'scheme:dark', 'Dark')}${b(S.scheme === 'light', 'scheme:light', 'Light')}</div>` +
+    `<div class="pv-group"><span>Accent</span>${Object.entries(ACCENTS).map(([k, v]) => `<button class="pv-sw" style="background:${v}" title="${k}" aria-label="${k}" aria-pressed="${S.accent === v}" data-pv="accent:${v}"></button>`).join('')}</div>` +
+    `<div class="pv-group"><span>Window</span>${SIZES.map(s => b(S.size[0] === s[0], 'size:' + s.join('x'), s.join('×'))).join('')}</div>` +
+    `<div class="pv-group"><span>Lang</span>${b(S.lang === 'en', 'lang:en', 'EN')}${b(S.lang === 'fi', 'lang:fi', 'FI')}</div>`
+}
+function fit() {
+  const stage = document.getElementById('stage'), sc = document.getElementById('scaler')
+  const s = Math.min(1, (stage.clientWidth - 48) / S.size[0], (stage.clientHeight - 48) / S.size[1])
+  app.style.transform = `scale(${s})`
+  sc.style.width = S.size[0] * s + 'px'; sc.style.height = S.size[1] * s + 'px'
+}
+addEventListener('resize', fit)
+
+function act(a) {
+  const [k, v] = a.split(/:(.*)/s)
+  switch (k) {
+    case 'screen': S.screen = v; S.overlay = null; break
+    case 'overlay': S.overlay = S.overlay === v ? null : v; S.palSel = 0; break
+    case 'close': S.overlay = null; S.applying = false; break
+    case 'scheme': S.scheme = v || (S.scheme === 'dark' ? 'light' : 'dark'); S.overlay = null; S.keepScroll = true; break
+    case 'accent': S.accent = v; S.keepScroll = true; break
+    case 'size': S.size = v.split('x').map(Number); S.keepScroll = true; break
+    case 'lang': S.lang = v; S.keepScroll = true; break
+    case 'seg': S.seg = v; S.keepScroll = true; break
+    case 'expand': S.open = S.open === v ? null : v; S.keepScroll = true; break
+    case 'tw': S.tw[v] = S.tw[v] ? 0 : 1; S.last = ['tw', v]; S.keepScroll = true; showToast(t(S.tw[v] ? 'turnedOn' : 'turnedOff', { x: t(v) }), true); break
+    case 'pr': S.pr[v] = S.pr[v] ? 0 : 1; S.keepScroll = true; break
+    case 'st': S.st[v] = S.st[v] ? 0 : 1; S.keepScroll = true; break
+    case 'game': S.game = v; S.keepScroll = true; break
+    case 'pulse': S.pulse = !S.pulse; S.keepScroll = true; break
+    case 'undo':
+      if (S.last?.[0] === 'tw') S.tw[S.last[1]] ^= 1
+      if (S.last?.[0] === 'all') for (const x of S.last[1]) S.tw[x] = 0
+      S.last = null; S.keepScroll = true; showToast(t('undone'), false); break
+    case 'toast':
+      S.overlay = null; S.keepScroll = true
+      if (v === 'a2') showToast(t('a2'), false)
+      else if (v === 'applied1') { S.tw.gamebar = 1; S.last = ['tw', 'gamebar']; showToast(t('turnedOn', { x: t('rec1') }), true) }
+      else showToast(t('applied', { n: 4 }), true)
+      break
+    case 'applyAll': {
+      if (S.applying) return
+      S.applying = true; render()
+      setTimeout(() => {
+        const left = REC.filter(x => !S.tw[x]); left.forEach(x => S.tw[x] = 1)
+        S.last = ['all', left]; S.applying = false; S.overlay = null; S.keepScroll = true
+        showToast(t('applied', { n: left.length || 3 }), true); render()
+      }, 900)
+      return
+    }
+    default: return
+  }
+  render()
+}
+document.addEventListener('click', e => {
+  const pv = e.target.closest('[data-pv]'); if (pv) return act(pv.dataset.pv)
+  const el = e.target.closest('[data-act]'); if (!el) return
+  if (el.dataset.act === 'close' && e.target.closest('[data-stop]') && el.closest('[data-stop]') !== el && !el.matches('.btn')) return
+  if (el.dataset.act.startsWith('expand') && e.target.closest('.switch')) return
+  e.stopPropagation(); act(el.dataset.act)
+})
+document.addEventListener('input', e => { if (e.target.id === 'q') { S.q = e.target.value; applyFilter() } })
+document.addEventListener('keydown', e => {
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); return act('overlay:palette') }
+  if ((e.ctrlKey || e.metaKey) && /^[1-5]$/.test(e.key)) { e.preventDefault(); return act('screen:' + NAV[+e.key - 1][2]) }
+  if (e.key === 'Escape' && S.overlay) return act('close')
+  if (e.key === '/' && S.screen === 'optimize' && document.activeElement?.tagName !== 'INPUT') { e.preventDefault(); app.querySelector('#q')?.focus() }
+  if (S.overlay === 'palette' && /^Arrow(Up|Down)$/.test(e.key)) {
+    e.preventDefault(); const items = app.querySelectorAll('.pal-i'); S.palSel = (S.palSel + (e.key === 'ArrowDown' ? 1 : -1) + items.length) % items.length
+    items.forEach((x, i) => x.classList.toggle('sel', i === S.palSel))
+  }
+  if (S.overlay === 'palette' && e.key === 'Enter') { const sel = app.querySelectorAll('.pal-i')[S.palSel]; if (sel) act(sel.dataset.act) }
+})
+
+// Live tick: update numbers and sparklines in place (no re-render, so focus and scroll stay put)
+setInterval(() => {
+  for (const k of Object.keys(live)) {
+    const a = live[k], lim = { cpu: [6, 60], gpu: [3, 40], ram: [38, 46], net: [8, 22] }[k]
+    a.push(Math.max(lim[0], Math.min(lim[1], a.at(-1) + (Math.random() - .5) * (lim[1] - lim[0]) * .25))); a.shift()
+    const v = Math.round(a.at(-1)), p = sparkPath(a)
+    const el = document.getElementById('v-' + k); if (el) el.textContent = v
+    document.getElementById('sl-' + k)?.setAttribute('d', p.line)
+    document.getElementById('sa-' + k)?.setAttribute('d', p.area)
+    const sb = document.getElementById('sb-' + k); if (sb) sb.textContent = v + '%'
+  }
+}, reduced ? 3000 : 1200)
+
+render()
+</script>
+</body>
+</html>

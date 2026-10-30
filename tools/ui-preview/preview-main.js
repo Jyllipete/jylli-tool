@@ -84,8 +84,7 @@ async function main() {
     const h = await win.webContents.executeJavaScript('document.documentElement.scrollHeight')
     win.setContentSize(SIZES[0][0], Math.min(h, 4000)); await sleep(400)
     await shot(win, path.join(OUT, TAG, 'gallery.png'))
-    logs.forEach(l => report.push(l)); console.log(report.join('
-') || 'gallery ok'); win.destroy(); app.exit(0); return
+    logs.forEach(l => report.push(l)); console.log(report.join('\n') || 'gallery ok'); win.destroy(); app.exit(0); return
   }
   for (const lang of LANGS) for (const tier of TIERS) for (const size of SIZES) {
     const name = `${TAG}/${lang}-${tier}-${size.join('x')}`
