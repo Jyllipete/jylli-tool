@@ -123,7 +123,7 @@ html, body {
 ::-webkit-scrollbar { width: 4px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--border-active); border-radius: 2px; }
-::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.25); }
+::-webkit-scrollbar-thumb:hover { background: rgba(var(--fx),0.25); }
 
 /* ── Cards ── */
 .card {
@@ -253,7 +253,7 @@ html, body {
 .core-heatmap-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(16px,1fr)); gap:2px; }
 .core-cell { height:14px; border-radius:2px; transition: background-color 600ms var(--ease-smooth); position:relative; }
 .core-cell.spike { animation: corePulse 0.5s ease-out; }
-.core-pe-divider { width:1px; background:rgba(255,255,255,0.15); border-radius:1px; margin: 0 2px; }
+.core-pe-divider { width:1px; background:rgba(var(--fx),0.15); border-radius:1px; margin: 0 2px; }
 @keyframes corePulse { 0%,100% { filter:brightness(1); } 50% { filter:brightness(1.6); } }
 .metric-head { display: flex; justify-content: space-between; margin-bottom: 3px; align-items: baseline; }
 .metric-label { font-family: var(--font-display); font-size: 0.6rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-dim); }
@@ -321,7 +321,7 @@ html, body {
 .proc-table th[data-sort="asc"]::after  { content: ' ↑'; color: var(--accent); }
 .proc-table th[data-sort="desc"]::after { content: ' ↓'; color: var(--accent); }
 .proc-table td { padding: 5px 10px; border-bottom: 1px solid var(--border-dim); color: var(--text-primary); font-size: 0.7rem; }
-.proc-table tr:nth-child(odd) td { background: rgba(255,255,255,0.015); }
+.proc-table tr:nth-child(odd) td { background: rgba(var(--fx),0.015); }
 .proc-table tr:hover td { background: var(--accent-glow); }
 .proc-table tr { animation: rowSlideIn 60ms var(--ease-smooth) both; }
 @keyframes rowSlideIn { from { opacity:0; transform:translateX(-6px); } to { opacity:1; transform:none; } }
@@ -649,7 +649,7 @@ tr.game-proc-row td { background: rgba(0,212,180,0.04) !important; }
 .thermal-cause-badge { display: inline-flex; align-items: center; gap: 4px; font-family: var(--font-display); font-size: 0.5rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; padding: 2px 6px; border-radius: 4px; margin-left: 6px; }
 .thermal-cause-thermal   { background: rgba(255,58,58,0.15);  color: var(--danger); }
 .thermal-cause-powerLimit{ background: rgba(255,181,71,0.15); color: var(--warning); }
-.thermal-cause-vrm       { background: rgba(155,89,182,0.15); color: var(--purple, #a855f7); }
+.thermal-cause-vrm       { background: rgba(155,89,182,0.15); color: var(--purple, var(--c-accent-fg)); }
 .thermal-cause-coreImbalance { background: rgba(58,158,255,0.15); color: var(--info); }
 /* Game FPS gain chips */
 .thermal-game-chips { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
@@ -663,7 +663,7 @@ tr.game-proc-row td { background: rgba(0,212,180,0.04) !important; }
 
 /* ── Frame Grief Detector ── */
 .fgd-timeline { position: relative; height: 28px; background: var(--bg-raised); border-radius: 6px; overflow: hidden; border: 1px solid var(--border-dim); margin: 8px 0; cursor: pointer; }
-.fgd-timeline::before { content: ''; position: absolute; left: 4px; right: 4px; top: 50%; height: 1px; background: rgba(255,255,255,0.08); pointer-events: none; }
+.fgd-timeline::before { content: ''; position: absolute; left: 4px; right: 4px; top: 50%; height: 1px; background: rgba(var(--fx),0.08); pointer-events: none; }
 .fgd-event { position: absolute; top: 2px; bottom: 2px; min-width: 4px; border-radius: 3px; background: var(--danger); opacity: 0.75; transition: opacity var(--dur-fast); }
 .fgd-event:hover { opacity: 1; }
 .fgd-event.warn { background: var(--warning); }
@@ -969,7 +969,7 @@ tr.game-proc-row td { background: rgba(0,212,180,0.04) !important; }
           <th style="width:38px"></th>
         </tr></thead>
         <tbody id="proc-tbody">
-          <tr><td colspan="5" style="text-align:center;color:#333;padding:20px" id="lbl-loading">Loading…</td></tr>
+          <tr><td colspan="5" style="text-align:center;color:var(--c-text-tertiary);padding:20px" id="lbl-loading">Loading…</td></tr>
         </tbody>
       </table>
     </div>

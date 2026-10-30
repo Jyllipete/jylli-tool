@@ -48,21 +48,21 @@ html, body { background: var(--bg); color: var(--white); font-family: 'Geist', '
 /* Buttons */
 .btn { display:inline-flex; align-items:center; gap:6px; border:none; border-radius:7px; padding:7px 14px; font-size:11px; font-weight:600; cursor:pointer; transition:background 0.13s ease, box-shadow 0.13s ease; white-space:nowrap; font-family:inherit; }
 .btn:disabled { opacity:0.45; cursor:not-allowed; }
-.btn-primary { background:var(--arma); color:#0B0A14; }
+.btn-primary { background:var(--arma); color:var(--c-info); }
 .btn-primary:not(:disabled):hover { background:color-mix(in srgb, var(--c-accent) 86%, #fff);  }
 .btn-primary:not(:disabled):active { transform:scale(0.97); }
-.btn-ghost { background:rgba(255,255,255,0.05); border:1px solid var(--border2); color:var(--white); }
-.btn-ghost:not(:disabled):hover { background:rgba(255,255,255,0.09); border-color:var(--c-border-strong); }
+.btn-ghost { background:rgba(var(--fx),0.05); border:1px solid var(--border2); color:var(--white); }
+.btn-ghost:not(:disabled):hover { background:rgba(var(--fx),0.09); border-color:var(--c-border-strong); }
 .btn-ghost:not(:disabled):active { transform:scale(0.97); }
 
 /* Sysinfo bar */
-#sysinfo-bar { display:none; align-items:center; gap:10px; background:var(--c-accent-muted); border:1px solid var(--c-accent-ring); border-radius:8px; padding:8px 14px; font-size:11px; color:#6a9a4a; }
+#sysinfo-bar { display:none; align-items:center; gap:10px; background:var(--c-accent-muted); border:1px solid var(--c-accent-ring); border-radius:8px; padding:8px 14px; font-size:11px; color:var(--c-success); }
 
 /* Preset bar */
 #preset-bar { display:none; align-items:center; gap:8px; flex-wrap:wrap; }
 .preset-label { font-size:11px; font-weight:600; color:var(--c-text-tertiary); text-transform:uppercase; letter-spacing:0.06em; white-space:nowrap; }
 .preset-btn { display:inline-flex; align-items:center; gap:6px; border-radius:8px; padding:6px 13px; font-size:11px; font-weight:600; cursor:pointer; transition:all 0.12s; border:1px solid transparent; white-space:nowrap; font-family:inherit; }
-.preset-btn:hover { box-shadow:0 0 0 1px rgba(255,255,255,0.1); }
+.preset-btn:hover { box-shadow:0 0 0 1px rgba(var(--fx),0.1); }
 .preset-quality     { background:var(--c-bg-raised); border-color:var(--c-border-default); color:var(--c-text-secondary); }
 .preset-performance { background:var(--c-accent-muted);  border-color:var(--c-accent-ring);  color:var(--arma); }
 .preset-recommended { background:var(--c-bg-raised); border-color:var(--c-border-default); color:var(--c-text-secondary); }
@@ -76,15 +76,15 @@ html, body { background: var(--bg); color: var(--white); font-family: 'Geist', '
 
 /* Category groups */
 .cat-group { background:var(--bg-card); border:1px solid var(--border); border-radius:10px; overflow:hidden; }
-.cat-header { display:flex; align-items:center; gap:8px; padding:10px 14px; background:rgba(255,255,255,0.02); border-bottom:1px solid var(--border); }
+.cat-header { display:flex; align-items:center; gap:8px; padding:10px 14px; background:rgba(var(--fx),0.02); border-bottom:1px solid var(--border); }
 .cat-icon { background:var(--c-accent-muted); border:1px solid var(--c-accent-ring); color:var(--c-accent); width:24px; height:24px; border-radius:6px; display:flex; align-items:center; justify-content:center; font-size:11px; flex-shrink:0; }
 .cat-name { font-size:12px; font-weight:700; color:var(--white); }
 .cat-desc { font-size:11px; color:var(--c-text-tertiary); margin-left:auto; }
 
 /* Setting rows */
-.setting-row { display:grid; grid-template-columns:1fr 180px 64px; align-items:center; gap:10px; padding:9px 14px; border-bottom:1px solid rgba(255,255,255,0.03); transition:background 0.1s; }
+.setting-row { display:grid; grid-template-columns:1fr 180px 64px; align-items:center; gap:10px; padding:9px 14px; border-bottom:1px solid rgba(var(--fx),0.03); transition:background 0.1s; }
 .setting-row:last-child { border-bottom:none; }
-.setting-row:hover { background:rgba(255,255,255,0.02); }
+.setting-row:hover { background:rgba(var(--fx),0.02); }
 .setting-row.is-changed { background:var(--c-accent-muted); }
 .setting-label { font-size:11px; font-weight:500; color:var(--white); display:flex; flex-direction:column; gap:2px; }
 .setting-label small { font-size:11px; color:var(--c-text-tertiary); font-weight:400; }
@@ -93,10 +93,10 @@ html, body { background: var(--bg); color: var(--white); font-family: 'Geist', '
 .setting-control select.is-rec { border-color:rgba(46,204,113,0.4); }
 .setting-control input[type=range] { width:100%; accent-color:var(--arma); }
 .impact-pill { display:inline-flex; align-items:center; justify-content:center; border-radius:20px; padding:2px 8px; font-size:11px; font-weight:700; letter-spacing:0.04em; text-transform:uppercase; white-space:nowrap; }
-.imp-low       { background:rgba(74,222,128,0.1);  color:#4ade80; border:1px solid rgba(74,222,128,0.25); }
-.imp-medium    { background:rgba(250,204,21,0.1);  color:#facc15; border:1px solid rgba(250,204,21,0.25); }
-.imp-high      { background:rgba(249,115,22,0.1);  color:#f97316; border:1px solid rgba(249,115,22,0.25); }
-.imp-very-high { background:rgba(239,68,68,0.12);  color:#ef4444; border:1px solid rgba(239,68,68,0.3); }
+.imp-low       { background:rgba(74,222,128,0.1);  color:var(--c-success); border:1px solid rgba(74,222,128,0.25); }
+.imp-medium    { background:rgba(250,204,21,0.1);  color:var(--c-warning); border:1px solid rgba(250,204,21,0.25); }
+.imp-high      { background:rgba(249,115,22,0.1);  color:var(--c-warning); border:1px solid rgba(249,115,22,0.25); }
+.imp-very-high { background:rgba(239,68,68,0.12);  color:var(--c-danger); border:1px solid rgba(239,68,68,0.3); }
 
 /* Footer */
 #footer { flex-shrink:0; display:flex; align-items:center; gap:8px; padding:10px 16px; background:var(--bg-dark); border-top:1px solid var(--border); }
@@ -524,7 +524,7 @@ function showSaveBanner() {
   const b = document.createElement('div')
   b.id = 'save-confirm-banner'
   b.style.cssText = 'background:rgba(46,204,113,0.08);border:1px solid rgba(46,204,113,0.25);border-radius:8px;padding:10px 14px;display:flex;align-items:center;gap:10px;font-size:11px'
-  b.innerHTML = `<i class="fa fa-circle-check" style="color:var(--success);font-size:14px;flex-shrink:0"></i><div style="flex:1;line-height:1.5"><strong style="color:var(--success)">${tA('savedMsg')}</strong><br><span style="color:#8a8a9a">${tA('savedNote')}</span></div><button onclick="this.closest('#save-confirm-banner').remove()" style="background:none;border:none;color:#555;cursor:pointer;font-size:13px">✕</button>`
+  b.innerHTML = `<i class="fa fa-circle-check" style="color:var(--success);font-size:14px;flex-shrink:0"></i><div style="flex:1;line-height:1.5"><strong style="color:var(--success)">${tA('savedMsg')}</strong><br><span style="color:var(--c-text-tertiary)">${tA('savedNote')}</span></div><button onclick="this.closest('#save-confirm-banner').remove()" style="background:none;border:none;color:var(--c-text-tertiary);cursor:pointer;font-size:13px">✕</button>`
   document.getElementById('content').insertBefore(b, document.getElementById('settings-body'))
 }
 

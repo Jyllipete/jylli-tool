@@ -58,7 +58,7 @@ async function makeWindow(file, ctx, [w, h]) {
   const logs = []
   win.webContents.on('console-message', (_e, level, message, line, source) => { if (level >= 2) logs.push(`[${level === 3 ? 'error' : 'warn'}] ${message} (${path.basename(source || '')}:${line})`) })
   win.webContents.on('render-process-gone', (_e, d) => logs.push(`[crash] ${d.reason}`))
-  await win.loadFile(path.join(ROOT, file), { query: { lang: ctx.lang } })
+  await win.loadFile(path.join(ROOT, file), { query: { lang: ctx.lang, scheme: SCHEME } })
   return { win, logs }
 }
 

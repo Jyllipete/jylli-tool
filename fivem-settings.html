@@ -58,7 +58,7 @@ html, body {
   display: flex;
   align-items: center;
   height: 46px;
-  background: rgba(13,11,20,0.96);
+  background: rgba(var(--bg-rgb),0.96);
   -webkit-backdrop-filter: blur(16px) saturate(150%);
   backdrop-filter: blur(16px) saturate(150%);
   border-bottom: 1px solid var(--border2);
@@ -125,8 +125,8 @@ html, body {
 }
 #content::-webkit-scrollbar { width: 5px; }
 #content::-webkit-scrollbar-track { background: transparent; }
-#content::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.14); border-radius: var(--r-pill); }
-#content::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.28); }
+#content::-webkit-scrollbar-thumb { background: rgba(var(--fx),0.14); border-radius: var(--r-pill); }
+#content::-webkit-scrollbar-thumb:hover { background: rgba(var(--fx),0.28); }
 
 /* ── Path row ── */
 #path-row {
@@ -169,13 +169,13 @@ html, body {
 }
 .btn-primary:not(:disabled):active { transform: scale(0.97); }
 .btn-ghost {
-  background: rgba(255,255,255,0.05);
+  background: rgba(var(--fx),0.05);
   border: 1px solid var(--border2);
   color: var(--white);
   position: relative; overflow: hidden;
   transition: background 0.13s ease, border-color 0.13s ease;
 }
-.btn-ghost:not(:disabled):hover { background: rgba(255,255,255,0.09); border-color: var(--c-border-strong); }
+.btn-ghost:not(:disabled):hover { background: rgba(var(--fx),0.09); border-color: var(--c-border-strong); }
 .btn-ghost:not(:disabled):active { transform: scale(0.97); }
 .btn-success {
   background: var(--success-bg);
@@ -184,7 +184,7 @@ html, body {
   transition: background 0.13s ease, box-shadow 0.13s ease;
 }
 .btn-success:not(:disabled):hover {
-  background: var(--success); color: #0a2a14;
+  background: var(--success); color: var(--c-success);
   box-shadow: 0 0 0 1px rgba(46,204,113,0.4), 0 0 14px rgba(46,204,113,0.2);
 }
 .btn-success:not(:disabled):active { transform: scale(0.97); }
@@ -247,12 +247,12 @@ html, body {
 .cat-header {
   display: flex; align-items: center; gap: 10px;
   padding: 11px 16px 10px;
-  background: rgba(255,255,255,0.02);
+  background: rgba(var(--fx),0.02);
   border-bottom: 1px solid var(--c-border-subtle);
   cursor: pointer; user-select: none;
   transition: background 0.13s ease;
 }
-.cat-header:hover { background: rgba(255,255,255,0.03); }
+.cat-header:hover { background: rgba(var(--fx),0.03); }
 .cat-icon {
   width: 28px; height: 28px;
   border-radius: var(--r-sm);
@@ -327,10 +327,10 @@ html, body {
   text-transform: uppercase;
   white-space: nowrap;
 }
-.imp-low       { background: rgba(74,222,128,0.14); color: #4ade80; border: 1px solid rgba(74,222,128,0.35); }
-.imp-medium    { background: rgba(250,204,21,0.14); color: #fde047; border: 1px solid rgba(250,204,21,0.35); }
-.imp-high      { background: rgba(249,115,22,0.14); color: #fb923c; border: 1px solid rgba(249,115,22,0.35); }
-.imp-very-high { background: rgba(239,68,68,0.18);  color: #f87171; border: 1px solid rgba(239,68,68,0.40); }
+.imp-low       { background: rgba(74,222,128,0.14); color: var(--c-success); border: 1px solid rgba(74,222,128,0.35); }
+.imp-medium    { background: rgba(250,204,21,0.14); color: var(--c-warning); border: 1px solid rgba(250,204,21,0.35); }
+.imp-high      { background: rgba(249,115,22,0.14); color: var(--c-warning); border: 1px solid rgba(249,115,22,0.35); }
+.imp-very-high { background: rgba(239,68,68,0.18);  color: var(--c-danger); border: 1px solid rgba(239,68,68,0.40); }
 
 /* ── Footer action bar ── */
 #footer {
@@ -412,7 +412,7 @@ html, body {
 /* Per-preset color theming */
 .preset-quality { border-color: rgba(52,152,219,0.25); }
 .preset-quality .preset-card-icon {
-  background: rgba(52,152,219,0.12); color: #3498DB;
+  background: rgba(52,152,219,0.12); color: var(--c-info);
   border: 1px solid rgba(52,152,219,0.25);
 }
 .preset-quality:hover {
@@ -423,7 +423,7 @@ html, body {
 
 .preset-balanced { border-color: rgba(46,204,113,0.25); }
 .preset-balanced .preset-card-icon {
-  background: rgba(46,204,113,0.12); color: #2ECC71;
+  background: rgba(46,204,113,0.12); color: var(--c-success);
   border: 1px solid rgba(46,204,113,0.25);
 }
 .preset-balanced:hover {
@@ -459,7 +459,7 @@ html, body {
 }
 .preset-smart-btn::before {
   content: ''; position: absolute; top: 0; left: -100%; width: 60%; height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.08), transparent);
+  background: linear-gradient(90deg, transparent, rgba(var(--fx),0.08), transparent);
   transform: skewX(-20deg);
   transition: left 0.5s ease;
   pointer-events: none;
@@ -590,7 +590,7 @@ mark.sh { background: var(--c-accent-muted); color: var(--c-accent); border-radi
 #perf-budget-fill::after {
   content: '';
   position: absolute; top: 0; right: 0; bottom: 0; width: 30px;
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.18));
+  background: linear-gradient(90deg, transparent, rgba(var(--fx),0.18));
   border-radius: 0 var(--r-pill) var(--r-pill) 0;
   pointer-events: none;
 }
@@ -633,7 +633,7 @@ mark.sh { background: var(--c-accent-muted); color: var(--c-accent); border-radi
 #btn-export-caret {
   padding: 5px 7px;
   font-size: 11px;
-  border-left: 1px solid rgba(255,255,255,0.08) !important;
+  border-left: 1px solid rgba(var(--fx),0.08) !important;
   border-radius: 0 7px 7px 0 !important;
 }
 #btn-export-main { border-radius: 7px 0 0 7px !important; }
@@ -659,7 +659,7 @@ mark.sh { background: var(--c-accent-muted); color: var(--c-accent); border-radi
   cursor: pointer;
   white-space: nowrap;
 }
-.export-menu-item:hover { background: rgba(255,255,255,0.06); color: var(--white); }
+.export-menu-item:hover { background: rgba(var(--fx),0.06); color: var(--white); }
 
 /* ── Undo button in preset bar ── */
 #btn-undo { opacity: 0.3; pointer-events: none; }
@@ -817,14 +817,14 @@ mark.sh { background: var(--c-accent-muted); color: var(--c-accent); border-radi
 
   <!-- FiveM running warning banner (shown before first save) -->
   <div id="fivem-warn-banner" style="display:none">
-    <i class="fa fa-triangle-exclamation" style="color:#e67e22;font-size:16px;margin-top:1px;flex-shrink:0"></i>
+    <i class="fa fa-triangle-exclamation" style="color:var(--c-warning);font-size:16px;margin-top:1px;flex-shrink:0"></i>
     <div style="flex:1">
-      <div id="lbl-warn-title" style="font-size:12px;font-weight:700;color:#e67e22;margin-bottom:3px">Make sure FiveM is fully closed before saving</div>
-      <div id="lbl-warn-body" style="font-size:10px;color:#8a8a9a;line-height:1.5">FiveM writes back to <code style="color:#aaa">gta5_settings.xml</code> when you exit the graphics menu or quit the game — this will overwrite your saved settings. Close FiveM completely first, then save here, then relaunch FiveM without opening Graphics Settings.</div>
+      <div id="lbl-warn-title" style="font-size:12px;font-weight:700;color:var(--c-warning);margin-bottom:3px">Make sure FiveM is fully closed before saving</div>
+      <div id="lbl-warn-body" style="font-size:10px;color:var(--c-text-tertiary);line-height:1.5">FiveM writes back to <code style="color:var(--c-text-primary)">gta5_settings.xml</code> when you exit the graphics menu or quit the game — this will overwrite your saved settings. Close FiveM completely first, then save here, then relaunch FiveM without opening Graphics Settings.</div>
     </div>
     <div style="display:flex;gap:6px;flex-shrink:0;align-items:center">
       <button class="btn btn-ghost" id="lbl-warn-cancel" style="font-size:10px;padding:5px 10px" onclick="document.getElementById('fivem-warn-banner').style.display='none'">Cancel</button>
-      <button class="btn btn-primary" style="font-size:10px;padding:5px 12px;background:#e67e22;border-color:#e67e22" onclick="confirmSaveAnyway()"><i class="fa fa-floppy-disk"></i> <span id="lbl-warn-save-anyway">Save Anyway</span></button>
+      <button class="btn btn-primary" style="font-size:10px;padding:5px 12px;background:var(--c-warning-muted);border-color:var(--c-warning-ring)" onclick="confirmSaveAnyway()"><i class="fa fa-floppy-disk"></i> <span id="lbl-warn-save-anyway">Save Anyway</span></button>
     </div>
   </div>
 
