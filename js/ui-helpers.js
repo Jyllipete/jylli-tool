@@ -2,6 +2,42 @@
 
 // ─── Modal open/close helpers ─────────────────────────────────────────────────
 const _closeTimers = new WeakMap()
+const _modalReturnFocus = new WeakMap()
+const _FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]):not([type=hidden]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+// Dialog semantics + focus management shared by every modal that goes through _openModal/_closeModal
+function _modalDialogEl(el) { return el.querySelector('[role="dialog"], .modal, .j-modal') || el }
+function _modalA11yOpen(el) {
+  const dlg = _modalDialogEl(el)
+  dlg.setAttribute('role', 'dialog'); dlg.setAttribute('aria-modal', 'true')
+  if (!dlg.getAttribute('aria-label') && !dlg.getAttribute('aria-labelledby')) {
+    const t = dlg.querySelector('.modal-title, .j-modal-title, h1, h2, h3, [id$="-title"]')
+    if (t) { if (!t.id) t.id = 'mt-' + (el.id || Math.random().toString(36).slice(2, 7)); dlg.setAttribute('aria-labelledby', t.id) }
+  }
+  _modalReturnFocus.set(el, document.activeElement)
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    if (dlg.contains(document.activeElement) && document.activeElement !== dlg) return
+    const first = dlg.querySelector('[autofocus]') || [...dlg.querySelectorAll(_FOCUSABLE)].find(n => n.offsetParent !== null)
+    if (first) first.focus(); else { dlg.setAttribute('tabindex', '-1'); dlg.focus() }
+  }))
+}
+function _modalA11yClose(el) {
+  const back = _modalReturnFocus.get(el)
+  _modalReturnFocus.delete(el)
+  if (back && document.contains(back) && typeof back.focus === 'function') back.focus()
+}
+// Keep Tab inside the topmost open modal
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Tab') return
+  const open = [...document.querySelectorAll('.modal-overlay.open, .j-modal-backdrop.j-open')].filter(m => m.style.display !== 'none')
+  const top = open[open.length - 1]
+  if (!top) return
+  const items = [...top.querySelectorAll(_FOCUSABLE)].filter(n => n.offsetParent !== null)
+  if (!items.length) return
+  const first = items[0], last = items[items.length - 1]
+  if (!top.contains(document.activeElement)) { e.preventDefault(); first.focus() }
+  else if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus() }
+  else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus() }
+})
 
 function _openModal(id) {
   const el = document.getElementById(id)
@@ -16,12 +52,14 @@ function _openModal(id) {
   el.style.display = 'flex'
   // Double-rAF guarantees a paint boundary so the CSS animation fires reliably
   requestAnimationFrame(() => requestAnimationFrame(() => el.classList.add('open')))
+  _modalA11yOpen(el)
 }
 function _closeModal(id) {
   const el = document.getElementById(id)
   if (!el) return
   el.classList.remove('open')
   el.classList.add('closing')
+  _modalA11yClose(el)
   const t = setTimeout(() => {
     el.style.display = 'none'
     el.classList.remove('closing')
