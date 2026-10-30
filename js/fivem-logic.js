@@ -21,7 +21,7 @@ async function buildFiveM(c) {
     banner.className = 'fivem-order-banner'
     banner.innerHTML = `
       <i class="fa fa-lightbulb"></i>
-      <span style="flex:1;color:var(--c-text-secondary)">${tUI('fivemOrderTip')}</span>
+      <span class="jx-703">${tUI('fivemOrderTip')}</span>
       <button class="fivem-order-banner-dismiss" aria-label="${tUI('abClose')}" onclick="localStorage.setItem('fivem_order_dismissed','1');document.getElementById('fivem-order-banner').remove()"><i class="fa fa-xmark"></i></button>
     `
     c.appendChild(banner)
@@ -187,12 +187,12 @@ async function buildFiveM(c) {
         <div class="fhc-title">${tUI('fivemHeroHud')}</div>
         <div class="fhc-desc">${tUI('fivemHeroHudDesc')}</div>
         <div class="fhc-open" id="fivem-hud-toggle-label"><i class="fa fa-circle-play"></i> ${tUI('fivemHeroHudOpen')}</div>
-        <div style="display:flex;align-items:center;gap:7px;margin-top:6px" onclick="event.stopPropagation()">
+        <div onclick="event.stopPropagation()" class="jx-704">
           <label class="toggle-switch jx-92">
             <input type="checkbox" id="fivem-hud-auto" ${settings.fivemHudEnabled ? 'checked' : ''} onchange="fivemHudAutoToggle(this.checked)">
             <span class="toggle-slider"></span>
           </label>
-          <span style="font-size:11px;color:var(--c-text-tertiary);cursor:pointer" onclick="document.getElementById('fivem-hud-auto').click()">${tUI('fivemHudAutoLabel')}</span>
+          <span onclick="document.getElementById('fivem-hud-auto').click()" class="jx-705">${tUI('fivemHudAutoLabel')}</span>
         </div>
       </div>
     </div>
@@ -282,9 +282,9 @@ async function buildFiveM(c) {
       <button class="header-btn-icon" onclick="document.getElementById('fivem-bookmarks-panel').style.display='none';fivemBookmarksClearRefresh()"><i class="fa fa-xmark"></i></button>
     </div>
     <div class="fivem-panel-body">
-      <div style="display:flex;gap:7px;align-items:center;margin-bottom:10px">
+      <div class="jx-706">
         <input id="fivem-bm-input" type="text" placeholder="${tUI('fivemBookmarksAddPlaceholder')}" style="flex:1;padding:5px 10px;border-radius:6px;border:1px solid var(--c-border-default);background:var(--c-bg-base);color:var(--c-text-primary);font-size:11px" onkeydown="if(event.key==='Enter')fivemBookmarkAdd()">
-        <button class="btn btn-primary btn-sm" onclick="fivemBookmarkAdd()" style="font-size:11px;white-space:nowrap"><i class="fa fa-plus"></i> ${tUI('fivemBookmarksAddBtn')}</button>
+        <button class="btn btn-primary btn-sm jx-707" onclick="fivemBookmarkAdd()"><i class="fa fa-plus"></i> ${tUI('fivemBookmarksAddBtn')}</button>
       </div>
       <div id="fivem-bookmarks-list"></div>
     </div>
@@ -374,13 +374,13 @@ async function buildFiveM(c) {
   logBody.id = 'fivem-sec-99-body'
   logBody.style.display = 'none'
   logBody.innerHTML = `
-    <div style="padding:0 18px 8px;display:flex;gap:8px;align-items:center">
+    <div class="jx-708">
       <button class="btn btn-secondary btn-sm" onclick="loadFivemLog()"><i class="fa fa-rotate"></i> ${tUI('fivemLogRefresh')}</button>
-      <button class="btn btn-ghost btn-sm" id="fivem-log-classify-btn" onclick="fivemClassifyLog()" style="color:var(--c-accent-fg);border-color:rgba(155,89,182,0.3)" onmouseenter="this.style.background = 'rgba(155,89,182,0.08)'" onmouseleave="this.style.background=''"><i class="fa fa-magnifying-glass-chart"></i> ${tUI('fivemLogClassify')}</button>
+      <button class="btn btn-ghost btn-sm jx-709" id="fivem-log-classify-btn" onclick="fivemClassifyLog()" onmouseenter="this.style.background = 'rgba(155,89,182,0.08)'" onmouseleave="this.style.background=''"><i class="fa fa-magnifying-glass-chart"></i> ${tUI('fivemLogClassify')}</button>
       <input id="fivem-log-filter" type="text" placeholder="${tUI('fivemLogFilter')}" oninput="filterFivemLog()" style="flex:1;padding:5px 10px;border-radius:6px;border:1px solid var(--border);background:var(--bg-card2,var(--surface-2));color:var(--fg);font-size:11px">
     </div>
     <div id="fivem-log-diagnose-out" style="display:none;margin:0 18px 8px;background:rgba(155,89,182,0.07);border:1px solid rgba(155,89,182,0.2);border-radius:8px;padding:10px 12px;font-size:11px;color:var(--c-text-primary);line-height:1.6"></div>
-    <div id="fivem-log-box" style="margin:0 18px 14px;background:var(--bg-card2,var(--surface-2));border:1px solid var(--border);border-radius:8px;padding:10px;font-family:monospace;font-size:11px;color:var(--muted);max-height:280px;overflow-y:auto;white-space:pre-wrap;line-height:1.5">${tUI('fivemLogLoading')}</div>
+    <div id="fivem-log-box" class="jx-710">${tUI('fivemLogLoading')}</div>
   `
   const logHdr = logCard.querySelector('.section-header')
   if (logHdr) {
@@ -402,10 +402,10 @@ async function buildFiveM(c) {
   sessionHistBody.id = 'fivem-sec-98-body'
   sessionHistBody.style.display = 'none'
   sessionHistBody.innerHTML = `
-    <div style="padding:0 18px 6px;font-size:9.5px;color:var(--muted)">${tUI('fivemSessionHistoryDesc')}</div>
-    <div id="fivem-session-hist-list" style="padding:0 18px 14px"></div>
-    <div style="padding:0 18px 10px">
-      <button class="btn btn-ghost btn-sm" style="font-size:11px;color:var(--danger)" onclick="fivemSessionHistClear()"><i class="fa fa-trash"></i> ${tUI('fivemSessionHistoryClear')}</button>
+    <div class="jx-711">${tUI('fivemSessionHistoryDesc')}</div>
+    <div id="fivem-session-hist-list" class="jx-712"></div>
+    <div class="jx-713">
+      <button class="btn btn-ghost btn-sm jx-714" onclick="fivemSessionHistClear()"><i class="fa fa-trash"></i> ${tUI('fivemSessionHistoryClear')}</button>
     </div>
   `
   const sessionHistHdr = sessionHistCard.querySelector('.section-header')
@@ -464,7 +464,7 @@ function fivemFilterTweaks(query) {
         if (!el) return
         const text = el.textContent
         if (!q) { el.innerHTML = text; return }
-        el.innerHTML = text.replace(new RegExp(`(${esc(q)})`, 'gi'), '<mark style="background:rgba(255,46,99,0.3);color:inherit;border-radius:2px">$1</mark>')
+        el.innerHTML = text.replace(new RegExp(`(${esc(q)})`, 'gi'), '<mark class="jx-715">$1</mark>')
       }
       highlight(nameEl)
       highlight(descEl)
@@ -600,7 +600,7 @@ async function fivemClassifyLog() {
 
   if (btn) { btn.disabled = true; btn.innerHTML = `<i class="fa fa-spinner fa-spin"></i> ${tUI('fivemLogClassifying')}` }
   out.style.display = ''
-  out.innerHTML = `<i class="fa fa-spinner fa-spin" style="color:var(--c-accent-fg);margin-right:6px"></i>${tUI('fivemLogClassifying')}`
+  out.innerHTML = `<i class="fa fa-spinner fa-spin jx-716"></i>${tUI('fivemLogClassifying')}`
 
   // 1. Local pattern scan
   const last200 = _fivemLogLines.slice(-200)
@@ -614,9 +614,9 @@ async function fivemClassifyLog() {
 
   if (matches.length > 0) {
     const items = matches.map(m =>
-      `<div style="margin-bottom:8px;padding:7px 10px;background:rgba(255,255,255,0.03);border-left:3px solid var(--c-accent-ring);border-radius:0 6px 6px 0">
-        <div style="font-size:11px;color:var(--muted);margin-bottom:3px;font-family:monospace">${m.sample.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>
-        <div class="jx-146"><i class="fa fa-wrench" style="color:var(--c-accent-fg);margin-right:5px;font-size:11px"></i>${m.fix}</div>
+      `<div class="jx-717">
+        <div class="jx-718">${m.sample.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>
+        <div class="jx-146"><i class="fa fa-wrench jx-719"></i>${m.fix}</div>
       </div>`
     ).join('')
     out.innerHTML = `<div style="font-size:11px;font-weight:700;color:var(--c-accent-fg);text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px"><i class="fa fa-triangle-exclamation jx-22"></i>${tUI('fivemPatternsDetected').replace('{n}', matches.length)}</div>${items}`
@@ -656,14 +656,14 @@ async function doFivemModScan(btn) {
   const sevIcon  = { high: 'fa-circle-xmark', medium: 'fa-triangle-exclamation', low: 'fa-circle-info' }
 
   const html = !r.found.length
-    ? `<div style="padding:14px 18px;font-size:11px;color:var(--success)"><i class="fa fa-circle-check"></i> ${tUI('fivemCleanResult')}</div>`
+    ? `<div class="jx-720"><i class="fa fa-circle-check"></i> ${tUI('fivemCleanResult')}</div>`
     : r.found.map(item => `
         <div class="mod-conflict-row">
           <i class="fa ${sevIcon[item.severity] || 'fa-circle-info'}" style="color:${sevColor[item.severity] || 'var(--muted)'};font-size:13px;flex-shrink:0"></i>
           <div class="jx-6">
             <div class="jx-18">${item.name} <span class="jx-105">· ${item.file}</span></div>
             <div class="jx-15">${item.reason}</div>
-            <div style="font-size:11px;color:var(--c-text-tertiary);margin-top:1px;font-style:italic">${item.dir}</div>
+            <div class="jx-721">${item.dir}</div>
           </div>
           <span class="mod-sev-badge sev-${item.severity}">${item.severity.toUpperCase()}</span>
         </div>`).join('')
@@ -760,15 +760,15 @@ function fivemSessionHistRender() {
       p.ram  != null ? `RAM ${p.ram}%`  : null,
     ].filter(Boolean).join(' · ')
     const anomalyBadge = s.anomalyCount > 0
-      ? `<span style="font-size:11px;padding:1px 6px;border-radius:3px;background:rgba(243,156,18,0.15);color:var(--c-warning)">${s.anomalyCount} ${tUI('fivemSessionHistoryAnomalies')}</span>`
+      ? `<span class="jx-722">${s.anomalyCount} ${tUI('fivemSessionHistoryAnomalies')}</span>`
       : `<span class="jx-41"><i class="fa fa-circle-check"></i> Clean</span>`
     return `
-      <div style="padding:8px 0;border-bottom:1px solid var(--hairline-strong);display:flex;align-items:center;gap:10px">
-        <div style="width:32px;height:32px;border-radius:6px;background:rgba(255,46,99,0.1);display:flex;align-items:center;justify-content:center;flex-shrink:0">
-          <i class="fa fa-gamepad" style="color:var(--c-accent-fg);font-size:13px"></i>
+      <div class="jx-723">
+        <div class="jx-724">
+          <i class="fa fa-gamepad jx-725"></i>
         </div>
         <div class="jx-6">
-          <div style="display:flex;align-items:center;gap:6px;margin-bottom:2px">
+          <div class="jx-726">
             <span class="jx-60">${s.game}</span>
             ${anomalyBadge}
           </div>
@@ -859,17 +859,17 @@ async function fivemBookmarksRender() {
 
   list.innerHTML = bms.map((bm, i) => {
     const statusDot = bm.online === false
-      ? `<span style="width:8px;height:8px;border-radius:50%;background:var(--c-danger-muted);display:inline-block;flex-shrink:0"></span>`
+      ? `<span class="jx-727"></span>`
       : bm.online === true
-      ? `<span style="width:8px;height:8px;border-radius:50%;background:var(--c-success-muted);display:inline-block;flex-shrink:0"></span>`
-      : `<span style="width:8px;height:8px;border-radius:50%;background:var(--surface-2);display:inline-block;flex-shrink:0"></span>`
+      ? `<span class="jx-728"></span>`
+      : `<span class="jx-729"></span>`
     const nameStr  = escHtml(bm.name  || `${bm.host}:${bm.port}`)
     const countStr = bm.online === true
       ? `${bm.players}/${bm.maxClients} ${tUI('fivemBookmarksPlayers')} · ${bm.pingMs}ms`
       : bm.online === false ? tUI('fivemBookmarksOffline') : tUI('fivemBookmarksPinging')
     const mapStr   = bm.mapName ? `<span class="jx-7"> · ${escHtml(bm.mapName)}</span>` : ''
     const linkedStr = bm.linkedBundle
-      ? `<span style="font-size:11px;color:var(--c-accent-fg)"><i class="fa fa-layer-group"></i> ${tUI('fivemBookmarksLinked')} ${escHtml(bm.linkedBundle)}</span>`
+      ? `<span class="jx-730"><i class="fa fa-layer-group"></i> ${tUI('fivemBookmarksLinked')} ${escHtml(bm.linkedBundle)}</span>`
       : ''
     const bundleOpts = bundleNames.length
       ? `<option value="">${tUI('fivemBookmarksLinkProfile')}</option>` + bundleNames.map(n => `<option value="${escAttr(n)}" ${bm.linkedBundle === n ? 'selected' : ''}>${escHtml(n)}</option>`).join('')
@@ -879,14 +879,14 @@ async function fivemBookmarksRender() {
         <div class="jx-30">
           ${statusDot}
           <div class="jx-6">
-            <div style="font-size:11px;font-weight:700;color:var(--c-text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${nameStr}${mapStr}</div>
+            <div class="jx-731">${nameStr}${mapStr}</div>
             <div class="jx-91">${escHtml(bm.host)}:${escHtml(bm.port)} · ${countStr}</div>
             ${linkedStr}
           </div>
           <button class="btn btn-primary btn-sm" style="font-size:11px;padding:3px 10px" id="fivem-bm-connect-${i}" onclick="fivemBookmarkConnect(${i}, this)"><i class="fa fa-play"></i> ${tUI('fivemBookmarksConnect')}</button>
           <button class="btn btn-ghost btn-sm" style="font-size:11px;color:var(--danger)" onclick="fivemBookmarkRemove(${i})"><i class="fa fa-trash"></i></button>
         </div>
-        <div style="margin-top:5px;padding-left:18px">
+        <div class="jx-732">
           <select style="font-size:11px;padding:2px 6px;border-radius:4px;border:1px solid var(--border);background:var(--bg-card2,var(--surface-2));color:var(--muted)" onchange="fivemBookmarkSetBundle(${i},this.value)">
             ${bundleOpts}
           </select>
@@ -1012,7 +1012,7 @@ async function fivemRunServerHealth() {
   const body = document.getElementById('fivem-health-body')
   if (!body) return
   if (btn) { btn.disabled = true; btn.innerHTML = `<i class="fa fa-spinner fa-spin"></i>` }
-  body.innerHTML = `<div style="color:var(--muted);font-size:11px;padding:8px 0"><i class="fa fa-spinner fa-spin"></i> ${tUI('fivemHealthPinging')}</div>`
+  body.innerHTML = `<div class="jx-733"><i class="fa fa-spinner fa-spin"></i> ${tUI('fivemHealthPinging')}</div>`
 
   const r = await api.fivemServerHealth().catch(() => null)
   if (btn) { btn.disabled = false; btn.innerHTML = `<i class="fa fa-play"></i> ${tUI('fivemHealthRunBtn')}` }
@@ -1030,7 +1030,7 @@ async function fivemRunServerHealth() {
       : '—'
     if (h.packetLoss > 0) tips.push('loss')
     return `
-      <div style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--hairline-strong);font-size:11px">
+      <div class="jx-734">
         <div style="width:9px;height:9px;border-radius:50%;background:${col};flex-shrink:0"></div>
         <div class="jx-2">
           <div class="jx-131">${h.name}</div>
@@ -1046,8 +1046,8 @@ async function fivemRunServerHealth() {
 
   const uniqueTips = [...new Set(tips)]
   const tipHtml = uniqueTips.map(t => `
-    <div style="margin-top:8px;padding:7px 10px;background:rgba(243,156,18,0.06);border:1px solid rgba(243,156,18,0.2);border-radius:7px;font-size:9.5px;color:var(--c-warning)">
-      <i class="fa fa-lightbulb" style="margin-right:6px;color:var(--c-warning)"></i>${tUI(t === 'loss' ? 'fivemHealthTipLoss' : 'fivemHealthTipDns')}
+    <div class="jx-735">
+      <i class="fa fa-lightbulb jx-736"></i>${tUI(t === 'loss' ? 'fivemHealthTipLoss' : 'fivemHealthTipDns')}
     </div>`).join('')
 
   requestAnimationFrame(() => { body.innerHTML = rows + tipHtml })
@@ -1086,7 +1086,7 @@ async function fivemRefreshCacheInfo() {
     const label = CACHE_LABELS[key] || key
     const desc = CACHE_DESC[key] || ''
     if (!info.exists) return `
-      <div style="padding:8px 0;border-bottom:1px solid var(--hairline-strong);font-size:11px;color:var(--muted)">
+      <div class="jx-737">
         <span class="jx-149">${label}</span> — ${tUI('fivemSmartCacheEmpty')}
       </div>`
     const ageDays = info.lastWrite ? Math.round((Date.now() - info.lastWrite) / 86400000) : null
@@ -1094,11 +1094,11 @@ async function fivemRefreshCacheInfo() {
     const sizeColor = info.sizeMB > 2000 ? jStatus('err') : info.sizeMB > 500 ? jStatus('warn') : jStatus('ok')
     const shouldClear = (info.sizeMB > 1000 && ageDays !== null && ageDays > 3) || info.sizeMB > 3000
     const recBadge = shouldClear
-      ? `<span style="font-size:8px;padding:1px 5px;border-radius:3px;background:rgba(243,156,18,0.15);color:var(--c-warning);margin-right:2px"><i class="fa fa-lightbulb"></i> Recommended</span>`
+      ? `<span class="jx-738"><i class="fa fa-lightbulb"></i> Recommended</span>`
       : ''
     return `
-      <div style="padding:9px 0;border-bottom:1px solid var(--hairline-strong)">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:3px">
+      <div class="jx-739">
+        <div class="jx-740">
           <span class="jx-60">${label}</span>
           <div class="jx-34">
             ${recBadge}
@@ -1144,7 +1144,7 @@ async function fivemIniEditorLoad() {
     const msg = r?.reason === 'premium_required'
       ? tUI('fivemIniPremiumRequired')
       : (r?.reason || tUI('fivemIniReadError'))
-    body.innerHTML = `<div style="color:var(--danger);font-size:11px;padding:8px 0"><i class="fa fa-triangle-exclamation"></i> ${msg}</div>`
+    body.innerHTML = `<div class="jx-741"><i class="fa fa-triangle-exclamation"></i> ${msg}</div>`
     return
   }
   const { values, defs, ramMB } = r
@@ -1169,16 +1169,16 @@ async function fivemIniEditorLoad() {
       const dangerWarn = def.dangerHint || null
       html += `
         <div class="cfx-ini-row" style="padding:8px 0;border-bottom:1px solid var(--hairline-strong);${rowBg}">
-          <div style="display:flex;align-items:flex-start;gap:8px">
+          <div class="jx-742">
             <div class="jx-6">
               <div class="jx-60">${def.label}
                 ${dangerWarn ? `<i class="fa fa-triangle-exclamation" style="color:var(--danger);font-size:11px;margin-left:4px" title="${dangerWarn}"></i>` : ''}
               </div>
-              <div style="font-size:9.5px;color:var(--muted);margin-top:2px">${def.desc}</div>
-              <div style="font-size:11px;color:var(--c-text-tertiary);margin-top:3px;font-family:monospace">${def.key} = ${cur !== null ? `<span class="jx-9">${escHtml(cur)}</span>` : `<span class="jx-164">${tUI('fivemIniNotSet')}</span>`}${recVal !== null ? ` <span style="color:var(--c-success);margin-left:6px">${tUI('fivemIniRecommended')}: ${recVal}</span>` : ''}</div>
+              <div class="jx-743">${def.desc}</div>
+              <div class="jx-744">${def.key} = ${cur !== null ? `<span class="jx-9">${escHtml(cur)}</span>` : `<span class="jx-164">${tUI('fivemIniNotSet')}</span>`}${recVal !== null ? ` <span class="jx-745">${tUI('fivemIniRecommended')}: ${recVal}</span>` : ''}</div>
               ${dangerWarn ? `<div class="jx-147"><i class="fa fa-shield-halved"></i> ${dangerWarn}</div>` : ''}
             </div>
-            <div style="display:flex;gap:5px;flex-shrink:0;align-items:flex-start;margin-top:2px">
+            <div class="jx-746">
               ${def.type === 'boolean'
                 ? `<button class="btn btn-sm ${cur == 1 || cur === 'true' ? 'btn-success' : 'btn-ghost'}" style="font-size:11px;min-width:52px" onclick="fivemIniToggleBool('${def.key}', ${cur == 1 || cur === 'true' ? 0 : 1})">${cur == 1 || cur === 'true' ? tUI('fivemIniOn') : tUI('fivemIniOff')}</button>`
                 : def.type === 'number'
