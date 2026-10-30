@@ -18,7 +18,9 @@ const ONLY_PAGES = arg('pages', null) ? String(arg('pages')).split(',') : null
 const WINDOWS = !!arg('windows', false)
 const TAG = String(arg('tag', 'run'))
 // --overlay name=js;name2=js2 : after boot, run JS (e.g. open a dialog) and shoot it as overlay-<name>.png
-const OVERLAYS = arg('overlay', null) ? String(arg('overlay')).split(';').map(x => { const i = x.indexOf('='); return [x.slice(0, i), x.slice(i + 1)] }) : []
+const OVERLAY_SRC = arg('overlay', null) ? (String(arg('overlay')).startsWith('@') ? fs.readFileSync(String(arg('overlay')).slice(1), 'utf8') : String(arg('overlay'))) : null   // '@file.js' reads the JS (as one overlay named by the file) from disk
+const OVERLAYS = !OVERLAY_SRC ? [] : String(arg('overlay')).startsWith('@') ? [[path.basename(String(arg('overlay')), '.js'), OVERLAY_SRC]]
+  : OVERLAY_SRC.split(';').map(x => { const i = x.indexOf('='); return [x.slice(0, i), x.slice(i + 1)] })
 const ACCENT = arg('accent', null)
 const SCHEME = String(arg('scheme', 'dark'))   // dark | light | system
 const SCALE = Number(arg('scale', 1)) || 1        // <1 shrinks screenshots (cheaper to view)
