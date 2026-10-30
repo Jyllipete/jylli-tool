@@ -651,3 +651,8 @@
 .j-push { margin-left: auto; }
 .j-diag-bar { margin-bottom: 12px; }
 #bench-progress { margin-bottom: 8px; }
+
+/* Startup legend */
+.j-legend { display: flex; align-items: center; gap: 6px; padding: 4px 18px 2px; flex-wrap: wrap; font-size: var(--fs-2); color: var(--c-text-tertiary); }
+.j-legend .startup-impact { cursor: default; margin-left: 4px; }
+.j-legend-label { margin-right: 2px; }

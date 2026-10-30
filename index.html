@@ -3533,7 +3533,7 @@ let _startupBootImpact = {}
 let _startupLoaded = false   // true after first successful fetch; prevents re-fetch on tab revisit
 
 function buildStartupManager(c) {
-  const card = makeSection('Startup & Services', tUI('startupSub'))
+  const card = makeSection(tUI('startupTitle'), tUI('startupSub'))
 
   // ── Hero Score Card ──────────────────────────────────────────────────────
   const hero = document.createElement('div')
@@ -3620,15 +3620,12 @@ function buildStartupManager(c) {
 
   // ── Impact legend chips (replaces plain text legend) ─────────────────────
   const legend = document.createElement('div')
-  legend.style.cssText = 'display:flex;align-items:center;gap:6px;padding:4px 18px 2px;flex-wrap:wrap'
+  legend.className = 'j-legend'
   legend.innerHTML = `
-    <span style="font-size:11px;color:var(--muted);letter-spacing:.04em;text-transform:uppercase;margin-right:2px">Impact:</span>
-    <span class="startup-impact high" style="cursor:default">High</span>
-    <span style="font-size:11px;color:var(--muted)">= disable</span>
-    <span class="startup-impact medium" style="cursor:default;margin-left:4px">Med</span>
-    <span style="font-size:11px;color:var(--muted)">= optional</span>
-    <span class="startup-impact low" style="cursor:default;margin-left:4px">Low</span>
-    <span style="font-size:11px;color:var(--muted)">= keep</span>
+    <span class="j-legend-label">${tUI('startupLegendImpact')}</span>
+    <span class="startup-impact high">${tUI('startupImpHigh')}</span><span>= ${tUI('startupLegendHigh')}</span>
+    <span class="startup-impact medium">${tUI('startupImpMed')}</span><span>= ${tUI('startupLegendMed')}</span>
+    <span class="startup-impact low">${tUI('startupImpLow')}</span><span>= ${tUI('startupLegendLow')}</span>
   `
   card.appendChild(legend)
 
@@ -3642,7 +3639,7 @@ function buildStartupManager(c) {
       oninput="startupFilter(this.value)"
       onkeydown="if(event.key==='Escape'){startupClearSearch()}">
     <span class="startup-search-count" id="startup-search-count"></span>
-    <button class="startup-search-clear" id="startup-search-clear" onclick="startupClearSearch()" title="Clear search">
+    <button class="startup-search-clear" id="startup-search-clear" onclick="startupClearSearch()" title="${tUI('startupClearSearch')}">
       <i class="fa fa-xmark"></i>
     </button>
   `
