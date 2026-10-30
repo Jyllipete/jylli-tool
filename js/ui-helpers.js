@@ -72,12 +72,10 @@ function _closeModal(id) {
 let _confirmResolve = null, _confirmReject = null
 function showConfirm({ title, body, okText = 'Confirm', okStyle = 'danger', icon = 'fa-triangle-exclamation' }) {
   _supersedePendingDialog()
-  const wRgb  = getComputedStyle(document.documentElement).getPropertyValue('--warning-rgb').trim() || '243,156,18'
-  const iRgb  = getComputedStyle(document.documentElement).getPropertyValue('--info-rgb').trim()    || '52,152,219'
   const styles = {
-    danger:  { bg: `rgba(var(--pink-rgb),0.12)`,   border: `rgba(var(--pink-rgb),0.3)`,   color: 'var(--pink)',    btnBg: 'var(--pink)',             btnColor: 'var(--c-bg-base)' },
-    warning: { bg: `rgba(${wRgb},0.12)`,            border: `rgba(${wRgb},0.3)`,           color: 'var(--warning)', btnBg: 'var(--warning)',          btnColor: 'var(--c-bg-base)' },
-    info:    { bg: `rgba(${iRgb},0.12)`,            border: `rgba(${iRgb},0.3)`,           color: 'var(--info)',    btnBg: 'var(--info)',             btnColor: '#fff' },
+    danger:  { bg: 'var(--c-danger-muted)',  border: 'var(--c-danger-ring)',  color: 'var(--c-danger)',  btnBg: 'var(--c-danger)',  btnColor: '#fff' },
+    warning: { bg: 'var(--c-warning-muted)', border: 'var(--c-warning-ring)', color: 'var(--c-warning)', btnBg: 'var(--c-warning)', btnColor: 'var(--on-accent)' },
+    info:    { bg: 'var(--c-info-muted)',    border: 'var(--c-info-ring)',    color: 'var(--c-info)',    btnBg: 'var(--c-info)',    btnColor: '#fff' },
   }
   const s = styles[okStyle] || styles.danger
   const iconEl = document.getElementById('confirm-modal-icon')
@@ -412,3 +410,31 @@ document.addEventListener('keydown', e => {
   // the click re-renders the tab row in the shell: put focus back on the matching tab
   requestAnimationFrame(() => { const t = [...document.querySelectorAll('[role="tablist"] > button')].find(b => b.textContent === next.textContent); if (t) t.focus() })
 })
+
+// ─── Keyboard shortcut sheet (Ctrl+/) ─────────────────────────────────────────
+function openShortcutSheet() {
+  let el = document.getElementById('shortcuts-modal')
+  if (!el) {
+    el = document.createElement('div')
+    el.id = 'shortcuts-modal'
+    el.className = 'j-modal-backdrop'
+    el.style.display = 'none'
+    el.addEventListener('click', e => { if (e.target === el) closeShortcutSheet() })
+    document.body.appendChild(el)
+  }
+  const { html } = ui
+  const keys = k => html`<span class="j-keys">${k.split('+').map(x => html`<kbd class="j-kbd">${x}</kbd>`)}</span>`
+  const rows = [['Ctrl+K', 'scPalette'], ['Ctrl+1…5', 'scSections'], ['Ctrl+,', 'scSettings'], ['Ctrl+Shift+L', 'scActivity'], ['Ctrl+/', 'scSheet'], ['Esc', 'scClose']]
+  el.innerHTML = String(html`<div class="j-modal j-modal-md" role="dialog" aria-modal="true" aria-labelledby="shortcuts-title">
+    <div class="j-modal-head"><h2 class="j-modal-title" id="shortcuts-title">${tUI('shortcutsTitle')}</h2>${ui.button({ iconOnly: true, icon: 'xmark', variant: 'ghost', size: 'sm', title: tUI('scClose'), onclick: 'closeShortcutSheet()' })}</div>
+    <div class="j-modal-body">${rows.map(([k, label]) => html`<div class="j-row"><div class="j-row-main"><div class="j-row-title">${tUI(label)}</div></div><div class="j-row-control">${keys(k)}</div></div>`)}</div>
+  </div>`)
+  _openModal('shortcuts-modal')
+  requestAnimationFrame(() => requestAnimationFrame(() => el.classList.add('j-open')))
+}
+function closeShortcutSheet() {
+  const el = document.getElementById('shortcuts-modal')
+  if (!el || el.style.display === 'none') return
+  el.classList.remove('j-open')
+  _closeModal('shortcuts-modal')
+}

@@ -1520,6 +1520,7 @@ const CMD_PAGE_DEFS = [
 const cmdPages = () => CMD_PAGE_DEFS.map(d => ({ ...d, name: tUI('cmdPg_' + d.page.replace(/-/g, '_')), sub: tUI('cmdPgSub_' + d.page.replace(/-/g, '_')) }))
 const cmdActions = () => [
   { name: tUI('cmdAct_rp'),    sub: tUI('cmdActSub_rp'),    icon: 'fa-shield-halved', action: () => quickCreateRP() },
+  { name: tUI('shortcutsTitle'), sub: tUI('cmdActSub_shortcuts'), icon: 'fa-keyboard', action: () => openShortcutSheet() },
   { name: tUI('cmdAct_theme'), sub: tUI('cmdActSub_theme'), icon: 'fa-circle-half-stroke', action: () => settingsSetScheme(JylliTheme.scheme() === 'dark' ? 'light' : 'dark') },
   { name: tUI('cmdAct_log'),   sub: tUI('cmdActSub_log'),   icon: 'fa-eraser',        action: () => clearLog() },
   { name: tUI('cmdAct_bug'),   sub: tUI('cmdActSub_bug'),   icon: 'fa-bug',           action: () => showBugReport() },
@@ -1607,6 +1608,8 @@ document.addEventListener('keydown', e => {
   if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && /^[1-5]$/.test(e.key)) { e.preventDefault(); Shell.go(['home', 'optimize', 'gaming', 'clean', 'system'][+e.key - 1]) }
   if ((e.ctrlKey || e.metaKey) && e.key === ',') { e.preventDefault(); Shell.go('settings') }
   if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === 'l') { e.preventDefault(); toggleLogPane() }
+  if ((e.ctrlKey || e.metaKey) && e.key === '/') { e.preventDefault(); openShortcutSheet() }
+  if (e.key === 'Escape' && document.getElementById('shortcuts-modal')?.classList.contains('j-open')) closeShortcutSheet()
   if (e.key === 'Escape' && document.getElementById('cmd-palette-overlay').classList.contains('open')) closeCmdPalette()
   if (e.key === 'Escape' && document.getElementById('advanced-intro-overlay').classList.contains('open')) closeAdvancedIntro()
 })

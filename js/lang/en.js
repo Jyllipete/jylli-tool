@@ -802,6 +802,7 @@ LANG.en = {
       netTweaksActive:'tweaks active', netEthernetAdapter:'Ethernet adapter', netWirelessAdapter:'wireless adapter',
       pmFreezeErrorTitle:'Freeze error', biosScewinScanRequired:'Run the SCEWIN scan first.', pfFailed:'Scan failed.', pfComplete:'Scan complete.', aoStillActiveTitle:'Tweaks still active after restore', aoStillActiveBody:'These settings are still applied on your system even though you toggled them off. Run Restore to fully undo them.', bsScanPrompt:'Run a scan to see your bloat score.', bloatDesc_clean:'Your system is clean. No action needed.', bloatDesc_moderate:'Moderate bloat detected. Gaming preset recommended.', bloatDesc_bloated:'High bloat. Full scan and cleanup advised.', bloatDesc_critical:'Critical bloat. Immediate action recommended.', saveError:'Could not save the file.',
       aoBbLive:'LIVE', aoBbCpuVsCap:'CPU used vs. cap',
+      shortcutsTitle:'Keyboard shortcuts', cmdActSub_shortcuts:'Show every shortcut', scPalette:'Command palette', scSections:'Jump to a section', scSettings:'Open Settings', scActivity:'Activity log', scSheet:'This sheet', scClose:'Close',
       motionSnappy:'Snappy',
       motionDefault:'Default',
       motionSmooth:'Smooth',

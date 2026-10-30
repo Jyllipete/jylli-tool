@@ -780,6 +780,7 @@ LANG.fi = {
       netTweaksActive:'säätöä käytössä', netEthernetAdapter:'Ethernet-sovitin', netWirelessAdapter:'langaton sovitin',
       pmFreezeErrorTitle:'Jäädytysvirhe', biosScewinScanRequired:'Suorita SCEWIN-skannaus ensin.', pfFailed:'Skannaus epäonnistui.', pfComplete:'Skannaus valmis.', aoStillActiveTitle:'Säädöt ovat yhä käytössä palautuksen jälkeen', aoStillActiveBody:'Nämä asetukset ovat yhä käytössä järjestelmässäsi, vaikka kytkit ne pois. Suorita palautus kumotaksesi ne kokonaan.', bsScanPrompt:'Suorita skannaus nähdäksesi bloatware-pisteesi.', bloatDesc_clean:'Järjestelmäsi on siisti. Toimia ei tarvita.', bloatDesc_moderate:'Kohtalaisesti bloatwarea. Pelaamisen esiasetus suositellaan.', bloatDesc_bloated:'Paljon bloatwarea. Täysi skannaus ja siivous suositellaan.', bloatDesc_critical:'Kriittisesti bloatwarea. Toimia suositellaan heti.', saveError:'Tiedostoa ei voitu tallentaa.',
       aoBbLive:'LIVE', aoBbCpuVsCap:'CPU-käyttö ja raja',
+      shortcutsTitle:'Pikanäppäimet', cmdActSub_shortcuts:'Näytä kaikki pikanäppäimet', scPalette:'Komentopaletti', scSections:'Siirry osioon', scSettings:'Avaa asetukset', scActivity:'Toimintaloki', scSheet:'Tämä lista', scClose:'Sulje',
       motionSnappy:'Nopea',
       motionDefault:'Oletus',
       motionSmooth:'Pehmeä',
