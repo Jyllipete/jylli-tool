@@ -765,7 +765,7 @@ function fivemSessionHistRender() {
     return `
       <div style="padding:8px 0;border-bottom:1px solid var(--hairline-strong);display:flex;align-items:center;gap:10px">
         <div style="width:32px;height:32px;border-radius:6px;background:rgba(255,46,99,0.1);display:flex;align-items:center;justify-content:center;flex-shrink:0">
-          <i class="fa fa-gamepad" style="color:var(--pink);font-size:13px"></i>
+          <i class="fa fa-gamepad" style="color:var(--c-accent-fg);font-size:13px"></i>
         </div>
         <div style="flex:1;min-width:0">
           <div style="display:flex;align-items:center;gap:6px;margin-bottom:2px">

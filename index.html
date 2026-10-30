@@ -291,7 +291,7 @@
 <div id="advanced-intro-overlay" class="modal-overlay" style="z-index:var(--z-modal-backdrop)">
   <div class="modal modal-sm">
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
-      <div style="width:34px;height:34px;border-radius:var(--r-md);background:var(--c-accent-muted);border:1px solid var(--c-accent-ring);display:flex;align-items:center;justify-content:center;font-size:15px;color:var(--c-accent);flex-shrink:0"><i class="fa fa-gear"></i></div>
+      <div style="width:34px;height:34px;border-radius:var(--r-md);background:var(--c-accent-muted);border:1px solid var(--c-accent-ring);display:flex;align-items:center;justify-content:center;font-size:15px;color:var(--c-accent-fg);flex-shrink:0"><i class="fa fa-gear"></i></div>
       <div style="flex:1;min-width:0">
         <div style="display:flex;align-items:center;gap:8px">
           <span style="font-size:15px;font-weight:700;color:var(--c-text-primary)" data-i18n="settingsAdvanced">Advanced Mode</span>
@@ -335,7 +335,7 @@
 <div id="batch-progress-modal" style="display:none;position:fixed;inset:0;background:var(--c-overlay);z-index:9000;align-items:center;justify-content:center;backdrop-filter:blur(8px)">
   <div class="modal-sheet" style="width:460px;max-width:95vw;padding:24px;">
     <div style="display:flex;align-items:center;gap:12px;margin-bottom:18px">
-      <div style="width:36px;height:36px;border-radius:9px;background:rgba(255,82,130,0.12);border:1px solid rgba(255,82,130,0.3);display:flex;align-items:center;justify-content:center;font-size:15px;color:var(--pink);flex-shrink:0"><i class="fa fa-rocket"></i></div>
+      <div style="width:36px;height:36px;border-radius:9px;background:rgba(255,82,130,0.12);border:1px solid rgba(255,82,130,0.3);display:flex;align-items:center;justify-content:center;font-size:15px;color:var(--c-accent-fg);flex-shrink:0"><i class="fa fa-rocket"></i></div>
       <div style="flex:1">
         <div id="bpm-title" style="font-size:14px;font-weight:800;color:var(--white)">Applying tweaks…</div>
         <div id="bpm-sub" style="font-size:11px;color:var(--muted)">Please wait</div>
@@ -358,7 +358,7 @@
   <div class="modal-sheet" style="width:580px;max-width:95vw;max-height:88vh;display:flex;flex-direction:column;">
     <div class="modal-sheet-header">
       <div style="display:flex;align-items:center;gap:12px">
-        <div style="width:38px;height:38px;border-radius:10px;background:rgba(var(--c-accent-rgb),0.15);border:1px solid rgba(var(--c-accent-rgb),0.35);display:flex;align-items:center;justify-content:center;font-size:17px;color:var(--c-accent)"><i class="fa fa-wand-sparkles"></i></div>
+        <div style="width:38px;height:38px;border-radius:10px;background:rgba(var(--c-accent-rgb),0.15);border:1px solid rgba(var(--c-accent-rgb),0.35);display:flex;align-items:center;justify-content:center;font-size:17px;color:var(--c-accent-fg)"><i class="fa fa-wand-sparkles"></i></div>
         <div>
           <div id="spw-title" style="font-size:16px;font-weight:800;color:var(--white)">Smart Profile Wizard</div>
           <div id="spw-subtitle" style="font-size:11px;color:var(--muted)">Instant optimization for your setup</div>
@@ -2227,7 +2227,7 @@ async function runUpdateCheck() {
       healthEl.innerHTML = `<span style="color:var(--ok)">✓ All ${healthResult.checked} verified tweaks still active</span>`
     } else {
       const ids = JSON.stringify(healthResult.reverted)
-      healthEl.innerHTML = `<span style="color:var(--warning)">⚠ ${healthResult.reverted.length} tweak(s) reverted by Windows — <a href="#" style="color:var(--pink)" onclick="reapplyReverted(${ids.replace(/"/g,"'")}); return false">re-apply now</a></span>`
+      healthEl.innerHTML = `<span style="color:var(--warning)">⚠ ${healthResult.reverted.length} tweak(s) reverted by Windows — <a href="#" style="color:var(--c-accent-fg)" onclick="reapplyReverted(${ids.replace(/"/g,"'")}); return false">re-apply now</a></span>`
     }
     healthEl.style.transition = 'opacity 0.2s ease'
     healthEl.style.display = 'block'
@@ -2813,10 +2813,10 @@ async function buildPulse(c) {
       <div style="display:flex;align-items:center;gap:12px">
         <div style="flex:1">
           <div style="font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:3px">
-            <i class="fa fa-star" style="margin-right:4px;color:var(--c-accent)"></i>${tUI('pulseScoreLabel')}
+            <i class="fa fa-star" style="margin-right:4px;color:var(--c-accent-fg)"></i>${tUI('pulseScoreLabel')}
           </div>
           <div style="display:flex;align-items:baseline;gap:5px">
-            <span id="pulse-score-val" style="font-size:26px;font-weight:800;color:var(--c-accent);font-variant-numeric:tabular-nums;line-height:1;transition:color .3s">—</span>
+            <span id="pulse-score-val" style="font-size:26px;font-weight:800;color:var(--c-accent-fg);font-variant-numeric:tabular-nums;line-height:1;transition:color .3s">—</span>
             <span style="font-size:11px;color:var(--muted)">/1000</span>
           </div>
         </div>
@@ -2848,7 +2848,7 @@ async function buildPulse(c) {
     <div id="pulse-launch-rules" style="padding:16px 16px 6px;border-bottom:1px solid var(--border)">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
         <div class="pulse-section-label"><i class="fa fa-bolt"></i>${tUI('launchRulesTitle')}</div>
-        <div id="pulse-launch-rules-armed" style="font-size:11px;color:var(--c-accent);font-weight:600"></div>
+        <div id="pulse-launch-rules-armed" style="font-size:11px;color:var(--c-accent-fg);font-weight:600"></div>
       </div>
       <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px">
 
@@ -2875,7 +2875,7 @@ async function buildPulse(c) {
           <div style="display:flex;align-items:center;gap:10px">
             <div id="pulse-gs-dot" class="lr-dot"></div>
             <div style="flex:1;min-width:0">
-              <div style="font-size:11px;font-weight:700;color:var(--c-accent);white-space:nowrap;overflow:hidden;text-overflow:ellipsis"><i class="fa fa-bolt" style="margin-right:4px"></i>${tUI('settingsGameShield')}</div>
+              <div style="font-size:11px;font-weight:700;color:var(--c-accent-fg);white-space:nowrap;overflow:hidden;text-overflow:ellipsis"><i class="fa fa-bolt" style="margin-right:4px"></i>${tUI('settingsGameShield')}</div>
               <div style="font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${tUI('settingsGameShieldDesc')}</div>
             </div>
             <label class="toggle-pill" style="flex-shrink:0">
@@ -2913,7 +2913,7 @@ async function buildPulse(c) {
                     <input id="gs-tier3-threshold" type="range" min="50" max="95" step="5" value="${settings.gameShieldTier3Threshold ?? 70}"
                       class="gs-slider" style="--gs-color:var(--c-accent);--gs-glow:rgba(142,68,173,0.28);--gs-fill-pct:${Math.round(((settings.gameShieldTier3Threshold ?? 70) - 50) / 45 * 100)}%"
                       oninput="gsUpdateThreshold('tier3', this.value)">
-                    <span id="gs-tier3-val" style="font-size:11px;font-weight:700;color:var(--c-accent);background:rgba(142,68,173,0.15);border:1px solid rgba(142,68,173,0.3);border-radius:4px;padding:1px 6px;flex-shrink:0;min-width:34px;text-align:center">${settings.gameShieldTier3Threshold ?? 70}%</span>
+                    <span id="gs-tier3-val" style="font-size:11px;font-weight:700;color:var(--c-accent-fg);background:rgba(142,68,173,0.15);border:1px solid rgba(142,68,173,0.3);border-radius:4px;padding:1px 6px;flex-shrink:0;min-width:34px;text-align:center">${settings.gameShieldTier3Threshold ?? 70}%</span>
                   </div>
                 </div>
                 <!-- Mid-session slider -->
@@ -2939,7 +2939,7 @@ async function buildPulse(c) {
           <div style="display:flex;align-items:center;gap:10px">
             <div id="pulse-gw-dot" class="lr-dot"></div>
             <div style="flex:1;min-width:0">
-              <div style="font-size:11px;font-weight:700;color:var(--white);white-space:nowrap;overflow:hidden;text-overflow:ellipsis"><i class="fa fa-eye" style="margin-right:4px;color:var(--c-accent)"></i>${tUI('settingsGameWatcher')}</div>
+              <div style="font-size:11px;font-weight:700;color:var(--white);white-space:nowrap;overflow:hidden;text-overflow:ellipsis"><i class="fa fa-eye" style="margin-right:4px;color:var(--c-accent-fg)"></i>${tUI('settingsGameWatcher')}</div>
               <div style="font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${tUI('settingsGameWatcherDesc')}</div>
             </div>
             <label class="toggle-pill" style="flex-shrink:0">
@@ -3018,7 +3018,7 @@ async function buildPulse(c) {
       </label>
       <div style="flex:1"></div>
       <div id="pulse-active-label" style="font-size:11px;color:var(--gray);display:none">
-        ${tUI('pulseActiveLabel')} <strong id="pulse-active-name" style="color:var(--pink)"></strong>
+        ${tUI('pulseActiveLabel')} <strong id="pulse-active-name" style="color:var(--c-accent-fg)"></strong>
       </div>
       <button id="pulse-start-btn" class="btn btn-primary btn-sm" onclick="doPulseStart(this)" disabled style="min-width:110px">
         <i class="fa fa-bolt"></i> ${tUI('pulseActivate')}
@@ -3080,7 +3080,7 @@ async function togglePulseBeforeAfter(btn) {
     </div>`
   }).join('')
   panel.innerHTML = `
-    <div style="font-size:11px;font-weight:700;color:var(--white);margin-bottom:8px"><i class="fa fa-chart-column" style="margin-right:5px;color:var(--c-accent)"></i>${tUI('pulseBeforeAfterTitle')}</div>
+    <div style="font-size:11px;font-weight:700;color:var(--white);margin-bottom:8px"><i class="fa fa-chart-column" style="margin-right:5px;color:var(--c-accent-fg)"></i>${tUI('pulseBeforeAfterTitle')}</div>
     ${rows}
     <div style="font-size:11px;color:rgba(var(--fx),0.25);margin-top:8px;line-height:1.4">${tUI('pulseBeforeAfterNote')}</div>`
   // Close on next outside click
@@ -5225,7 +5225,7 @@ async function doBenchmark() {
     benchmarkBaseline = r.score
     localStorage.setItem('pf_bench_baseline', r.score)
     status.textContent = `${tUI('pfBenchBaselineLabel')} ${r.score.toLocaleString()} — ${tUI('pfBenchBaseline')}`
-    results.innerHTML = `<div style="padding:10px 0;font-size:13px;font-weight:800;color:var(--white)">Score: <span style="color:var(--pink)">${r.score.toLocaleString()}</span> <span style="font-size:11px;color:var(--muted);font-weight:400">${tUI('pfBenchUnit')}</span></div>
+    results.innerHTML = `<div style="padding:10px 0;font-size:13px;font-weight:800;color:var(--white)">Score: <span style="color:var(--c-accent-fg)">${r.score.toLocaleString()}</span> <span style="font-size:11px;color:var(--muted);font-weight:400">${tUI('pfBenchUnit')}</span></div>
       <div style="font-size:11px;color:var(--muted)">${tUI('pfBenchBaselineNote')}</div>`
   } else {
     const delta = r.score - benchmarkBaseline
@@ -5947,7 +5947,7 @@ async function loadGameHistory() {
     const h = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60), s = sec % 60
     const dur = h > 0 ? `${h}h ${m}m` : m > 0 ? `${m}m` : `${s}s`
     const fps = e.avgFps ? `${e.avgFps} FPS` : '—'
-    const shield = e.shieldKills > 0 ? `<span style="color:var(--c-accent)">×${e.shieldKills}</span>` : '—'
+    const shield = e.shieldKills > 0 ? `<span style="color:var(--c-accent-fg)">×${e.shieldKills}</span>` : '—'
     const ug = e.updateBlocks > 0 ? `<span style="color:var(--c-danger)">×${e.updateBlocks}</span>` : '—'
     const d = new Date(e.ts)
     const date = `${d.getMonth()+1}/${d.getDate()} ${d.getHours()}:${String(d.getMinutes()).padStart(2,'0')}`
@@ -6590,15 +6590,15 @@ async function buildBiosTuner(c) {
   recoveryGuide.innerHTML = `
     <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 16px;cursor:pointer;user-select:none" onclick="this.parentElement.querySelector('.recovery-body').style.display = this.parentElement.querySelector('.recovery-body').style.display==='none' ? '' : 'none'; this.querySelector('.recovery-chevron').style.transform = this.parentElement.querySelector('.recovery-body').style.display==='' ? 'rotate(180deg)' : ''">
       <div style="display:flex;align-items:center;gap:10px">
-        <i class="fa fa-life-ring" style="color:var(--c-accent);font-size:15px"></i>
-        <span style="font-size:12px;font-weight:700;color:var(--c-accent);letter-spacing:0.3px">${tUI('biosRecoveryTitle')}</span>
+        <i class="fa fa-life-ring" style="color:var(--c-accent-fg);font-size:15px"></i>
+        <span style="font-size:12px;font-weight:700;color:var(--c-accent-fg);letter-spacing:0.3px">${tUI('biosRecoveryTitle')}</span>
       </div>
-      <i class="fa fa-chevron-down recovery-chevron" style="color:var(--c-accent);font-size:11px;transition:transform 0.2s;transform:rotate(180deg)"></i>
+      <i class="fa fa-chevron-down recovery-chevron" style="color:var(--c-accent-fg);font-size:11px;transition:transform 0.2s;transform:rotate(180deg)"></i>
     </div>
     <div class="recovery-body" style="padding:0 16px 14px;border-top:1px solid var(--c-border-subtle)">
       <div style="display:grid;gap:10px;margin-top:12px">
         <div style="background:var(--c-bg-raised, rgba(var(--fx),0.03));border-radius:7px;padding:10px 14px">
-          <div style="font-size:11px;font-weight:700;color:var(--c-accent);margin-bottom:5px"><i class="fa fa-power-off"></i> ${tUI('biosRecNoBoot')}</div>
+          <div style="font-size:11px;font-weight:700;color:var(--c-accent-fg);margin-bottom:5px"><i class="fa fa-power-off"></i> ${tUI('biosRecNoBoot')}</div>
           <ol style="margin:0;padding-left:16px;font-size:11px;color:var(--c-text-secondary);line-height:1.8">
             <li>${tUI('biosRecNoBootStep1')}</li>
             <li>${tUI('biosRecNoBootStep2')}</li>
@@ -6607,19 +6607,19 @@ async function buildBiosTuner(c) {
           </ol>
         </div>
         <div style="background:var(--c-bg-raised, rgba(var(--fx),0.03));border-radius:7px;padding:10px 14px">
-          <div style="font-size:11px;font-weight:700;color:var(--c-accent);margin-bottom:5px"><i class="fa fa-display"></i> ${tUI('biosRecBlackScreen')}</div>
+          <div style="font-size:11px;font-weight:700;color:var(--c-accent-fg);margin-bottom:5px"><i class="fa fa-display"></i> ${tUI('biosRecBlackScreen')}</div>
           <div style="font-size:11px;color:var(--c-text-secondary);line-height:1.8">${tUI('biosRecBlackScreenDesc')}</div>
         </div>
         <div style="background:var(--c-bg-raised, rgba(var(--fx),0.03));border-radius:7px;padding:10px 14px">
-          <div style="font-size:11px;font-weight:700;color:var(--c-accent);margin-bottom:5px"><i class="fa fa-memory"></i> ${tUI('biosRecXmpCrash')}</div>
+          <div style="font-size:11px;font-weight:700;color:var(--c-accent-fg);margin-bottom:5px"><i class="fa fa-memory"></i> ${tUI('biosRecXmpCrash')}</div>
           <div style="font-size:11px;color:var(--c-text-secondary);line-height:1.8">${tUI('biosRecXmpCrashDesc')}</div>
         </div>
         <div style="background:var(--c-bg-raised, rgba(var(--fx),0.03));border-radius:7px;padding:10px 14px">
-          <div style="font-size:11px;font-weight:700;color:var(--c-accent);margin-bottom:5px"><i class="fa fa-brands fa-windows"></i> ${tUI('biosRecHyperV')}</div>
+          <div style="font-size:11px;font-weight:700;color:var(--c-accent-fg);margin-bottom:5px"><i class="fa fa-brands fa-windows"></i> ${tUI('biosRecHyperV')}</div>
           <div style="font-size:11px;color:var(--c-text-secondary);line-height:1.8">${tUI('biosRecHyperVDesc')}</div>
         </div>
         <div style="background:var(--c-bg-raised, rgba(var(--fx),0.03));border-radius:7px;padding:10px 14px">
-          <div style="font-size:11px;font-weight:700;color:var(--c-accent);margin-bottom:5px"><i class="fa fa-microchip"></i> ${tUI('biosRecScewin')}</div>
+          <div style="font-size:11px;font-weight:700;color:var(--c-accent-fg);margin-bottom:5px"><i class="fa fa-microchip"></i> ${tUI('biosRecScewin')}</div>
           <div style="font-size:11px;color:var(--c-text-secondary);line-height:1.8">${tUI('biosRecScewinDesc')}</div>
         </div>
       </div>
@@ -6750,7 +6750,7 @@ async function buildBiosTuner(c) {
   ramStressRow.style.cssText = 'padding:4px 18px 14px'
   ramStressRow.innerHTML = `
     <div style="border-top:1px solid var(--border2);padding-top:12px;margin-top:4px">
-      <div style="font-size:11px;font-weight:700;color:var(--white);margin-bottom:4px"><i class="fa fa-flask" style="color:var(--c-accent)"></i> ${tUI('biosRamTestBtn')}</div>
+      <div style="font-size:11px;font-weight:700;color:var(--white);margin-bottom:4px"><i class="fa fa-flask" style="color:var(--c-accent-fg)"></i> ${tUI('biosRamTestBtn')}</div>
       <div style="font-size:11px;color:var(--c-text-tertiary);margin-bottom:8px">${tUI('biosRamTestNote')}</div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px">
         <button class="btn btn-ghost btn-sm" id="ram-stress-quick" onclick="doRamStressTest(30)"><i class="fa fa-stopwatch"></i> ${tUI('biosRamTestQuick')}</button>
@@ -6909,7 +6909,7 @@ async function buildBiosTuner(c) {
     <div style="display:flex;gap:16px;align-items:center;margin-bottom:10px;flex-wrap:wrap">
       <div id="bios-therm-cpu" style="background:var(--surface-2);border:1px solid var(--border2);border-radius:8px;padding:8px 16px;text-align:center;min-width:80px">
         <div style="font-size:11px;color:var(--gray);letter-spacing:0.5px;margin-bottom:2px">${tUI('biosThermalCpu')}</div>
-        <div id="bios-therm-cpu-val" style="font-size:22px;font-weight:900;color:var(--pink)">—</div>
+        <div id="bios-therm-cpu-val" style="font-size:22px;font-weight:900;color:var(--c-accent-fg)">—</div>
         <div style="font-size:11px;color:var(--gray)">°C</div>
       </div>
       <div id="bios-therm-gpu" style="background:var(--surface-2);border:1px solid var(--border2);border-radius:8px;padding:8px 16px;text-align:center;min-width:80px">
@@ -7955,7 +7955,7 @@ async function doRamDiagScan() {
       ${r.sticks.map(s => `
         <div style="background:var(--surface-2);border:1px solid var(--border2);border-radius:8px;padding:10px 14px;display:grid;grid-template-columns:auto 1fr;gap:4px 16px;align-items:start">
           <div style="font-size:11px;font-weight:800;color:var(--white);grid-column:1/-1;margin-bottom:4px">
-            <i class="fa fa-memory" style="color:var(--pink)"></i> ${s.slot} — ${s.cap}GB ${genLabel(s)}
+            <i class="fa fa-memory" style="color:var(--c-accent-fg)"></i> ${s.slot} — ${s.cap}GB ${genLabel(s)}
           </div>
           <div style="font-size:11px;color:var(--gray)">${tUI('biosRamRatedSpeed')}</div>  <div style="font-size:11px;color:var(--white)">${s.rated ? s.rated + ' MHz' : '—'}</div>
           <div style="font-size:11px;color:var(--gray)">${tUI('biosRamRunningAt')}</div>   <div style="font-size:11px;color:var(--white)">${s.actual ? s.actual + ' MHz' + (s.ddr5 ? ' '+tUI('biosRamDdr5HalfRate') : '') : '—'}</div>
@@ -7971,7 +7971,7 @@ async function doRamDiagScan() {
   timingsDiv.style.cssText = 'padding:0 18px 14px'
   if (t.ok && t.cl) {
     timingsDiv.innerHTML = `<div style="background:var(--surface-2);border:1px solid var(--border2);border-radius:8px;padding:10px 14px;font-size:11px">
-      <div style="font-weight:700;color:var(--white);margin-bottom:6px"><i class="fa fa-stopwatch" style="color:var(--pink)"></i> Memory Timings (CPU-Z)</div>
+      <div style="font-weight:700;color:var(--white);margin-bottom:6px"><i class="fa fa-stopwatch" style="color:var(--c-accent-fg)"></i> Memory Timings (CPU-Z)</div>
       <div style="color:var(--gray);font-family:monospace;font-size:12px;letter-spacing:0.5px">
         CL${t.cl} &nbsp;·&nbsp; tRCD${t.trcd} &nbsp;·&nbsp; tRP${t.trp} &nbsp;·&nbsp; tRAS${t.tras} &nbsp;·&nbsp; CR${t.cr} &nbsp;@&nbsp; ${t.freq} MHz
       </div>
@@ -9334,7 +9334,7 @@ async function updateMetrics() {
         const overlay = document.createElement('div')
         overlay.id = 'cpu-temp-nosensor'
         overlay.style.cssText = 'position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;background:rgba(13,13,13,0.7);border-radius:var(--radius);z-index:2'
-        overlay.innerHTML = `<i class="fa fa-thermometer-empty" style="font-size:22px;color:var(--c-text-tertiary)"></i><span style="font-size:11px;color:var(--c-text-tertiary);text-align:center;padding:0 16px">No CPU temperature sensor detected.<br><span style="color:var(--c-text-tertiary)">Install <a href="#" onclick="api.openExternal('https://github.com/LibreHardwareMonitor/LibreHardwareMonitor')" style="color:var(--pink)">LibreHardwareMonitor</a> and run as Admin to enable.</span></span>`
+        overlay.innerHTML = `<i class="fa fa-thermometer-empty" style="font-size:22px;color:var(--c-text-tertiary)"></i><span style="font-size:11px;color:var(--c-text-tertiary);text-align:center;padding:0 16px">No CPU temperature sensor detected.<br><span style="color:var(--c-text-tertiary)">Install <a href="#" onclick="api.openExternal('https://github.com/LibreHardwareMonitor/LibreHardwareMonitor')" style="color:var(--c-accent-fg)">LibreHardwareMonitor</a> and run as Admin to enable.</span></span>`
         panel.style.position = 'relative'
         panel.appendChild(overlay)
       }
@@ -9795,7 +9795,7 @@ async function runWindowsHealthDash(btn) {
   } else {
     banner.style.background = pinkA(0.07); banner.style.border = `1px solid ${pinkA(0.2)}`; banner.style.color = 'var(--pink)'
     banner.innerHTML = `<i class="fa fa-triangle-exclamation"></i> <strong>${tUI('dashHealthIssueCount').replace('{n}', result.issues.length)}</strong><br><span style="font-size:11px;opacity:.85">${result.issues.join('<br>')}</span>`
-    btn.innerHTML = `<i class="fa fa-triangle-exclamation" style="color:var(--pink)"></i> ${tUI('dashHealthBtnIssues')}`
+    btn.innerHTML = `<i class="fa fa-triangle-exclamation" style="color:var(--c-accent-fg)"></i> ${tUI('dashHealthBtnIssues')}`
   }
   btn.disabled = false
 }
@@ -10018,7 +10018,7 @@ function ariaRenderJournal() {
 
       return `<div style="background:rgba(155,89,182,0.06);border:1px solid rgba(155,89,182,0.18);border-radius:7px;padding:8px 10px">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px">
-          <span style="font-size:11px;font-weight:700;color:var(--c-accent)">${gameName}</span>
+          <span style="font-size:11px;font-weight:700;color:var(--c-accent-fg)">${gameName}</span>
           <span style="font-size:11px;color:var(--muted)">${dateStr} · ${timeStr}${durMin ? ` · ${durMin}m` : ''}</span>
         </div>
         <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:${insights.length ? '6px' : '0'}">
@@ -10310,7 +10310,7 @@ async function ariaShowSessionCoach() {
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
         <div style="display:flex;align-items:center;gap:10px">
           <div style="width:42px;height:42px;border-radius:50%;background:rgba(155,89,182,0.15);border:2px solid rgba(155,89,182,0.4);display:flex;align-items:center;justify-content:center">
-            <i class="fa fa-brain" style="color:var(--c-accent);font-size:18px"></i>
+            <i class="fa fa-brain" style="color:var(--c-accent-fg);font-size:18px"></i>
           </div>
           <div>
             <div style="font-size:12px;font-weight:800;color:var(--white)">ARIA Session Coach</div>
@@ -10357,7 +10357,7 @@ async function ariaShowSessionCoach() {
         </div>
         ${data.recommendation ? `
         <div style="display:flex;gap:8px;align-items:flex-start;background:rgba(155,89,182,0.08);border:1px solid rgba(155,89,182,0.2);border-radius:7px;padding:7px 9px;margin-top:2px">
-          <i class="fa fa-lightbulb" style="color:var(--c-accent);margin-top:1px;min-width:14px"></i>
+          <i class="fa fa-lightbulb" style="color:var(--c-accent-fg);margin-top:1px;min-width:14px"></i>
           <span style="color:var(--c-text-primary)">${data.recommendation}</span>
         </div>` : ''}
       </div>
@@ -10606,7 +10606,7 @@ async function ariaRefreshInsights() {
           return `<span style="${cls};font-size:11px;margin-left:3px">(${sign}${d.toFixed(1)}ms)</span>`
         }
         frameRow = `<div style="margin-top:5px;padding-top:5px;border-top:1px solid rgba(var(--fx),0.06);font-size:11px;color:var(--muted)">
-          <span style="font-weight:700;color:var(--c-accent);margin-right:6px"><i class="fa fa-chart-line" style="font-size:11px"></i> ${tUI('ariaInsightFrameTime')}</span>
+          <span style="font-weight:700;color:var(--c-accent-fg);margin-right:6px"><i class="fa fa-chart-line" style="font-size:11px"></i> ${tUI('ariaInsightFrameTime')}</span>
           <span style="margin-right:8px">${tUI('ariaInsightFrameMean')}: ${fmtMs(ft.before?.mean)} → ${fmtMs(ft.after?.mean)}${fmtDelta(ft.meanDelta)}</span>
           <span style="margin-right:8px">${tUI('ariaInsightFrameP1')}: ${fmtMs(ft.before?.p1Low)} → ${fmtMs(ft.after?.p1Low)}${fmtDelta(ft.p1Delta)}</span>
           <span>${tUI('ariaInsightFrameP01')}: ${fmtMs(ft.before?.p01Low)} → ${fmtMs(ft.after?.p01Low)}${fmtDelta(ft.p01Delta)}</span>
@@ -10973,7 +10973,7 @@ async function aomRunHealthInline() {
     // Issues found — show warning with option to proceed or stop
     body.innerHTML += `
       <div class="aom-restore-warn" style="margin-top:var(--sp-1-5)">
-        <div><div style="font-size:var(--font-size-sm);font-weight:700;color:var(--c-text-primary);margin-bottom:4px"><i class="fa fa-triangle-exclamation" style="color:var(--c-accent)"></i> ${tWizard('aomHealthIssuesTitle')}</div>
+        <div><div style="font-size:var(--font-size-sm);font-weight:700;color:var(--c-text-primary);margin-bottom:4px"><i class="fa fa-triangle-exclamation" style="color:var(--c-accent-fg)"></i> ${tWizard('aomHealthIssuesTitle')}</div>
         ${result.issues.map(i => `<div style="font-size:var(--font-size-xs);color:var(--c-danger);padding:2px 0">• ${i}</div>`).join('')}
         <div style="font-size:var(--font-size-xs);color:var(--c-text-tertiary);margin-top:6px">${tWizard('aomHealthIssuesBody')}</div></div>
       </div>`
@@ -11119,7 +11119,7 @@ async function aomUndoRun(rpName) {
   try {
     await showConfirm({
       title: tUI('aomUndoRun'),
-      body: `<strong style="color:var(--c-accent)">${tUI('restoreConfirmBody')}</strong><br><br>Windows will restore to the restore point created before Auto-Optimize and <strong style="color:var(--c-text-primary)">restart automatically</strong>.<br><br><span style="font-size:12px;color:var(--c-text-tertiary)">Tweak states will be reset to match the restored system.</span>`,
+      body: `<strong style="color:var(--c-accent-fg)">${tUI('restoreConfirmBody')}</strong><br><br>Windows will restore to the restore point created before Auto-Optimize and <strong style="color:var(--c-text-primary)">restart automatically</strong>.<br><br><span style="font-size:12px;color:var(--c-text-tertiary)">Tweak states will be reset to match the restored system.</span>`,
       okText: tUI('restoreConfirmOk'),
       okStyle: 'danger',
       icon: 'fa-rotate-left'
@@ -11742,7 +11742,7 @@ async function aomRenderRunPlanPreview() {
       ${renderPlanRows(plan)}
     </div>
     <div class="aom-restore-warn">
-      <i class="fa fa-shield-halved" style="color:var(--c-accent);flex-shrink:0;font-size:12px;margin-top:1px"></i>
+      <i class="fa fa-shield-halved" style="color:var(--c-accent-fg);flex-shrink:0;font-size:12px;margin-top:1px"></i>
       <span style="font-size:11px;color:var(--c-text-secondary);line-height:1.5">${tWizard('aomRestorePointWarn')}</span>
     </div>`
 
@@ -11857,7 +11857,7 @@ async function aomRenderStep2() {
       </div>
     </details>` : ''}
     <div class="aom-restore-warn">
-      <i class="fa fa-shield-halved" style="color:var(--c-accent);flex-shrink:0;font-size:13px;margin-top:1px"></i>
+      <i class="fa fa-shield-halved" style="color:var(--c-accent-fg);flex-shrink:0;font-size:13px;margin-top:1px"></i>
       <span style="font-size:var(--font-size-sm);color:var(--c-text-secondary);line-height:var(--lh-base)">${tWizard('aomRestorePointWarn')}</span>
     </div>`
 
@@ -12713,9 +12713,9 @@ function spwStep1() {
         <div id="spw-uc-${u.id}" onclick="spwSelectUseCase('${u.id}')"
           style="background:var(--surface-2);border:1px solid var(--hairline-strong);border-radius:10px;padding:12px 16px;cursor:pointer;transition:border-color .15s,background .15s;display:flex;align-items:center;gap:14px"
           onmouseenter="this.style.borderColor = 'rgba(var(--c-accent-rgb),0.4)'" onmouseleave="if(!this.classList.contains('spw-sel'))this.style.borderColor='var(--hairline-strong)'">
-          <div style="width:36px;height:36px;border-radius:8px;background:rgba(var(--c-accent-rgb),0.1);border:1px solid rgba(var(--c-accent-rgb),0.2);display:flex;align-items:center;justify-content:center;font-size:15px;color:var(--c-accent);flex-shrink:0"><i class="fa ${u.icon}"></i></div>
+          <div style="width:36px;height:36px;border-radius:8px;background:rgba(var(--c-accent-rgb),0.1);border:1px solid rgba(var(--c-accent-rgb),0.2);display:flex;align-items:center;justify-content:center;font-size:15px;color:var(--c-accent-fg);flex-shrink:0"><i class="fa ${u.icon}"></i></div>
           <div><div style="font-size:12px;font-weight:700;color:var(--white)">${u.label}</div><div style="font-size:11px;color:var(--muted);margin-top:2px">${u.desc}</div></div>
-          <i class="fa fa-circle-check" id="spw-uc-chk-${u.id}" style="margin-left:auto;font-size:16px;color:var(--c-accent);display:none"></i>
+          <i class="fa fa-circle-check" id="spw-uc-chk-${u.id}" style="margin-left:auto;font-size:16px;color:var(--c-accent-fg);display:none"></i>
         </div>`).join('')}
     </div>`
   document.getElementById('spw-footer').innerHTML = `
@@ -12758,13 +12758,13 @@ function spwStep2() {
     <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:14px">
       ${specs.map(s => `
         <div style="display:flex;align-items:center;gap:10px;padding:9px 12px;background:var(--surface-2);border:1px solid var(--hairline-strong);border-radius:8px">
-          <i class="fa ${s.icon}" style="color:var(--c-accent);width:13px;font-size:12px;flex-shrink:0"></i>
+          <i class="fa ${s.icon}" style="color:var(--c-accent-fg);width:13px;font-size:12px;flex-shrink:0"></i>
           <span style="font-size:11px;color:var(--muted);width:64px;flex-shrink:0">${s.label}</span>
           <span style="font-size:11px;color:var(--c-text-primary);font-weight:600;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${s.val}</span>
         </div>`).join('')}
     </div>
     <div style="padding:9px 12px;background:rgba(var(--c-accent-rgb),0.06);border:1px solid rgba(var(--c-accent-rgb),0.18);border-radius:8px;font-size:11px;color:var(--gray)">
-      <i class="fa fa-circle-info" style="color:var(--c-accent);margin-right:5px"></i>${tWizard('spwHwNote')}
+      <i class="fa fa-circle-info" style="color:var(--c-accent-fg);margin-right:5px"></i>${tWizard('spwHwNote')}
     </div>`
   document.getElementById('spw-footer').innerHTML = `
     <button class="btn btn-ghost btn-sm" onclick="spwStep1()"><i class="fa fa-arrow-left"></i> ${tWizard('spwBack')}</button>
@@ -12783,9 +12783,9 @@ function spwStep3() {
         <div id="spw-g-${g.id}" onclick="spwToggleGame('${g.id}')"
           style="background:var(--surface-2);border:1px solid var(--hairline-strong);border-radius:8px;padding:10px 12px;cursor:pointer;transition:border-color .15s,background .15s;display:flex;align-items:center;gap:10px"
           onmouseenter="this.style.borderColor = 'rgba(var(--c-accent-rgb),0.4)'" onmouseleave="this.style.borderColor=_spwGames.has('${g.id}')?'var(--c-accent)':'var(--hairline-strong)'">
-          <i class="fa ${g.icon}" style="color:var(--c-accent);width:12px;font-size:13px;flex-shrink:0"></i>
+          <i class="fa ${g.icon}" style="color:var(--c-accent-fg);width:12px;font-size:13px;flex-shrink:0"></i>
           <span style="font-size:11.5px;font-weight:600;color:var(--white)">${g.label}</span>
-          <i class="fa fa-check" id="spw-g-chk-${g.id}" style="margin-left:auto;font-size:12px;color:var(--c-accent);display:none"></i>
+          <i class="fa fa-check" id="spw-g-chk-${g.id}" style="margin-left:auto;font-size:12px;color:var(--c-accent-fg);display:none"></i>
         </div>`).join('')}
     </div>
     <div style="margin-top:10px;font-size:11px;color:var(--muted);text-align:center"><i class="fa fa-circle-info"></i> ${tWizard('spwSkip')}</div>`
@@ -12826,7 +12826,7 @@ function spwStep4() {
     <div style="display:flex;flex-direction:column;gap:8px">
       ${periphItems.map(p => `
         <div style="background:var(--surface-2);border:1px solid var(--hairline-strong);border-radius:10px;padding:11px 14px;display:flex;align-items:center;gap:12px">
-          <div style="width:32px;height:32px;border-radius:7px;background:rgba(var(--c-accent-rgb),0.1);border:1px solid rgba(var(--c-accent-rgb),0.2);display:flex;align-items:center;justify-content:center;font-size:13px;color:var(--c-accent);flex-shrink:0"><i class="fa ${p.icon}"></i></div>
+          <div style="width:32px;height:32px;border-radius:7px;background:rgba(var(--c-accent-rgb),0.1);border:1px solid rgba(var(--c-accent-rgb),0.2);display:flex;align-items:center;justify-content:center;font-size:13px;color:var(--c-accent-fg);flex-shrink:0"><i class="fa ${p.icon}"></i></div>
           <div style="flex:1">
             <div style="font-size:11px;font-weight:700;color:var(--white)">${p.label}</div>
             <div style="font-size:11px;color:var(--muted);margin-top:1px">${p.desc}</div>
@@ -12869,9 +12869,9 @@ function spwStep5() {
         <div id="spw-conn-${c.id}" onclick="spwSelectConn('${c.id}')"
           style="background:${_spwConnType===c.id?'rgba(var(--c-accent-rgb),0.12)':'var(--surface-2)'};border:1px solid ${_spwConnType===c.id?'var(--c-accent)':'var(--surface-2)'};border-radius:10px;padding:12px 16px;cursor:pointer;transition:all .15s;display:flex;align-items:center;gap:14px"
           onmouseenter="this.style.borderColor = 'rgba(var(--c-accent-rgb),0.4)'" onmouseleave="if(_spwConnType!=='${c.id}')this.style.borderColor='var(--hairline-strong)'">
-          <div style="width:36px;height:36px;border-radius:8px;background:rgba(var(--c-accent-rgb),0.1);border:1px solid rgba(var(--c-accent-rgb),0.2);display:flex;align-items:center;justify-content:center;font-size:15px;color:var(--c-accent);flex-shrink:0"><i class="fa ${c.icon}"></i></div>
+          <div style="width:36px;height:36px;border-radius:8px;background:rgba(var(--c-accent-rgb),0.1);border:1px solid rgba(var(--c-accent-rgb),0.2);display:flex;align-items:center;justify-content:center;font-size:15px;color:var(--c-accent-fg);flex-shrink:0"><i class="fa ${c.icon}"></i></div>
           <div style="flex:1"><div style="font-size:12px;font-weight:700;color:var(--white)">${c.label}</div><div style="font-size:11px;color:var(--muted);margin-top:2px">${c.desc}</div></div>
-          <i class="fa fa-circle-check" style="font-size:16px;color:var(--c-accent);${_spwConnType===c.id?'':'display:none'}"></i>
+          <i class="fa fa-circle-check" style="font-size:16px;color:var(--c-accent-fg);${_spwConnType===c.id?'':'display:none'}"></i>
         </div>`).join('')}
     </div>`
   document.getElementById('spw-footer').innerHTML = `
@@ -12900,7 +12900,7 @@ function spwStep6() {
           onmouseenter="this.style.borderColor = 'rgba(var(--c-accent-rgb),0.4)'" onmouseleave="if(_spwSafetyLevel!=='${s.id}')this.style.borderColor='var(--hairline-strong)'">
           <div style="width:36px;height:36px;border-radius:8px;background:rgba(0,0,0,0.2);border:1px solid ${s.color}44;display:flex;align-items:center;justify-content:center;font-size:15px;color:${s.color};flex-shrink:0"><i class="fa ${s.icon}"></i></div>
           <div style="flex:1"><div style="font-size:12px;font-weight:700;color:var(--white)">${s.label}</div><div style="font-size:11px;color:var(--muted);margin-top:2px">${s.desc}</div></div>
-          <i class="fa fa-circle-check" style="font-size:16px;color:var(--c-accent);${_spwSafetyLevel===s.id?'':'display:none'}"></i>
+          <i class="fa fa-circle-check" style="font-size:16px;color:var(--c-accent-fg);${_spwSafetyLevel===s.id?'':'display:none'}"></i>
         </div>`).join('')}
     </div>`
   document.getElementById('spw-footer').innerHTML = `
@@ -12934,7 +12934,7 @@ async function spwStep7() {
   _spwPlanIds = [...tweakIds]
   body.innerHTML = `
     <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;align-items:center">
-      <div style="background:rgba(var(--c-accent-rgb),0.1);border:1px solid rgba(var(--c-accent-rgb),0.25);border-radius:8px;padding:7px 13px;font-size:11px;color:var(--c-accent)"><i class="fa fa-wand-sparkles"></i> ${tweakIds.length} ${tWizard('spwStep7Sub')}</div>
+      <div style="background:rgba(var(--c-accent-rgb),0.1);border:1px solid rgba(var(--c-accent-rgb),0.25);border-radius:8px;padding:7px 13px;font-size:11px;color:var(--c-accent-fg)"><i class="fa fa-wand-sparkles"></i> ${tweakIds.length} ${tWizard('spwStep7Sub')}</div>
     </div>
     ${tweakIds.length === 0 ? `<div style="text-align:center;padding:24px 0;color:var(--success)"><i class="fa fa-check-circle" style="font-size:28px;margin-bottom:8px;display:block"></i>${tWizard('spwAllApplied')}</div>` : ''}
     <div style="display:flex;flex-direction:column;gap:4px;max-height:290px;overflow-y:auto" id="spw-plan-rows">
@@ -12950,7 +12950,7 @@ async function spwStep7() {
           ${tier ? `<span style="font-size:11px;font-weight:700;padding:2px 6px;border-radius:4px;background:rgba(0,0,0,0.3);color:${tierColor[tier]};border:1px solid ${tierColor[tier]}33;flex-shrink:0">${tierLabel[tier]}</span>` : ''}
         </div>`}).join('')}
     </div>
-    ${tweakIds.length > 0 ? `<div style="margin-top:10px;padding:9px 11px;background:rgba(var(--c-accent-rgb),0.06);border:1px solid rgba(var(--c-accent-rgb),0.16);border-radius:8px;display:flex;gap:8px;align-items:flex-start"><i class="fa fa-shield-halved" style="color:var(--c-accent);flex-shrink:0;font-size:12px;margin-top:1px"></i><span style="font-size:11px;color:var(--c-text-primary);line-height:1.5">${tWizard('aomRestorePointWarn')}</span></div>` : ''}`
+    ${tweakIds.length > 0 ? `<div style="margin-top:10px;padding:9px 11px;background:rgba(var(--c-accent-rgb),0.06);border:1px solid rgba(var(--c-accent-rgb),0.16);border-radius:8px;display:flex;gap:8px;align-items:flex-start"><i class="fa fa-shield-halved" style="color:var(--c-accent-fg);flex-shrink:0;font-size:12px;margin-top:1px"></i><span style="font-size:11px;color:var(--c-text-primary);line-height:1.5">${tWizard('aomRestorePointWarn')}</span></div>` : ''}`
 
   footer.innerHTML = `
     <button class="btn btn-ghost btn-sm" onclick="spwStep6()"><i class="fa fa-arrow-left"></i> ${tWizard('spwBack')}</button>
@@ -13083,7 +13083,7 @@ async function buildHardware(c) {
   hwProgHeader.className = 'hw-progress-header'
   hwProgHeader.id = 'hw-progress-header'
   hwProgHeader.innerHTML = `
-    <i class="fa fa-microchip" style="color:var(--c-accent);font-size:14px;flex-shrink:0"></i>
+    <i class="fa fa-microchip" style="color:var(--c-accent-fg);font-size:14px;flex-shrink:0"></i>
     <span id="hw-prog-label" style="font-size:11px;font-weight:700;color:var(--gray);white-space:nowrap">—</span>
     <div class="fivem-progress-bar-track" style="flex:1">
       <div class="fivem-progress-bar-fill" id="hw-prog-fill" style="width:0%;background:linear-gradient(90deg,var(--c-accent),rgba(var(--pink-rgb),0.5))"></div>
@@ -13117,7 +13117,7 @@ async function buildHardware(c) {
     <span class="hw-step-arrow"><i class="fa fa-chevron-right"></i></span>
     <span class="hw-step-chip">
       <span class="hw-step-num">2</span>
-      <i class="fa fa-bolt" style="color:var(--c-accent)"></i>
+      <i class="fa fa-bolt" style="color:var(--c-accent-fg)"></i>
       <span>${tUI('hwStep2')}</span>
     </span>
     <span class="hw-step-arrow"><i class="fa fa-chevron-right"></i></span>
@@ -17113,7 +17113,7 @@ function buildDebloater(c) {
       <button class="btn btn-info btn-sm" onclick="doDebloatScan()"><i class="fa fa-magnifying-glass"></i> ${tUI('scanBtn')}</button>
       <button class="btn btn-sm" style="background:var(--warning-bg);color:var(--warning);border:1px solid var(--c-warning-muted);" onclick="doDebloatRecommended()"><i class="fa fa-gamepad"></i> ${tUI('scanGaming')}</button>
       <button class="btn btn-sm" style="background:rgba(0,150,255,0.12);color:var(--c-info);border:1px solid rgba(0,150,255,0.3);" onclick="doDevPreset()"><i class="fa fa-code"></i> ${tUI('devPreset')}</button>
-      <button class="btn btn-sm" style="background:rgba(228,100,255,0.12);color:var(--pink);border:1px solid rgba(228,100,255,0.3);" onclick="doStreamerPreset()"><i class="fa fa-circle-dot"></i> ${tUI('streamerPreset')}</button>
+      <button class="btn btn-sm" style="background:rgba(228,100,255,0.12);color:var(--c-accent-fg);border:1px solid rgba(228,100,255,0.3);" onclick="doStreamerPreset()"><i class="fa fa-circle-dot"></i> ${tUI('streamerPreset')}</button>
     </div>
   `
   storeSection.appendChild(scanCard)
@@ -17215,7 +17215,7 @@ function buildDebloater(c) {
     if (!catTasks.length) continue
     const hdr = document.createElement('div')
     hdr.style.cssText = 'padding:6px 18px 2px;display:flex;align-items:center;gap:6px;border-top:1px solid var(--border2);margin-top:4px'
-    hdr.innerHTML = `<i class="fa ${cat.icon}" style="font-size:11px;color:var(--pink)"></i><span style="font-size:11px;font-weight:600;color:var(--c-text-tertiary);letter-spacing:.5px;text-transform:uppercase">${cat.label}</span><span style="font-size:11px;color:var(--c-text-tertiary);margin-left:4px">${catTasks.length}</span>`
+    hdr.innerHTML = `<i class="fa ${cat.icon}" style="font-size:11px;color:var(--c-accent-fg)"></i><span style="font-size:11px;font-weight:600;color:var(--c-text-tertiary);letter-spacing:.5px;text-transform:uppercase">${cat.label}</span><span style="font-size:11px;color:var(--c-text-tertiary);margin-left:4px">${catTasks.length}</span>`
     taskCard.appendChild(hdr)
     catTasks.forEach(task => {
       const safeId = task.name.replace(/\W/g,'_')
@@ -18866,7 +18866,7 @@ async function doRestoreToPoint() {
     }
   } catch {}
 
-  try { await showConfirm({ title: `${tUI('restoreConfirmTitle')} #${seq}`, body: `<strong style="color:var(--pink)">${tUI('restoreConfirmBody')}</strong><br><br>Windows will restore to this point and <strong style="color:var(--c-text-primary)">restart automatically</strong>.${diffHtml}<br><br><span style="font-size:12px;color:var(--muted)">Tweak states will be reset to match the restored system.</span>`, okText: tUI('restoreConfirmOk'), okStyle: 'danger', icon: 'fa-triangle-exclamation' }) } catch { return }
+  try { await showConfirm({ title: `${tUI('restoreConfirmTitle')} #${seq}`, body: `<strong style="color:var(--c-accent-fg)">${tUI('restoreConfirmBody')}</strong><br><br>Windows will restore to this point and <strong style="color:var(--c-text-primary)">restart automatically</strong>.${diffHtml}<br><br><span style="font-size:12px;color:var(--muted)">Tweak states will be reset to match the restored system.</span>`, okText: tUI('restoreConfirmOk'), okStyle: 'danger', icon: 'fa-triangle-exclamation' }) } catch { return }
   const r = await api.restoreToPoint(seq)
   if (!r.ok) {
     if (r.fallback) {
