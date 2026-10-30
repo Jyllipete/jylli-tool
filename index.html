@@ -1907,7 +1907,7 @@ function settingsToggleAutoPulse(on) {
 
 function _syncLrCardOpacity(cardId, checked) {
   const el = document.getElementById(cardId)
-  if (el) el.style.opacity = checked ? '1' : '0.5'
+  if (el) el.classList.toggle('lr-off', !checked)   // the switch carries the state; dimming the whole card made an idle Pulse look broken
 }
 
 function launchRuleToggle(rule, on) {
@@ -4941,12 +4941,10 @@ async function _fixBadgeRecommended(settings) {
 }
 
 async function buildFixes(c) {
-  // Hero
-  const hero = document.createElement('div')
-  hero.style.cssText = 'background:linear-gradient(135deg,var(--surface-2),var(--surface-2));border:1px solid var(--hairline-strong);border-radius:10px;padding:14px 18px;margin-bottom:14px'
-  hero.innerHTML = `
-    <div style="font-size:16px;font-weight:800;color:var(--white);margin-bottom:4px"><i class="fa fa-wrench"></i> ${tUI('fixesTitle')}</div>
-    <div style="font-size:11px;color:var(--gray);line-height:1.5">${tUI('fixesHero')}</div>`
+  // Lede (the section header above already carries the title)
+  const hero = document.createElement('p')
+  hero.className = 'j-lede'
+  hero.textContent = tUI('fixesHero')
   c.appendChild(hero)
 
   // Search bar
