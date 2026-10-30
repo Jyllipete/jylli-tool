@@ -527,6 +527,7 @@
 <script src="js/pages/system-processes.js"></script>
 <script src="js/pages/system-history.js"></script>
 <script src="js/pages/system-scheduler.js"></script>
+<script src="js/pages/optimize-fixes.js"></script>
 <script src="js/ui-helpers.js"></script>
 <script src="js/fivem-logic.js"></script>
 <script>
@@ -4915,8 +4916,7 @@ async function _fixBadgeRecommended(settings) {
     const slot = document.querySelector(`#fix-card-${id} .fix-badge-slot`)
     if (!slot || slot.querySelector('.fix-rec-badge')) return
     const badge = document.createElement('span')
-    badge.className = 'fix-rec-badge'
-    badge.style.cssText = 'font-size:11px;font-weight:700;color:var(--c-warning);background:rgba(245,158,11,0.12);border:1px solid rgba(245,158,11,0.3);border-radius:4px;padding:1px 6px'
+    badge.className = 'j-badge j-badge-warn fix-rec-badge'
     badge.textContent = `★ ${tUI('fixRecommended')}`
     slot.appendChild(badge)
   }
@@ -4943,115 +4943,6 @@ async function _fixBadgeRecommended(settings) {
   // Re-trigger active search so newly injected badges don't stay hidden if user already typed
   const _searchInput = document.getElementById('fix-search-input')
   if (_searchInput?.value) _searchInput.dispatchEvent(new Event('input'))
-}
-
-async function buildFixes(c) {
-  // Lede (the section header above already carries the title)
-  const hero = document.createElement('p')
-  hero.className = 'j-lede'
-  hero.textContent = tUI('fixesHero')
-  c.appendChild(hero)
-
-  // Search bar
-  const searchWrap = document.createElement('div')
-  searchWrap.style.cssText = 'position:relative;margin-bottom:12px'
-  searchWrap.innerHTML = `
-    <i class="fa fa-magnifying-glass" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--gray);font-size:11px;pointer-events:none"></i>
-    <input id="fix-search-input" type="text" placeholder="${tUI('fixSearchPlaceholder')}"
-      style="width:100%;box-sizing:border-box;background:var(--bg-card);border:1px solid var(--border);border-radius:8px;padding:7px 10px 7px 28px;font-size:11px;color:var(--white);outline:none">`
-  c.appendChild(searchWrap)
-
-  // LGHUB warning (async, inserted after search bar if present)
-  api.checkLghub?.().then(r => {
-    if (!r?.present) return
-    const warn = document.createElement('div')
-    warn.style.cssText = 'background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.3);border-radius:8px;padding:10px 14px;margin-bottom:10px;display:flex;align-items:center;gap:10px'
-    warn.innerHTML = `<i class="fa fa-triangle-exclamation" style="color:var(--c-danger);font-size:14px;flex-shrink:0"></i><div style="font-size:11px;color:var(--c-text-primary);line-height:1.5"><strong style="color:var(--c-danger)">${tUI('fixLghubTitle')}</strong> — ${tUI('fixLghubDesc')}</div>`
-    c.insertBefore(warn, searchWrap.nextSibling)
-  }).catch(() => {})
-
-  // Load settings for applied state
-  const settings = await api.loadSettings().catch(() => ({}))
-
-  // Category definitions
-  const CATS = [
-    { key: 'gaming',   label: tUI('fixCatGaming'),   icon: 'fa-gamepad' },
-    { key: 'hardware', label: tUI('fixCatHardware'),  icon: 'fa-microchip' },
-    { key: 'system',   label: tUI('fixCatSystem'),    icon: 'fa-gear' },
-  ]
-
-  const catSections = {}
-  CATS.forEach(cat => {
-    const section = document.createElement('div')
-    section.className = `fix-cat-section fix-cat-${cat.key}`
-    section.style.cssText = 'margin-bottom:16px'
-
-    const header = document.createElement('div')
-    header.className = `fix-cat-header fix-cat-header-${cat.key}`
-    header.style.cssText = 'display:flex;align-items:center;gap:7px;margin-bottom:8px;padding:0 2px'
-    header.innerHTML = `
-      <i class="fa ${cat.icon}" style="font-size:11px;color:var(--cyan)"></i>
-      <span style="font-size:11px;font-weight:700;color:var(--cyan);text-transform:uppercase;letter-spacing:0.8px">${cat.label}</span>`
-
-    const grid = document.createElement('div')
-    grid.className = `fix-grid fix-grid-${cat.key}`
-    grid.style.cssText = 'display:grid;grid-template-columns:repeat(3,1fr);gap:10px'
-
-    section.appendChild(header)
-    section.appendChild(grid)
-    c.appendChild(section)
-    catSections[cat.key] = { section, grid }
-  })
-
-  // Render fix cards
-  FIXES_DEFS.forEach(fix => {
-    const applied = settings[`fix_${fix.id}`] === 'applied'
-    const name = LANG[currentLang]?.fixNames?.[fix.id] || fix.name
-    const desc = tFixDesc(fix.id) || fix.desc
-
-    const card = document.createElement('div')
-    card.id = `fix-card-${fix.id}`
-    card.className = 'fix-card'
-    card.dataset.name = name.toLowerCase()
-    card.dataset.desc = desc.toLowerCase()
-    card.dataset.cat = fix.category
-    card.style.cssText = 'background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:16px 18px;display:flex;flex-direction:column;gap:10px;transition:border-color 0.15s'
-
-    card.innerHTML = `
-      <div style="display:flex;align-items:center;gap:10px">
-        <div style="width:36px;height:36px;background:var(--bg-card2);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">${fix.icon}</div>
-        <div style="flex:1;min-width:0">
-          <div style="font-size:12px;font-weight:700;color:var(--white);line-height:1.3">${name}</div>
-          <div class="fix-badge-slot" style="display:flex;gap:4px;flex-wrap:wrap;margin-top:3px">
-            ${applied ? `<span class="fix-applied-badge" style="font-size:11px;font-weight:700;color:var(--c-success);background:rgba(74,222,128,0.12);border:1px solid rgba(74,222,128,0.3);border-radius:4px;padding:1px 6px">✓ ${tUI('fixApplied')}</span>` : ''}
-          </div>
-        </div>
-      </div>
-      <div style="font-size:11px;color:var(--gray);line-height:1.6;flex:1">${desc}</div>
-      <button class="btn ${applied ? 'btn-outline' : 'btn-primary'} btn-sm fix-run-btn" id="fix-btn-${fix.id}" onclick="runFix('${fix.id}',this)">${tUI('runFix')}</button>
-    `
-
-    const target = catSections[fix.category]?.grid
-    if (target) target.appendChild(card)
-  })
-
-  // Search filter
-  document.getElementById('fix-search-input')?.addEventListener('input', e => {
-    const q = e.target.value.toLowerCase().trim()
-    CATS.forEach(cat => {
-      const { section, grid } = catSections[cat.key]
-      let anyVisible = false
-      grid.querySelectorAll('.fix-card').forEach(card => {
-        const match = !q || card.dataset.name.includes(q) || card.dataset.desc.includes(q)
-        card.style.display = match ? '' : 'none'
-        if (match) anyVisible = true
-      })
-      section.style.display = anyVisible ? '' : 'none'
-    })
-  })
-
-  // Smart recommendations (async, non-blocking)
-  _fixBadgeRecommended(settings)
 }
 
 async function runFix(id, btn) {
@@ -5082,7 +4973,7 @@ async function runFix(id, btn) {
     const r = await api.runFix(id)
     if (r?.ok) {
       btn.innerHTML = `<i class="fa fa-check"></i> ${tUI('fixDone')}`
-      btn.className = 'btn btn-success btn-sm fix-run-btn'
+      btn.className = 'j-btn j-btn-sm j-btn-ghost fix-run-btn'
       toast(tUI('tkFixApplied'), fix.name, 'ok')
       if (id !== 'fix-fullscreen-flicker') {
         const s = await api.loadSettings().catch(() => ({}))
@@ -5092,12 +4983,11 @@ async function runFix(id, btn) {
         if (slot && !slot.querySelector('.fix-applied-badge')) {
           slot.querySelectorAll('.fix-rec-badge').forEach(b => b.remove())
           const badge = document.createElement('span')
-          badge.className = 'fix-applied-badge'
-          badge.style.cssText = 'font-size:11px;font-weight:700;color:var(--c-success);background:rgba(74,222,128,0.12);border:1px solid rgba(74,222,128,0.3);border-radius:4px;padding:1px 6px'
+          badge.className = 'j-badge j-badge-ok fix-applied-badge'
           badge.textContent = `✓ ${tUI('fixApplied')}`
           slot.appendChild(badge)
         }
-        setTimeout(() => { btn.className = 'btn btn-outline btn-sm fix-run-btn' }, 1500)
+        setTimeout(() => { btn.className = 'j-btn j-btn-sm j-btn-ghost fix-run-btn' }, 1500)
       }
       if (id === 'fix-wifi' || id === 'fix-winsock') {
         try {

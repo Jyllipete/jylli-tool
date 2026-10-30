@@ -1432,7 +1432,7 @@ LANG.en = {
       netOptiTierFull:'Fully Optimized',
       // Fixes hero
       fixesTitle:'Fixes',
-      fixSearchPlaceholder:'Search fixes…',
+      fixSearchPlaceholder:'Search fixes…', fixNoResults:'No fixes match your search', fixNoResultsSub:'Try a different word, or clear the search.',
       fixCatGaming:'Gaming',
       fixCatHardware:'Hardware & Connectivity',
       fixCatSystem:'System & Windows',

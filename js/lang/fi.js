@@ -1472,7 +1472,7 @@ LANG.fi = {
       netOptiTierFull:'Täysin optimoitu',
       // Fixes hero
       fixesTitle:'Korjaukset',
-      fixSearchPlaceholder:'Hae korjauksia…',
+      fixSearchPlaceholder:'Hae korjauksia…', fixNoResults:'Haku ei löytänyt korjauksia', fixNoResultsSub:'Kokeile toista sanaa tai tyhjennä haku.',
       fixCatGaming:'Pelit',
       fixCatHardware:'Laitteisto & Yhteydet',
       fixCatSystem:'Järjestelmä & Windows',
