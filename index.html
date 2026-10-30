@@ -1491,29 +1491,31 @@ function toggleSidebar() {
 }
 
 // ─── Command Palette ──────────────────────────────────────────────────────────
-const CMD_PAGES = [
-  { name: 'Home',              sub: 'Dashboard overview',                    page: 'dashboard',       icon: 'fa-house' },
-  { name: 'Pre-Flight',        sub: 'Diagnostic scan',                       page: 'preflight',       icon: 'fa-stethoscope' },
-  { name: 'Performance',       sub: 'Tweaks, CPU, GPU & power settings',     page: 'performance',     icon: 'fa-gauge-high' },
-  { name: 'Gaming',            sub: 'Game Profiles & App Optimizer',          page: 'gaming',          icon: 'fa-gamepad' },
-  { name: 'Networking',        sub: 'Network tweaks',                        page: 'network',         icon: 'fa-globe' },
-  { name: 'Privacy & Cleanup', sub: 'Debloat, cleanup & privacy controls',   page: 'privacy-cleanup', icon: 'fa-shield-halved' },
-  { name: 'Startups',          sub: 'Startup manager',                       page: 'startup-manager', icon: 'fa-rocket' },
-  { name: 'Processes',         sub: 'Process manager',                       page: 'process-manager', icon: 'fa-diagram-project' },
-  { name: 'Latency',           sub: 'DPC/ISR latency monitor',               page: 'latency-monitor', icon: 'fa-wave-square' },
-  { name: 'BIOS Tuner',        sub: 'BIOS & firmware tools',                 page: 'bios-tuner',      icon: 'fa-server' },
-  { name: 'Pulse',             sub: 'Game performance mode',                 page: 'pulse',           icon: 'fa-bolt' },
-  { name: 'Scheduler',         sub: 'Automated tweaks',                      page: 'scheduler',       icon: 'fa-clock' },
-  { name: 'Tweak History',     sub: 'Changelog of changes',                  page: 'changelog',       icon: 'fa-clipboard-list' },
-  { name: 'Settings',          sub: 'App preferences',                       page: 'settings',        icon: 'fa-gear' },
-  { name: 'System Restore',    sub: 'Create & manage restore points',        page: 'restore-points',  icon: 'fa-shield-halved' },
-  { name: 'Fixes',             sub: 'Quick system fixes',                    page: 'fixes',           icon: 'fa-wrench' },
+const CMD_PAGE_DEFS = [
+  { page: 'dashboard', icon: 'fa-house' },
+  { page: 'preflight', icon: 'fa-stethoscope' },
+  { page: 'performance', icon: 'fa-gauge-high' },
+  { page: 'gaming', icon: 'fa-gamepad' },
+  { page: 'network', icon: 'fa-globe' },
+  { page: 'privacy-cleanup', icon: 'fa-broom' },
+  { page: 'startup-manager', icon: 'fa-rocket' },
+  { page: 'process-manager', icon: 'fa-diagram-project' },
+  { page: 'latency-monitor', icon: 'fa-wave-square' },
+  { page: 'bios-tuner', icon: 'fa-server' },
+  { page: 'pulse', icon: 'fa-bolt' },
+  { page: 'scheduler', icon: 'fa-clock' },
+  { page: 'changelog', icon: 'fa-clipboard-list' },
+  { page: 'settings', icon: 'fa-gear' },
+  { page: 'restore-points', icon: 'fa-shield-halved' },
+  { page: 'fixes', icon: 'fa-wrench' },
 ]
-const CMD_ACTIONS = [
-  { name: 'Create Restore Point', sub: 'Quick safety snapshot', icon: 'fa-shield-halved', action: () => quickCreateRP() },
-  { name: 'Clear Log',            sub: 'Clear output log',       icon: 'fa-eraser',        action: () => clearLog() },
-  { name: 'Report Bug',          sub: 'Send bug report',         icon: 'fa-bug',           action: () => showBugReport() },
-  { name: "What's New",          sub: 'Latest release notes',    icon: 'fa-star',          action: () => showWhatsNew() },
+const cmdPages = () => CMD_PAGE_DEFS.map(d => ({ ...d, name: tUI('cmdPg_' + d.page.replace(/-/g, '_')), sub: tUI('cmdPgSub_' + d.page.replace(/-/g, '_')) }))
+const cmdActions = () => [
+  { name: tUI('cmdAct_rp'),    sub: tUI('cmdActSub_rp'),    icon: 'fa-shield-halved', action: () => quickCreateRP() },
+  { name: tUI('cmdAct_theme'), sub: tUI('cmdActSub_theme'), icon: 'fa-circle-half-stroke', action: () => settingsSetScheme(JylliTheme.scheme() === 'dark' ? 'light' : 'dark') },
+  { name: tUI('cmdAct_log'),   sub: tUI('cmdActSub_log'),   icon: 'fa-eraser',        action: () => clearLog() },
+  { name: tUI('cmdAct_bug'),   sub: tUI('cmdActSub_bug'),   icon: 'fa-bug',           action: () => showBugReport() },
+  { name: tUI('cmdAct_new'),   sub: tUI('cmdActSub_new'),   icon: 'fa-star',          action: () => showWhatsNew() },
 ]
 
 let cmdFocusIdx = -1
@@ -1534,19 +1536,19 @@ function cmdFilter(q) { cmdRender(q) }
 function cmdRender(q) {
   const container = document.getElementById('cmd-results')
   q = (q || '').toLowerCase().trim()
-  const pages = CMD_PAGES.filter(p => !q || p.name.toLowerCase().includes(q) || p.sub.toLowerCase().includes(q))
-  const actions = CMD_ACTIONS.filter(a => !q || a.name.toLowerCase().includes(q) || a.sub.toLowerCase().includes(q))
+  const pages = cmdPages().filter(p => !q || p.name.toLowerCase().includes(q) || p.sub.toLowerCase().includes(q))
+  const actions = cmdActions().filter(a => !q || a.name.toLowerCase().includes(q) || a.sub.toLowerCase().includes(q))
   cmdFilteredItems = []
 
   if (!pages.length && !actions.length) {
-    container.innerHTML = `<div id="cmd-empty"><i class="fa fa-magnifying-glass" style="font-size:20px;color:var(--muted);display:block;margin-bottom:8px"></i>No results for "${q}"</div>`
+    container.innerHTML = `<div id="cmd-empty"><i class="fa fa-magnifying-glass" style="font-size:20px;color:var(--muted);display:block;margin-bottom:8px"></i>${tUI('cmdNoResults')} "${escHtml(q)}"</div>`
     cmdFocusIdx = -1
     return
   }
 
   let html = ''
   if (pages.length) {
-    html += `<div class="cmd-group-label">Pages</div>`
+    html += `<div class="cmd-group-label">${tUI('cmdGroupPages')}</div>`
     pages.forEach((p, i) => {
       cmdFilteredItems.push({ type: 'page', data: p })
       html += `<div class="cmd-item" data-idx="${cmdFilteredItems.length-1}" onclick="cmdSelectIdx(${cmdFilteredItems.length-1})">
@@ -1557,7 +1559,7 @@ function cmdRender(q) {
     })
   }
   if (actions.length) {
-    html += `<div class="cmd-group-label">Actions</div>`
+    html += `<div class="cmd-group-label">${tUI('cmdGroupActions')}</div>`
     actions.forEach((a, i) => {
       cmdFilteredItems.push({ type: 'action', data: a })
       html += `<div class="cmd-item" data-idx="${cmdFilteredItems.length-1}" onclick="cmdSelectIdx(${cmdFilteredItems.length-1})">
@@ -1594,6 +1596,9 @@ function cmdSelectIdx(idx) {
 // Keyboard shortcut
 document.addEventListener('keydown', e => {
   if ((e.ctrlKey || e.metaKey) && e.key === 'k') { e.preventDefault(); openCmdPalette() }
+  if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && /^[1-5]$/.test(e.key)) { e.preventDefault(); Shell.go(['home', 'optimize', 'gaming', 'clean', 'system'][+e.key - 1]) }
+  if ((e.ctrlKey || e.metaKey) && e.key === ',') { e.preventDefault(); Shell.go('settings') }
+  if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === 'l') { e.preventDefault(); toggleLogPane() }
   if (e.key === 'Escape' && document.getElementById('cmd-palette-overlay').classList.contains('open')) closeCmdPalette()
   if (e.key === 'Escape' && document.getElementById('advanced-intro-overlay').classList.contains('open')) closeAdvancedIntro()
 })
