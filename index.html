@@ -5590,8 +5590,8 @@ async function buildBiosTuner(c) {
 
   // ── Optimization Score Hero Card ──────────────────────────────────────────
   const scoreCard = document.createElement('div')
-  scoreCard.style.cssText = 'background:var(--surface-2);border:1.5px solid var(--hairline-strong);border-radius:10px;padding:14px 18px;margin-bottom:16px'
-  scoreCard.innerHTML = `<div id="bios-score-card"><div class="jx-75"><i class="fa fa-circle-info"></i> ${tUI('biosScoreNoData')}</div></div>`
+  scoreCard.className = 'j-note'
+  scoreCard.innerHTML = `<div id="bios-score-card"><div class="j-note-body"><i class="fa fa-circle-info" aria-hidden="true"></i> ${tUI('biosScoreNoData')}</div></div>`
   c.appendChild(scoreCard)
 
   // ── Ryzen AutoTune delta card (post-session comparison) ───────────────────
@@ -5618,69 +5618,22 @@ async function buildBiosTuner(c) {
   // ── Permanent danger banner ───────────────────────────────────────────────
   const banner = document.createElement('div')
   banner.id = 'bios-danger-banner'
-  if (_biosDangerAcknowledged) {
-    banner.style.cssText = 'background:var(--surface-2);border:1.5px solid var(--c-success-ring);border-radius:10px;padding:8px 14px;margin-bottom:16px'
-    banner.innerHTML = `<div class="jx-34"><i class="fa fa-check-circle jx-76"></i><span class="jx-41">${tUI('biosDangerAcknowledged')}</span></div>`
-  } else {
-    banner.style.cssText = 'background:var(--surface-2);border:1.5px solid var(--c-danger-ring);border-radius:10px;padding:14px 18px;margin-bottom:16px;display:flex;gap:12px;align-items:flex-start'
-    banner.innerHTML = `
-      <div style="color:var(--c-danger);font-size:20px;flex-shrink:0;margin-top:1px"><i class="fa fa-triangle-exclamation"></i></div>
-      <div class="jx-2">
-        <div style="font-size:12px;font-weight:800;color:var(--c-danger);letter-spacing:0.5px;margin-bottom:4px">${tUI('biosDangerTitle')}</div>
-        <div style="font-size:11px;color:var(--c-text-primary);line-height:1.6">
-          ${tUI('biosDangerLine1')}<br>
-          ${tUI('biosDangerLine2')}<br>
-          ${tUI('biosDangerLine3')}<br>
-          <span id="bios-compat-note" class="jx-12">${tUI('biosCompatNote')}</span>
-        </div>
-        <div style="margin-top:10px;padding-top:8px;border-top:1px solid var(--c-danger-muted);display:flex;justify-content:flex-end">
-          <button id="bios-ack-btn" class="btn btn-ghost btn-sm" style="font-size:11px;color:var(--c-danger);border-color:var(--c-danger-muted)" onclick="doBiosDangerAck()">
-            <i class="fa fa-check"></i> ${tUI('biosAcknowledgeBtn')}
-          </button>
-        </div>
-      </div>`
-  }
+  _biosRenderDangerBanner(banner, _biosDangerAcknowledged)
   c.appendChild(banner)
 
   // ── Recovery Guide ─────────────────────────────────────────────────────────
-  const recoveryGuide = document.createElement('div')
-  recoveryGuide.style.cssText = 'background:var(--c-bg-elevated);border:1px solid var(--c-border-subtle);border-radius:10px;padding:0;margin-bottom:16px;overflow:hidden'
+  const recoveryGuide = document.createElement('details')
+  recoveryGuide.className = 'j-note j-bios-rec'
+  recoveryGuide.open = true
+  const recItem = (icon, title, body) => `<div class="j-bios-rec-item"><div class="j-bios-rec-h"><i class="fa ${icon}" aria-hidden="true"></i> ${title}</div>${body}</div>`
   recoveryGuide.innerHTML = `
-    <div onclick="this.parentElement.querySelector('.recovery-body').style.display = this.parentElement.querySelector('.recovery-body').style.display==='none' ? '' : 'none'; this.querySelector('.recovery-chevron').style.transform = this.parentElement.querySelector('.recovery-body').style.display==='' ? 'rotate(180deg)' : ''" class="jx-114">
-      <div class="jx-30">
-        <i class="fa fa-life-ring" style="color:var(--c-accent-fg);font-size:15px"></i>
-        <span style="font-size:12px;font-weight:700;color:var(--c-accent-fg);letter-spacing:0.3px">${tUI('biosRecoveryTitle')}</span>
-      </div>
-      <i class="fa fa-chevron-down recovery-chevron" style="color:var(--c-accent-fg);font-size:11px;transition:transform 0.2s;transform:rotate(180deg)"></i>
-    </div>
-    <div class="recovery-body" style="padding:0 16px 14px;border-top:1px solid var(--c-border-subtle)">
-      <div style="display:grid;gap:10px;margin-top:12px">
-        <div class="jx-42">
-          <div class="jx-43"><i class="fa fa-power-off"></i> ${tUI('biosRecNoBoot')}</div>
-          <ol style="margin:0;padding-left:16px;font-size:11px;color:var(--c-text-secondary);line-height:1.8">
-            <li>${tUI('biosRecNoBootStep1')}</li>
-            <li>${tUI('biosRecNoBootStep2')}</li>
-            <li>${tUI('biosRecNoBootStep3')}</li>
-            <li>${tUI('biosRecNoBootStep4')}</li>
-          </ol>
-        </div>
-        <div class="jx-42">
-          <div class="jx-43"><i class="fa fa-display"></i> ${tUI('biosRecBlackScreen')}</div>
-          <div class="jx-52">${tUI('biosRecBlackScreenDesc')}</div>
-        </div>
-        <div class="jx-42">
-          <div class="jx-43"><i class="fa fa-memory"></i> ${tUI('biosRecXmpCrash')}</div>
-          <div class="jx-52">${tUI('biosRecXmpCrashDesc')}</div>
-        </div>
-        <div class="jx-42">
-          <div class="jx-43"><i class="fa fa-brands fa-windows"></i> ${tUI('biosRecHyperV')}</div>
-          <div class="jx-52">${tUI('biosRecHyperVDesc')}</div>
-        </div>
-        <div class="jx-42">
-          <div class="jx-43"><i class="fa fa-microchip"></i> ${tUI('biosRecScewin')}</div>
-          <div class="jx-52">${tUI('biosRecScewinDesc')}</div>
-        </div>
-      </div>
+    <summary class="j-note-title j-bios-rec-sum"><i class="fa fa-life-ring" aria-hidden="true"></i><span>${tUI('biosRecoveryTitle')}</span><i class="fa fa-chevron-down j-bios-rec-chev" aria-hidden="true"></i></summary>
+    <div class="recovery-body j-bios-rec-body">
+      ${recItem('fa-power-off', tUI('biosRecNoBoot'), `<ol class="j-bios-rec-steps"><li>${tUI('biosRecNoBootStep1')}</li><li>${tUI('biosRecNoBootStep2')}</li><li>${tUI('biosRecNoBootStep3')}</li><li>${tUI('biosRecNoBootStep4')}</li></ol>`)}
+      ${recItem('fa-display', tUI('biosRecBlackScreen'), `<div class="j-note-body">${tUI('biosRecBlackScreenDesc')}</div>`)}
+      ${recItem('fa-memory', tUI('biosRecXmpCrash'), `<div class="j-note-body">${tUI('biosRecXmpCrashDesc')}</div>`)}
+      ${recItem('fa-brands fa-windows', tUI('biosRecHyperV'), `<div class="j-note-body">${tUI('biosRecHyperVDesc')}</div>`)}
+      ${recItem('fa-microchip', tUI('biosRecScewin'), `<div class="j-note-body">${tUI('biosRecScewinDesc')}</div>`)}
     </div>`
   c.appendChild(recoveryGuide)
 
@@ -6221,12 +6174,27 @@ async function doIntelBoost(mode) {
   }
 }
 
+function _biosRenderDangerBanner(el, acknowledged) {
+  if (acknowledged) {
+    el.className = 'j-note j-note-ok j-bios-ack-done'
+    el.innerHTML = `<i class="fa fa-check-circle" aria-hidden="true"></i><span>${tUI('biosDangerAcknowledged')}</span>`
+    return
+  }
+  el.className = 'j-note j-note-danger j-bios-danger'
+  el.innerHTML = `
+    <i class="fa fa-triangle-exclamation j-bios-danger-ico" aria-hidden="true"></i>
+    <div class="jx-2">
+      <div class="j-note-title">${tUI('biosDangerTitle')}</div>
+      <div class="j-note-body j-bios-danger-text">${tUI('biosDangerLine1')}<br>${tUI('biosDangerLine2')}<br>${tUI('biosDangerLine3')}<br><span id="bios-compat-note">${tUI('biosCompatNote')}</span></div>
+      <div class="j-bios-ack">${ui.button({ label: tUI('biosAcknowledgeBtn'), icon: 'check', variant: 'ghost', size: 'sm', id: 'bios-ack-btn', onclick: 'doBiosDangerAck()' })}</div>
+    </div>`
+}
+
 function doBiosDangerAck() {
   _biosDangerAcknowledged = true
   const bannerDiv = document.getElementById('bios-danger-banner')
   if (!bannerDiv) return
-  bannerDiv.style.cssText = 'background:var(--surface-2);border:1.5px solid var(--c-success-ring);border-radius:10px;padding:8px 14px;margin-bottom:16px'
-  bannerDiv.innerHTML = `<div class="jx-34"><i class="fa fa-check-circle jx-76"></i><span class="jx-41">${tUI('biosDangerAcknowledged')}</span></div>`
+  _biosRenderDangerBanner(bannerDiv, true)
 }
 
 async function doBiosScan() {
