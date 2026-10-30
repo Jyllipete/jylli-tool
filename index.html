@@ -528,6 +528,7 @@
 <script src="js/pages/system-history.js"></script>
 <script src="js/pages/system-scheduler.js"></script>
 <script src="js/pages/optimize-fixes.js"></script>
+<script src="js/pages/gaming-latency.js"></script>
 <script src="js/ui-helpers.js"></script>
 <script src="js/fivem-logic.js"></script>
 <script>
@@ -8242,86 +8243,6 @@ const DPC_SPIKE_THRESHOLD = 3  // % — above this is logged as a spike
 let _dpcSpikeLog = []          // { ts, dpc, isr } entries
 let _lastSpikeTs = 0           // debounce: only one entry per 5s
 
-async function buildLatencyMonitor(c) {
-  if (!settings.isPremium) { await buildPremiumBanner(c, 'latency-monitor'); return }
-  c.innerHTML = `
-    <div class="section-card">
-      <div class="section-header"><div class="section-accent"></div><div class="section-title">${tUI('latencyTitle')}</div></div>
-      <div class="section-subtitle">${tUI('latencySubtitle')}</div>
-      <div style="padding:12px 18px 8px;display:flex;gap:12px;flex-wrap:wrap">
-        <div class="latency-stat-card" id="lat-dpc-card">
-          <div class="latency-stat-label">DPC %</div>
-          <div class="latency-stat-val" id="lat-dpc-val">—</div>
-          <div class="latency-stat-sub" id="lat-dpc-peak">Peak: —</div>
-        </div>
-        <div class="latency-stat-card" id="lat-isr-card">
-          <div class="latency-stat-label">ISR %</div>
-          <div class="latency-stat-val" id="lat-isr-val">—</div>
-          <div class="latency-stat-sub" id="lat-isr-peak">Peak: —</div>
-        </div>
-        <div class="latency-stat-card">
-          <div class="latency-stat-label">Timer Resolution</div>
-          <div class="latency-stat-val" id="lat-timer-val">—</div>
-          <div class="latency-stat-sub" id="lat-timer-sub">Current (µs)</div>
-        </div>
-        <div class="latency-stat-card">
-          <div class="latency-stat-label">Status</div>
-          <div class="latency-stat-val" id="lat-status-val" style="font-size:13px">—</div>
-          <div class="latency-stat-sub" id="lat-status-sub">—</div>
-        </div>
-      </div>
-      <div style="padding:0 18px 4px;display:flex;align-items:center;gap:6px">
-        <span style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em">DPC</span>
-        <div style="flex:1;position:relative;height:72px;background:rgba(var(--fx),0.02);border-radius:6px;overflow:hidden">
-          <canvas id="canvas-dpc" style="width:100%;height:72px"></canvas>
-        </div>
-      </div>
-      <div style="padding:4px 18px 12px;display:flex;align-items:center;gap:6px">
-        <span style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em">ISR</span>
-        <div style="flex:1;position:relative;height:72px;background:rgba(var(--fx),0.02);border-radius:6px;overflow:hidden">
-          <canvas id="canvas-isr" style="width:100%;height:72px"></canvas>
-        </div>
-      </div>
-    </div>
-    <!-- DPC Spike Logger -->
-    <div class="section-card">
-      <div class="section-header">
-        <div class="section-accent"></div>
-        <div class="section-title">${tUI('latencySpikeLogTitle')}</div>
-        <button class="btn btn-ghost btn-sm" style="margin-left:auto;font-size:11px" onclick="exportSpikeLog()"><i class="fa fa-file-export"></i> ${tUI('latencySpikeExport')}</button>
-        <button class="btn btn-ghost btn-sm" style="font-size:11px" onclick="clearSpikeLog()"><i class="fa fa-trash"></i></button>
-      </div>
-      <div style="padding:8px 18px 12px">
-        <div style="font-size:11px;color:var(--muted);margin-bottom:8px">${tUI('latencySpikeLogDesc')}</div>
-        <div id="dpc-spike-log" style="max-height:180px;overflow-y:auto;display:flex;flex-direction:column;gap:4px">
-          <div style="font-size:11px;color:var(--muted);text-align:center;padding:12px">${tUI('latencySpikeLogEmpty')}</div>
-        </div>
-      </div>
-    </div>
-    <div class="section-card">
-      <div class="section-header"><div class="section-accent"></div><div class="section-title">${tUI('latencyWhatTitle')}</div></div>
-      <div style="padding:4px 18px 14px;display:flex;flex-direction:column;gap:8px">
-        <div class="latency-info-row"><span class="latency-dot good"></span>${tUI('latencyRow1')}</div>
-        <div class="latency-info-row"><span class="latency-dot warn"></span>${tUI('latencyRow2')}</div>
-        <div class="latency-info-row"><span class="latency-dot bad"></span>${tUI('latencyRow3')}</div>
-        <div class="latency-info-row"><span class="latency-dot"></span>${tUI('latencyRow4')}</div>
-      </div>
-    </div>
-    <div class="section-card">
-      <div class="section-header"><div class="section-accent"></div><div class="section-title">${tUI('latencyFixTitle')}</div></div>
-      <div style="padding:8px 18px 14px;display:flex;flex-direction:column;gap:6px">
-        <div class="latency-fix-row"><i class="fa fa-arrow-right" style="color:var(--pink);margin-right:6px"></i>${tUI('latencyFix1')}</div>
-        <div class="latency-fix-row"><i class="fa fa-arrow-right" style="color:var(--pink);margin-right:6px"></i>${tUI('latencyFix2')}</div>
-        <div class="latency-fix-row"><i class="fa fa-arrow-right" style="color:var(--pink);margin-right:6px"></i>${tUI('latencyFix3')}</div>
-        <div class="latency-fix-row"><i class="fa fa-arrow-right" style="color:var(--pink);margin-right:6px"></i>${tUI('latencyFix4')}</div>
-      </div>
-    </div>
-  `
-
-  _latencyHistory.dpc = []
-  _latencyHistory.isr = []
-  startLatencyPolling()
-}
 function startLatencyPolling() {
   stopLatencyPolling()
   pollLatency()
