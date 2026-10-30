@@ -532,6 +532,7 @@
 <script src="js/pages/gaming-latency.js"></script>
 <script src="js/pages/system-diagnostics.js"></script>
 <script src="js/pages/system-restore.js"></script>
+<script src="js/pages/clean-cleanup-aside.js"></script>
 <script src="js/ui-helpers.js"></script>
 <script src="js/fivem-logic.js"></script>
 <script>
@@ -16108,75 +16109,6 @@ function _enhanceCleanupRow(el, row) {
       nameEl.parentElement.appendChild(hint)
     }
   }
-}
-
-function _buildDiskUsageCard() {
-  const card = document.createElement('div')
-  card.className = 'analytics-aside-card'
-  card.innerHTML = `
-    <div class="analytics-aside-header">
-      <div class="analytics-aside-header-left">
-        <div class="analytics-aside-icon-wrap" style="background:rgba(52,152,219,0.12);border:1px solid rgba(52,152,219,0.22);color:var(--c-info)">
-          <i class="fa fa-chart-bar"></i>
-        </div>
-        <div>
-          <div class="analytics-aside-title">${tUI('diskUsageTitle')}</div>
-          <div class="analytics-aside-sub">${tUI('diskUsageSub')}</div>
-        </div>
-      </div>
-      <button class="btn btn-sm" style="background:rgba(52,152,219,0.12);color:var(--c-info);border:1px solid rgba(52,152,219,0.25);flex-shrink:0" onclick="loadDiskUsage(this)">
-        <i class="fa fa-magnifying-glass"></i> ${tUI('diskUsageScan')}
-      </button>
-    </div>
-    <div id="disk-usage-results" style="display:none"></div>
-  `
-  return card
-}
-
-function _buildPhantomCard() {
-  const card = document.createElement('div')
-  card.className = 'analytics-aside-card'
-  card.innerHTML = `
-    <div class="analytics-aside-header">
-      <div class="analytics-aside-header-left">
-        <div class="analytics-aside-icon-wrap" style="background:rgba(167,139,250,0.12);border:1px solid rgba(167,139,250,0.22);color:var(--c-accent-fg)">
-          <i class="fa fa-ghost"></i>
-        </div>
-        <div>
-          <div class="analytics-aside-title">${tUI('phantomTitle')}</div>
-          <div class="analytics-aside-sub">${tUI('phantomSub')}</div>
-        </div>
-      </div>
-      <button class="btn btn-sm" id="phantom-scan-btn" style="background:rgba(167,139,250,0.12);color:var(--c-accent-fg);border:1px solid rgba(167,139,250,0.25);flex-shrink:0" onclick="loadPhantomApps(this)">
-        <i class="fa fa-magnifying-glass"></i> ${tUI('phantomScan')}
-      </button>
-    </div>
-    <div id="phantom-results" style="display:none;margin-top:10px"></div>
-  `
-  return card
-}
-
-function _buildTimelineCard() {
-  const card = document.createElement('div')
-  card.className = 'analytics-aside-card'
-  card.innerHTML = `
-    <div class="analytics-aside-header">
-      <div class="analytics-aside-header-left">
-        <div class="analytics-aside-icon-wrap" style="background:rgba(74,222,128,0.12);border:1px solid rgba(74,222,128,0.22);color:var(--c-success)">
-          <i class="fa fa-chart-line"></i>
-        </div>
-        <div>
-          <div class="analytics-aside-title">${tUI('timelineTitle')}</div>
-          <div class="analytics-aside-sub">${tUI('timelineSub')}</div>
-        </div>
-      </div>
-      <button class="btn btn-sm" id="timeline-refresh-btn" style="background:rgba(74,222,128,0.12);color:var(--c-success);border:1px solid rgba(74,222,128,0.25);flex-shrink:0" onclick="loadCleanupTimeline(this)">
-        <i class="fa fa-rotate"></i> ${tUI('timelineRefresh')}
-      </button>
-    </div>
-    <div id="timeline-results" style="margin-top:10px"><div style="display:flex;align-items:center;gap:6px;color:var(--c-success);font-size:11px;padding:4px 0"><i class="fa fa-spinner fa-spin" style="font-size:12px"></i> ${tUI('timelineLoading')}</div></div>
-  `
-  return card
 }
 
 async function loadDiskUsage(btn) {
