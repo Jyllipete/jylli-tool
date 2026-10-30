@@ -9,6 +9,7 @@
 - Ei hehkuja, ei värillisiä reunaviivoja, kaikki tekstit vähintään 11 px, parempi kontrasti (tarkistetaan: `npm run check`)
 - Komentopaletti käännetty (EN/FI), uusi toiminto "Vaihda teemaa"; pikanäppäimet Ctrl+1…5, Ctrl+, ja Ctrl+Shift+L
 - Näppäimistöllä käytettävät rivit ja nimetyt kentät kaikilla sivuilla
+- Käynnistysohjelmat ja Pulse rakennettu uudelleen yhteisillä komponenteilla; tilavärit (onnistui/varoitus/virhe) seuraavat valittua teemaa; tyhjät ja virhetilat selkeämmiksi
 
 ### 🔧 Tekniset
 - Uusi asetus `colorScheme`; sivujen ikkunat saavat `?scheme=`-parametrin
