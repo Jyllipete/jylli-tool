@@ -41,6 +41,11 @@ module.exports = String.raw`(() => {
   if (primary > 1) add('multiple-primary', String(primary))
   const lines = []
   for (const [k, v] of Object.entries(out)) { const u = [...new Set(v)]; lines.push(k + ' x' + v.length + ': ' + u.slice(0, 6).join(' | ') + (u.length > 6 ? ' …' : '')) }
+  // untranslated English left in the Finnish UI (heuristic: common English function words in a visible text node)
+  if (document.documentElement.lang === 'fi' || (typeof currentLang !== 'undefined' && currentLang === 'fi')) {
+    const w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT)
+    for (let n = w.nextNode(); n; n = w.nextNode()) { const t = n.textContent.trim(); if (t.length > 12 && /\b(the|and|your|with|for|from|this|that|will|can|are|you|not|to)\b/i.test(t) && n.parentElement && vis(n.parentElement) && !/^(script|style)$/i.test(n.parentElement.tagName)) add('english-in-fi', t.slice(0, 60)) }
+  }
   // style signature of the rendered page: lets two CSS versions be compared (same signature = same computed styles)
   let sig = 5381, count = 0
   for (const el of root.querySelectorAll('*')) { if (!vis(el)) continue; const s = getComputedStyle(el); const str = el.tagName + s.display + s.color + s.backgroundColor + s.fontSize + s.fontWeight + s.borderTopWidth + s.borderLeftWidth + s.padding + s.margin + s.width + s.height; for (let i = 0; i < str.length; i++) sig = ((sig << 5) + sig + str.charCodeAt(i)) | 0; count++ }
