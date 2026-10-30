@@ -68,7 +68,7 @@
       <strong class="jx-20">Antivirus detected — add an exclusion for best performance.</strong>
       <span style="color:var(--gray);margin-left:6px">Jylli Tool's hardware monitoring tools may be flagged or slowed by your AV. Add <code style="background:#ffffff18;padding:1px 4px;border-radius:3px">%LOCALAPPDATA%\Programs\Jylli Tool</code> to exclusions.</span>
     </div>
-    <button class="btn btn-ghost btn-sm" onclick="dismissAvTip()" style="flex-shrink:0">Got it</button>
+    <button class="btn btn-ghost btn-sm jx-92" onclick="dismissAvTip()">Got it</button>
   </div>
 </div>
 
@@ -214,7 +214,7 @@
       <div id="confirm-modal-title" style="font-size:15px;font-weight:700;color:var(--white)"></div>
     </div>
     <div id="confirm-modal-body" style="font-size:12.5px;color:var(--gray);line-height:1.6;margin-bottom:20px"></div>
-    <div style="display:flex;gap:8px;justify-content:flex-end">
+    <div class="jx-93">
       <button class="btn btn-ghost btn-sm" onclick="_confirmModalReject()" data-i18n="btnCancel">Cancel</button>
       <button class="btn btn-sm" id="confirm-modal-ok" onclick="_confirmModalResolve()" data-i18n="btnConfirm">Confirm</button>
     </div>
@@ -227,7 +227,7 @@
     <div style="display:flex;align-items:center;gap:10px;padding:18px 20px 14px;border-bottom:1px solid var(--border)">
       <i class="fa fa-code-compare" style="color:var(--warning);font-size:16px"></i>
       <div class="jx-6">
-        <div id="tdm-title" style="font-size:13px;font-weight:700;color:var(--white)"></div>
+        <div id="tdm-title" class="jx-94"></div>
         <div id="tdm-sub" class="jx-33"></div>
       </div>
       <button class="btn btn-ghost btn-sm" onclick="document.getElementById('tweak-diff-modal').style.display='none'"><i class="fa fa-xmark"></i></button>
@@ -320,7 +320,7 @@
         <div><div class="adv-feat-name">BIOS Tuner</div><div class="adv-feat-desc" data-i18n="advIntroBiosTunerDesc">Read and write BIOS/UEFI settings directly from Windows</div></div>
       </div>
     </div>
-    <div class="tip warning" style="margin-bottom:14px">
+    <div class="tip warning jx-95">
       <i class="fa fa-triangle-exclamation tip-icon"></i>
       <span data-i18n="advIntroBiosWarning">BIOS Tuner requires care — incorrect settings can prevent your PC from booting.</span>
     </div>
@@ -328,7 +328,7 @@
       <input type="checkbox" id="adv-intro-dont-show" style="accent-color:var(--c-accent);cursor:pointer">
       <span data-i18n="advIntroDontShow">Don't show this again</span>
     </label>
-    <button class="btn btn-primary" style="width:100%" onclick="closeAdvancedIntro()" data-i18n="btnGotIt">Got it</button>
+    <button class="btn btn-primary jx-63" onclick="closeAdvancedIntro()" data-i18n="btnGotIt">Got it</button>
   </div>
 </div>
 
@@ -361,7 +361,7 @@
       <div class="jx-26">
         <div style="width:38px;height:38px;border-radius:10px;background:rgba(var(--c-accent-rgb),0.15);border:1px solid rgba(var(--c-accent-rgb),0.35);display:flex;align-items:center;justify-content:center;font-size:17px;color:var(--c-accent-fg)"><i class="fa fa-wand-sparkles"></i></div>
         <div>
-          <div id="spw-title" style="font-size:16px;font-weight:800;color:var(--white)">Smart Profile Wizard</div>
+          <div id="spw-title" class="jx-64">Smart Profile Wizard</div>
           <div id="spw-subtitle" class="jx-7">Instant optimization for your setup</div>
         </div>
       </div>
@@ -2225,7 +2225,7 @@ async function runUpdateCheck() {
 
   if (healthEl && healthResult && healthResult.checked > 0) {
     if (healthResult.reverted.length === 0) {
-      healthEl.innerHTML = `<span style="color:var(--ok)">✓ All ${healthResult.checked} verified tweaks still active</span>`
+      healthEl.innerHTML = `<span class="jx-96">✓ All ${healthResult.checked} verified tweaks still active</span>`
     } else {
       const ids = JSON.stringify(healthResult.reverted)
       healthEl.innerHTML = `<span class="jx-17">⚠ ${healthResult.reverted.length} tweak(s) reverted by Windows — <a href="#" style="color:var(--c-accent-fg)" onclick="reapplyReverted(${ids.replace(/"/g,"'")}); return false">re-apply now</a></span>`
@@ -2246,7 +2246,7 @@ async function reapplyReverted(ids) {
   }
   toast(tUIf('tkReapplied', { n: ids.length }), '', 'ok')
   const healthEl = document.getElementById('settings-health-result')
-  if (healthEl) healthEl.innerHTML = `<span style="color:var(--ok)">✓ ${ids.length} tweak(s) re-applied</span>`
+  if (healthEl) healthEl.innerHTML = `<span class="jx-96">✓ ${ids.length} tweak(s) re-applied</span>`
 }
 
 async function doCleanPowerPlans(btn) {
@@ -2270,7 +2270,7 @@ async function hwCreateAndConfirmRP() {
       if (banner) {
         banner.style.background = 'var(--success-bg,var(--surface-2))'
         banner.style.borderColor = 'var(--c-success-ring)'
-        banner.innerHTML = `<span style="font-size:20px;color:var(--success,var(--c-success))"><i class="fa fa-shield-halved"></i></span><div class="hw-warn-text" style="color:var(--success,var(--c-success))">${tUI('hwRpConfirmedText')}</div><button class="btn btn-ghost btn-sm" style="flex-shrink:0" onclick="document.getElementById('hw-warn-banner').style.display='none'" title="${tUI('hwRpDismiss')}"><i class="fa fa-xmark"></i></button>`
+        banner.innerHTML = `<span class="jx-97"><i class="fa fa-shield-halved"></i></span><div class="hw-warn-text jx-98">${tUI('hwRpConfirmedText')}</div><button class="btn btn-ghost btn-sm" style="flex-shrink:0" onclick="document.getElementById('hw-warn-banner').style.display='none'" title="${tUI('hwRpDismiss')}"><i class="fa fa-xmark"></i></button>`
       }
       appendLog('Restore point created', 'ok')
     } else {
@@ -2624,16 +2624,16 @@ function buildWizardSteps() {
           status: result.safetyScore >= 80 ? 'ok' : result.safetyScore >= 50 ? 'warn' : 'err',
           text: `<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin:6px 0 10px">
             <div class="jx-27">
-              <div style="font-size:11px;color:var(--muted);font-weight:700;margin-bottom:4px">${tUI('pfOsType')}</div>
+              <div class="jx-65">${tUI('pfOsType')}</div>
               <div style="font-size:13px;font-weight:800;color:${result.osType === 'Stock' ? 'var(--success)' : 'var(--warning)'}">${result.osType}</div>
             </div>
             <div class="jx-27">
-              <div style="font-size:11px;color:var(--muted);font-weight:700;margin-bottom:4px">${tUI('pfSafetyScore')}</div>
+              <div class="jx-65">${tUI('pfSafetyScore')}</div>
               <div style="font-size:20px;font-weight:900;color:${scoreColor}">${result.safetyScore}<span class="jx-7">/100</span></div>
             </div>
             <div class="jx-27">
-              <div style="font-size:11px;color:var(--muted);font-weight:700;margin-bottom:4px">${tUI('pfPreApplied')}</div>
-              <div style="font-size:13px;font-weight:800;color:var(--info)">${applied}</div>
+              <div class="jx-65">${tUI('pfPreApplied')}</div>
+              <div class="jx-99">${applied}</div>
             </div>
           </div>${alertHtml}`
         }
@@ -2679,10 +2679,10 @@ async function runWizardStep(step) {
           style="background:var(--surface-2);border:1px solid rgba(46,204,113,0.25);border-radius:12px;padding:16px 18px;cursor:pointer;transition:border-color .15s,background .15s"
           onmouseenter="this.style.borderColor = 'rgba(46,204,113,0.6)';this.style.background = 'var(--surface-2)'"
           onmouseleave="this.style.borderColor = 'rgba(46,204,113,0.25)';this.style.background = 'var(--surface-2)'">
-          <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px">
+          <div class="jx-100">
             <div style="width:36px;height:36px;border-radius:9px;background:rgba(46,204,113,0.12);border:1px solid rgba(46,204,113,0.3);display:flex;align-items:center;justify-content:center;font-size:16px;color:var(--success);flex-shrink:0"><i class="fa fa-rocket"></i></div>
             <div>
-              <div style="font-size:13px;font-weight:800;color:var(--white)">${tWizard('autoTitle')} <span style="font-size:11px;font-weight:600;background:rgba(46,204,113,0.15);color:var(--success);border:1px solid rgba(46,204,113,0.3);border-radius:4px;padding:2px 7px;margin-left:4px">${tWizard('autoBadge')}</span></div>
+              <div class="jx-66">${tWizard('autoTitle')} <span style="font-size:11px;font-weight:600;background:rgba(46,204,113,0.15);color:var(--success);border:1px solid rgba(46,204,113,0.3);border-radius:4px;padding:2px 7px;margin-left:4px">${tWizard('autoBadge')}</span></div>
               <div class="jx-33">${tWizard('autoSub')}</div>
             </div>
           </div>
@@ -2699,10 +2699,10 @@ async function runWizardStep(step) {
           style="background:var(--surface-2);border:1px solid var(--hairline-strong);border-radius:12px;padding:16px 18px;cursor:pointer;transition:border-color .15s,background .15s"
           onmouseenter="this.style.borderColor = 'var(--hairline-strong)';this.style.background = 'var(--surface-2)'"
           onmouseleave="this.style.borderColor = 'var(--hairline-strong)';this.style.background = 'var(--surface-2)'">
-          <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px">
+          <div class="jx-100">
             <div style="width:36px;height:36px;border-radius:9px;background:var(--surface-2);border:1px solid var(--hairline-strong);display:flex;align-items:center;justify-content:center;font-size:16px;color:var(--muted);flex-shrink:0"><i class="fa fa-sliders"></i></div>
             <div>
-              <div style="font-size:13px;font-weight:800;color:var(--white)">${tWizard('manualTitle')}</div>
+              <div class="jx-66">${tWizard('manualTitle')}</div>
               <div class="jx-33">${tWizard('manualSub')}</div>
             </div>
           </div>
@@ -2802,7 +2802,7 @@ async function buildPulse(c) {
     <div id="pulse-hero" class="pulse-hero">
       <div class="pulse-hero-badge"><i class="fa fa-bolt"></i></div>
       <div class="u-grow">
-        <div style="font-size:13px;font-weight:700;color:var(--white)">Pulse</div>
+        <div class="jx-94">Pulse</div>
         <div class="jx-1">${tUI('pulseSubtitle')}</div>
       </div>
       <div id="pulse-status-badge" class="pulse-status-badge" style="display:none">${tUI('pulseActive')}</div>
@@ -2814,7 +2814,7 @@ async function buildPulse(c) {
       <div class="jx-26">
         <div class="u-grow">
           <div style="font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:3px">
-            <i class="fa fa-star" style="margin-right:4px;color:var(--c-accent-fg)"></i>${tUI('pulseScoreLabel')}
+            <i class="fa fa-star jx-101"></i>${tUI('pulseScoreLabel')}
           </div>
           <div style="display:flex;align-items:baseline;gap:5px">
             <span id="pulse-score-val" style="font-size:26px;font-weight:800;color:var(--c-accent-fg);font-variant-numeric:tabular-nums;line-height:1;transition:color .3s">—</span>
@@ -2906,8 +2906,8 @@ async function buildPulse(c) {
               <div class="jx-37">
                 <!-- Tier 3 slider -->
                 <div>
-                  <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:3px">
-                    <span style="font-size:11px;color:var(--c-text-secondary);font-weight:600">${tUI('gsThresholdTier3')}</span>
+                  <div class="jx-102">
+                    <span class="jx-103">${tUI('gsThresholdTier3')}</span>
                     <span class="u-cap">${tUI('gsThresholdTier3Hint')}</span>
                   </div>
                   <div class="u-row7">
@@ -2919,8 +2919,8 @@ async function buildPulse(c) {
                 </div>
                 <!-- Mid-session slider -->
                 <div>
-                  <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:3px">
-                    <span style="font-size:11px;color:var(--c-text-secondary);font-weight:600">${tUI('gsThresholdMidSession')}</span>
+                  <div class="jx-102">
+                    <span class="jx-103">${tUI('gsThresholdMidSession')}</span>
                     <span class="u-cap">${tUI('gsThresholdMidSessionHint')}</span>
                   </div>
                   <div class="u-row7">
@@ -2940,7 +2940,7 @@ async function buildPulse(c) {
           <div class="u-row10">
             <div id="pulse-gw-dot" class="lr-dot"></div>
             <div class="u-fill">
-              <div style="font-size:11px;font-weight:700;color:var(--white);white-space:nowrap;overflow:hidden;text-overflow:ellipsis"><i class="fa fa-eye" style="margin-right:4px;color:var(--c-accent-fg)"></i>${tUI('settingsGameWatcher')}</div>
+              <div style="font-size:11px;font-weight:700;color:var(--white);white-space:nowrap;overflow:hidden;text-overflow:ellipsis"><i class="fa fa-eye jx-101"></i>${tUI('settingsGameWatcher')}</div>
               <div class="u-ellip">${tUI('settingsGameWatcherDesc')}</div>
             </div>
             <label class="toggle-pill u-noshrink">
@@ -2983,7 +2983,7 @@ async function buildPulse(c) {
 
     <!-- Recent Sessions -->
     <div id="game-history-panel" style="display:none;padding:8px 16px 4px;border-bottom:1px solid var(--border)">
-      <div class="pulse-section-label" style="margin-bottom:6px"><i class="fa fa-clock-rotate-left"></i>${tUI('recentSessionsTitle')}</div>
+      <div class="pulse-section-label jx-104"><i class="fa fa-clock-rotate-left"></i>${tUI('recentSessionsTitle')}</div>
       <div id="game-history-table"></div>
     </div>
 
@@ -3003,7 +3003,7 @@ async function buildPulse(c) {
         <span class="pulse-hero-empty-icon"><i class="fa fa-gamepad"></i></span>
         <span class="pulse-hero-empty-text">${tUI('pulseChooseGame')}</span>
       </div>
-      <div style="display:flex;flex-wrap:wrap;gap:6px" id="pulse-preset-grid">
+      <div id="pulse-preset-grid" class="jx-67">
         ${PULSE_PRESET_LIST.map(p => `
           <button class="pulse-preset-card" id="pp-${p.id}" onclick="selectPulsePreset('${p.id}')" title="${p.name}">
             <i class="fa ${p.icon}" style="font-size:13px;color:var(--muted);margin-bottom:3px;display:block"></i>
@@ -3840,7 +3840,7 @@ function _renderStartupList(items) {
   if (!list) return
 
   if (!items.length) {
-    list.innerHTML = `<div style="padding:16px 18px;color:var(--muted);font-size:11px">${tUI('startupNoItems')}</div>`
+    list.innerHTML = `<div class="jx-68">${tUI('startupNoItems')}</div>`
     updateStartupHero(items)
     return
   }
@@ -3944,7 +3944,7 @@ async function loadStartupItems(btn) {
   // Handle backend error response
   if (rawItems && !Array.isArray(rawItems) && rawItems.error) {
     toast(tUI('startupRefresh'), rawItems.error, 'err')
-    list.innerHTML = `<div style="padding:16px 18px;color:var(--muted);font-size:11px">${tUI('startupNoItems')}</div>`
+    list.innerHTML = `<div class="jx-68">${tUI('startupNoItems')}</div>`
     return
   }
   const items = Array.isArray(rawItems) ? rawItems : []
@@ -4681,7 +4681,7 @@ function renderSchedTaskCard(t) {
   const nextRun = schedFormatCountdown(t.NextRunTime)
   const resultOk = t.LastRunTime && t.LastTaskResult === 0
   const resultBadge = t.LastRunTime
-    ? (resultOk ? '<i class="fa fa-check jx-29"></i>' : '<i class="fa fa-triangle-exclamation" style="color:var(--danger)"></i>')
+    ? (resultOk ? '<i class="fa fa-check jx-29"></i>' : '<i class="fa fa-triangle-exclamation jx-69"></i>')
     : ''
   const isDisabled = (t.State || '').toLowerCase() === 'disabled'
   return `
@@ -4694,8 +4694,8 @@ function renderSchedTaskCard(t) {
         </div>
       </div>
       <div class="sched-card-meta">
-        <div><span style="color:var(--muted-2,var(--c-text-tertiary))">${tUI('schedLastRun')}:</span> ${lastRun} ${resultBadge}</div>
-        ${nextRun ? `<div id="sched-nrt-${escAttr(t.TaskName)}"><span style="color:var(--muted-2,var(--c-text-tertiary))">${tUI('schedNextRun')}:</span> ${nextRun}</div>` : ''}
+        <div><span class="jx-70">${tUI('schedLastRun')}:</span> ${lastRun} ${resultBadge}</div>
+        ${nextRun ? `<div id="sched-nrt-${escAttr(t.TaskName)}"><span class="jx-70">${tUI('schedNextRun')}:</span> ${nextRun}</div>` : ''}
       </div>
       <div class="sched-card-footer">
         <button class="btn btn-ghost btn-sm" title="${tUI('schedRunNowTitle')}" onclick="doRunTask(${jsArg(t.TaskName)})"><i class="fa fa-play"></i> ${tUI('schedRunNow')}</button>
@@ -4718,7 +4718,7 @@ function schedUpdateCountdowns(tasks) {
     const el = document.getElementById(`sched-nrt-${t.TaskName}`)
     if (!el || !t.NextRunTime) continue
     const c = schedFormatCountdown(t.NextRunTime)
-    const next = `<span style="color:var(--muted-2,var(--c-text-tertiary))">${tUI('schedNextRun')}:</span> ${c || ''}`
+    const next = `<span class="jx-70">${tUI('schedNextRun')}:</span> ${c || ''}`
     if (el.innerHTML !== next) el.innerHTML = next
   }
 }
@@ -4733,7 +4733,7 @@ async function loadScheduledTasks() {
   const bulk = document.getElementById('sched-bulk-bar')
   if (bulk) bulk.style.display = tasks.length ? 'flex' : 'none'
   if (!tasks.length) {
-    list.innerHTML = `<div style="padding:16px 18px;color:var(--muted);font-size:11px">${tUI('schedEmptyState')}</div>`
+    list.innerHTML = `<div class="jx-68">${tUI('schedEmptyState')}</div>`
     return
   }
   try {
@@ -4781,7 +4781,7 @@ async function doToggleHistory(name) {
     const isFail = h.id === 101 || h.id === 103 || h.id === 323
     const isOk   = h.id === 201 || h.id === 203
     const icon = isFail
-      ? '<i class="fa fa-triangle-exclamation" style="color:var(--danger)"></i>'
+      ? '<i class="fa fa-triangle-exclamation jx-69"></i>'
       : isOk
         ? '<i class="fa fa-check jx-29"></i>'
         : '<i class="fa fa-circle-info jx-39"></i>'
@@ -5226,7 +5226,7 @@ async function doBenchmark() {
     benchmarkBaseline = r.score
     localStorage.setItem('pf_bench_baseline', r.score)
     status.textContent = `${tUI('pfBenchBaselineLabel')} ${r.score.toLocaleString()} — ${tUI('pfBenchBaseline')}`
-    results.innerHTML = `<div style="padding:10px 0;font-size:13px;font-weight:800;color:var(--white)">Score: <span class="jx-11">${r.score.toLocaleString()}</span> <span style="font-size:11px;color:var(--muted);font-weight:400">${tUI('pfBenchUnit')}</span></div>
+    results.innerHTML = `<div style="padding:10px 0;font-size:13px;font-weight:800;color:var(--white)">Score: <span class="jx-11">${r.score.toLocaleString()}</span> <span class="jx-105">${tUI('pfBenchUnit')}</span></div>
       <div class="jx-7">${tUI('pfBenchBaselineNote')}</div>`
   } else {
     const delta = r.score - benchmarkBaseline
@@ -5237,12 +5237,12 @@ async function doBenchmark() {
     results.innerHTML = `<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;padding:8px 0">
       <div class="jx-27">
         <div class="jx-40">${tUI('pfBenchLabel')}</div>
-        <div style="font-size:16px;font-weight:800;color:var(--white)">${benchmarkBaseline.toLocaleString()}</div>
+        <div class="jx-64">${benchmarkBaseline.toLocaleString()}</div>
         <div class="jx-15">${tUI('pfBenchUnit')}</div>
       </div>
       <div class="jx-27">
         <div class="jx-40">${tUI('pfBenchCurrent').toUpperCase()}</div>
-        <div style="font-size:16px;font-weight:800;color:var(--white)">${r.score.toLocaleString()}</div>
+        <div class="jx-64">${r.score.toLocaleString()}</div>
         <div class="jx-15">${tUI('pfBenchUnit')}</div>
       </div>
       <div class="jx-27">
@@ -5350,8 +5350,8 @@ function renderPreflightResults(r) {
 
   let html = `
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
-      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:16px 18px">
-        <div style="font-size:11px;color:var(--muted);margin-bottom:6px;font-weight:700;letter-spacing:1px">${tUI('pfOsType')}</div>
+      <div class="jx-106">
+        <div class="jx-107">${tUI('pfOsType')}</div>
         <div class="jx-34">
           <i class="fa ${osIcon}" style="color:${osColor};font-size:20px"></i>
           <div>
@@ -5360,8 +5360,8 @@ function renderPreflightResults(r) {
           </div>
         </div>
       </div>
-      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:16px 18px">
-        <div style="font-size:11px;color:var(--muted);margin-bottom:6px;font-weight:700;letter-spacing:1px">${tUI('pfSafetyScore')}</div>
+      <div class="jx-106">
+        <div class="jx-107">${tUI('pfSafetyScore')}</div>
         <div class="jx-30">
           <div id="pf-score-num" style="font-size:28px;font-weight:900;color:${scoreColor};animation:scoreReveal 0.4s cubic-bezier(0.22,1,0.36,1) both">0</div>
           <div>
@@ -5377,15 +5377,15 @@ function renderPreflightResults(r) {
 
   // Score breakdown panel
   html += `<div class="jx-51">
-    <div style="padding:10px 18px 8px;border-bottom:1px solid var(--border2);font-size:11px;font-weight:700;color:var(--white);display:flex;align-items:center;gap:8px">
+    <div class="jx-71">
       <i class="fa fa-chart-bar jx-39"></i> ${tUI('pfScoreBreakdown')}
     </div>
-    <div style="padding:8px 18px 10px">`
+    <div class="jx-108">`
   scoreItems.forEach(item => {
     const impactPct = item.pts !== 0 ? Math.round((Math.abs(item.pts) / 100) * 100) : 0
     html += `<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid rgba(var(--fx),0.04)">
       <i class="fa ${item.icon}" style="color:${item.col};font-size:11px;width:12px;text-align:center"></i>
-      <span style="flex:1;font-size:11px;color:var(--gray)">${item.label}</span>
+      <span class="jx-109">${item.label}</span>
       <span style="font-size:11px;color:var(--muted);width:32px;text-align:right">${impactPct > 0 ? impactPct + '%' : ''}</span>
       <span style="font-size:11px;font-weight:700;color:${item.pts < 0 ? 'var(--danger)' : item.pts > 0 ? 'var(--success)' : 'var(--muted)'}">${item.pts > 0 ? '+' + item.pts : item.pts < 0 ? item.pts : '±0'}</span>
     </div>`
@@ -5401,7 +5401,7 @@ function renderPreflightResults(r) {
 
   // ── Category coverage sub-scores ─────────────────────────────────────────
   html += `<div class="jx-51">
-    <div style="padding:10px 18px 8px;border-bottom:1px solid var(--border2);font-size:11px;font-weight:700;color:var(--white);display:flex;align-items:center;gap:8px">
+    <div class="jx-71">
       <i class="fa fa-chart-pie" style="color:var(--purple)"></i> ${tUI('pfCategoryHealth')}
     </div>
     <div style="padding:8px 18px 10px;display:flex;flex-direction:column;gap:2px">`
@@ -5429,7 +5429,7 @@ function renderPreflightResults(r) {
       <div style="padding:12px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px">
         <i class="fa fa-circle-check" style="color:var(--info);font-size:16px;flex-shrink:0"></i>
         <div class="jx-2">
-          <div style="font-size:13px;font-weight:800;color:var(--info)">${preApplied.length} ${tUI('pfTweaksApplied')}</div>
+          <div class="jx-99">${preApplied.length} ${tUI('pfTweaksApplied')}</div>
           <div class="jx-15">${tUI('pfTweaksSkip')}</div>
         </div>
       </div>`
@@ -5462,7 +5462,7 @@ function renderPreflightResults(r) {
   const negativeDetections = (r.detections || []).filter(d => d.severity !== 'bonus')
   if (negativeDetections.length > 0) {
     html += `<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:10px;margin-bottom:10px;overflow:hidden">
-      <div style="padding:10px 18px 8px;border-bottom:1px solid var(--border2);font-size:11px;font-weight:700;color:var(--white)"><i class="fa fa-shield-halved jx-17"></i> ${tUI('pfDetections')}</div>`
+      <div class="jx-72"><i class="fa fa-shield-halved jx-17"></i> ${tUI('pfDetections')}</div>`
     negativeDetections.forEach(d => {
       const col = d.severity === 'high' ? 'var(--danger)' : d.severity === 'medium' ? 'var(--warning)' : 'var(--info)'
       const sevLabel = d.severity === 'high' ? tUI('pfHigh') : d.severity === 'medium' ? tUI('pfMedium') : tUI('pfLow')
@@ -5491,7 +5491,7 @@ function renderPreflightResults(r) {
       suboptimal:   { bg: 'var(--warning-bg)', bd: 'var(--warning-bd)', col: 'var(--warning)', label: tUI('pfConflictSuboptimal') },
     }
     html += `<div class="jx-51">
-      <div style="padding:10px 18px 8px;border-bottom:1px solid var(--border2);font-size:11px;font-weight:700;color:var(--white)"><i class="fa fa-triangle-exclamation jx-17"></i> ${tUI('pfConflicts')}</div>
+      <div class="jx-72"><i class="fa fa-triangle-exclamation jx-17"></i> ${tUI('pfConflicts')}</div>
       <div style="padding:10px 18px;display:flex;flex-wrap:wrap;gap:6px">`
     conflictsToRender.forEach(c => {
       const ts = TIER_STYLE[c.tier] || TIER_STYLE.redundant
@@ -5539,14 +5539,14 @@ function renderPreflightResults(r) {
   recommendations.sort((a, b) => (b.priority || 0) - (a.priority || 0))
   if (recommendations.length > 0) {
     html += `<div class="jx-51">
-      <div style="padding:10px 18px 8px;border-bottom:1px solid var(--border2);font-size:11px;font-weight:700;color:var(--white)"><i class="fa fa-lightbulb jx-17"></i> ${tUI('pfRecommendations')}</div>
-      <div style="padding:8px 18px 10px">`
+      <div class="jx-72"><i class="fa fa-lightbulb jx-17"></i> ${tUI('pfRecommendations')}</div>
+      <div class="jx-108">`
     recommendations.forEach(rec => {
       const navBtn = rec.page ? `<button class="btn btn-ghost btn-sm" onclick="showPage('${rec.page}')" style="margin-top:4px;font-size:11px"><i class="fa fa-arrow-right"></i> ${tUI('pfGoThere')}</button>` : ''
       html += `<div style="display:flex;align-items:flex-start;gap:8px;padding:6px 0;border-bottom:1px solid var(--border2)">
         <i class="fa ${rec.icon}" style="color:${rec.col};font-size:12px;margin-top:3px;flex-shrink:0"></i>
         <div>
-          <div style="font-size:11px;color:var(--gray);line-height:1.5">${rec.text}</div>
+          <div class="jx-73">${rec.text}</div>
           ${navBtn}
         </div>
       </div>`
@@ -5738,7 +5738,7 @@ function renderPreflightDiff(prev, curr, prevTs) {
   const changeCount = nowApplied.length + nowRestored.length
 
   let diffHtml = `<div style="background:var(--bg-card);border:1px solid var(--border);border-left:3px solid var(--info);border-radius:10px;overflow:hidden;margin-bottom:10px">
-    <div style="padding:10px 18px 8px;border-bottom:1px solid var(--border2);font-size:11px;font-weight:700;color:var(--white);display:flex;align-items:center;gap:8px">
+    <div class="jx-71">
       <i class="fa fa-code-compare jx-39"></i>
       ${tUI('pfDiffTitle')}
       <span style="font-weight:400;color:var(--muted);font-size:11px;margin-left:4px">${tUI('pfDiffSince').replace('{t}', ageLabel)}</span>
@@ -5954,8 +5954,8 @@ async function loadGameHistory() {
     const date = `${d.getMonth()+1}/${d.getDate()} ${d.getHours()}:${String(d.getMinutes()).padStart(2,'0')}`
     const scoreVal = e.pulseScore != null ? e.pulseScore : null
     const scoreColor = scoreVal == null ? 'rgba(255,255,255,0.25)' : scoreVal >= 800 ? '#2ecc71' : scoreVal >= 600 ? '#f39c12' : '#e74c3c'
-    const scoreStr = scoreVal != null ? `<span style="color:${scoreColor};font-weight:700">${scoreVal}</span>` : `<span style="color:rgba(var(--fx),0.2)">—</span>`
-    const tempStr = e.peakCpuTemp != null ? `<span style="color:${e.peakCpuTemp > 90 ? 'var(--c-danger)' : e.peakCpuTemp > 75 ? 'var(--c-warning)' : 'rgba(var(--fx),0.4)'}">${Math.round(e.peakCpuTemp)}°</span>` : `<span style="color:rgba(var(--fx),0.2)">—</span>`
+    const scoreStr = scoreVal != null ? `<span style="color:${scoreColor};font-weight:700">${scoreVal}</span>` : `<span class="jx-110">—</span>`
+    const tempStr = e.peakCpuTemp != null ? `<span style="color:${e.peakCpuTemp > 90 ? 'var(--c-danger)' : e.peakCpuTemp > 75 ? 'var(--c-warning)' : 'rgba(var(--fx),0.4)'}">${Math.round(e.peakCpuTemp)}°</span>` : `<span class="jx-110">—</span>`
     return `<div style="display:grid;grid-template-columns:1fr auto auto auto auto auto auto;gap:4px 8px;align-items:center;padding:3px 0;border-bottom:1px solid rgba(var(--fx),0.04);font-size:11px">
       <span style="color:var(--white);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${e.displayName || e.game}</span>
       <span class="jx-3">${dur}</span>
@@ -6146,9 +6146,9 @@ const _RISK_NAMES  = { boot:'Boot', game:'Performance', stability:'Stability', p
 
 function _riskArrow(v) {
   if (v >=  2) return { html:'<span style="color:var(--c-success);font-weight:900">&#x2191;&#x2191;</span>', label:'Major gain' }
-  if (v ===  1) return { html:'<span style="color:var(--c-success);font-weight:700">&#x2191;</span>', label:'Small gain' }
+  if (v ===  1) return { html:'<span class="jx-74">&#x2191;</span>', label:'Small gain' }
   if (v ===  0) return { html:'<span class="jx-12">&#x2192;</span>', label:'No change' }
-  if (v === -1) return { html:'<span style="color:var(--c-warning);font-weight:700">&#x2193;</span>', label:'Small trade-off' }
+  if (v === -1) return { html:'<span class="jx-111">&#x2193;</span>', label:'Small trade-off' }
   if (v <= -2) return { html:'<span style="color:var(--c-danger);font-weight:900">&#x2193;&#x2193;</span>', label:'Significant trade-off' }
 }
 
@@ -6348,7 +6348,7 @@ async function doBiosThermalFingerprint() {
   let remaining = 30  // 30 × 2s = 60s
   const totalSamples = 30
 
-  result.innerHTML = `<div style="font-size:11px;color:var(--c-text-tertiary);padding:4px 0">
+  result.innerHTML = `<div class="jx-75">
     <i class="fa fa-eye jx-16"></i> Observing your thermal behaviour passively — do not run any benchmarks during this time.
     <div style="margin-top:6px;background:var(--surface-2);border-radius:4px;height:4px;overflow:hidden">
       <div id="fingerprint-progress" style="height:4px;width:0%;background:var(--pink);border-radius:4px;transition:width 2s linear"></div>
@@ -6374,7 +6374,7 @@ async function doBiosThermalFingerprint() {
       if (status) status.textContent = tUI('biosThermalFingerprintDone')
       const archetype = _classifyThermalFingerprint(samples)
       if (!archetype) {
-        result.innerHTML = `<div style="font-size:11px;color:var(--c-warning)">Could not gather enough thermal data. Is LibreHardwareMonitor running?</div>`
+        result.innerHTML = `<div class="jx-112">Could not gather enough thermal data. Is LibreHardwareMonitor running?</div>`
         return
       }
       const avgTemp  = Math.round(samples.reduce((a,b)=>a+b.cpu,0)/samples.length)
@@ -6498,7 +6498,7 @@ function renderBiosScore() {
   if (!el) return
   const { score, reasons, noData } = computeBiosScore(_biosScoreInfo, _biosScoreEntries)
   if (noData) {
-    el.innerHTML = `<div style="font-size:11px;color:var(--c-text-tertiary);padding:4px 0"><i class="fa fa-circle-info"></i> ${tUI('biosScoreNoData')}</div>`
+    el.innerHTML = `<div class="jx-75"><i class="fa fa-circle-info"></i> ${tUI('biosScoreNoData')}</div>`
     return
   }
   let tier, color, pulse = false
@@ -6523,7 +6523,7 @@ function renderBiosScore() {
         <div style="font-size:11px;font-weight:700;color:${color};margin-top:3px">${tier}</div>
       </div>
     </div>
-    ${reasons.length ? `<div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:5px">${reasons.map(r => `<span style="font-size:11px;background:var(--surface-2);border:1px solid var(--hairline-strong);color:var(--c-success);border-radius:4px;padding:2px 7px"><i class="fa fa-check jx-4"></i> ${r.label} <span style="color:var(--c-success);font-size:11px">+${r.pts}</span></span>`).join('')}</div>` : ''}`
+    ${reasons.length ? `<div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:5px">${reasons.map(r => `<span style="font-size:11px;background:var(--surface-2);border:1px solid var(--hairline-strong);color:var(--c-success);border-radius:4px;padding:2px 7px"><i class="fa fa-check jx-4"></i> ${r.label} <span class="jx-113">+${r.pts}</span></span>`).join('')}</div>` : ''}`
 }
 
 let _biosDangerAcknowledged = false
@@ -6534,7 +6534,7 @@ async function buildBiosTuner(c) {
   // ── Optimization Score Hero Card ──────────────────────────────────────────
   const scoreCard = document.createElement('div')
   scoreCard.style.cssText = 'background:var(--surface-2);border:1.5px solid var(--hairline-strong);border-radius:10px;padding:14px 18px;margin-bottom:16px'
-  scoreCard.innerHTML = `<div id="bios-score-card"><div style="font-size:11px;color:var(--c-text-tertiary);padding:4px 0"><i class="fa fa-circle-info"></i> ${tUI('biosScoreNoData')}</div></div>`
+  scoreCard.innerHTML = `<div id="bios-score-card"><div class="jx-75"><i class="fa fa-circle-info"></i> ${tUI('biosScoreNoData')}</div></div>`
   c.appendChild(scoreCard)
 
   // ── Ryzen AutoTune delta card (post-session comparison) ───────────────────
@@ -6563,7 +6563,7 @@ async function buildBiosTuner(c) {
   banner.id = 'bios-danger-banner'
   if (_biosDangerAcknowledged) {
     banner.style.cssText = 'background:var(--surface-2);border:1.5px solid var(--c-success-ring);border-radius:10px;padding:8px 14px;margin-bottom:16px'
-    banner.innerHTML = `<div class="jx-34"><i class="fa fa-check-circle" style="color:var(--c-success);font-size:13px"></i><span class="jx-41">${tUI('biosDangerAcknowledged')}</span></div>`
+    banner.innerHTML = `<div class="jx-34"><i class="fa fa-check-circle jx-76"></i><span class="jx-41">${tUI('biosDangerAcknowledged')}</span></div>`
   } else {
     banner.style.cssText = 'background:var(--surface-2);border:1.5px solid var(--c-danger-ring);border-radius:10px;padding:14px 18px;margin-bottom:16px;display:flex;gap:12px;align-items:flex-start'
     banner.innerHTML = `
@@ -6589,7 +6589,7 @@ async function buildBiosTuner(c) {
   const recoveryGuide = document.createElement('div')
   recoveryGuide.style.cssText = 'background:var(--c-bg-elevated);border:1px solid var(--c-border-subtle);border-radius:10px;padding:0;margin-bottom:16px;overflow:hidden'
   recoveryGuide.innerHTML = `
-    <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 16px;cursor:pointer;user-select:none" onclick="this.parentElement.querySelector('.recovery-body').style.display = this.parentElement.querySelector('.recovery-body').style.display==='none' ? '' : 'none'; this.querySelector('.recovery-chevron').style.transform = this.parentElement.querySelector('.recovery-body').style.display==='' ? 'rotate(180deg)' : ''">
+    <div onclick="this.parentElement.querySelector('.recovery-body').style.display = this.parentElement.querySelector('.recovery-body').style.display==='none' ? '' : 'none'; this.querySelector('.recovery-chevron').style.transform = this.parentElement.querySelector('.recovery-body').style.display==='' ? 'rotate(180deg)' : ''" class="jx-114">
       <div class="jx-30">
         <i class="fa fa-life-ring" style="color:var(--c-accent-fg);font-size:15px"></i>
         <span style="font-size:12px;font-weight:700;color:var(--c-accent-fg);letter-spacing:0.3px">${tUI('biosRecoveryTitle')}</span>
@@ -6705,7 +6705,7 @@ async function buildBiosTuner(c) {
     </div>
     <div style="background:var(--surface-2);border:1px solid var(--hairline-strong);border-radius:8px;padding:9px 13px;margin-bottom:10px">
       <div style="font-size:11px;font-weight:700;color:var(--c-info);margin-bottom:7px"><i class="fa fa-bookmark"></i> ${tUI('biosProfileTitle')}</div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+      <div class="jx-115">
         <select id="bios-profile-select" class="styled-select" style="font-size:11px;padding:3px 8px;min-width:120px">
           <option value="">${tUI('biosProfileEmpty')}</option>
         </select>
@@ -6734,7 +6734,7 @@ async function buildBiosTuner(c) {
   const ramScanRow = document.createElement('div')
   ramScanRow.style.cssText = 'padding:10px 18px 4px'
   ramScanRow.innerHTML = `
-    <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+    <div class="jx-116">
       <button class="btn btn-primary btn-sm" id="ram-scan-btn" onclick="doRamDiagScan()"><i class="fa fa-memory"></i> ${tUI('biosRamScanBtn')}</button>
       <span id="ram-scan-status" class="jx-1">${tUI('biosRamStatus')}</span>
     </div>
@@ -6777,7 +6777,7 @@ async function buildBiosTuner(c) {
     cpuContent.innerHTML = `
       <div style="background:var(--surface-2);border:1.5px solid var(--hairline-strong);border-radius:9px;padding:12px 16px;margin-bottom:12px">
         <div style="font-size:11.5px;font-weight:800;color:var(--c-info);margin-bottom:4px"><i class="fa fa-bolt"></i> ${tUI('biosIntelBoostTitle')}</div>
-        <div style="font-size:11px;color:var(--c-text-tertiary);margin-bottom:10px">${tUI('biosIntelBoostSub')}<br><span class="jx-5">CPU: ${sysInfo?.cpu || 'Unknown'}</span></div>
+        <div class="jx-117">${tUI('biosIntelBoostSub')}<br><span class="jx-5">CPU: ${sysInfo?.cpu || 'Unknown'}</span></div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
           <button class="btn btn-ghost btn-sm jx-4" id="intel-boost-disabled" onclick="doIntelBoost('disabled')"><i class="fa fa-pause"></i> ${tUI('biosIntelBoostDisabled')}</button>
           <button class="btn btn-ghost btn-sm jx-4" id="intel-boost-efficient" onclick="doIntelBoost('efficient')"><i class="fa fa-leaf"></i> ${tUI('biosIntelBoostEfficient')}</button>
@@ -6813,7 +6813,7 @@ async function buildBiosTuner(c) {
             <div class="jx-18">PPT — Package Power</div>
             <div class="jx-1">Total chip power cap. Eco ≈45W, Desktop ≈88–142W</div>
           </div>
-          <input type="range" id="ryzen-ppt" min="20" max="230" value="88" oninput="document.getElementById('ryzen-ppt-val').textContent=this.value+'W'" style="flex:1;accent-color:var(--pink)">
+          <input type="range" id="ryzen-ppt" min="20" max="230" value="88" oninput="document.getElementById('ryzen-ppt-val').textContent=this.value+'W'" class="jx-77">
           <span id="ryzen-ppt-val" class="jx-55">88W</span>
         </div>
         <div class="jx-26">
@@ -6821,7 +6821,7 @@ async function buildBiosTuner(c) {
             <div class="jx-18">TDC — Thermal Current</div>
             <div class="jx-1">Sustained current limit. Eco ≈35A, Desktop ≈75–110A</div>
           </div>
-          <input type="range" id="ryzen-tdc" min="20" max="160" value="75" oninput="document.getElementById('ryzen-tdc-val').textContent=this.value+'A'" style="flex:1;accent-color:var(--pink)">
+          <input type="range" id="ryzen-tdc" min="20" max="160" value="75" oninput="document.getElementById('ryzen-tdc-val').textContent=this.value+'A'" class="jx-77">
           <span id="ryzen-tdc-val" class="jx-55">75A</span>
         </div>
         <div class="jx-26">
@@ -6829,7 +6829,7 @@ async function buildBiosTuner(c) {
             <div class="jx-18">EDC — Peak Current</div>
             <div class="jx-1">Peak burst current. Eco ≈50A, Desktop ≈120–160A</div>
           </div>
-          <input type="range" id="ryzen-edc" min="30" max="220" value="120" oninput="document.getElementById('ryzen-edc-val').textContent=this.value+'A'" style="flex:1;accent-color:var(--pink)">
+          <input type="range" id="ryzen-edc" min="30" max="220" value="120" oninput="document.getElementById('ryzen-edc-val').textContent=this.value+'A'" class="jx-77">
           <span id="ryzen-edc-val" class="jx-55">120A</span>
         </div>
         <div class="jx-31">
@@ -6870,7 +6870,7 @@ async function buildBiosTuner(c) {
       </div>
       <!-- Ryzen AutoTune -->
       <div style="margin-bottom:10px;padding:10px 12px;background:rgba(0,212,180,0.04);border:1px solid rgba(0,212,180,0.18);border-radius:8px">
-        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+        <div class="jx-118">
           <button id="ryzen-autotune-btn" class="btn btn-primary btn-sm" onclick="doRyzenAutoTune()" style="font-size:11px;padding:4px 12px;gap:6px">
             <i class="fa fa-wand-magic-sparkles"></i> Tune for me
           </button>
@@ -6880,9 +6880,9 @@ async function buildBiosTuner(c) {
       </div>
       <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">
         <span style="font-size:11px;color:var(--gray);align-self:center;margin-right:4px">${tUI('ryzenPresets')}</span>
-        <button class="btn btn-ghost btn-sm" onclick="ryzenPreset(45,35,50,45,95,1600,0)" style="font-size:11px;padding:3px 10px">${tUI('ryzenEcoMode')}</button>
-        <button class="btn btn-ghost btn-sm" onclick="ryzenPreset(88,75,120,65,95,1800,0)" style="font-size:11px;padding:3px 10px">${tUI('ryzenBalanced')}</button>
-        <button class="btn btn-ghost btn-sm" onclick="ryzenPreset(142,110,160,142,95,2000,0)" style="font-size:11px;padding:3px 10px">${tUI('ryzenPerformance')}</button>
+        <button class="btn btn-ghost btn-sm jx-78" onclick="ryzenPreset(45,35,50,45,95,1600,0)">${tUI('ryzenEcoMode')}</button>
+        <button class="btn btn-ghost btn-sm jx-78" onclick="ryzenPreset(88,75,120,65,95,1800,0)">${tUI('ryzenBalanced')}</button>
+        <button class="btn btn-ghost btn-sm jx-78" onclick="ryzenPreset(142,110,160,142,95,2000,0)">${tUI('ryzenPerformance')}</button>
       </div>
       <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px;flex-wrap:wrap;background:var(--surface-2);border:1px solid var(--hairline-strong);border-radius:7px;padding:8px 12px">
         <span style="font-size:11px;color:var(--c-text-tertiary);margin-right:4px"><i class="fa fa-floppy-disk"></i> ${tUI('ryzenSavePreset')}</span>
@@ -6892,8 +6892,8 @@ async function buildBiosTuner(c) {
           <option value="">${tUI('ryzenLoadPreset')}…</option>
         </select>
       </div>
-      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-        <label class="danger-toggle" style="margin:0"><span><i class="fa fa-triangle-exclamation"></i> ${tUI('ryzenUnderstand')}</span><label class="toggle-switch"><input type="checkbox" id="tog-ryzenadj"><span class="toggle-slider"></span></label></label>
+      <div class="jx-118">
+        <label class="danger-toggle jx-119"><span><i class="fa fa-triangle-exclamation"></i> ${tUI('ryzenUnderstand')}</span><label class="toggle-switch"><input type="checkbox" id="tog-ryzenadj"><span class="toggle-slider"></span></label></label>
         <button class="btn btn-primary btn-sm" onclick="doRyzenAdjApply()"><i class="fa fa-bolt"></i> ${tUI('biosApply')}</button>
         <span id="ryzen-apply-status" class="jx-1"></span>
       </div>`
@@ -6908,13 +6908,13 @@ async function buildBiosTuner(c) {
   thermContent.style.padding = '10px 18px 14px'
   thermContent.innerHTML = `
     <div style="display:flex;gap:16px;align-items:center;margin-bottom:10px;flex-wrap:wrap">
-      <div id="bios-therm-cpu" style="background:var(--surface-2);border:1px solid var(--border2);border-radius:8px;padding:8px 16px;text-align:center;min-width:80px">
-        <div style="font-size:11px;color:var(--gray);letter-spacing:0.5px;margin-bottom:2px">${tUI('biosThermalCpu')}</div>
+      <div id="bios-therm-cpu" class="jx-120">
+        <div class="jx-121">${tUI('biosThermalCpu')}</div>
         <div id="bios-therm-cpu-val" style="font-size:22px;font-weight:900;color:var(--c-accent-fg)">—</div>
         <div class="jx-1">°C</div>
       </div>
-      <div id="bios-therm-gpu" style="background:var(--surface-2);border:1px solid var(--border2);border-radius:8px;padding:8px 16px;text-align:center;min-width:80px">
-        <div style="font-size:11px;color:var(--gray);letter-spacing:0.5px;margin-bottom:2px">${tUI('biosThermalGpu')}</div>
+      <div id="bios-therm-gpu" class="jx-120">
+        <div class="jx-121">${tUI('biosThermalGpu')}</div>
         <div id="bios-therm-gpu-val" style="font-size:22px;font-weight:900;color:var(--c-info)">—</div>
         <div class="jx-1">°C</div>
       </div>
@@ -6952,8 +6952,8 @@ async function buildBiosTuner(c) {
   fanContent.innerHTML = `
     <div id="bios-lhm-grid" style="display:none;margin-bottom:14px">
       <div style="font-size:11px;font-weight:700;color:var(--c-info);letter-spacing:0.5px;margin-bottom:8px"><i class="fa fa-gauge-high"></i> LIVE SENSORS — <span id="bios-lhm-refresh-ts" style="font-weight:400;color:var(--c-text-tertiary)"></span></div>
-      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:6px;margin-bottom:8px" id="bios-lhm-fans"></div>
-      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:6px;margin-bottom:8px" id="bios-lhm-powers"></div>
+      <div id="bios-lhm-fans" class="jx-122"></div>
+      <div id="bios-lhm-powers" class="jx-122"></div>
       <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:6px" id="bios-lhm-volts"></div>
     </div>
     <div id="bios-lhm-sensor-warn" style="font-size:11px;color:var(--c-text-tertiary);background:var(--surface-2);border:1px solid var(--border2);border-radius:6px;padding:7px 12px;margin-bottom:12px">
@@ -6992,11 +6992,11 @@ async function buildBiosTuner(c) {
   const changeLogCard = document.createElement('div')
   changeLogCard.style.cssText = 'background:var(--surface-2);border:1.5px solid var(--hairline-strong);border-radius:10px;margin-bottom:16px;overflow:hidden'
   changeLogCard.innerHTML = `
-    <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 16px;cursor:pointer;user-select:none"
-         onclick="this.parentElement.querySelector('.bios-changelog-body').style.display = this.parentElement.querySelector('.bios-changelog-body').style.display==='none' ? '' : 'none'; this.querySelector('.cl-chevron').style.transform = this.parentElement.querySelector('.bios-changelog-body').style.display==='' ? 'rotate(180deg)' : ''">
+    <div
+         onclick="this.parentElement.querySelector('.bios-changelog-body').style.display = this.parentElement.querySelector('.bios-changelog-body').style.display==='none' ? '' : 'none'; this.querySelector('.cl-chevron').style.transform = this.parentElement.querySelector('.bios-changelog-body').style.display==='' ? 'rotate(180deg)' : ''" class="jx-114">
       <div class="jx-30">
         <i class="fa fa-clock-rotate-left" style="color:var(--c-info);font-size:14px"></i>
-        <span style="font-size:12px;font-weight:700;color:var(--c-info)">${tUI('biosChangeLogTitle')} <span id="bios-changelog-count" style="font-size:11px;color:var(--c-text-tertiary);margin-left:4px"></span></span>
+        <span style="font-size:12px;font-weight:700;color:var(--c-info)">${tUI('biosChangeLogTitle')} <span id="bios-changelog-count" class="jx-123"></span></span>
       </div>
       <div class="jx-36">
         <button class="btn btn-ghost btn-sm" style="font-size:11px;padding:2px 8px;color:var(--c-warning);border-color:rgba(230,126,34,0.3)" onclick="event.stopPropagation();doBiosRevertAllChanges()">${tUI('biosChangeLogRevertAll')}</button>
@@ -7028,7 +7028,7 @@ async function loadBiosChangeLog() {
     return `<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--border2);flex-wrap:wrap">
       <span style="font-size:11px;color:var(--c-text-tertiary);min-width:110px">${dt}</span>
       <span style="font-size:11px;color:var(--white);font-weight:600;flex:1">${escHtml(e.settingName || e.token)}</span>
-      <span style="font-size:11px;color:var(--c-danger)">${escHtml(String(e.oldValue))}</span>
+      <span class="jx-124">${escHtml(String(e.oldValue))}</span>
       <i class="fa fa-arrow-right jx-5"></i>
       <span class="jx-41">${escHtml(String(e.newValue))}</span>
       <button class="btn btn-ghost btn-sm" style="font-size:11px;padding:2px 7px"
@@ -7169,7 +7169,7 @@ function doBiosDangerAck() {
   const bannerDiv = document.getElementById('bios-danger-banner')
   if (!bannerDiv) return
   bannerDiv.style.cssText = 'background:var(--surface-2);border:1.5px solid var(--c-success-ring);border-radius:10px;padding:8px 14px;margin-bottom:16px'
-  bannerDiv.innerHTML = `<div class="jx-34"><i class="fa fa-check-circle" style="color:var(--c-success);font-size:13px"></i><span class="jx-41">${tUI('biosDangerAcknowledged')}</span></div>`
+  bannerDiv.innerHTML = `<div class="jx-34"><i class="fa fa-check-circle jx-76"></i><span class="jx-41">${tUI('biosDangerAcknowledged')}</span></div>`
 }
 
 async function doBiosScan() {
@@ -7190,7 +7190,7 @@ async function doBiosScan() {
   const row = (icon, label, value, good) => `
     <div class="jx-31">
       <div style="width:26px;text-align:center;color:${good === true ? 'var(--c-success)' : good === false ? 'var(--c-danger)' : 'var(--c-warning)'};font-size:13px"><i class="fa ${icon}"></i></div>
-      <div style="font-size:11px;color:var(--gray);width:160px;flex-shrink:0">${label}</div>
+      <div class="jx-125">${label}</div>
       <div style="font-size:11px;color:var(--white);font-weight:600">${value}</div>
     </div>`
   const ramLabel = info.ramActual ? `${info.ramActual} MHz actual / ${info.ramRated} MHz rated${info.ramNote ? ' (' + info.ramNote + ')' : ''}` : 'Unknown'
@@ -7384,7 +7384,7 @@ function renderBiosCapsuleDrift(cr) {
     <div style="display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--hairline-strong);flex-wrap:wrap">
       <div style="font-size:11px;font-weight:700;color:var(--white);min-width:180px;flex-shrink:0">${escHtml(d.settingName)}</div>
       <div class="jx-5">${escHtml(d.from)}</div>
-      <div style="font-size:11px;color:var(--c-info)">&#x2192;</div>
+      <div class="jx-126">&#x2192;</div>
       <div class="jx-44">${escHtml(d.to)}</div>
       <div class="jx-2"></div>
       ${d.external
@@ -7401,9 +7401,9 @@ function renderBiosCapsuleDrift(cr) {
         <div style="font-size:11px;font-weight:800;color:${externalCount ? 'var(--c-warning)' : 'var(--c-info-muted)'};letter-spacing:0.5px">SETTINGS DRIFT DETECTED</div>
         <div class="jx-56">Since ${fmt(cr.firstScan)}</div>
       </div>
-      <div style="font-size:11px;color:var(--c-text-tertiary);margin-bottom:10px">
+      <div class="jx-117">
         ${cr.drifts.length} setting${cr.drifts.length > 1 ? 's' : ''} changed since first scan
-        ${externalCount ? `— <span style="color:var(--c-warning);font-weight:700">${externalCount} changed externally</span> (Windows Update or BIOS flash)` : ''}
+        ${externalCount ? `— <span class="jx-111">${externalCount} changed externally</span> (Windows Update or BIOS flash)` : ''}
         ${internalCount ? `— <span class="jx-14">${internalCount} changed by you</span>` : ''}
       </div>
       ${rows}
@@ -7439,12 +7439,12 @@ function buildScewinSettingCard(def, entry) {
     <div style="display:flex;align-items:flex-start;gap:12px;flex-wrap:wrap">
       <div style="flex:1;min-width:200px">
         <div style="font-size:12px;font-weight:700;color:var(--white);margin-bottom:2px">${def.label}</div>
-        <div style="font-size:11px;color:var(--gray);line-height:1.5">${def.desc}</div>
-        ${def.reboot ? '<div style="font-size:11px;color:var(--c-warning);margin-top:4px"><i class="fa fa-rotate-right"></i> Reboot required</div>' : '<div style="font-size:11px;color:var(--c-success);margin-top:4px"><i class="fa fa-bolt"></i> Takes effect immediately</div>'}
+        <div class="jx-73">${def.desc}</div>
+        ${def.reboot ? '<div class="jx-127"><i class="fa fa-rotate-right"></i> Reboot required</div>' : '<div style="font-size:11px;color:var(--c-success);margin-top:4px"><i class="fa fa-bolt"></i> Takes effect immediately</div>'}
         ${buildRiskRadar(def.key)}
       </div>
       <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px">
-        ${def.danger ? `<label class="danger-toggle" style="margin:0"><span><i class="fa fa-triangle-exclamation"></i> ${def.dangerLabel}</span><label class="toggle-switch"><input type="checkbox" id="scewin-tog-${entry.token}"><span class="toggle-slider"></span></label></label>` : ''}
+        ${def.danger ? `<label class="danger-toggle jx-119"><span><i class="fa fa-triangle-exclamation"></i> ${def.dangerLabel}</span><label class="toggle-switch"><input type="checkbox" id="scewin-tog-${entry.token}"><span class="toggle-slider"></span></label></label>` : ''}
         <div style="display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end">${optionBtns}</div>
         <div id="scewin-status-${entry.token}" style="font-size:11px;color:var(--gray)"></div>
       </div>
@@ -7473,7 +7473,7 @@ function renderBiosAgeAlert(info) {
   el.innerHTML = `
     <div class="jx-31">
       <div style="width:26px;text-align:center;color:${color};font-size:13px"><i class="fa ${icon}"></i></div>
-      <div style="font-size:11px;color:var(--gray);width:160px;flex-shrink:0">${tUI('biosBiosAge')}</div>
+      <div class="jx-125">${tUI('biosBiosAge')}</div>
       <div style="font-size:11px;color:${color};font-weight:600">${ageDays} ${tUI('biosBiosAgeUnit')} — ${label}${updateUrl ? ` <a href="#" onclick="event.preventDefault();api.openExternal('${updateUrl}')" style="color:var(--c-info);margin-left:8px;font-size:11px"><i class="fa fa-arrow-up-right-from-square"></i> ${tUI('biosBiosUpdateBtn')}</a>` : ''}</div>
     </div>`
 }
@@ -7494,7 +7494,7 @@ function renderAntiCheatCard(info) {
   ]
 
   const dot = ok => ok
-    ? `<span style="color:var(--c-success);font-size:13px">&#9679;</span>`
+    ? `<span class="jx-76">&#9679;</span>`
     : `<span style="color:var(--c-danger);font-size:13px">&#9679;</span>`
 
   const rows = acs.map(ac => `
@@ -7650,7 +7650,7 @@ async function doBiosBootChronicle() {
   btn.innerHTML = `<i class="fa fa-magnifying-glass"></i> ${tUI('biosBootChronicleBtn')}`
   if (status) status.textContent = ''
   if (!r?.ok || !r.boots?.length) {
-    result.innerHTML = `<div style="font-size:11px;color:var(--gray);padding:4px 0"><i class="fa fa-circle-info"></i> ${tUI('biosBootChronicleNoData')}</div>`
+    result.innerHTML = `<div class="jx-79"><i class="fa fa-circle-info"></i> ${tUI('biosBootChronicleNoData')}</div>`
     return
   }
   const boot = r.boots[0]
@@ -7663,7 +7663,7 @@ async function doBiosBootChronicle() {
   const desktop  = postBoot
 
   if (!total) {
-    result.innerHTML = `<div style="font-size:11px;color:var(--gray);padding:4px 0">${tUI('biosBootChronicleNoData')}</div>`
+    result.innerHTML = `<div class="jx-79">${tUI('biosBootChronicleNoData')}</div>`
     return
   }
 
@@ -7702,9 +7702,9 @@ async function doBiosBootChronicle() {
 
   result.innerHTML = `
     <div style="background:var(--surface-2);border:1.5px solid var(--hairline-strong);border-radius:9px;padding:12px 16px">
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+      <div class="jx-116">
         <i class="fa fa-clock jx-16"></i>
-        <div style="font-size:12px;font-weight:800;color:var(--white)">Total boot time: <span class="jx-16">${(total/1000).toFixed(1)}s</span></div>
+        <div class="jx-80">Total boot time: <span class="jx-16">${(total/1000).toFixed(1)}s</span></div>
         ${bootDate ? `<div class="jx-56">${bootDate}</div>` : ''}
       </div>
       <div style="display:flex;gap:3px;height:28px;margin-bottom:14px;align-items:flex-end">${bars}</div>
@@ -7868,11 +7868,11 @@ async function doBiosProfileCompare() {
     <div style="display:flex;gap:12px;margin-top:8px">
       <div class="jx-2">
         <div class="jx-40">${tUI('biosProfileCompareA')}</div>
-        <select id="_bios-cmp-a" class="styled-select" style="width:100%">${optHtml}</select>
+        <select id="_bios-cmp-a" class="styled-select jx-63">${optHtml}</select>
       </div>
       <div class="jx-2">
         <div class="jx-40">${tUI('biosProfileCompareB')}</div>
-        <select id="_bios-cmp-b" class="styled-select" style="width:100%">${optHtml.replace('<option', '<option selected').replace('<option selected', '<option').replace(/(<option[^>]*>)/, '$1').slice(0)}</select>
+        <select id="_bios-cmp-b" class="styled-select jx-63">${optHtml.replace('<option', '<option selected').replace('<option selected', '<option').replace(/(<option[^>]*>)/, '$1').slice(0)}</select>
       </div>
     </div>`
 
@@ -7920,7 +7920,7 @@ async function doBiosProfileCompare() {
 
   const tableBody = `
     <div style="max-height:340px;overflow-y:auto;margin-top:8px">
-      <table style="width:100%;border-collapse:collapse">
+      <table class="jx-128">
         <thead><tr>
           <th style="padding:5px 8px;font-size:11px;color:var(--c-text-tertiary);text-align:left;border-bottom:1px solid var(--hairline-strong)">${tUI('biosProfileCompareSetting')}</th>
           <th style="padding:5px 8px;font-size:11px;color:var(--c-warning);text-align:left;border-bottom:1px solid var(--hairline-strong)">${escHtml(selA)}</th>
@@ -7929,7 +7929,7 @@ async function doBiosProfileCompare() {
         <tbody>${rows}</tbody>
       </table>
     </div>
-    <div style="font-size:11px;color:var(--c-text-tertiary);margin-top:8px">${diffs.length} ${tUI('biosProfileCompareDiffCount')}</div>`
+    <div class="jx-81">${diffs.length} ${tUI('biosProfileCompareDiffCount')}</div>`
 
   showConfirm({ title: `${tUI('biosProfileCompareTitle')}: ${selA} vs ${selB}`, body: tableBody, okText: 'OK', okStyle: 'info', icon: 'fa-code-compare' }).catch(() => {})
 }
@@ -7978,7 +7978,7 @@ async function doRamDiagScan() {
       </div>
     </div>`
   } else {
-    timingsDiv.innerHTML = `<div style="font-size:11px;color:var(--gray);padding:4px 0">${tUI('biosTimingsNA')}</div>`
+    timingsDiv.innerHTML = `<div class="jx-79">${tUI('biosTimingsNA')}</div>`
   }
   out.appendChild(timingsDiv)
 }
@@ -9782,7 +9782,7 @@ async function runWindowsHealthDash(btn) {
   let result
   try { result = await api.runWindowsHealth() } catch (e) {
     banner.style.background = pinkA(0.07); banner.style.border = `1px solid ${pinkA(0.2)}`
-    banner.innerHTML = `<i class="fa fa-circle-xmark" style="color:var(--danger)"></i> ${tUI('dashHealthFailed')}: ${e.message}`
+    banner.innerHTML = `<i class="fa fa-circle-xmark jx-69"></i> ${tUI('dashHealthFailed')}: ${e.message}`
     btn.disabled = false; btn.innerHTML = `<i class="fa fa-heart-pulse"></i> ${tUI('dashHealthBtn')}`; return
   }
 
@@ -10023,9 +10023,9 @@ function ariaRenderJournal() {
           <span class="jx-7">${dateStr} · ${timeStr}${durMin ? ` · ${durMin}m` : ''}</span>
         </div>
         <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:${insights.length ? '6px' : '0'}">
-          ${j.avgFps ? `<span style="font-size:11px;background:rgba(var(--fx),0.04);border:1px solid var(--border);border-radius:4px;padding:2px 6px;color:var(--muted)">AVG ${j.avgFps} FPS</span>` : ''}
-          ${j.low1Fps ? `<span style="font-size:11px;background:rgba(var(--fx),0.04);border:1px solid var(--border);border-radius:4px;padding:2px 6px;color:var(--muted)">1% ${j.low1Fps} FPS</span>` : ''}
-          ${j.peakCpu ? `<span style="font-size:11px;background:rgba(var(--fx),0.04);border:1px solid var(--border);border-radius:4px;padding:2px 6px;color:var(--muted)">CPU ${Math.round(j.peakCpu)}% peak</span>` : ''}
+          ${j.avgFps ? `<span class="jx-82">AVG ${j.avgFps} FPS</span>` : ''}
+          ${j.low1Fps ? `<span class="jx-82">1% ${j.low1Fps} FPS</span>` : ''}
+          ${j.peakCpu ? `<span class="jx-82">CPU ${Math.round(j.peakCpu)}% peak</span>` : ''}
         </div>
         ${insights.length ? `<div style="display:flex;flex-direction:column;gap:2px;font-size:11px">${insights.map(i=>`<div>${i}</div>`).join('')}</div>` : ''}
       </div>`
@@ -10078,7 +10078,7 @@ async function buildWeeklyReport() {
     const statTile = (icon, label, val, color = 'var(--pink)') =>
       `<div style="background:var(--bg-card2);border:1px solid var(--border);border-radius:8px;padding:10px;text-align:center">
         <div style="font-size:14px;color:${color};margin-bottom:4px"><i class="fa ${icon}"></i></div>
-        <div style="font-size:13px;font-weight:800;color:var(--white)">${val}</div>
+        <div class="jx-66">${val}</div>
         <div class="jx-15">${label}</div>
       </div>`
 
@@ -10242,18 +10242,18 @@ function showAriaSessionSummary(data) {
   const anomalyTotal = Object.values(data.anomalyCounts || {}).reduce((a, v) => a + v, 0)
 
   const pill = (label, val, col) =>
-    `<span style="background:rgba(var(--fx),0.04);border:1px solid var(--border);border-radius:5px;padding:3px 8px;white-space:nowrap">
+    `<span class="jx-129">
       <span class="jx-3">${label}: </span><span style="color:${col};font-weight:700">${val}</span>
     </span>`
 
   const anomalyStr = anomalyTotal === 0
-    ? `<span style="color:var(--c-success);font-weight:700">0</span>`
+    ? `<span class="jx-74">0</span>`
     : `<span style="color:var(--c-danger);font-weight:700">${anomalyTotal}</span>`
       + ' (' + Object.entries(data.anomalyCounts || {}).map(([k,v])=>`${k.toUpperCase()}×${v}`).join(', ') + ')'
 
   body.innerHTML =
     pill(tUI('ariaSessionSummaryDuration'), `${mins} min`, '#c0c0c0') +
-    `<span style="background:rgba(var(--fx),0.04);border:1px solid var(--border);border-radius:5px;padding:3px 8px;white-space:nowrap">
+    `<span class="jx-129">
       <span class="jx-3">${tUI('ariaSessionSummaryAnomalies')}: </span>${anomalyStr}
     </span>` +
     pill(tUI('ariaSessionSummaryInsights'), data.insightsApplied || 0, '#9b59b6') +
@@ -10314,7 +10314,7 @@ async function ariaShowSessionCoach() {
             <i class="fa fa-brain" style="color:var(--c-accent-fg);font-size:18px"></i>
           </div>
           <div>
-            <div style="font-size:12px;font-weight:800;color:var(--white)">ARIA Session Coach</div>
+            <div class="jx-80">ARIA Session Coach</div>
             <div class="jx-7">${data.game}${mins > 0 ? ` &bull; ${mins} min` : ''}</div>
           </div>
         </div>
@@ -10364,7 +10364,7 @@ async function ariaShowSessionCoach() {
       </div>
 
       <!-- Footer -->
-      <div style="display:flex;gap:8px;justify-content:flex-end">
+      <div class="jx-93">
         <button onclick="ariaCoachCopyToClipboard()" class="btn btn-ghost" style="font-size:11px;padding:5px 12px"><i class="fa fa-copy jx-22"></i>Copy Report</button>
         <button onclick="document.getElementById('session-coach-overlay').remove()" class="btn btn-primary" style="font-size:11px;padding:5px 14px">Done</button>
       </div>
@@ -10608,8 +10608,8 @@ async function ariaRefreshInsights() {
         }
         frameRow = `<div style="margin-top:5px;padding-top:5px;border-top:1px solid rgba(var(--fx),0.06);font-size:11px;color:var(--muted)">
           <span style="font-weight:700;color:var(--c-accent-fg);margin-right:6px"><i class="fa fa-chart-line jx-4"></i> ${tUI('ariaInsightFrameTime')}</span>
-          <span style="margin-right:8px">${tUI('ariaInsightFrameMean')}: ${fmtMs(ft.before?.mean)} → ${fmtMs(ft.after?.mean)}${fmtDelta(ft.meanDelta)}</span>
-          <span style="margin-right:8px">${tUI('ariaInsightFrameP1')}: ${fmtMs(ft.before?.p1Low)} → ${fmtMs(ft.after?.p1Low)}${fmtDelta(ft.p1Delta)}</span>
+          <span class="jx-83">${tUI('ariaInsightFrameMean')}: ${fmtMs(ft.before?.mean)} → ${fmtMs(ft.after?.mean)}${fmtDelta(ft.meanDelta)}</span>
+          <span class="jx-83">${tUI('ariaInsightFrameP1')}: ${fmtMs(ft.before?.p1Low)} → ${fmtMs(ft.after?.p1Low)}${fmtDelta(ft.p1Delta)}</span>
           <span>${tUI('ariaInsightFrameP01')}: ${fmtMs(ft.before?.p01Low)} → ${fmtMs(ft.after?.p01Low)}${fmtDelta(ft.p01Delta)}</span>
         </div>`
       }
@@ -10619,14 +10619,14 @@ async function ariaRefreshInsights() {
         const fmtFps = (n) => { const sign = n >= 0 ? '+' : ''; const col = n > 0 ? '#2ecc71' : n < 0 ? '#e74c3c' : 'var(--muted)'; return `<span style="color:${col};font-weight:700">${sign}${n} FPS</span>` }
         fpsRow = `<div style="margin-top:4px;font-size:11px;color:var(--muted)">
           <span style="font-weight:700;color:var(--c-success);margin-right:6px"><i class="fa fa-tachometer-alt jx-4"></i> FPS</span>
-          <span style="margin-right:8px">${tUI('ariaAvgFps')}: ${fd.avgBefore} → ${fd.avgAfter} (${fmtFps(fd.avgAfter - fd.avgBefore)})</span>
+          <span class="jx-83">${tUI('ariaAvgFps')}: ${fd.avgBefore} → ${fd.avgAfter} (${fmtFps(fd.avgAfter - fd.avgBefore)})</span>
           <span>${tUI('ariaLow1Fps')}: ${fd.low1Before} → ${fd.low1After} (${fmtFps(fd.low1After - fd.low1Before)})</span>
         </div>`
       }
       return `
         <div class="aria-insight-card">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
-            <span style="font-weight:700;color:var(--c-text-primary)">${ins.tweakId.replace(/-/g,' ').replace(/\b\w/g,c=>c.toUpperCase())}</span>
+          <div class="jx-130">
+            <span class="jx-131">${ins.tweakId.replace(/-/g,' ').replace(/\b\w/g,c=>c.toUpperCase())}</span>
             <span class="jx-7">${action}</span>
           </div>
           ${pills || `<div class="jx-3">${tUI('ariaInsightNoDelta')}</div>`}
@@ -10659,20 +10659,20 @@ async function loadHistoryChart(range) {
   try {
     const data = await api.getMetricsHistory({ hours }).catch(() => [])
     if (!data || data.length === 0) {
-      body.innerHTML = `<div style="color:var(--muted);font-size:11px;text-align:center;padding:18px 0"><i class="fa fa-circle-info"></i> ${tUI('dashHistoryEmpty')}</div>`
+      body.innerHTML = `<div class="jx-132"><i class="fa fa-circle-info"></i> ${tUI('dashHistoryEmpty')}</div>`
       return
     }
     body.innerHTML = `
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
         <div>
-          <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:4px">${tUI('dashHistoryCpu')}</div>
-          <canvas id="hist-canvas-cpu" width="400" height="60" style="width:100%;height:60px;border-radius:5px"></canvas>
-          <div id="hist-stat-cpu" style="font-size:11px;color:var(--muted);margin-top:2px;display:flex;gap:10px"></div>
+          <div class="jx-133">${tUI('dashHistoryCpu')}</div>
+          <canvas id="hist-canvas-cpu" width="400" height="60" class="jx-134"></canvas>
+          <div id="hist-stat-cpu" class="jx-135"></div>
         </div>
         <div>
-          <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:4px">${tUI('dashHistoryRam')}</div>
-          <canvas id="hist-canvas-ram" width="400" height="60" style="width:100%;height:60px;border-radius:5px"></canvas>
-          <div id="hist-stat-ram" style="font-size:11px;color:var(--muted);margin-top:2px;display:flex;gap:10px"></div>
+          <div class="jx-133">${tUI('dashHistoryRam')}</div>
+          <canvas id="hist-canvas-ram" width="400" height="60" class="jx-134"></canvas>
+          <div id="hist-stat-ram" class="jx-135"></div>
         </div>
       </div>`
     requestAnimationFrame(() => {
@@ -10680,7 +10680,7 @@ async function loadHistoryChart(range) {
       drawHistorySparkline('hist-canvas-ram', data.map(s => s.ram), 'hist-stat-ram', '#3498db')
     })
   } catch {
-    body.innerHTML = `<div style="color:var(--muted);font-size:11px;text-align:center;padding:18px 0">${tUI('dashHistoryEmpty')}</div>`
+    body.innerHTML = `<div class="jx-132">${tUI('dashHistoryEmpty')}</div>`
   }
 }
 
@@ -10903,7 +10903,7 @@ function aomRenderHealthGate(reason, ageHours) {
               ['fa-hard-drive',  tWizard('aomHealthSmartLabel'), tWizard('aomHealthSmartSub')],
             ].map(([ic,label,sub]) => `<div class="aom-gate-row">
               <i class="fa ${ic}" style="color:var(--c-info);width:12px;font-size:11px;flex-shrink:0"></i>
-              <div><span style="font-size:var(--font-size-sm);color:var(--c-text-primary);font-weight:600">${label}</span> <span style="font-size:var(--font-size-xs);color:var(--c-text-tertiary)">— ${sub}</span></div>
+              <div><span style="font-size:var(--font-size-sm);color:var(--c-text-primary);font-weight:600">${label}</span> <span class="jx-84">— ${sub}</span></div>
             </div>`).join('')}
           </div>
         </div>
@@ -10929,11 +10929,11 @@ async function aomRunHealthInline() {
   document.getElementById('aom-close-btn')?.setAttribute('disabled', 'disabled')
   const body = document.getElementById('aom-body')
   body.innerHTML = `
-    <div class="aom-gate-hero" style="padding-bottom:var(--sp-2)">
+    <div class="aom-gate-hero jx-136">
       <div class="aom-gate-icon info"><i class="fa fa-heart-pulse"></i></div>
       <div class="aom-gate-title">${tWizard('aomHealthRunning')}</div>
       <div id="aom-health-status" class="aom-gate-desc">${tWizard('aomHealthInit')}</div>
-      <div class="aom-scan-track" style="width:100%;max-width:360px">
+      <div class="aom-scan-track jx-137">
         <div id="aom-health-bar" class="aom-scan-bar"></div>
       </div>
     </div>
@@ -10998,11 +10998,11 @@ async function aomRunPreflightInline() {
   document.getElementById('aom-close-btn')?.setAttribute('disabled', 'disabled')
 
   body.innerHTML = `
-    <div class="aom-gate-hero" style="padding-bottom:var(--sp-2)">
+    <div class="aom-gate-hero jx-136">
       <div class="aom-gate-icon info"><i class="fa fa-magnifying-glass"></i></div>
       <div class="aom-gate-title">${tWizard('aomPreflightRunning')}</div>
       <div id="aom-pf-status" class="aom-gate-desc">${tWizard('aomPreflightRunningDesc')}</div>
-      <div class="aom-scan-track" style="width:100%;max-width:360px">
+      <div class="aom-scan-track jx-137">
         <div id="aom-pf-bar" class="aom-scan-bar"></div>
       </div>
     </div>
@@ -11078,16 +11078,16 @@ function aomRenderPreflightGate(reason, ageHours) {
           : tWizard('aomPreflightStaleDesc').replace('{h}', ageHours)}
       </div>
       <div class="aom-gate-rows">
-        <div style="background:var(--c-bg-raised);border:1px solid var(--c-border-subtle);border-radius:var(--r-md);padding:var(--sp-1-5) var(--sp-2);display:flex;gap:var(--sp-1-5);align-items:flex-start">
+        <div class="jx-138">
           <i class="fa fa-magnifying-glass" style="color:var(--c-info);margin-top:1px;flex-shrink:0"></i>
           <div>
             <div style="font-size:var(--font-size-sm);font-weight:700;color:var(--c-text-primary);margin-bottom:2px">${tWizard('aomPreflightRunNowTitle')}</div>
-            <div style="font-size:var(--font-size-xs);color:var(--c-text-tertiary)">${tWizard('aomPreflightRunNowDesc')}</div>
+            <div class="jx-84">${tWizard('aomPreflightRunNowDesc')}</div>
           </div>
         </div>
-        <div style="background:var(--c-bg-raised);border:1px solid var(--c-border-subtle);border-radius:var(--r-md);padding:var(--sp-1-5) var(--sp-2);display:flex;gap:var(--sp-1-5);align-items:flex-start">
+        <div class="jx-138">
           <i class="fa fa-shield-halved" style="color:var(--c-success);margin-top:1px;flex-shrink:0"></i>
-          <div style="font-size:var(--font-size-xs);color:var(--c-text-tertiary)">${tWizard('aomPreflightShieldDesc')}</div>
+          <div class="jx-84">${tWizard('aomPreflightShieldDesc')}</div>
         </div>
       </div>
     </div>`
@@ -11169,7 +11169,7 @@ function aomRenderStep0() {
     { id:'mix',    icon:'fa-shuffle',    labelKey:'aomUcMix',    descKey:'aomUcMixDesc'    },
   ]
   body.innerHTML = `
-    <div style="margin-bottom:var(--sp-1-5)">
+    <div class="jx-85">
       <div style="font-size:var(--font-size-base);font-weight:700;color:var(--c-text-primary);margin-bottom:4px">${tWizard('aomStep0Question')}</div>
       ${_aomUseCase ? `<div style="font-size:var(--font-size-xs);color:var(--c-success);display:flex;align-items:center;gap:5px"><i class="fa fa-clock-rotate-left"></i> ${tWizard('aomUcRemembered')}</div>` : ''}
     </div>
@@ -11368,7 +11368,7 @@ async function aomRenderStepFiveM() {
     body.innerHTML = `
       <div class="aom-lock-wall">
         <div class="aom-lock-icon"><i class="fa fa-lock"></i></div>
-        <div style="font-size:var(--font-size-base);font-weight:700;color:var(--c-text-primary)"><i class="fa fa-crown jx-48"></i>${tUI('aomFivemLockedTitle')}</div>
+        <div class="jx-86"><i class="fa fa-crown jx-48"></i>${tUI('aomFivemLockedTitle')}</div>
         <div style="font-size:var(--font-size-sm);color:var(--c-text-secondary);max-width:300px;line-height:var(--lh-relaxed)">${tUI('aomFivemLockedDesc')}</div>
         <a href="#" class="btn btn-primary btn-sm" onclick="api.openExternal('${url}');return false"><i class="fa fa-crown"></i> ${tUI('premiumLockCta')}</a>
       </div>`
@@ -11427,7 +11427,7 @@ async function aomRenderStepFiveM() {
     <div style="display:flex;align-items:center;gap:var(--sp-1-5);margin-bottom:var(--sp-2)">
       <div style="width:36px;height:36px;border-radius:var(--r-md);background:var(--c-info-muted);border:1px solid var(--c-info-ring);display:flex;align-items:center;justify-content:center;font-size:15px;color:var(--c-info);flex-shrink:0"><i class="fa fa-gamepad"></i></div>
       <div>
-        <div style="font-size:var(--font-size-base);font-weight:700;color:var(--c-text-primary)">FiveM Optimization</div>
+        <div class="jx-86">FiveM Optimization</div>
         <div style="font-size:var(--font-size-xs);color:var(--c-text-secondary)">System tweaks + recommended in-game graphics settings for maximum FPS</div>
         ${sysInfo?.gpu ? `<div style="font-size:var(--font-size-xs);color:var(--c-info);margin-top:2px"><i class="fa fa-microchip jx-50"></i>Recommended for ${sysInfo.gpu}${sysInfo.vramMB ? ' (' + Math.round(sysInfo.vramMB/1024) + 'GB VRAM)' : ''}</div>` : ''}
       </div>
@@ -11441,7 +11441,7 @@ async function aomRenderStepFiveM() {
 
     <div id="aom-fivem-content" style="display:${aomFivemEnabled ? 'block' : 'none'}">
       <!-- Quick apply mode selector -->
-      <div style="margin-bottom:var(--sp-1-5)" id="aom-fivem-mode-btns">
+      <div id="aom-fivem-mode-btns" class="jx-85">
         <div class="aom-pill-tabs">
           <button id="aom-fivem-quick-btn" class="aom-pill-tab active" onclick="aomFivemSetMode('quick')"><i class="fa fa-bolt jx-24"></i>Apply Recommended</button>
           <button id="aom-fivem-tune-btn"  class="aom-pill-tab" onclick="aomFivemSetMode('tune')"><i class="fa fa-sliders jx-24"></i>Tune Individually</button>
@@ -11462,18 +11462,18 @@ async function aomRenderStepFiveM() {
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
           <div style="font-size:11px;font-weight:700;color:var(--c-text-tertiary);letter-spacing:1px;text-transform:uppercase">In-Game Graphics Settings</div>
           ${aomFivemSettingsPath
-            ? `<div style="font-size:11px;color:var(--c-info)"><i class="fa fa-file"></i> ${aomFivemSettingsPath.split('\\').pop()} · ${needsChange} change${needsChange !== 1 ? 's' : ''}</div>`
-            : `<div style="font-size:11px;color:var(--c-warning)"><i class="fa fa-triangle-exclamation"></i> Settings file not found — launch FiveM once to create it</div>`}
+            ? `<div class="jx-126"><i class="fa fa-file"></i> ${aomFivemSettingsPath.split('\\').pop()} · ${needsChange} change${needsChange !== 1 ? 's' : ''}</div>`
+            : `<div class="jx-112"><i class="fa fa-triangle-exclamation"></i> Settings file not found — launch FiveM once to create it</div>`}
         </div>
         <div style="background:var(--c-bg-deep);border:1px solid var(--c-border-subtle);border-radius:var(--r-md);overflow:hidden;max-height:220px;overflow-y:auto">
-          <table style="width:100%;border-collapse:collapse">
+          <table class="jx-128">
             <thead>
               <tr style="background:var(--c-bg-deep);border-bottom:1px solid var(--c-border-subtle)">
                 <th style="padding:5px 6px;font-size:11px;font-weight:700;color:var(--c-text-tertiary);letter-spacing:.8px;text-align:left;text-transform:uppercase">Setting</th>
-                <th style="padding:5px 6px;font-size:11px;font-weight:700;color:var(--c-text-tertiary);letter-spacing:.8px;text-align:center;text-transform:uppercase">Current</th>
+                <th class="jx-87">Current</th>
                 <th style="padding:5px 6px;font-size:11px;font-weight:700;color:var(--c-success);letter-spacing:.8px;text-align:center;text-transform:uppercase">Recommended</th>
-                <th style="padding:5px 6px;font-size:11px;font-weight:700;color:var(--c-text-tertiary);letter-spacing:.8px;text-align:center;text-transform:uppercase">FPS Impact</th>
-                <th style="padding:5px 6px;font-size:11px;font-weight:700;color:var(--c-text-tertiary);letter-spacing:.8px;text-align:center;text-transform:uppercase"></th>
+                <th class="jx-87">FPS Impact</th>
+                <th class="jx-87"></th>
               </tr>
             </thead>
             <tbody>${rows}</tbody>
@@ -11712,10 +11712,10 @@ async function aomRenderRunPlanPreview() {
   const impactLabel = { high: tWizard('aomRunPlanHigh'), medium: tWizard('aomRunPlanMed'), low: tWizard('aomRunPlanLow') }
 
   const renderPlanRows = (p) => p.map(t => `
-    <div style="display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:7px;background:var(--c-bg-raised);border:1px solid var(--c-border-subtle)">
+    <div class="jx-139">
       <input type="checkbox" id="rpp-${t.id}" checked style="accent-color:var(--c-success);flex-shrink:0">
       <div class="jx-6">
-        <div style="font-size:11px;font-weight:600;color:var(--c-text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${t.name}</div>
+        <div class="jx-88">${t.name}</div>
         <div class="jx-5">${t.category}</div>
       </div>
       <span style="font-size:11px;font-weight:700;padding:2px 6px;border-radius:4px;background:var(--c-${t.gamerImpact==='high'?'success':t.gamerImpact==='medium'?'warning':'info'}-muted);color:${impactColor[t.gamerImpact]||'var(--c-text-tertiary)'};border:1px solid var(--c-${t.gamerImpact==='high'?'success':t.gamerImpact==='medium'?'warning':'info'}-ring);flex-shrink:0">${impactLabel[t.gamerImpact]||t.gamerImpact?.toUpperCase()}</span>
@@ -11743,7 +11743,7 @@ async function aomRenderRunPlanPreview() {
       ${renderPlanRows(plan)}
     </div>
     <div class="aom-restore-warn">
-      <i class="fa fa-shield-halved" style="color:var(--c-accent-fg);flex-shrink:0;font-size:12px;margin-top:1px"></i>
+      <i class="fa fa-shield-halved jx-140"></i>
       <span style="font-size:11px;color:var(--c-text-secondary);line-height:1.5">${tWizard('aomRestorePointWarn')}</span>
     </div>`
 
@@ -11777,10 +11777,10 @@ async function aomSetMode(mode) {
       const impactLabel = { high: tWizard('aomRunPlanHigh'), medium: tWizard('aomRunPlanMed'), low: tWizard('aomRunPlanLow') }
       const tierLabel   = { 1: tWizard('aomRunPlanSafe'), 2: tWizard('aomRunPlanReview'), 3: tWizard('aomRunPlanAggr') }
       rowsEl.innerHTML = plan.map(t => `
-        <div style="display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:7px;background:var(--c-bg-raised);border:1px solid var(--c-border-subtle)">
+        <div class="jx-139">
           <input type="checkbox" id="rpp-${t.id}" checked style="accent-color:var(--c-success);flex-shrink:0">
           <div class="jx-6">
-            <div style="font-size:11px;font-weight:600;color:var(--c-text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${t.name}</div>
+            <div class="jx-88">${t.name}</div>
             <div class="jx-5">${t.category}</div>
           </div>
           <span style="font-size:11px;font-weight:700;padding:2px 6px;border-radius:4px;background:var(--c-${t.gamerImpact==='high'?'success':t.gamerImpact==='medium'?'warning':'info'}-muted);color:${impactColor[t.gamerImpact]||'var(--c-text-tertiary)'};border:1px solid var(--c-${t.gamerImpact==='high'?'success':t.gamerImpact==='medium'?'warning':'info'}-ring);flex-shrink:0">${impactLabel[t.gamerImpact]||t.gamerImpact?.toUpperCase()}</span>
@@ -11813,9 +11813,9 @@ async function aomRenderStep2() {
   let _conflictBanners = ''
   try {
     const ctx = await api.getSystemContext()
-    if (ctx?.streaming) _conflictBanners += `<div style="margin-bottom:8px;padding:8px 12px;background:rgba(243,156,18,0.08);border:1px solid rgba(243,156,18,0.3);border-radius:7px;font-size:11px;color:var(--c-warning)"><i class="fa fa-video jx-19"></i><strong>Streaming software is active</strong> — network tweaks may cause a brief stream interruption.</div>`
+    if (ctx?.streaming) _conflictBanners += `<div class="jx-141"><i class="fa fa-video jx-19"></i><strong>Streaming software is active</strong> — network tweaks may cause a brief stream interruption.</div>`
     if (ctx?.videoCallActive) _conflictBanners += `<div style="margin-bottom:8px;padding:8px 12px;background:rgba(231,76,60,0.08);border:1px solid rgba(231,76,60,0.3);border-radius:7px;font-size:11px;color:var(--danger)"><i class="fa fa-phone jx-19"></i><strong>Video call in progress</strong> — network tweaks will interrupt your call. Finish the call first.</div>`
-    if ((ctx?.ramPressurePct || 0) > 80) _conflictBanners += `<div style="margin-bottom:8px;padding:8px 12px;background:rgba(243,156,18,0.08);border:1px solid rgba(243,156,18,0.3);border-radius:7px;font-size:11px;color:var(--c-warning)"><i class="fa fa-memory jx-19"></i><strong>RAM is under heavy load (${Math.round(ctx.ramPressurePct)}%)</strong> — close other apps for best results.</div>`
+    if ((ctx?.ramPressurePct || 0) > 80) _conflictBanners += `<div class="jx-141"><i class="fa fa-memory jx-19"></i><strong>RAM is under heavy load (${Math.round(ctx.ramPressurePct)}%)</strong> — close other apps for best results.</div>`
   } catch {}
 
   const body = document.getElementById('aom-body')
@@ -11886,9 +11886,9 @@ async function aomRun(tweakIds) {
 
   const body = document.getElementById('aom-body')
   body.innerHTML = `
-    <div style="margin-bottom:var(--sp-1-5)">
+    <div class="jx-85">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--sp-1)">
-        <div id="aom-run-status" style="font-size:var(--font-size-base);font-weight:700;color:var(--c-text-primary)">${tWizard('aomCreatingRp')}</div>
+        <div id="aom-run-status" class="jx-86">${tWizard('aomCreatingRp')}</div>
         <div style="display:flex;gap:var(--sp-2);align-items:center;font-size:var(--font-size-xs);color:var(--c-text-tertiary)">
           <span id="aom-elapsed"></span>
           <span id="aom-run-counter">0 / ${tweakIds.length}</span>
@@ -11969,7 +11969,7 @@ async function aomRun(tweakIds) {
   if (aomFivemEnabled && aomFivemSettingsPath) {
     const status = document.getElementById('aom-run-status')
     if (status) status.textContent = tWizard('aomApplyingFiveM')
-    if (log) log.innerHTML += `<div style="margin-top:4px"><span class="jx-16"><i class="fa fa-gamepad"></i> ${tWizard('aomFiveMApplyLog')}</span></div>`
+    if (log) log.innerHTML += `<div class="jx-142"><span class="jx-16"><i class="fa fa-gamepad"></i> ${tWizard('aomFiveMApplyLog')}</span></div>`
     const _runFivemRec = buildFivemRec(sysInfo)
     const settingsResult = await api.fivemWriteSettings(_runFivemRec, null)
     if (log) {
@@ -11981,12 +11981,12 @@ async function aomRun(tweakIds) {
       log.scrollTop = log.scrollHeight
     }
   } else if (aomFivemEnabled && !aomFivemSettingsPath) {
-    if (log) log.innerHTML += `<div style="margin-top:4px"><span class="jx-8"><i class="fa fa-triangle-exclamation"></i> ${tWizard('aomFiveMSkipped')}</span></div>`
+    if (log) log.innerHTML += `<div class="jx-142"><span class="jx-8"><i class="fa fa-triangle-exclamation"></i> ${tWizard('aomFiveMSkipped')}</span></div>`
   }
 
   const failCount = result?.failedTasks?.length || 0
   if (log) {
-    log.innerHTML += `<div style="color:var(--success);font-weight:700;margin-top:6px"><i class="fa fa-check"></i> ${tWizard('aomComplete')}</div>`
+    log.innerHTML += `<div class="jx-143"><i class="fa fa-check"></i> ${tWizard('aomComplete')}</div>`
     if (failCount > 0) {
       log.innerHTML += `<div style="color:var(--danger);font-size:11px;margin-top:2px"><i class="fa fa-triangle-exclamation"></i> ${failCount} tweak(s) failed — see above for details</div>`
     }
@@ -12334,7 +12334,7 @@ function buildWindowsOpti(c) {
   qwSection.innerHTML = `
     <div class="section-header">
       <div class="section-accent"></div>
-      <div class="section-title"><i class="fa fa-bolt" style="color:var(--c-info);margin-right:6px"></i>${tUI('genQuickWinTitle')}</div>
+      <div class="section-title"><i class="fa fa-bolt jx-144"></i>${tUI('genQuickWinTitle')}</div>
     </div>
   `
   const _allCards = SECTIONS.flatMap(s => s.cards)
@@ -12714,7 +12714,7 @@ function spwStep1() {
         <div id="spw-uc-${u.id}" onclick="spwSelectUseCase('${u.id}')"
           style="background:var(--surface-2);border:1px solid var(--hairline-strong);border-radius:10px;padding:12px 16px;cursor:pointer;transition:border-color .15s,background .15s;display:flex;align-items:center;gap:14px"
           onmouseenter="this.style.borderColor = 'rgba(var(--c-accent-rgb),0.4)'" onmouseleave="if(!this.classList.contains('spw-sel'))this.style.borderColor='var(--hairline-strong)'">
-          <div style="width:36px;height:36px;border-radius:8px;background:rgba(var(--c-accent-rgb),0.1);border:1px solid rgba(var(--c-accent-rgb),0.2);display:flex;align-items:center;justify-content:center;font-size:15px;color:var(--c-accent-fg);flex-shrink:0"><i class="fa ${u.icon}"></i></div>
+          <div class="jx-145"><i class="fa ${u.icon}"></i></div>
           <div><div class="jx-59">${u.label}</div><div class="jx-15">${u.desc}</div></div>
           <i class="fa fa-circle-check" id="spw-uc-chk-${u.id}" style="margin-left:auto;font-size:16px;color:var(--c-accent-fg);display:none"></i>
         </div>`).join('')}
@@ -12870,7 +12870,7 @@ function spwStep5() {
         <div id="spw-conn-${c.id}" onclick="spwSelectConn('${c.id}')"
           style="background:${_spwConnType===c.id?'rgba(var(--c-accent-rgb),0.12)':'var(--surface-2)'};border:1px solid ${_spwConnType===c.id?'var(--c-accent)':'var(--surface-2)'};border-radius:10px;padding:12px 16px;cursor:pointer;transition:all .15s;display:flex;align-items:center;gap:14px"
           onmouseenter="this.style.borderColor = 'rgba(var(--c-accent-rgb),0.4)'" onmouseleave="if(_spwConnType!=='${c.id}')this.style.borderColor='var(--hairline-strong)'">
-          <div style="width:36px;height:36px;border-radius:8px;background:rgba(var(--c-accent-rgb),0.1);border:1px solid rgba(var(--c-accent-rgb),0.2);display:flex;align-items:center;justify-content:center;font-size:15px;color:var(--c-accent-fg);flex-shrink:0"><i class="fa ${c.icon}"></i></div>
+          <div class="jx-145"><i class="fa ${c.icon}"></i></div>
           <div class="jx-2"><div class="jx-59">${c.label}</div><div class="jx-15">${c.desc}</div></div>
           <i class="fa fa-circle-check" style="font-size:16px;color:var(--c-accent-fg);${_spwConnType===c.id?'':'display:none'}"></i>
         </div>`).join('')}
@@ -12944,14 +12944,14 @@ async function spwStep7() {
         return `<div style="display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:7px;background:var(--surface-2);border:1px solid var(--hairline-strong)">
           <input type="checkbox" id="spwrpp-${id}" checked style="accent-color:var(--c-accent);flex-shrink:0">
           <div class="jx-6">
-            <div style="font-size:11px;font-weight:600;color:var(--c-text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${tName(id) || id}</div>
+            <div class="jx-88">${tName(id) || id}</div>
             <div class="jx-7">${m?.category || ''}</div>
           </div>
           ${impact ? `<span style="font-size:11px;font-weight:700;padding:2px 6px;border-radius:4px;background:rgba(${impact==='high'?'46,204,113':impact==='medium'?'243,156,18':'52,152,219'},0.12);color:${impactColor[impact]};border:1px solid ${impactColor[impact]}33;flex-shrink:0">${impactLabel[impact]}</span>` : ''}
           ${tier ? `<span style="font-size:11px;font-weight:700;padding:2px 6px;border-radius:4px;background:rgba(0,0,0,0.3);color:${tierColor[tier]};border:1px solid ${tierColor[tier]}33;flex-shrink:0">${tierLabel[tier]}</span>` : ''}
         </div>`}).join('')}
     </div>
-    ${tweakIds.length > 0 ? `<div style="margin-top:10px;padding:9px 11px;background:rgba(var(--c-accent-rgb),0.06);border:1px solid rgba(var(--c-accent-rgb),0.16);border-radius:8px;display:flex;gap:8px;align-items:flex-start"><i class="fa fa-shield-halved" style="color:var(--c-accent-fg);flex-shrink:0;font-size:12px;margin-top:1px"></i><span style="font-size:11px;color:var(--c-text-primary);line-height:1.5">${tWizard('aomRestorePointWarn')}</span></div>` : ''}`
+    ${tweakIds.length > 0 ? `<div style="margin-top:10px;padding:9px 11px;background:rgba(var(--c-accent-rgb),0.06);border:1px solid rgba(var(--c-accent-rgb),0.16);border-radius:8px;display:flex;gap:8px;align-items:flex-start"><i class="fa fa-shield-halved jx-140"></i><span style="font-size:11px;color:var(--c-text-primary);line-height:1.5">${tWizard('aomRestorePointWarn')}</span></div>` : ''}`
 
   footer.innerHTML = `
     <button class="btn btn-ghost btn-sm" onclick="spwStep6()"><i class="fa fa-arrow-left"></i> ${tWizard('spwBack')}</button>
@@ -12974,7 +12974,7 @@ async function spwStep8() {
 
   body.innerHTML = `
     <div class="jx-13">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+      <div class="jx-130">
         <div id="spw-run-status" style="font-size:11px;color:var(--gray);font-weight:600">${tWizard('aomCreatingRp')}</div>
         <div id="spw-run-counter" class="jx-7">0 / ${tweakIds.length}</div>
       </div>
@@ -13011,7 +13011,7 @@ async function spwStep8() {
   const scoreColor = rawScore >= 70 ? '#2ecc71' : rawScore >= 45 ? '#f39c12' : 'var(--danger)'
 
   if (log) {
-    log.innerHTML += `<div style="color:var(--success);font-weight:700;margin-top:6px"><i class="fa fa-check"></i> ${tWizard('aomComplete')}</div>`
+    log.innerHTML += `<div class="jx-143"><i class="fa fa-check"></i> ${tWizard('aomComplete')}</div>`
     log.innerHTML += `
     <div style="margin-top:10px;padding:11px;background:rgba(var(--c-accent-rgb),0.06);border:1px solid rgba(var(--c-accent-rgb),0.18);border-radius:9px">
       <div style="font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.8px;text-transform:uppercase;margin-bottom:8px">${tWizard('aomSessionReport')}</div>
@@ -13021,8 +13021,8 @@ async function spwStep8() {
           <div class="jx-15">${tWizard('gamingReadinessScore')}</div>
         </div>
         <div class="jx-2">
-          <div style="font-size:11px;color:var(--c-text-primary)"><i class="fa fa-check-circle" style="color:var(--success);margin-right:5px"></i>${passCount} ${tWizard('aomBgKilled')}</div>
-          ${failCount > 0 ? `<div style="font-size:11px;color:var(--danger);margin-top:3px"><i class="fa fa-triangle-exclamation jx-22"></i>${failCount} failed</div>` : ''}
+          <div class="jx-146"><i class="fa fa-check-circle" style="color:var(--success);margin-right:5px"></i>${passCount} ${tWizard('aomBgKilled')}</div>
+          ${failCount > 0 ? `<div class="jx-147"><i class="fa fa-triangle-exclamation jx-22"></i>${failCount} failed</div>` : ''}
           ${passCount > 0 ? `<div style="font-size:11px;color:var(--c-warning);margin-top:3px"><i class="fa fa-rotate-right jx-22"></i>${tWizard('aomRebootForEffect')}</div>` : ''}
         </div>
       </div>
@@ -13100,7 +13100,7 @@ async function buildHardware(c) {
   if (_rpConfirmed) {
     warn.style.background = 'var(--success-bg,var(--surface-2))'
     warn.style.borderColor = 'var(--c-success-ring)'
-    warn.innerHTML = `<span style="font-size:20px;color:var(--success,var(--c-success))"><i class="fa fa-shield-halved"></i></span><div class="hw-warn-text" style="color:var(--success,var(--c-success))">${tUI('hwRpConfirmedText')}</div><button class="btn btn-ghost btn-sm" style="flex-shrink:0" onclick="this.closest('#hw-warn-banner').style.display='none'" title="${tUI('hwRpDismiss')}"><i class="fa fa-xmark"></i></button>`
+    warn.innerHTML = `<span class="jx-97"><i class="fa fa-shield-halved"></i></span><div class="hw-warn-text jx-98">${tUI('hwRpConfirmedText')}</div><button class="btn btn-ghost btn-sm" style="flex-shrink:0" onclick="this.closest('#hw-warn-banner').style.display='none'" title="${tUI('hwRpDismiss')}"><i class="fa fa-xmark"></i></button>`
   } else {
     warn.innerHTML = `<span style="font-size:20px"><i class="fa fa-shield-halved"></i></span><div class="hw-warn-text">${tUI('hwWarnText')}</div><button class="btn btn-primary btn-sm" onclick="hwCreateAndConfirmRP()">${tUI('hwCreateRP')}</button>`
   }
@@ -13256,8 +13256,8 @@ async function buildHardware(c) {
       <div class="hw-tool-infobox">${tUI('hwIrqTechDetail')}</div>
     </details>
     <div id="hw-irq-status" style="font-size:12px;margin-bottom:10px;color:var(--muted)">…</div>
-    <div id="hw-irq-devices" style="margin-bottom:12px"></div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+    <div id="hw-irq-devices" class="jx-148"></div>
+    <div class="jx-115">
       <button id="hw-irq-apply-btn" class="btn btn-primary btn-sm" onclick="doIrqApply(this)">
         <i class="fa fa-microchip"></i> ${tUI('hwIrqApply')}
       </button>
@@ -13281,11 +13281,11 @@ async function buildHardware(c) {
   topoInner.className = 'hw-tool-panel'
   topoInner.innerHTML = `
     <div id="hw-topo-pin-indicator" style="display:none;font-size:12px;color:var(--success,var(--c-success));background:var(--success-bg);border:1px solid var(--success-bd,var(--c-success-muted));border-radius:var(--r-sm,7px);padding:7px 10px;margin-bottom:10px;display:flex;align-items:center;gap:8px">
-      <i class="fa fa-thumbtack"></i><span>${tUI('hwCpuTopoPinnedNow')} </span><span id="hw-topo-pin-indicator-exe" style="font-weight:600"></span>
+      <i class="fa fa-thumbtack"></i><span>${tUI('hwCpuTopoPinnedNow')} </span><span id="hw-topo-pin-indicator-exe" class="jx-149"></span>
     </div>
     <div id="hw-topo-rec" class="jx-13"></div>
-    <div id="hw-topo-info" class="hw-tool-desc" style="margin-bottom:12px">…</div>
-    <p class="hw-tool-desc" style="margin-bottom:6px">${tUI('hwCpuTopoDesc')}</p>
+    <div id="hw-topo-info" class="hw-tool-desc jx-148">…</div>
+    <p class="hw-tool-desc jx-104">${tUI('hwCpuTopoDesc')}</p>
     <div id="hw-topo-games" class="jx-38"></div>
     <div style="display:flex;gap:8px;align-items:center;margin-bottom:6px;flex-wrap:wrap">
       <input id="hw-topo-exe" type="text" placeholder="game.exe" class="hw-tool-input" style="width:180px">
@@ -13300,7 +13300,7 @@ async function buildHardware(c) {
       </button>
     </div>
     <div class="hw-tool-detail-text jx-13">${tUI('hwCpuTopoExeHint')}</div>
-    <div id="hw-topo-status" style="font-size:12px;color:var(--muted)"></div>
+    <div id="hw-topo-status" class="jx-150"></div>
   `
   topoSec.appendChild(topoInner)
   c.appendChild(topoSec)
@@ -13320,9 +13320,9 @@ async function buildHardware(c) {
       <span style="color:var(--c-danger);white-space:nowrap">● ${tUI('hwThermalLegendThermal')}</span>
     </div>
     <div id="hw-thermal-timeline" class="hw-tool-chart" style="display:none;height:48px;margin-bottom:8px"></div>
-    <div id="hw-thermal-status" style="font-size:12px;color:var(--muted);margin-bottom:6px"></div>
+    <div id="hw-thermal-status" class="jx-151"></div>
     <div id="hw-thermal-sugg" class="hw-tool-infobox accent-left" style="margin-bottom:10px;display:none"></div>
-    <div style="display:flex;gap:8px">
+    <div class="jx-89">
       <button id="hw-thermal-start-btn" class="btn btn-primary btn-sm" onclick="doThermalStart(this)">
         <i class="fa fa-play"></i> ${tUI('hwThermalStart')}
       </button>
@@ -13349,7 +13349,7 @@ async function buildHardware(c) {
     <div id="hw-eff-big" style="font-size:22px;font-weight:700;margin-bottom:4px;display:none"></div>
     <div id="hw-eff-context" style="font-size:12px;color:var(--muted);margin-bottom:8px"></div>
     <div id="hw-eff-chart" class="hw-tool-chart" style="height:40px;margin-bottom:8px"></div>
-    <div style="display:flex;gap:8px">
+    <div class="jx-89">
       <button id="hw-eff-start-btn" class="btn btn-primary btn-sm" onclick="doEffStart(this)">
         <i class="fa fa-play"></i> ${tUI('hwEffStart')}
       </button>
@@ -13373,9 +13373,9 @@ async function buildHardware(c) {
     <div class="hw-tool-infobox accent-left jx-13">${tUI('hwLatSteps')}</div>
     <div id="hw-lat-frame-count" style="font-size:12px;font-weight:600;color:var(--muted);margin-bottom:8px;display:none"></div>
     <div id="hw-lat-bars" style="display:flex;gap:16px;align-items:flex-end;margin-bottom:8px"></div>
-    <div id="hw-lat-status" style="font-size:12px;color:var(--muted);margin-bottom:6px">—</div>
+    <div id="hw-lat-status" class="jx-151">—</div>
     <div id="hw-lat-sugg" class="hw-tool-infobox accent-left" style="margin-bottom:10px;display:none;line-height:1.5"></div>
-    <div style="display:flex;gap:8px">
+    <div class="jx-89">
       <button id="hw-lat-start-btn" class="btn btn-primary btn-sm" onclick="doLatStart(this)">
         <i class="fa fa-play"></i> ${tUI('hwLatStart')}
       </button>
@@ -13439,7 +13439,7 @@ async function hwIrqInit() {
       const extraChip = extra > 0
         ? `<div class="hw-irq-chip" style="align-items:center;justify-content:center;color:var(--muted);font-size:11px">+${extra} ${tUI('hwIrqMoreDevices')}</div>`
         : ''
-      devicesEl.innerHTML = `<div style="font-size:11px;color:var(--c-text-tertiary);margin-bottom:6px">${tUI('hwIrqDevicesMoved')}</div><div style="display:flex;flex-wrap:wrap;gap:6px">${items}${extraChip}</div>`
+      devicesEl.innerHTML = `<div class="jx-152">${tUI('hwIrqDevicesMoved')}</div><div class="jx-67">${items}${extraChip}</div>`
     } else if (devicesEl) {
       devicesEl.innerHTML = `<span class="jx-5">Scanning devices… (may take a moment)</span>`
     }
@@ -13540,7 +13540,7 @@ async function doCpuTopoFindGames(btn) {
     const dbExes = new Set(GAME_DATABASE.map(g => g.exe.toLowerCase()))
     const found = (procs || []).filter(p => dbExes.has((p.name || p.exe || '').toLowerCase()))
     if (!found.length) {
-      if (gamesEl) gamesEl.innerHTML = `<div style="font-size:11px;color:var(--c-text-tertiary);margin-bottom:6px">${tUI('hwCpuTopoNoRunning')}</div>`
+      if (gamesEl) gamesEl.innerHTML = `<div class="jx-152">${tUI('hwCpuTopoNoRunning')}</div>`
     } else {
       if (gamesEl) {
         const header = `<div style="font-size:11px;color:var(--c-text-tertiary);margin-bottom:5px">${tUI('hwCpuTopoFoundGames').replace('{n}', found.length)}</div>`
@@ -13692,9 +13692,9 @@ async function doEffStart(btn) {
   const res = await api.efficiencyStart()
   if (sensorEl) {
     if (res.hasNvidiaSmi) {
-      sensorEl.innerHTML = `<span style="color:var(--success,var(--c-success));background:var(--success-bg,var(--surface-2));border:1px solid var(--c-success-muted);border-radius:4px;padding:1px 7px;font-size:11px"><i class="fa fa-circle" style="font-size:11px;vertical-align:middle"></i> ${tUI('hwEffNvidiaSmi')}</span>`
+      sensorEl.innerHTML = `<span style="color:var(--success,var(--c-success));background:var(--success-bg,var(--surface-2));border:1px solid var(--c-success-muted);border-radius:4px;padding:1px 7px;font-size:11px"><i class="fa fa-circle jx-153"></i> ${tUI('hwEffNvidiaSmi')}</span>`
     } else {
-      sensorEl.innerHTML = `<span style="color:var(--c-warning);background:rgba(255,152,0,0.07);border:1px solid rgba(255,152,0,0.25);border-radius:4px;padding:1px 7px;font-size:11px"><i class="fa fa-circle-half-stroke" style="font-size:11px;vertical-align:middle"></i> ${tUI('hwEffNeutralAmd')}</span><div style="font-size:11px;color:var(--c-text-tertiary);margin-top:4px;line-height:1.4">${tUI('hwEffAccuracyNote')}</div>`
+      sensorEl.innerHTML = `<span style="color:var(--c-warning);background:rgba(255,152,0,0.07);border:1px solid rgba(255,152,0,0.25);border-radius:4px;padding:1px 7px;font-size:11px"><i class="fa fa-circle-half-stroke jx-153"></i> ${tUI('hwEffNeutralAmd')}</span><div style="font-size:11px;color:var(--c-text-tertiary);margin-top:4px;line-height:1.4">${tUI('hwEffAccuracyNote')}</div>`
     }
   }
   if (!_effTickHandler) {
@@ -13790,7 +13790,7 @@ async function doLatStart(btn) {
         } else if (bn === 'gpu') {
           suggEl.style.display = ''
           suggEl.style.borderLeftColor = '#4fc3f7'
-          suggEl.innerHTML = `<i class="fa fa-display" style="color:var(--c-info);margin-right:6px"></i>${tUI('hwLatSuggGpu')}`
+          suggEl.innerHTML = `<i class="fa fa-display jx-144"></i>${tUI('hwLatSuggGpu')}`
         } else {
           suggEl.style.display = 'none'
         }
@@ -14111,7 +14111,7 @@ function buildNetwork(c) {
     benchPanel.className = 'net-bench-panel'
     benchPanel.innerHTML = `
       <div class="net-bench-panel-header">
-        <button class="btn btn-ghost btn-sm" id="dns-bench-btn" onclick="runDnsBenchmark(this)" style="gap:6px">
+        <button class="btn btn-ghost btn-sm jx-154" id="dns-bench-btn" onclick="runDnsBenchmark(this)">
           <i class="fa fa-gauge-high"></i> ${tUI('dnsBenchRun')}
         </button>
         <span class="net-bench-status" id="dns-bench-status"></span>
@@ -14302,7 +14302,7 @@ function buildNetHealthCheck(c) {
   inner.id = 'net-health-inner'
   inner.innerHTML = `
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:2px">
-      <button class="btn btn-primary btn-sm" id="net-health-btn" onclick="runNetHealthCheck(this)" style="gap:6px">
+      <button class="btn btn-primary btn-sm jx-154" id="net-health-btn" onclick="runNetHealthCheck(this)">
         <i class="fa fa-heart-pulse"></i> ${tUI('netHealthRun')}
       </button>
       <span id="net-health-status" class="jx-5"></span>
@@ -14583,8 +14583,8 @@ function makeCard({ id, name, desc, icon = '<i class="fa fa-gear"></i>', danger 
         <div class="tc-desc">${desc}</div>
         ${preApplied ? `<div class="tc-warn jx-39"><i class="fa fa-lock"></i> Already active on your system — applying again is safe but redundant.</div>` : ''}
         ${warning ? `<div class="tc-warn"><i class="fa fa-triangle-exclamation"></i> ${warning}</div>` : ''}
-        ${warnMsg ? `<div class="tc-conflict-warn"><i class="fa fa-triangle-exclamation" style="flex-shrink:0;margin-top:1px"></i>${warnMsg}</div>` : ''}
-        ${ethernetSpike ? `<div class="tc-conflict-warn jx-17"><i class="fa fa-wave-square" style="flex-shrink:0;margin-top:1px"></i>${tUI('warnEthernetSpike')}</div>` : ''}
+        ${warnMsg ? `<div class="tc-conflict-warn"><i class="fa fa-triangle-exclamation jx-155"></i>${warnMsg}</div>` : ''}
+        ${ethernetSpike ? `<div class="tc-conflict-warn jx-17"><i class="fa fa-wave-square jx-155"></i>${tUI('warnEthernetSpike')}</div>` : ''}
         ${reboot ? `<span class="reboot-badge"><i class="fa fa-rotate-right"></i> ${tUI('genRebootBadge')}</span>` : ''}
       </div>
     </div>
@@ -14901,7 +14901,7 @@ function renderGPDetail(g) {
         ${g.id === 'arma-reforger' ? `<button class="btn btn-info btn-sm" onclick="api.openArmaSettings()"><i class="fa fa-sliders"></i> Graphics Settings</button>` : ''}
       </div>
       ${tip ? `<div class="gp-tip-v2"><i class="fa fa-lightbulb" style="color:var(--info);margin-right:6px"></i>${tip}</div>` : ''}
-      ${g.installPath ? `<div style="margin-bottom:14px"><button class="btn btn-ghost btn-sm" onclick="api.openPath(${jsArg(g.installPath)})" ><i class="fa fa-folder-open"></i> ${tUI('gpOpenFolder')}</button></div>` : ''}
+      ${g.installPath ? `<div class="jx-95"><button class="btn btn-ghost btn-sm" onclick="api.openPath(${jsArg(g.installPath)})" ><i class="fa fa-folder-open"></i> ${tUI('gpOpenFolder')}</button></div>` : ''}
       <div class="gp-section-lbl">${tUI('gpAutoProfile')}</div>
       <div style="display:flex;gap:8px;align-items:center;margin-bottom:14px" id="gp-profile-assign-row">
         <select class="gp-profile-select" id="gp-profile-sel-${g.id}" onchange="assignGameProfile('${g.id}',this.value)">
@@ -15193,9 +15193,9 @@ const APP_OPTI_DEFS = [
     bullets:['Disables Steam startup to system tray','Inhibits bootstrap auto-restart (steam.cfg)','Sets steam.exe to IDLE CPU priority via IFEO'] },
   { id:'epic-optimize',        cat:'Launchers',     sub:'Epic Games',   icon:_aoico('Epic Games.ico'),
     bullets:['Sets EpicGamesLauncher.exe to IDLE CPU + I/O priority','Disables auto-start in launcher config (bRunAtStartup=False)'] },
-  { id:'ea-app-optimize',      cat:'Launchers',     sub:'Electronic Arts', icon:'<i class="fa fa-store" style="font-size:22px;color:var(--c-danger)"></i>',
+  { id:'ea-app-optimize',      cat:'Launchers',     sub:'Electronic Arts', icon:'<i class="fa fa-store jx-156"></i>',
     bullets:['Sets EA Desktop to IDLE CPU + I/O priority','Sets EA background service to IDLE CPU priority'] },
-  { id:'riot-optimize',        cat:'Launchers',     sub:'Riot Games',   icon:'<i class="fa fa-shield-halved" style="font-size:22px;color:var(--c-danger)"></i>',
+  { id:'riot-optimize',        cat:'Launchers',     sub:'Riot Games',   icon:'<i class="fa fa-shield-halved jx-156"></i>',
     bullets:['Sets RiotClientServices.exe to IDLE CPU + I/O priority','Vanguard anti-cheat is not affected'] },
   { id:'obs-optimize',         cat:'Streaming',     sub:'OBS Project',  icon:_aoico('obs.ico'),
     bullets:['Sets obs64.exe to HIGH CPU priority via IFEO','Encoding threads compete less with game threads'] },
@@ -15325,7 +15325,7 @@ async function buildAppOptimizer(c) {
           <div class="ao-sgm-row-hd">${tUI('aoUpdateIntercept')}</div>
           <div class="ao-sgm-row-ds">${tUI('aoUpdateInterceptDesc')}</div>
         </div>
-        <label class="tc-toggle" style="flex-shrink:0;margin-top:2px">
+        <label class="tc-toggle jx-157">
           <input type="checkbox" id="sgm-update-intercept" ${settings.updateInterceptEnabled ? 'checked' : ''} onchange="sgmToggle('updateInterceptEnabled',this.checked)">
           <span class="tc-slider"></span>
         </label>
@@ -15335,7 +15335,7 @@ async function buildAppOptimizer(c) {
           <div class="ao-sgm-row-hd">${tUI('aoIdleSuppression')}</div>
           <div class="ao-sgm-row-ds">${tUI('aoIdleSuppressionDesc')}</div>
         </div>
-        <label class="tc-toggle" style="flex-shrink:0;margin-top:2px">
+        <label class="tc-toggle jx-157">
           <input type="checkbox" id="sgm-idle-suppression" ${settings.idleSuppressionEnabled ? 'checked' : ''} onchange="sgmToggle('idleSuppressionEnabled',this.checked)">
           <span class="tc-slider"></span>
         </label>
@@ -15350,7 +15350,7 @@ async function buildAppOptimizer(c) {
   bbPanel.innerHTML = `
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
       <i class="fa fa-chart-bar" style="color:var(--accent);font-size:13px"></i>
-      <span style="font-size:12px;font-weight:800;color:var(--white)">BackgroundBudget</span>
+      <span class="jx-80">BackgroundBudget</span>
       <span id="bb-live-badge" style="font-size:11px;font-weight:700;letter-spacing:0.08em;padding:2px 7px;border-radius:10px;background:rgba(0,212,180,0.12);border:1px solid rgba(0,212,180,0.3);color:var(--accent)">LIVE</span>
       <span style="font-size:11px;color:var(--gray);margin-left:auto">CPU used vs. cap</span>
     </div>
@@ -15558,7 +15558,7 @@ async function buildAppOptimizer(c) {
           row.style.cssText = 'display:flex;align-items:center;gap:10px;margin-bottom:6px;padding:6px 8px;background:rgba(0,0,0,0.15);border-radius:6px'
           row.innerHTML = `
             <i class="fa fa-triangle-exclamation" style="color:var(--c-warning);flex-shrink:0;font-size:12px"></i>
-            <div class="fp-cause-text" style="flex:1;font-size:11px;color:var(--gray)"><strong class="jx-20">${tAOName(id)}</strong> — ${driftDate} <i class="fa fa-spinner fa-spin" style="font-size:11px;opacity:0.5;margin-right:3px"></i>${tUI('aoFingerprintChecking')}</div>
+            <div class="fp-cause-text jx-109"><strong class="jx-20">${tAOName(id)}</strong> — ${driftDate} <i class="fa fa-spinner fa-spin" style="font-size:11px;opacity:0.5;margin-right:3px"></i>${tUI('aoFingerprintChecking')}</div>
             <button class="btn btn-sm" style="font-size:11px;flex-shrink:0" onclick="aoFpRestore('${id}')"><i class="fa fa-rotate-right"></i> ${tUI('restore')}</button>`
           fpBanner.appendChild(row)
 
@@ -15597,7 +15597,7 @@ async function buildAppOptimizer(c) {
         stuckBanner.style.cssText = 'background:rgba(239,68,68,0.07);border:1px solid rgba(239,68,68,0.3);border-radius:10px;padding:12px 16px;margin-bottom:12px'
         stuckBanner.innerHTML = `<div style="font-size:11.5px;font-weight:700;color:var(--c-danger);margin-bottom:6px"><i class="fa fa-circle-exclamation"></i> ${tUI('aoStillActiveTitle') || 'Tweaks still active after restore'}</div>
 <div style="font-size:11px;color:var(--gray);margin-bottom:10px">${tUI('aoStillActiveBody') || 'These settings are still applied on your system even though you toggled them off. Run Restore to fully undo them.'}</div>
-<div style="display:flex;flex-wrap:wrap;gap:6px">${stillActive.map(id => `<button class="btn btn-sm" style="font-size:11px;background:rgba(239,68,68,0.12);border-color:rgba(239,68,68,0.35);color:var(--c-danger)" onclick="doAppOpti('${id}','restore').then(()=>{ const b=document.getElementById('ao-stuck-banner'); if(b) b.remove() })"><i class="fa fa-rotate-left"></i> ${tAOName(id) || id}</button>`).join('')}</div>`
+<div class="jx-67">${stillActive.map(id => `<button class="btn btn-sm" style="font-size:11px;background:rgba(239,68,68,0.12);border-color:rgba(239,68,68,0.35);color:var(--c-danger)" onclick="doAppOpti('${id}','restore').then(()=>{ const b=document.getElementById('ao-stuck-banner'); if(b) b.remove() })"><i class="fa fa-rotate-left"></i> ${tAOName(id) || id}</button>`).join('')}</div>`
         const refNode = document.getElementById('ao-conflict-banner') || document.getElementById('ao-fp-banner') || c.querySelector('.section-card') || null
         if (refNode) c.insertBefore(stuckBanner, refNode)
         else c.appendChild(stuckBanner)
@@ -15727,7 +15727,7 @@ function _aoRebuildConflictBanner() {
       <i class="fa ${conf.icon}" style="color:var(--c-warning);margin-top:2px;flex-shrink:0;font-size:13px"></i>
       <div class="jx-2">
         <div style="font-size:11.5px;font-weight:700;color:var(--white);margin-bottom:3px">${conf.title}</div>
-        <div style="font-size:11px;color:var(--gray);line-height:1.5">${conf.body}</div>
+        <div class="jx-73">${conf.body}</div>
       </div>
       ${fixBtn}`
     banner.appendChild(row)
@@ -16187,7 +16187,7 @@ async function loadDiskUsage(btn) {
   const data = await api.getDiskUsage().catch(() => [])
   btn.disabled = false
   btn.innerHTML = `<i class="fa fa-magnifying-glass"></i> ${tUI('diskUsageScan')}`
-  if (!data || data.length === 0) { el.innerHTML = `<div style="color:var(--c-text-tertiary);font-size:12px;text-align:center;padding:8px">${tUI('diskUsageEmpty')}</div>`; el.style.display = 'block'; return }
+  if (!data || data.length === 0) { el.innerHTML = `<div class="jx-158">${tUI('diskUsageEmpty')}</div>`; el.style.display = 'block'; return }
   const maxBytes = data[0].bytes || 1
   const fmt = b => b >= 1073741824 ? `${(b/1073741824).toFixed(1)} GB` : b >= 1048576 ? `${Math.round(b/1048576)} MB` : `${Math.round(b/1024)} KB`
   el.innerHTML = data.map(row => {
@@ -16224,7 +16224,7 @@ async function loadPhantomApps(btn) {
   btn.disabled = false
   btn.innerHTML = `<i class="fa fa-magnifying-glass"></i> ${tUI('phantomScan')}`
   if (!data || data.length === 0) {
-    el.innerHTML = `<div style="color:var(--c-text-tertiary);font-size:12px;text-align:center;padding:8px">${tUI('phantomEmpty')}</div>`
+    el.innerHTML = `<div class="jx-158">${tUI('phantomEmpty')}</div>`
     el.style.display = 'block'
     return
   }
@@ -16292,7 +16292,7 @@ async function loadCleanupTimeline(btn) {
       <div style="height:6px;background:var(--surface-2);border-radius:3px;overflow:hidden">
         <div style="height:100%;width:${Math.min(100,usedPct)}%;background:${barColor};border-radius:3px;transition:width .4s"></div>
       </div>
-      ${proj.projectedFullDate ? `<div style="font-size:11px;color:var(--c-warning);margin-top:4px"><i class="fa fa-triangle-exclamation jx-50"></i>${tUI('timelineFull').replace('{date}', proj.projectedFullDate)}</div>` : ''}
+      ${proj.projectedFullDate ? `<div class="jx-127"><i class="fa fa-triangle-exclamation jx-50"></i>${tUI('timelineFull').replace('{date}', proj.projectedFullDate)}</div>` : ''}
     </div>`
   }
 
@@ -16306,9 +16306,9 @@ async function loadCleanupTimeline(btn) {
     html += `<div style="display:flex;gap:10px;flex-wrap:wrap">`
     history.slice(0, 6).forEach(e => {
       const d = new Date(e.ts).toLocaleDateString(settings.language === 'fi' ? 'fi-FI' : 'en-GB', { day:'numeric', month:'short' })
-      const itemLine = e.itemCount > 0 ? `<div style="color:var(--c-success);font-size:11px">${e.itemCount} ${tUI('timelineItems')}</div>` : ''
+      const itemLine = e.itemCount > 0 ? `<div class="jx-113">${e.itemCount} ${tUI('timelineItems')}</div>` : ''
       html += `<div style="background:var(--surface-2);border:1px solid var(--hairline-strong);border-radius:6px;padding:5px 8px;font-size:11px">
-        <div style="color:var(--c-success);font-weight:700">${fmt(e.freedBytes)}</div>
+        <div class="jx-74">${fmt(e.freedBytes)}</div>
         <div class="jx-12">${d}</div>
         ${itemLine}
       </div>`
@@ -16712,15 +16712,15 @@ function buildDesktopAppsTab(container) {
   sortBar.innerHTML = `
     <span class="jx-24">Sort:</span>
     <button class="btn btn-ghost btn-sm" style="padding:2px 8px;font-size:11px;background:var(--surface-2);color:var(--c-text-tertiary)" onclick="win32Sort('name')">Name</button>
-    <button class="btn btn-ghost btn-sm" style="padding:2px 8px;font-size:11px" onclick="win32Sort('size')">Size</button>
-    <button class="btn btn-ghost btn-sm" style="padding:2px 8px;font-size:11px" onclick="win32Sort('date')">Date</button>
+    <button class="btn btn-ghost btn-sm jx-159" onclick="win32Sort('size')">Size</button>
+    <button class="btn btn-ghost btn-sm jx-159" onclick="win32Sort('date')">Date</button>
   `
   card.appendChild(sortBar)
 
   const listArea = document.createElement('div')
   listArea.id = 'win32-list-area'
   listArea.style.cssText = 'padding:8px 18px'
-  listArea.innerHTML = `<div style="color:var(--c-text-tertiary);font-size:12px;padding:8px 0">Click "Load installed apps" to scan your programs.</div>`
+  listArea.innerHTML = `<div class="jx-90">Click "Load installed apps" to scan your programs.</div>`
   card.appendChild(listArea)
 
   // Progress bar
@@ -16800,7 +16800,7 @@ function win32RenderList(apps) {
     banner.innerHTML = `<div class="win32-info-stat"><i class="fa fa-box-archive"></i> <strong>${apps.length}</strong> <span>${tUI('desktopInfoApps')}</span></div><div class="win32-info-stat"><i class="fa fa-hard-drive"></i> <strong>${sizeStr}</strong> <span>${tUI('desktopInfoSize')}</span></div>`
   }
   if (!apps || apps.length === 0) {
-    area.innerHTML = '<div style="color:var(--c-text-tertiary);font-size:12px;padding:8px 0">No apps found.</div>'
+    area.innerHTML = '<div class="jx-90">No apps found.</div>'
     return
   }
 
@@ -16903,7 +16903,7 @@ function win32CatSelect(safeBucket, val) {
 
 async function doLoadWin32Apps() {
   const area = document.getElementById('win32-list-area')
-  if (area) area.innerHTML = `<div style="color:var(--c-text-tertiary);font-size:12px;padding:8px 0"><i class="fa fa-spinner fa-spin"></i> Scanning registry…</div>`
+  if (area) area.innerHTML = `<div class="jx-90"><i class="fa fa-spinner fa-spin"></i> Scanning registry…</div>`
 
   const [apps, prefetch] = await Promise.all([api.listInstalledWin32(), api.getPrefetchAges()])
 
@@ -17216,7 +17216,7 @@ function buildDebloater(c) {
     if (!catTasks.length) continue
     const hdr = document.createElement('div')
     hdr.style.cssText = 'padding:6px 18px 2px;display:flex;align-items:center;gap:6px;border-top:1px solid var(--border2);margin-top:4px'
-    hdr.innerHTML = `<i class="fa ${cat.icon}" style="font-size:11px;color:var(--c-accent-fg)"></i><span style="font-size:11px;font-weight:600;color:var(--c-text-tertiary);letter-spacing:.5px;text-transform:uppercase">${cat.label}</span><span style="font-size:11px;color:var(--c-text-tertiary);margin-left:4px">${catTasks.length}</span>`
+    hdr.innerHTML = `<i class="fa ${cat.icon}" style="font-size:11px;color:var(--c-accent-fg)"></i><span style="font-size:11px;font-weight:600;color:var(--c-text-tertiary);letter-spacing:.5px;text-transform:uppercase">${cat.label}</span><span class="jx-123">${catTasks.length}</span>`
     taskCard.appendChild(hdr)
     catTasks.forEach(task => {
       const safeId = task.name.replace(/\W/g,'_')
@@ -17229,7 +17229,7 @@ function buildDebloater(c) {
           ${!task.safe ? `<span class="service-warn">${tUI('taskCaution')}</span>` : ''}
           <span class="task-state-badge" id="task-state-${safeId}" style="font-size:11px;color:var(--c-text-tertiary);margin-left:4px">…</span>
         </label>
-        <span style="font-size:11px;color:var(--c-text-tertiary);flex:1;padding-left:8px">${LANG[currentLang]?.taskDescs?.[task.name] || task.desc}</span>
+        <span class="jx-160">${LANG[currentLang]?.taskDescs?.[task.name] || task.desc}</span>
         <button class="btn btn-ghost btn-sm" id="task-reenable-${safeId}" style="display:none;padding:2px 7px;font-size:11px;margin-left:4px;flex-shrink:0" onclick="doReEnableTask('${task.path.replace(/\\/g,'\\\\').replace(/'/g,"\\'")}','${task.name.replace(/'/g,"\\'")}','${task.name.replace(/'/g,"\\'")}')"><i class="fa fa-rotate-left"></i></button>
       `
       taskCard.appendChild(row)
@@ -17302,7 +17302,7 @@ function buildDebloater(c) {
           <span class="svc-status-badge" id="svcbadge-${svc.id}"></span>
           ${svc.warn ? `<span class="service-warn">${svc.id === 'WSearch' ? tUI('servicesWSearch') : svc.warn}</span>` : ''}
         </label>
-        <span style="font-size:11px;color:var(--c-text-tertiary);flex:1;padding-left:8px">${LANG[currentLang]?.svcDescs?.[svc.id] || svc.desc || ''}</span>
+        <span class="jx-160">${LANG[currentLang]?.svcDescs?.[svc.id] || svc.desc || ''}</span>
       `
       svcCard.appendChild(row)
     })
@@ -17756,7 +17756,7 @@ async function doScanDevices() {
   body.innerHTML = `<div class="jx-47"><i class="fa fa-spinner fa-spin"></i> Scanning for unused devices…</div>`
   _scannedDevices = await api.getUnusedDevices().catch(() => [])
   if (!_scannedDevices.length) {
-    body.innerHTML = `<div style="color:var(--success);font-size:12px"><i class="fa fa-check"></i> No unused or ghost devices found.</div>`
+    body.innerHTML = `<div class="jx-161"><i class="fa fa-check"></i> No unused or ghost devices found.</div>`
     return
   }
   body.innerHTML = _scannedDevices.map((d, i) => `
@@ -17914,7 +17914,7 @@ async function doScanShellExtensions() {
   body.innerHTML = `<div class="jx-47"><i class="fa fa-spinner fa-spin"></i> ${tUI('shellExtScanning')}</div>`
   _scannedShellExts = await api.getShellExtensions().catch(() => [])
   if (!_scannedShellExts.length) {
-    body.innerHTML = `<div style="color:var(--success);font-size:12px"><i class="fa fa-check"></i> ${tUI('shellExtNone')}</div>`
+    body.innerHTML = `<div class="jx-161"><i class="fa fa-check"></i> ${tUI('shellExtNone')}</div>`
     return
   }
   const orphaned = _scannedShellExts.filter(e => !e.dllExists)
@@ -17925,7 +17925,7 @@ async function doScanShellExtensions() {
       <div style="display:flex;align-items:flex-start;gap:8px;padding:5px 0;border-bottom:1px solid var(--border2)">
         <input type="checkbox" id="shell-chk-${i}" ${!ext.dllExists ? 'checked' : ''} style="accent-color:var(--pink);margin-top:2px">
         <div class="jx-6">
-          <div style="font-size:11px;color:var(--c-text-primary);font-weight:500">${escHtml(ext.name || ext.clsid)}</div>
+          <div class="jx-162">${escHtml(ext.name || ext.clsid)}</div>
           <div style="font-size:11px;color:var(--c-text-tertiary);word-break:break-all">${escHtml(ext.dllPath || tUI('shellExtNoDll'))}</div>
         </div>
         ${!ext.dllExists ? `<span style="font-size:11px;color:var(--c-warning);background:rgba(245,166,35,.12);border:1px solid rgba(245,166,35,.3);padding:1px 5px;border-radius:3px;white-space:nowrap">${tUI('shellExtOrphanedBadge')}</span>` : `<span style="font-size:11px;color:var(--c-text-tertiary);padding:1px 5px">${tUI('shellExtActiveBadge')}</span>`}
@@ -18339,21 +18339,21 @@ function buildServiceImpactBody(selectedIds) {
     const breaksHtml = (s.breaks && s.breaks.length)
       ? `<div style="margin-top:4px;padding:4px 8px;background:rgba(231,76,60,0.08);border-radius:4px;border-left:2px solid var(--danger)">
            <div style="font-size:11px;font-weight:700;color:var(--danger);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:2px">${tUI('svcBreaksLabel')}</div>
-           ${s.breaks.map(b => `<div style="font-size:11px;color:var(--c-danger)">• ${b}</div>`).join('')}
+           ${s.breaks.map(b => `<div class="jx-124">• ${b}</div>`).join('')}
          </div>`
       : ''
     return `
       <div style="padding:6px 0;border-bottom:1px solid var(--border2)">
         <div style="display:flex;gap:8px;align-items:baseline">
           <span class="jx-4">${riskIcon[s.risk] || ''}</span>
-          <div style="font-size:11px;color:var(--c-text-primary);font-weight:500">${s.name}</div>
+          <div class="jx-162">${s.name}</div>
         </div>
         <div style="font-size:11px;color:var(--c-text-tertiary);padding-left:18px;margin-top:2px">${LANG[currentLang]?.svcDescs?.[s.id] || s.desc}</div>
         ${breaksHtml ? `<div style="padding-left:18px;margin-top:4px">${breaksHtml}</div>` : ''}
       </div>
     `
   }).join('')
-  return `<div style="max-height:280px;overflow-y:auto;margin-top:8px">${rows}</div><div style="font-size:11px;color:var(--c-text-tertiary);margin-top:8px">${tUI('impactRestoreHint')}</div>`
+  return `<div style="max-height:280px;overflow-y:auto;margin-top:8px">${rows}</div><div class="jx-81">${tUI('impactRestoreHint')}</div>`
 }
 
 function buildTaskImpactBody(selected) {
@@ -18363,7 +18363,7 @@ function buildTaskImpactBody(selected) {
       <div style="flex:1;font-size:11px;color:var(--c-text-tertiary)">${LANG[currentLang]?.taskDescs?.[t.name] || t.desc}</div>
     </div>
   `).join('')
-  return `<div style="max-height:240px;overflow-y:auto;margin-top:8px">${rows}</div><div style="font-size:11px;color:var(--c-text-tertiary);margin-top:8px">${tUI('impactRestoreHint')}</div>`
+  return `<div style="max-height:240px;overflow-y:auto;margin-top:8px">${rows}</div><div class="jx-81">${tUI('impactRestoreHint')}</div>`
 }
 
 // ── UserAssist enrichment ─────────────────────────────────────────────────────
@@ -18867,7 +18867,7 @@ async function doRestoreToPoint() {
     }
   } catch {}
 
-  try { await showConfirm({ title: `${tUI('restoreConfirmTitle')} #${seq}`, body: `<strong class="jx-11">${tUI('restoreConfirmBody')}</strong><br><br>Windows will restore to this point and <strong class="jx-9">restart automatically</strong>.${diffHtml}<br><br><span style="font-size:12px;color:var(--muted)">Tweak states will be reset to match the restored system.</span>`, okText: tUI('restoreConfirmOk'), okStyle: 'danger', icon: 'fa-triangle-exclamation' }) } catch { return }
+  try { await showConfirm({ title: `${tUI('restoreConfirmTitle')} #${seq}`, body: `<strong class="jx-11">${tUI('restoreConfirmBody')}</strong><br><br>Windows will restore to this point and <strong class="jx-9">restart automatically</strong>.${diffHtml}<br><br><span class="jx-150">Tweak states will be reset to match the restored system.</span>`, okText: tUI('restoreConfirmOk'), okStyle: 'danger', icon: 'fa-triangle-exclamation' }) } catch { return }
   const r = await api.restoreToPoint(seq)
   if (!r.ok) {
     if (r.fallback) {
