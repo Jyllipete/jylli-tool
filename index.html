@@ -8440,28 +8440,6 @@ function drawLatencyCanvas(id, hist, lineColor) {
   ctx.shadowBlur = 0
 }
 
-// ─── Tweak Profiles ──────────────────────────────────────────────────────────
-function buildTweakProfiles(c) {
-  c.innerHTML = `
-    <div class="section-card">
-      <div class="section-header"><div class="section-accent"></div><div class="section-title">Tweak Profiles</div></div>
-      <div class="section-subtitle">Save your current applied tweaks as a named profile, then load them on any PC or after a reinstall.</div>
-      <div style="padding:12px 18px 14px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-        <input id="profile-name-input" class="profile-name-input" placeholder="${tUI('profileNamePlaceholder')}" maxlength="48" onkeydown="if(event.key==='Enter')saveCurrentProfile()" style="flex:1;min-width:160px">
-        <button class="btn btn-primary btn-sm" onclick="saveCurrentProfile()"><i class="fa fa-floppy-disk"></i> Save Current</button>
-        <button class="btn btn-ghost btn-sm" onclick="importProfile()" style="color:var(--c-info);border-color:rgba(52,152,219,0.3)" onmouseenter="this.style.background='rgba(52,152,219,0.08)'" onmouseleave="this.style.background=''"><i class="fa fa-file-import"></i> Import</button>
-      </div>
-    </div>
-    <div class="section-card">
-      <div class="section-header"><div class="section-accent"></div><div class="section-title">Saved Profiles</div></div>
-      <div id="profiles-list" style="padding:4px 0 8px">
-        <div style="padding:20px 18px;text-align:center;color:var(--muted);font-size:11px">Loading…</div>
-      </div>
-    </div>
-  `
-  loadProfilesList()
-}
-
 async function saveCurrentProfile() {
   const input = document.getElementById('profile-name-input')
   const name = input?.value.trim()
