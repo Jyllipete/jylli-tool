@@ -397,3 +397,18 @@ document.addEventListener('DOMContentLoaded', () => {
     requestAnimationFrame(() => { queued = false; _labelIconButtons(document); _a11yEnhance(document) })
   }).observe(document.body, { childList: true, subtree: true })
 })
+
+// Arrow / Home / End move between the tabs of a tablist (and activate the focused one), as in the WAI-ARIA tabs pattern
+document.addEventListener('keydown', e => {
+  if (!/^(ArrowLeft|ArrowRight|Home|End)$/.test(e.key)) return
+  const tab = e.target.closest && e.target.closest('[role="tablist"] > button')
+  if (!tab) return
+  const tabs = [...tab.parentElement.querySelectorAll(':scope > button')].filter(b => !b.disabled && b.offsetParent !== null)
+  const i = tabs.indexOf(tab)
+  if (i < 0) return
+  const next = e.key === 'Home' ? tabs[0] : e.key === 'End' ? tabs[tabs.length - 1] : tabs[(i + (e.key === 'ArrowRight' ? 1 : -1) + tabs.length) % tabs.length]
+  e.preventDefault()
+  next.focus(); next.click()
+  // the click re-renders the tab row in the shell: put focus back on the matching tab
+  requestAnimationFrame(() => { const t = [...document.querySelectorAll('[role="tablist"] > button')].find(b => b.textContent === next.textContent); if (t) t.focus() })
+})
