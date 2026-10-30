@@ -340,7 +340,7 @@
         <div id="bpm-title" style="font-size:14px;font-weight:800;color:var(--white)">Applying tweaks…</div>
         <div id="bpm-sub" style="font-size:11px;color:var(--muted)">Please wait</div>
       </div>
-      <button id="bpm-close" onclick="document.getElementById('batch-progress-modal').style.display='none'" style="display:none;background:rgba(var(--fx),0.05);border:1px solid #2a2a3a;border-radius:6px;padding:4px 10px;color:var(--muted);font-size:11px;cursor:pointer;transition:background .15s;flex-shrink:0" onmouseenter="this.style.background='rgba(255,255,255,0.1)'" onmouseleave="this.style.background='rgba(255,255,255,0.05)'"><i class="fa fa-xmark"></i> Close</button>
+      <button id="bpm-close" onclick="document.getElementById('batch-progress-modal').style.display='none'" style="display:none;background:rgba(var(--fx),0.05);border:1px solid var(--hairline-strong);border-radius:6px;padding:4px 10px;color:var(--muted);font-size:11px;cursor:pointer;transition:background .15s;flex-shrink:0" onmouseenter="this.style.background='rgba(255,255,255,0.1)'" onmouseleave="this.style.background='rgba(255,255,255,0.05)'"><i class="fa fa-xmark"></i> Close</button>
     </div>
     <div style="background:rgba(var(--fx),0.05);border-radius:8px;height:6px;overflow:hidden;margin-bottom:10px">
       <div id="bpm-bar" style="height:100%;background:var(--pink);width:0%;transition:width .3s"></div>
@@ -669,7 +669,7 @@ async function init(isPremium = false) {
   const _taglineEl = document.querySelector('.boot-tagline')
   if (_taglineEl) _taglineEl.firstChild.textContent = tUI('loadScanning')
   document.getElementById('titlebar-ver').textContent   = `v${appVersion}`
-  document.getElementById('sidebar-ver').innerHTML      = `v${appVersion} · Jylli Tool<span id="sidebar-thermal-badge" style="display:none;margin-left:6px;font-size:11px;padding:1px 5px;border-radius:8px;background:var(--tg-badge-bg,#2a2a2a);color:var(--tg-badge-color,#aaa)"></span>`
+  document.getElementById('sidebar-ver').innerHTML      = `v${appVersion} · Jylli Tool<span id="sidebar-thermal-badge" style="display:none;margin-left:6px;font-size:11px;padding:1px 5px;border-radius:8px;background:var(--tg-badge-bg,var(--surface-2));color:var(--tg-badge-color,var(--c-text-primary))"></span>`
 
   // ThermalGuard: wire sidebar badge to thermal ticks
   api.onThermalTick(d => { updateThermalGuardBadge(d); if (d?.cpuTemp != null) _lastSensorCpuTemp = parseFloat(d.cpuTemp) || 0 })
@@ -1251,7 +1251,7 @@ async function init(isPremium = false) {
         const pill = document.createElement('span')
         pill.className = 'gs-pill'
         pill.textContent = name
-        pill.style.cssText = 'font-size:8px;background:rgba(142,68,173,0.18);color:#c39bd3;border:1px solid rgba(142,68,173,0.35);border-radius:10px;padding:1px 6px;white-space:nowrap'
+        pill.style.cssText = 'font-size:8px;background:rgba(142,68,173,0.18);color:var(--c-accent-fg);border:1px solid rgba(142,68,173,0.35);border-radius:10px;padding:1px 6px;white-space:nowrap'
         return pill
       })
       manifest.innerHTML = ''
@@ -1288,7 +1288,7 @@ async function init(isPremium = false) {
           const pill = document.createElement('span')
           pill.className = 'gs-pill'
           pill.textContent = name
-          pill.style.cssText = 'font-size:8px;background:rgba(231,76,60,0.18);color:#e74c3c;border:1px solid rgba(231,76,60,0.35);border-radius:10px;padding:1px 6px;white-space:nowrap'
+          pill.style.cssText = 'font-size:8px;background:rgba(231,76,60,0.18);color:var(--c-danger);border:1px solid rgba(231,76,60,0.35);border-radius:10px;padding:1px 6px;white-space:nowrap'
           manifest.appendChild(pill)
         })
       }
@@ -2261,7 +2261,7 @@ async function hwCreateAndConfirmRP() {
       if (banner) {
         banner.style.background = 'var(--success-bg,#0a1a0a)'
         banner.style.borderColor = '#1a5c35'
-        banner.innerHTML = `<span style="font-size:20px;color:var(--success,#4caf50)"><i class="fa fa-shield-halved"></i></span><div class="hw-warn-text" style="color:var(--success,#4caf50)">${tUI('hwRpConfirmedText')}</div><button class="btn btn-ghost btn-sm" style="flex-shrink:0" onclick="document.getElementById('hw-warn-banner').style.display='none'" title="${tUI('hwRpDismiss')}"><i class="fa fa-xmark"></i></button>`
+        banner.innerHTML = `<span style="font-size:20px;color:var(--success,var(--c-success))"><i class="fa fa-shield-halved"></i></span><div class="hw-warn-text" style="color:var(--success,var(--c-success))">${tUI('hwRpConfirmedText')}</div><button class="btn btn-ghost btn-sm" style="flex-shrink:0" onclick="document.getElementById('hw-warn-banner').style.display='none'" title="${tUI('hwRpDismiss')}"><i class="fa fa-xmark"></i></button>`
       }
       appendLog('Restore point created', 'ok')
     } else {
@@ -2677,7 +2677,7 @@ async function runWizardStep(step) {
               <div style="font-size:11px;color:var(--muted);margin-top:1px">${tWizard('autoSub')}</div>
             </div>
           </div>
-          <div style="font-size:11px;color:#a0a0a0;line-height:1.7;margin-bottom:10px">${tWizard('autoDesc')}</div>
+          <div style="font-size:11px;color:var(--c-text-primary);line-height:1.7;margin-bottom:10px">${tWizard('autoDesc')}</div>
           <div style="display:flex;gap:6px;flex-wrap:wrap">
             ${['Disables bloat services','Network stack tuning','Best power plan','Input optimisation','GPU scheduling','Privacy tweaks'].map(t =>
               `<span style="font-size:11px;background:rgba(46,204,113,0.08);color:var(--success);border:1px solid rgba(46,204,113,0.2);border-radius:4px;padding:2px 7px">${t}</span>`
@@ -2687,11 +2687,11 @@ async function runWizardStep(step) {
 
         <!-- Manual card -->
         <div onclick="wizardChooseManual()" id="wiz-choice-manual"
-          style="background:var(--surface-2);border:1px solid #222;border-radius:12px;padding:16px 18px;cursor:pointer;transition:border-color .15s,background .15s"
+          style="background:var(--surface-2);border:1px solid var(--hairline-strong);border-radius:12px;padding:16px 18px;cursor:pointer;transition:border-color .15s,background .15s"
           onmouseenter="this.style.borderColor='#444';this.style.background='#161616'"
           onmouseleave="this.style.borderColor='#222';this.style.background='#111'">
           <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px">
-            <div style="width:36px;height:36px;border-radius:9px;background:var(--surface-2);border:1px solid #2a2a2a;display:flex;align-items:center;justify-content:center;font-size:16px;color:var(--muted);flex-shrink:0"><i class="fa fa-sliders"></i></div>
+            <div style="width:36px;height:36px;border-radius:9px;background:var(--surface-2);border:1px solid var(--hairline-strong);display:flex;align-items:center;justify-content:center;font-size:16px;color:var(--muted);flex-shrink:0"><i class="fa fa-sliders"></i></div>
             <div>
               <div style="font-size:13px;font-weight:800;color:var(--white)">${tWizard('manualTitle')}</div>
               <div style="font-size:11px;color:var(--muted);margin-top:1px">${tWizard('manualSub')}</div>
@@ -4303,7 +4303,7 @@ function buildPingTest(c) {
   } catch (_) {}
 
   const hero = document.createElement('div')
-  hero.style.cssText = 'background:linear-gradient(135deg,#0a0d18 0%,#0d1020 100%);border:1px solid #1a2a5c;border-radius:12px;padding:18px 20px;margin-bottom:12px'
+  hero.style.cssText = 'background:linear-gradient(135deg,var(--surface-2) 0%,var(--surface-2) 100%);border:1px solid var(--hairline-strong);border-radius:12px;padding:18px 20px;margin-bottom:12px'
   hero.innerHTML = `
     <div style="font-size:15px;font-weight:800;color:var(--info);margin-bottom:6px"><i class="fa fa-satellite-dish"></i> ${tUI('pingHeroTitle')}</div>
     <div style="font-size:11px;color:var(--gray);line-height:1.5;margin-bottom:10px">${tUI('pingHeroSub')}</div>
@@ -4688,8 +4688,8 @@ function renderSchedTaskCard(t) {
         </div>
       </div>
       <div class="sched-card-meta">
-        <div><span style="color:var(--muted-2,#555)">${tUI('schedLastRun')}:</span> ${lastRun} ${resultBadge}</div>
-        ${nextRun ? `<div id="sched-nrt-${escAttr(t.TaskName)}"><span style="color:var(--muted-2,#555)">${tUI('schedNextRun')}:</span> ${nextRun}</div>` : ''}
+        <div><span style="color:var(--muted-2,var(--c-text-tertiary))">${tUI('schedLastRun')}:</span> ${lastRun} ${resultBadge}</div>
+        ${nextRun ? `<div id="sched-nrt-${escAttr(t.TaskName)}"><span style="color:var(--muted-2,var(--c-text-tertiary))">${tUI('schedNextRun')}:</span> ${nextRun}</div>` : ''}
       </div>
       <div class="sched-card-footer">
         <button class="btn btn-ghost btn-sm" title="${tUI('schedRunNowTitle')}" onclick="doRunTask(${jsArg(t.TaskName)})"><i class="fa fa-play"></i> ${tUI('schedRunNow')}</button>
@@ -4712,7 +4712,7 @@ function schedUpdateCountdowns(tasks) {
     const el = document.getElementById(`sched-nrt-${t.TaskName}`)
     if (!el || !t.NextRunTime) continue
     const c = schedFormatCountdown(t.NextRunTime)
-    const next = `<span style="color:var(--muted-2,#555)">${tUI('schedNextRun')}:</span> ${c || ''}`
+    const next = `<span style="color:var(--muted-2,var(--c-text-tertiary))">${tUI('schedNextRun')}:</span> ${c || ''}`
     if (el.innerHTML !== next) el.innerHTML = next
   }
 }
@@ -4821,7 +4821,7 @@ const FIXES_DEFS = [
     handler: async (s) => { await api.minimize() }
   },
   {
-    id: 'fix-fivem-fullscreen', name: 'FiveM Fullscreen Fix', icon: '<i class="fa fa-expand" style="color:#f97316"></i>', category: 'gaming',
+    id: 'fix-fivem-fullscreen', name: 'FiveM Fullscreen Fix', icon: '<i class="fa fa-expand" style="color:var(--c-warning)"></i>', category: 'gaming',
     desc: 'Fixes Alt+Enter not working / FiveM launching in windowed mode. Sets the Windows fullscreen compat flag and writes -fullscreen to GTA V commandline.txt.',
     handler: async (s) => { await api.runTweak('fix-fivem-fullscreen', 'apply') }
   },
@@ -4838,7 +4838,7 @@ const FIXES_DEFS = [
     handler: async (s) => { await api.runTweak('fix-valorant-hvci', 'apply') }
   },
   {
-    id: 'fix-nvidia-cp', name: 'NVIDIA Control Panel (No Microsoft Store)', icon: '<i class="fa fa-display" style="color:#76b900"></i>', category: 'gaming',
+    id: 'fix-nvidia-cp', name: 'NVIDIA Control Panel (No Microsoft Store)', icon: '<i class="fa fa-display" style="color:var(--c-success)"></i>', category: 'gaming',
     desc: 'Launches NVIDIA Control Panel without needing Microsoft Store by copying and running the AppX package directly',
     handler: async (s) => { await api.runTweak('fix-nvidia-cp', 'apply') }
   },
@@ -4911,7 +4911,7 @@ async function _fixBadgeRecommended(settings) {
     if (!slot || slot.querySelector('.fix-rec-badge')) return
     const badge = document.createElement('span')
     badge.className = 'fix-rec-badge'
-    badge.style.cssText = 'font-size:11px;font-weight:700;color:#f59e0b;background:rgba(245,158,11,0.12);border:1px solid rgba(245,158,11,0.3);border-radius:4px;padding:1px 6px'
+    badge.style.cssText = 'font-size:11px;font-weight:700;color:var(--c-warning);background:rgba(245,158,11,0.12);border:1px solid rgba(245,158,11,0.3);border-radius:4px;padding:1px 6px'
     badge.textContent = `★ ${tUI('fixRecommended')}`
     slot.appendChild(badge)
   }
@@ -4943,7 +4943,7 @@ async function _fixBadgeRecommended(settings) {
 async function buildFixes(c) {
   // Hero
   const hero = document.createElement('div')
-  hero.style.cssText = 'background:linear-gradient(135deg,#0d0d18,#10101a);border:1px solid #2a2a3a;border-radius:10px;padding:14px 18px;margin-bottom:14px'
+  hero.style.cssText = 'background:linear-gradient(135deg,var(--surface-2),var(--surface-2));border:1px solid var(--hairline-strong);border-radius:10px;padding:14px 18px;margin-bottom:14px'
   hero.innerHTML = `
     <div style="font-size:16px;font-weight:800;color:var(--white);margin-bottom:4px"><i class="fa fa-wrench"></i> ${tUI('fixesTitle')}</div>
     <div style="font-size:11px;color:var(--gray);line-height:1.5">${tUI('fixesHero')}</div>`
@@ -5090,7 +5090,7 @@ async function runFix(id, btn) {
           slot.querySelectorAll('.fix-rec-badge').forEach(b => b.remove())
           const badge = document.createElement('span')
           badge.className = 'fix-applied-badge'
-          badge.style.cssText = 'font-size:11px;font-weight:700;color:#4ade80;background:rgba(74,222,128,0.12);border:1px solid rgba(74,222,128,0.3);border-radius:4px;padding:1px 6px'
+          badge.style.cssText = 'font-size:11px;font-weight:700;color:var(--c-success);background:rgba(74,222,128,0.12);border:1px solid rgba(74,222,128,0.3);border-radius:4px;padding:1px 6px'
           badge.textContent = `✓ ${tUI('fixApplied')}`
           slot.appendChild(badge)
         }
@@ -5219,7 +5219,7 @@ const pfGetFriendlyName = id => { for (const cat of PF_CATEGORIES) { if (cat.nam
 
 function buildPreflight(c) {
   const hero = document.createElement('div')
-  hero.style.cssText = 'background:linear-gradient(135deg,#0d180d,#10100a);border:1px solid #2a3a2a;border-radius:10px;padding:14px 18px;margin-bottom:14px'
+  hero.style.cssText = 'background:linear-gradient(135deg,var(--surface-2),var(--surface-2));border:1px solid var(--hairline-strong);border-radius:10px;padding:14px 18px;margin-bottom:14px'
   hero.innerHTML = `
     <div style="font-size:16px;font-weight:800;color:var(--white);margin-bottom:4px"><i class="fa fa-stethoscope" style="color:var(--success)"></i> ${tUI('preflightHeroTitle')}</div>
     <div style="font-size:11px;color:var(--gray);line-height:1.5">${tUI('preflightHeroSub')}</div>`
@@ -5669,7 +5669,7 @@ function renderPreflightResults(r) {
       const ts = TIER_STYLE[c.tier] || TIER_STYLE.redundant
       html += `<div style="display:inline-flex;align-items:center;gap:5px;background:${ts.bg};border:1px solid ${ts.bd};border-radius:5px;padding:4px 10px">
         <span style="font-size:11px;font-weight:800;color:${ts.col};letter-spacing:0.5px">${ts.label}</span>
-        <span style="font-size:11px;color:#c0c0cc;font-weight:600">${c.label}</span>
+        <span style="font-size:11px;color:var(--c-text-primary);font-weight:600">${c.label}</span>
       </div>`
     })
     html += `</div></div>`
@@ -6189,7 +6189,7 @@ function gsExclusionRenderPills() {
   container.innerHTML = ''
   for (const exe of _gsExclusions) {
     const span = document.createElement('span')
-    span.style.cssText = 'font-size:8px;background:rgba(39,174,96,0.15);color:#2ecc71;border:1px solid rgba(39,174,96,0.35);border-radius:10px;padding:1px 6px;display:inline-flex;align-items:center;gap:3px'
+    span.style.cssText = 'font-size:8px;background:rgba(39,174,96,0.15);color:var(--c-success);border:1px solid rgba(39,174,96,0.35);border-radius:10px;padding:1px 6px;display:inline-flex;align-items:center;gap:3px'
     span.textContent = exe
     const btn = document.createElement('button')
     btn.style.cssText = 'background:none;border:none;color:var(--muted);cursor:pointer;font-size:11px;padding:0;line-height:1'
@@ -6318,7 +6318,7 @@ const _RISK_NAMES  = { boot:'Boot', game:'Performance', stability:'Stability', p
 
 function _riskArrow(v) {
   if (v >=  2) return { html:'<span style="color:var(--c-success);font-weight:900">&#x2191;&#x2191;</span>', label:'Major gain' }
-  if (v ===  1) return { html:'<span style="color:#8be67e;font-weight:700">&#x2191;</span>', label:'Small gain' }
+  if (v ===  1) return { html:'<span style="color:var(--c-success);font-weight:700">&#x2191;</span>', label:'Small gain' }
   if (v ===  0) return { html:'<span style="color:var(--c-text-tertiary)">&#x2192;</span>', label:'No change' }
   if (v === -1) return { html:'<span style="color:var(--c-warning);font-weight:700">&#x2193;</span>', label:'Small trade-off' }
   if (v <= -2) return { html:'<span style="color:var(--c-danger);font-weight:900">&#x2193;&#x2193;</span>', label:'Significant trade-off' }
@@ -6330,7 +6330,7 @@ function buildRiskRadar(defKey) {
   const cols = _RISK_LABELS.map(dim => {
     const d = map[dim]
     const arr = _riskArrow(d.v)
-    return `<div style="flex:1;min-width:0;text-align:center;padding:5px 4px;background:#0a1225;border-radius:6px;border:1px solid #1a2a50">
+    return `<div style="flex:1;min-width:0;text-align:center;padding:5px 4px;background:var(--surface-2);border-radius:6px;border:1px solid var(--hairline-strong)">
       <div style="font-size:11px;color:var(--c-text-tertiary);margin-bottom:3px"><i class="fa ${_RISK_ICONS[dim]}"></i></div>
       <div style="font-size:11px;color:var(--c-text-tertiary);margin-bottom:3px;letter-spacing:0.3px">${_RISK_NAMES[dim]}</div>
       <div style="font-size:15px;line-height:1">${arr.html}</div>
@@ -6687,7 +6687,7 @@ function renderBiosScore() {
         <div style="background:var(--surface-2);border-radius:6px;height:10px;overflow:hidden;margin-bottom:6px">
           <div style="height:100%;width:${barW};background:${color};border-radius:6px;transition:width 0.6s"></div>
         </div>
-        <div style="font-size:11px;color:#777">${tUI('biosScoreSub')}</div>
+        <div style="font-size:11px;color:var(--c-text-tertiary)">${tUI('biosScoreSub')}</div>
       </div>
       <div style="text-align:center;min-width:90px">
         <div style="font-size:28px;font-weight:900;color:${color};line-height:1${pulse ? ';animation:pulse 1.6s infinite' : ''}">${score}</div>
@@ -6695,7 +6695,7 @@ function renderBiosScore() {
         <div style="font-size:11px;font-weight:700;color:${color};margin-top:3px">${tier}</div>
       </div>
     </div>
-    ${reasons.length ? `<div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:5px">${reasons.map(r => `<span style="font-size:11px;background:#0e2a0e;border:1px solid #1e4a1e;color:var(--c-success);border-radius:4px;padding:2px 7px"><i class="fa fa-check" style="font-size:11px"></i> ${r.label} <span style="color:#6a6;font-size:11px">+${r.pts}</span></span>`).join('')}</div>` : ''}`
+    ${reasons.length ? `<div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:5px">${reasons.map(r => `<span style="font-size:11px;background:var(--surface-2);border:1px solid var(--hairline-strong);color:var(--c-success);border-radius:4px;padding:2px 7px"><i class="fa fa-check" style="font-size:11px"></i> ${r.label} <span style="color:var(--c-success);font-size:11px">+${r.pts}</span></span>`).join('')}</div>` : ''}`
 }
 
 let _biosDangerAcknowledged = false
@@ -6705,7 +6705,7 @@ async function buildBiosTuner(c) {
 
   // ── Optimization Score Hero Card ──────────────────────────────────────────
   const scoreCard = document.createElement('div')
-  scoreCard.style.cssText = 'background:#0a1020;border:1.5px solid #1a2a50;border-radius:10px;padding:14px 18px;margin-bottom:16px'
+  scoreCard.style.cssText = 'background:var(--surface-2);border:1.5px solid var(--hairline-strong);border-radius:10px;padding:14px 18px;margin-bottom:16px'
   scoreCard.innerHTML = `<div id="bios-score-card"><div style="font-size:11px;color:var(--c-text-tertiary);padding:4px 0"><i class="fa fa-circle-info"></i> ${tUI('biosScoreNoData')}</div></div>`
   c.appendChild(scoreCard)
 
@@ -6734,10 +6734,10 @@ async function buildBiosTuner(c) {
   const banner = document.createElement('div')
   banner.id = 'bios-danger-banner'
   if (_biosDangerAcknowledged) {
-    banner.style.cssText = 'background:#081408;border:1.5px solid #1a5c1a;border-radius:10px;padding:8px 14px;margin-bottom:16px'
+    banner.style.cssText = 'background:var(--surface-2);border:1.5px solid var(--c-success-ring);border-radius:10px;padding:8px 14px;margin-bottom:16px'
     banner.innerHTML = `<div style="display:flex;align-items:center;gap:8px"><i class="fa fa-check-circle" style="color:var(--c-success);font-size:13px"></i><span style="font-size:11px;color:var(--c-success)">${tUI('biosDangerAcknowledged')}</span></div>`
   } else {
-    banner.style.cssText = 'background:#1a0408;border:1.5px solid #c0152a;border-radius:10px;padding:14px 18px;margin-bottom:16px;display:flex;gap:12px;align-items:flex-start'
+    banner.style.cssText = 'background:var(--surface-2);border:1.5px solid var(--c-danger-ring);border-radius:10px;padding:14px 18px;margin-bottom:16px;display:flex;gap:12px;align-items:flex-start'
     banner.innerHTML = `
       <div style="color:var(--c-danger);font-size:20px;flex-shrink:0;margin-top:1px"><i class="fa fa-triangle-exclamation"></i></div>
       <div style="flex:1">
@@ -6875,7 +6875,7 @@ async function buildBiosTuner(c) {
       <button class="btn btn-ghost btn-sm" id="scewin-export-btn" onclick="doBiosDumpExport()" style="display:none"><i class="fa fa-file-export"></i> ${tUI('biosScewinExportBtn')}</button>
       <span id="scewin-scan-status" style="font-size:11px;color:var(--gray)">${tUI('biosScewinStatus')}</span>
     </div>
-    <div style="background:var(--surface-2);border:1px solid #1a2a50;border-radius:8px;padding:9px 13px;margin-bottom:10px">
+    <div style="background:var(--surface-2);border:1px solid var(--hairline-strong);border-radius:8px;padding:9px 13px;margin-bottom:10px">
       <div style="font-size:11px;font-weight:700;color:var(--c-info);margin-bottom:7px"><i class="fa fa-bookmark"></i> ${tUI('biosProfileTitle')}</div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
         <select id="bios-profile-select" class="styled-select" style="font-size:11px;padding:3px 8px;min-width:120px">
@@ -6910,7 +6910,7 @@ async function buildBiosTuner(c) {
       <button class="btn btn-primary btn-sm" id="ram-scan-btn" onclick="doRamDiagScan()"><i class="fa fa-memory"></i> ${tUI('biosRamScanBtn')}</button>
       <span id="ram-scan-status" style="font-size:11px;color:var(--gray)">${tUI('biosRamStatus')}</span>
     </div>
-    <div style="background:#0a1414;border:1px solid #1a4040;border-radius:7px;padding:9px 13px;font-size:11px;color:#7ab8b8;margin-bottom:10px">
+    <div style="background:var(--surface-2);border:1px solid var(--hairline-strong);border-radius:7px;padding:9px 13px;font-size:11px;color:var(--c-info);margin-bottom:10px">
       <i class="fa fa-circle-info"></i> ${tUI('biosRamTimingsNote')}
     </div>`
   ramCard.appendChild(ramScanRow)
@@ -6947,7 +6947,7 @@ async function buildBiosTuner(c) {
 
   if (!isAmd) {
     cpuContent.innerHTML = `
-      <div style="background:var(--surface-2);border:1.5px solid #1a3060;border-radius:9px;padding:12px 16px;margin-bottom:12px">
+      <div style="background:var(--surface-2);border:1.5px solid var(--hairline-strong);border-radius:9px;padding:12px 16px;margin-bottom:12px">
         <div style="font-size:11.5px;font-weight:800;color:var(--c-info);margin-bottom:4px"><i class="fa fa-bolt"></i> ${tUI('biosIntelBoostTitle')}</div>
         <div style="font-size:11px;color:var(--c-text-tertiary);margin-bottom:10px">${tUI('biosIntelBoostSub')}<br><span style="font-size:11px;color:var(--c-text-tertiary)">CPU: ${sysInfo?.cpu || 'Unknown'}</span></div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
@@ -6963,12 +6963,12 @@ async function buildBiosTuner(c) {
     doIntelBoostRead()
   } else {
     cpuContent.innerHTML = `
-      <div style="background:var(--surface-2);border:1.5px solid #c07000;border-radius:9px;padding:11px 15px;margin-bottom:14px;font-size:11px;color:var(--c-warning);display:flex;gap:10px;align-items:flex-start">
+      <div style="background:var(--surface-2);border:1.5px solid var(--c-warning-ring);border-radius:9px;padding:11px 15px;margin-bottom:14px;font-size:11px;color:var(--c-warning);display:flex;gap:10px;align-items:flex-start">
         <i class="fa fa-triangle-exclamation" style="font-size:16px;flex-shrink:0;margin-top:1px"></i>
         <div>
           <div style="font-weight:800;font-size:11.5px;margin-bottom:4px">${tUI('ryzenTitle')}</div>
-          <div style="line-height:1.7;color:#c8a060">
-            ${tUI('ryzenWarn1')} <strong style="color:#e0c080">${tUI('ryzenWarn2')}</strong><br>
+          <div style="line-height:1.7;color:var(--c-warning)">
+            ${tUI('ryzenWarn1')} <strong style="color:var(--c-warning)">${tUI('ryzenWarn2')}</strong><br>
             ${tUI('ryzenWarn3')}<br>
             ${tUI('ryzenWarn4')} <strong>${tUI('ryzenWarn5')}</strong><br>
             ${tUI('ryzenWarn6').replace('ryzenadj.exe', '<code style="font-size:11px">ryzenadj.exe</code>').replace('assets\\ryzenadj\\', '<code style="font-size:11px">assets\\ryzenadj\\</code>')}
@@ -7036,7 +7036,7 @@ async function buildBiosTuner(c) {
           <input type="range" id="ryzen-curve" min="-30" max="30" value="0" oninput="const v=this.value;document.getElementById('ryzen-curve-val').textContent=(v>0?'+':'')+v;document.getElementById('ryzen-curve-val').style.color=v<0?'#27ae60':v>0?'#e67e22':'var(--gray)'" style="flex:1;accent-color:var(--pink)">
           <span id="ryzen-curve-val" style="width:44px;text-align:right;font-size:12px;font-weight:700;color:var(--gray)">0</span>
         </div>
-        <div style="background:var(--surface-2);border:1px solid #7a4400;border-radius:6px;padding:7px 12px;font-size:11px;color:var(--c-warning);margin-top:6px">
+        <div style="background:var(--surface-2);border:1px solid var(--c-warning-ring);border-radius:6px;padding:7px 12px;font-size:11px;color:var(--c-warning);margin-top:6px">
           <i class="fa fa-triangle-exclamation"></i> ${tUI('ryzenCurveWarn')}
         </div>
       </div>
@@ -7056,7 +7056,7 @@ async function buildBiosTuner(c) {
         <button class="btn btn-ghost btn-sm" onclick="ryzenPreset(88,75,120,65,95,1800,0)" style="font-size:11px;padding:3px 10px">${tUI('ryzenBalanced')}</button>
         <button class="btn btn-ghost btn-sm" onclick="ryzenPreset(142,110,160,142,95,2000,0)" style="font-size:11px;padding:3px 10px">${tUI('ryzenPerformance')}</button>
       </div>
-      <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px;flex-wrap:wrap;background:var(--surface-2);border:1px solid #1a2a50;border-radius:7px;padding:8px 12px">
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px;flex-wrap:wrap;background:var(--surface-2);border:1px solid var(--hairline-strong);border-radius:7px;padding:8px 12px">
         <span style="font-size:11px;color:var(--c-text-tertiary);margin-right:4px"><i class="fa fa-floppy-disk"></i> ${tUI('ryzenSavePreset')}</span>
         <input id="ryzen-preset-name" type="text" placeholder="${tUI('ryzenPresetName')}" style="flex:1;min-width:100px;background:var(--surface-2);border:1px solid var(--border2);border-radius:5px;color:var(--white);font-size:11px;padding:4px 8px">
         <button class="btn btn-ghost btn-sm" style="font-size:11px" onclick="doRyzenSavePreset()"><i class="fa fa-floppy-disk"></i> ${tUI('ryzenSavePreset')}</button>
@@ -7128,7 +7128,7 @@ async function buildBiosTuner(c) {
       <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:6px;margin-bottom:8px" id="bios-lhm-powers"></div>
       <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:6px" id="bios-lhm-volts"></div>
     </div>
-    <div id="bios-lhm-sensor-warn" style="font-size:11px;color:var(--c-text-tertiary);background:#0e0e0e;border:1px solid var(--border2);border-radius:6px;padding:7px 12px;margin-bottom:12px">
+    <div id="bios-lhm-sensor-warn" style="font-size:11px;color:var(--c-text-tertiary);background:var(--surface-2);border:1px solid var(--border2);border-radius:6px;padding:7px 12px;margin-bottom:12px">
       <i class="fa fa-circle-info"></i> ${tUI('biosFanLhmRequired')}
     </div>
     <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:10px">
@@ -7162,7 +7162,7 @@ async function buildBiosTuner(c) {
 
   // ── Section H: Change History (collapsible) ───────────────────────────────
   const changeLogCard = document.createElement('div')
-  changeLogCard.style.cssText = 'background:#081414;border:1.5px solid #1a4040;border-radius:10px;margin-bottom:16px;overflow:hidden'
+  changeLogCard.style.cssText = 'background:var(--surface-2);border:1.5px solid var(--hairline-strong);border-radius:10px;margin-bottom:16px;overflow:hidden'
   changeLogCard.innerHTML = `
     <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 16px;cursor:pointer;user-select:none"
          onclick="this.parentElement.querySelector('.bios-changelog-body').style.display = this.parentElement.querySelector('.bios-changelog-body').style.display==='none' ? '' : 'none'; this.querySelector('.cl-chevron').style.transform = this.parentElement.querySelector('.bios-changelog-body').style.display==='' ? 'rotate(180deg)' : ''">
@@ -7176,7 +7176,7 @@ async function buildBiosTuner(c) {
         <i class="fa fa-chevron-down cl-chevron" style="color:var(--c-info);font-size:11px;transition:transform 0.2s"></i>
       </div>
     </div>
-    <div class="bios-changelog-body" style="display:none;border-top:1px solid #1a4040;padding:10px 16px 14px">
+    <div class="bios-changelog-body" style="display:none;border-top:1px solid var(--hairline-strong);padding:10px 16px 14px">
       <div style="font-size:11px;color:var(--c-text-tertiary);margin-bottom:8px">${tUI('biosChangeLogSub')}</div>
       <div id="bios-changelog-list"></div>
     </div>`
@@ -7340,7 +7340,7 @@ function doBiosDangerAck() {
   _biosDangerAcknowledged = true
   const bannerDiv = document.getElementById('bios-danger-banner')
   if (!bannerDiv) return
-  bannerDiv.style.cssText = 'background:#081408;border:1.5px solid #1a5c1a;border-radius:10px;padding:8px 14px;margin-bottom:16px'
+  bannerDiv.style.cssText = 'background:var(--surface-2);border:1.5px solid var(--c-success-ring);border-radius:10px;padding:8px 14px;margin-bottom:16px'
   bannerDiv.innerHTML = `<div style="display:flex;align-items:center;gap:8px"><i class="fa fa-check-circle" style="color:var(--c-success);font-size:13px"></i><span style="font-size:11px;color:var(--c-success)">${tUI('biosDangerAcknowledged')}</span></div>`
 }
 
@@ -7358,7 +7358,7 @@ async function doBiosScan() {
   status.textContent = tUI('pfComplete') || 'Scan complete.'
   const xmpGap = info.ramRated > 0 && info.ramActual > 0 && info.ramActual < info.ramRated * 0.95
   _biosXmpGap = xmpGap
-  const xmpBanner = xmpGap ? `<div style="background:var(--surface-2);border:1px solid #b87800;border-radius:8px;padding:10px 14px;margin-bottom:10px;font-size:11px;color:var(--c-warning);display:flex;gap:8px;align-items:center"><i class="fa fa-triangle-exclamation"></i><div><strong>XMP / DOCP not enabled.</strong> Your RAM is running at ${info.ramActual} MHz but is rated for ${info.ramRated} MHz. Enable XMP in BIOS for a free performance gain.</div></div>` : ''
+  const xmpBanner = xmpGap ? `<div style="background:var(--surface-2);border:1px solid var(--c-warning-ring);border-radius:8px;padding:10px 14px;margin-bottom:10px;font-size:11px;color:var(--c-warning);display:flex;gap:8px;align-items:center"><i class="fa fa-triangle-exclamation"></i><div><strong>XMP / DOCP not enabled.</strong> Your RAM is running at ${info.ramActual} MHz but is rated for ${info.ramRated} MHz. Enable XMP in BIOS for a free performance gain.</div></div>` : ''
   const row = (icon, label, value, good) => `
     <div style="display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--border2)">
       <div style="width:26px;text-align:center;color:${good === true ? 'var(--c-success)' : good === false ? 'var(--c-danger)' : 'var(--c-warning)'};font-size:13px"><i class="fa ${icon}"></i></div>
@@ -7401,7 +7401,7 @@ async function doBiosScan() {
   // Block SCEWIN section for confirmed non-AMI boards
   if (info.biosType && info.biosType !== 'ami' && info.biosType !== 'unknown') {
     const sceSection = document.getElementById('bios-scewin-section')
-    if (sceSection) sceSection.innerHTML = `<div style="padding:12px;background:#1a0e00;border:1px solid #7a4400;border-radius:8px;font-size:12px;color:var(--c-warning)">
+    if (sceSection) sceSection.innerHTML = `<div style="padding:12px;background:var(--surface-2);border:1px solid var(--c-warning-ring);border-radius:8px;font-size:12px;color:var(--c-warning)">
       <i class="fa fa-circle-info"></i> <strong>${info.biosType.charAt(0).toUpperCase() + info.biosType.slice(1)} BIOS detected</strong> — SCEWIN is only compatible with AMI BIOS (ASUS, MSI, Gigabyte, ASRock).
       The system scan above is still available. Live BIOS read/write via SCEWIN is not supported on this board.
     </div>`
@@ -7437,7 +7437,7 @@ async function doBiosScan() {
 
   if (recs.length) {
     const recDiv = document.createElement('div')
-    recDiv.style.cssText = 'margin-top:14px;background:#0a1a0a;border:1px solid #1e3a1e;border-radius:8px;padding:12px 14px'
+    recDiv.style.cssText = 'margin-top:14px;background:var(--surface-2);border:1px solid var(--hairline-strong);border-radius:8px;padding:12px 14px'
     recDiv.innerHTML = `<div style="font-size:11px;font-weight:700;color:var(--c-success);margin-bottom:8px;letter-spacing:0.5px"><i class="fa fa-wand-magic-sparkles"></i> ${tUI('biosRecTitle')}</div>` +
       recs.map(r => `<div style="display:flex;gap:8px;align-items:flex-start;padding:4px 0;font-size:11px;color:var(--gray)"><i class="fa ${r.icon}" style="color:${r.color};margin-top:1px;width:14px;flex-shrink:0"></i><span>${r.text}</span></div>`).join('')
     results.appendChild(recDiv)
@@ -7553,24 +7553,24 @@ function renderBiosCapsuleDrift(cr) {
   const internalCount = cr.drifts.length - externalCount
   const fmt = ts => new Date(ts).toLocaleDateString(undefined, { month:'short', day:'numeric', year:'numeric' })
   const rows = cr.drifts.map(d => `
-    <div style="display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid #1a2a50;flex-wrap:wrap">
+    <div style="display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--hairline-strong);flex-wrap:wrap">
       <div style="font-size:11px;font-weight:700;color:var(--white);min-width:180px;flex-shrink:0">${escHtml(d.settingName)}</div>
       <div style="font-size:11px;color:var(--c-text-tertiary)">${escHtml(d.from)}</div>
       <div style="font-size:11px;color:var(--c-info)">&#x2192;</div>
       <div style="font-size:11px;color:var(--white)">${escHtml(d.to)}</div>
       <div style="flex:1"></div>
       ${d.external
-        ? `<span style="font-size:11px;background:#3a1a0a;color:var(--c-warning);border:1px solid var(--c-warning);border-radius:4px;padding:2px 6px"><i class="fa fa-triangle-exclamation"></i> External change</span>`
-        : `<span style="font-size:11px;background:#0a2a1a;color:var(--c-success);border:1px solid var(--c-success);border-radius:4px;padding:2px 6px"><i class="fa fa-pen"></i> Changed by you</span>`}
+        ? `<span style="font-size:11px;background:var(--surface-2);color:var(--c-warning);border:1px solid var(--c-warning);border-radius:4px;padding:2px 6px"><i class="fa fa-triangle-exclamation"></i> External change</span>`
+        : `<span style="font-size:11px;background:var(--surface-2);color:var(--c-success);border:1px solid var(--c-success);border-radius:4px;padding:2px 6px"><i class="fa fa-pen"></i> Changed by you</span>`}
       <div style="font-size:11px;color:var(--c-text-tertiary)">${fmt(d.changedAt)}</div>
       ${d.external ? `<button class="btn btn-ghost btn-sm" style="font-size:11px;padding:2px 8px" onclick="doBiosCapsuleRestore(${jsArg(d.token)},${jsArg(d.from)},${jsArg(d.settingName)})"><i class="fa fa-rotate-left"></i> Restore</button>` : ''}
     </div>`).join('')
   el.style.display = ''
   el.innerHTML = `
-    <div style="background:var(--surface-2);border:1.5px solid ${externalCount ? 'var(--c-warning)' : '#1a2a50'};border-radius:9px;padding:12px 16px;margin:8px 0">
+    <div style="background:var(--surface-2);border:1.5px solid ${externalCount ? 'var(--c-warning)' : 'var(--surface-2)'};border-radius:9px;padding:12px 16px;margin:8px 0">
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
-        <i class="fa fa-clock-rotate-left" style="color:${externalCount ? 'var(--c-warning)' : '#3ab8b8'}"></i>
-        <div style="font-size:11px;font-weight:800;color:${externalCount ? 'var(--c-warning)' : '#3ab8b8'};letter-spacing:0.5px">SETTINGS DRIFT DETECTED</div>
+        <i class="fa fa-clock-rotate-left" style="color:${externalCount ? 'var(--c-warning)' : 'var(--c-info-muted)'}"></i>
+        <div style="font-size:11px;font-weight:800;color:${externalCount ? 'var(--c-warning)' : 'var(--c-info-muted)'};letter-spacing:0.5px">SETTINGS DRIFT DETECTED</div>
         <div style="font-size:11px;color:var(--c-text-tertiary);margin-left:auto">Since ${fmt(cr.firstScan)}</div>
       </div>
       <div style="font-size:11px;color:var(--c-text-tertiary);margin-bottom:10px">
@@ -7597,7 +7597,7 @@ function buildScewinSettingCard(def, entry) {
   const isXmp = /xmp|docp|expo/i.test(def.key)
   const showXmpRecommended = isXmp && _biosXmpGap
   const wrap = document.createElement('div')
-  wrap.style.cssText = 'border-top:1px solid var(--border2);padding:12px 18px 10px' + (showXmpRecommended ? ';border:1.5px solid #b87800;border-radius:8px;margin:6px 12px;animation:xmp-pulse 2s ease-in-out infinite' : '')
+  wrap.style.cssText = 'border-top:1px solid var(--border2);padding:12px 18px 10px' + (showXmpRecommended ? ';border:1.5px solid var(--c-warning-ring);border-radius:8px;margin:6px 12px;animation:xmp-pulse 2s ease-in-out infinite' : '')
   const optionBtns = entry.options.map(opt => `
     <button class="btn btn-sm ${opt.current ? 'btn-primary' : 'btn-ghost'}"
       id="scewin-opt-${entry.token}-${opt.value}"
@@ -7670,7 +7670,7 @@ function renderAntiCheatCard(info) {
     : `<span style="color:var(--c-danger);font-size:13px">&#9679;</span>`
 
   const rows = acs.map(ac => `
-    <div style="display:flex;align-items:center;gap:10px;padding:5px 0;border-bottom:1px solid #1a2a50">
+    <div style="display:flex;align-items:center;gap:10px;padding:5px 0;border-bottom:1px solid var(--hairline-strong)">
       ${dot(ac.ok)}
       <span style="font-size:11.5px;font-weight:700;color:var(--white);min-width:90px">${ac.name}</span>
       <span style="font-size:11px;color:${ac.ok ? 'var(--c-success)' : 'var(--c-danger)'};flex:1">${ac.ok ? 'Ready' : 'Missing: ' + ac.needs.join(', ')}</span>
@@ -7679,7 +7679,7 @@ function renderAntiCheatCard(info) {
 
   el.style.display = ''
   el.innerHTML = `
-    <div style="margin-top:10px;background:var(--surface-2);border:1.5px solid #1a2a50;border-radius:9px;padding:12px 16px">
+    <div style="margin-top:10px;background:var(--surface-2);border:1.5px solid var(--hairline-strong);border-radius:9px;padding:12px 16px">
       <div style="font-size:11px;font-weight:800;color:var(--c-info);margin-bottom:8px;letter-spacing:0.5px">
         <i class="fa fa-shield-halved"></i> ${tUI('biosAntiCheatTitle')}
       </div>
@@ -7711,7 +7711,7 @@ function showAntiCheatGuide(acName) {
   const body = `<div style="font-size:11.5px;line-height:1.8;color:var(--gray)">
     <div style="margin-bottom:10px;color:var(--c-danger);font-weight:700">${tUI('biosGuideMissing').replace('{ac}', acName).replace('{items}', missing.join(', '))}</div>
     <div style="margin-bottom:10px">${steps}</div>
-    <div style="font-size:11px;color:var(--c-text-tertiary);border-top:1px solid #1a2a50;padding-top:8px;margin-top:4px">
+    <div style="font-size:11px;color:var(--c-text-tertiary);border-top:1px solid var(--hairline-strong);padding-top:8px;margin-top:4px">
       <i class="fa fa-triangle-exclamation" style="color:var(--c-warning)"></i>
       ${tUI('biosGuideFooter')}
     </div>
@@ -7865,7 +7865,7 @@ async function doBiosBootChronicle() {
   const bootDate = boot.ts ? new Date(boot.ts).toLocaleString(undefined, { month:'short', day:'numeric', hour:'2-digit', minute:'2-digit' }) : ''
 
   const rowsHtml = segments.map(s => `
-    <div style="display:flex;align-items:center;gap:10px;padding:4px 0;border-bottom:1px solid #1a2a50">
+    <div style="display:flex;align-items:center;gap:10px;padding:4px 0;border-bottom:1px solid var(--hairline-strong)">
       <div style="width:10px;height:10px;border-radius:50%;background:${s.color};flex-shrink:0"></div>
       <div style="font-size:11px;color:var(--white);min-width:110px">${s.label}</div>
       <div style="font-size:11px;font-weight:700;color:${s.color}">${(s.ms/1000).toFixed(1)}s</div>
@@ -7873,7 +7873,7 @@ async function doBiosBootChronicle() {
     </div>`).join('')
 
   result.innerHTML = `
-    <div style="background:var(--surface-2);border:1.5px solid #1a2a50;border-radius:9px;padding:12px 16px">
+    <div style="background:var(--surface-2);border:1.5px solid var(--hairline-strong);border-radius:9px;padding:12px 16px">
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
         <i class="fa fa-clock" style="color:var(--c-info)"></i>
         <div style="font-size:12px;font-weight:800;color:var(--white)">Total boot time: <span style="color:var(--c-info)">${(total/1000).toFixed(1)}s</span></div>
@@ -7881,7 +7881,7 @@ async function doBiosBootChronicle() {
       </div>
       <div style="display:flex;gap:3px;height:28px;margin-bottom:14px;align-items:flex-end">${bars}</div>
       ${rowsHtml}
-      ${hasBiosTip ? `<div style="margin-top:10px;background:#1a2a10;border:1px solid var(--c-success);border-radius:7px;padding:8px 12px;font-size:11px;color:var(--c-success)">
+      ${hasBiosTip ? `<div style="margin-top:10px;background:var(--surface-2);border:1px solid var(--c-success);border-radius:7px;padding:8px 12px;font-size:11px;color:var(--c-success)">
         <i class="fa fa-lightbulb"></i> <strong>Tip:</strong> ${tUI('biosBootChronicleFastBootTip')}
       </div>` : worst.ms > 10000 ? `<div style="margin-top:10px;font-size:11px;color:var(--c-text-tertiary)">Longest phase: <span style="color:var(--c-warning)">${worst.label} (${(worst.ms/1000).toFixed(1)}s)</span> — consider investigating startup services.</div>` : `<div style="margin-top:10px;font-size:11px;color:var(--c-success)"><i class="fa fa-check"></i> ${tUI('biosBootChronicleGoodBoot')}</div>`}
     </div>`
@@ -7922,9 +7922,9 @@ async function doBiosStabilityCheck() {
   const color = score >= 90 ? '#2ecc71' : score >= 70 ? '#e67e22' : '#e74c3c'
   const label = score >= 90 ? 'Stable' : score >= 70 ? 'Mostly Stable' : 'Potentially Unstable'
   const signalRows = (r.signals || []).map(s => `
-    <div style="display:flex;align-items:flex-start;gap:8px;padding:4px 0;border-bottom:1px solid #1a2a50">
+    <div style="display:flex;align-items:flex-start;gap:8px;padding:4px 0;border-bottom:1px solid var(--hairline-strong)">
       <i class="fa ${s.ok ? 'fa-check' : 'fa-xmark'}" style="color:${s.ok ? 'var(--c-success)' : 'var(--c-danger)'};margin-top:1px;flex-shrink:0"></i>
-      <span style="font-size:11px;color:${s.ok ? '#ccc' : 'var(--c-warning)'}">${escHtml(s.label)}</span>
+      <span style="font-size:11px;color:${s.ok ? 'var(--surface-3)' : 'var(--c-warning)'}">${escHtml(s.label)}</span>
     </div>`).join('')
 
   result.innerHTML = `
@@ -8084,9 +8084,9 @@ async function doBiosProfileCompare() {
 
   const rows = diffs.map(d =>
     `<tr>
-      <td style="padding:5px 8px;font-size:11px;color:var(--c-text-primary);border-bottom:1px solid #222">${escHtml(d.label)}</td>
-      <td style="padding:5px 8px;font-size:11px;color:var(--c-warning);border-bottom:1px solid #222">${escHtml(String(d.valA))}</td>
-      <td style="padding:5px 8px;font-size:11px;color:var(--c-info);border-bottom:1px solid #222">${escHtml(String(d.valB))}</td>
+      <td style="padding:5px 8px;font-size:11px;color:var(--c-text-primary);border-bottom:1px solid var(--hairline-strong)">${escHtml(d.label)}</td>
+      <td style="padding:5px 8px;font-size:11px;color:var(--c-warning);border-bottom:1px solid var(--hairline-strong)">${escHtml(String(d.valA))}</td>
+      <td style="padding:5px 8px;font-size:11px;color:var(--c-info);border-bottom:1px solid var(--hairline-strong)">${escHtml(String(d.valB))}</td>
     </tr>`
   ).join('')
 
@@ -8094,9 +8094,9 @@ async function doBiosProfileCompare() {
     <div style="max-height:340px;overflow-y:auto;margin-top:8px">
       <table style="width:100%;border-collapse:collapse">
         <thead><tr>
-          <th style="padding:5px 8px;font-size:11px;color:var(--c-text-tertiary);text-align:left;border-bottom:1px solid #333">${tUI('biosProfileCompareSetting')}</th>
-          <th style="padding:5px 8px;font-size:11px;color:var(--c-warning);text-align:left;border-bottom:1px solid #333">${escHtml(selA)}</th>
-          <th style="padding:5px 8px;font-size:11px;color:var(--c-info);text-align:left;border-bottom:1px solid #333">${escHtml(selB)}</th>
+          <th style="padding:5px 8px;font-size:11px;color:var(--c-text-tertiary);text-align:left;border-bottom:1px solid var(--hairline-strong)">${tUI('biosProfileCompareSetting')}</th>
+          <th style="padding:5px 8px;font-size:11px;color:var(--c-warning);text-align:left;border-bottom:1px solid var(--hairline-strong)">${escHtml(selA)}</th>
+          <th style="padding:5px 8px;font-size:11px;color:var(--c-info);text-align:left;border-bottom:1px solid var(--hairline-strong)">${escHtml(selB)}</th>
         </tr></thead>
         <tbody>${rows}</tbody>
       </table>
@@ -8190,13 +8190,13 @@ async function doRamStressTest(durationSec) {
   if (r.passed) {
     if (result) {
       result.style.display = ''
-      result.style.cssText += ';background:#0a1f0a;border:1px solid #1e4a1e;color:#4caf50'
+      result.style.cssText += ';background:var(--surface-2);border:1px solid var(--hairline-strong);color:var(--c-success)'
       result.innerHTML = `<i class="fa fa-check-circle"></i> <strong>${tUI('biosRamTestPassed')}</strong> — ${tUI('biosRamTestPassedSuffix').replace('{s}', durationSec)}`
     }
   } else {
     if (result) {
       result.style.display = ''
-      result.style.cssText += ';background:#1f0a0a;border:1px solid #4a1e1e;color:#e74c3c'
+      result.style.cssText += ';background:var(--surface-2);border:1px solid var(--hairline-strong);color:var(--c-danger)'
       result.innerHTML = `<i class="fa fa-triangle-exclamation"></i> <strong>${tUI('biosRamTestFailed')}</strong> — ${tUI('biosRamTestFailedSuffix')}`
     }
   }
@@ -11000,7 +11000,7 @@ function drawHistorySparkline(canvasId, values, statId, color) {
   const avg = Math.round(values.reduce((a, b) => a + b, 0) / values.length)
   const peak = Math.round(Math.max(...values))
   const statEl = document.getElementById(statId)
-  if (statEl) statEl.innerHTML = `<span>Avg <b style="color:var(--c-text-primary)">${avg}%</b></span> <span>Peak <b style="color:${peak > 85 ? 'var(--c-danger)' : peak > 70 ? 'var(--c-warning)' : '#c0c0c0'}">${peak}%</b></span> <span>${values.length} samples</span>`
+  if (statEl) statEl.innerHTML = `<span>Avg <b style="color:var(--c-text-primary)">${avg}%</b></span> <span>Peak <b style="color:${peak > 85 ? 'var(--c-danger)' : peak > 70 ? 'var(--c-warning)' : 'var(--surface-3)'}">${peak}%</b></span> <span>${values.length} samples</span>`
 }
 
 
@@ -11675,9 +11675,9 @@ async function aomRenderStepFiveM() {
     const impact = defImpact[key] || 'medium'
     const ic = impactColor[impact]
     const il = impactLabel[impact]
-    return `<tr style="border-bottom:1px solid #111">
+    return `<tr style="border-bottom:1px solid var(--hairline-strong)">
       <td style="padding:4px 6px;font-size:11px;color:var(--c-text-primary)">${label}</td>
-      <td style="padding:4px 6px;font-size:11px;color:${alreadyGood ? '#555' : '#e0e0e0'};text-align:center">${cur}</td>
+      <td style="padding:4px 6px;font-size:11px;color:${alreadyGood ? 'var(--surface-2)' : 'var(--surface-3)'};text-align:center">${cur}</td>
       <td style="padding:4px 6px;font-size:11px;color:var(--success);font-weight:600;text-align:center">${rec}</td>
       <td style="padding:4px 6px;text-align:center"><span style="font-size:11px;font-weight:700;letter-spacing:.5px;color:${ic};background:${ic}18;border:1px solid ${ic}44;border-radius:3px;padding:1px 4px">${il}</span></td>
       <td style="padding:4px 6px;text-align:center;font-size:11px;color:${alreadyGood ? 'var(--c-success)' : 'var(--c-text-tertiary)'}">${alreadyGood ? '<i class="fa fa-check"></i>' : '<i class="fa fa-arrow-right" style="opacity:.4"></i>'}</td>
@@ -11725,7 +11725,7 @@ async function aomRenderStepFiveM() {
       <!-- System tweaks -->
         <div style="font-size:11px;font-weight:700;color:var(--c-text-tertiary);letter-spacing:1px;text-transform:uppercase;margin-bottom:6px">System Tweaks</div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px">
-          ${systemTweakRows.map(t => `<div style="display:flex;align-items:center;gap:7px;font-size:11px;color:var(--c-text-primary);padding:5px 8px;background:var(--surface-2);border-radius:5px;border:1px solid #1a1a22">
+          ${systemTweakRows.map(t => `<div style="display:flex;align-items:center;gap:7px;font-size:11px;color:var(--c-text-primary);padding:5px 8px;background:var(--surface-2);border-radius:5px;border:1px solid var(--hairline-strong)">
             <i class="fa fa-check" style="color:var(--success);font-size:11px;flex-shrink:0"></i>${t.label}
           </div>`).join('')}
         </div>
@@ -12248,7 +12248,7 @@ async function aomRun(tweakIds) {
     const settingsResult = await api.fivemWriteSettings(_runFivemRec, null)
     if (log) {
       if (settingsResult?.ok) {
-        log.innerHTML += `<div><span style="color:#5aaa7a"><i class="fa fa-check"></i> ${tWizard('aomFiveMApplied').replace('{n}', Object.keys(_runFivemRec).length)}</span></div>`
+        log.innerHTML += `<div><span style="color:var(--c-success)"><i class="fa fa-check"></i> ${tWizard('aomFiveMApplied').replace('{n}', Object.keys(_runFivemRec).length)}</span></div>`
       } else {
         log.innerHTML += `<div><span style="color:var(--c-warning)"><i class="fa fa-triangle-exclamation"></i> ${tWizard('aomFiveMWriteFailed').replace('{reason}', settingsResult?.reason || 'could not write file')}</span></div>`
       }
@@ -12777,7 +12777,7 @@ async function applyTweakBatch(ids, action = 'apply') {
     if (count) count.textContent   = `${i + 1} / ${ids.length}`
     if (log) {
       const line = document.createElement('div')
-      line.style.cssText = 'color:#888'
+      line.style.cssText = 'color:var(--c-text-tertiary)'
       line.textContent = `→ ${id}`
       log.appendChild(line)
       log.scrollTop = log.scrollHeight
@@ -12986,7 +12986,7 @@ function spwStep1() {
     <div style="display:flex;flex-direction:column;gap:8px">
       ${useCases.map(u => `
         <div id="spw-uc-${u.id}" onclick="spwSelectUseCase('${u.id}')"
-          style="background:var(--surface-2);border:1px solid #222;border-radius:10px;padding:12px 16px;cursor:pointer;transition:border-color .15s,background .15s;display:flex;align-items:center;gap:14px"
+          style="background:var(--surface-2);border:1px solid var(--hairline-strong);border-radius:10px;padding:12px 16px;cursor:pointer;transition:border-color .15s,background .15s;display:flex;align-items:center;gap:14px"
           onmouseenter="this.style.borderColor='rgba(var(--c-accent-rgb),0.4)'" onmouseleave="if(!this.classList.contains('spw-sel'))this.style.borderColor='#222'">
           <div style="width:36px;height:36px;border-radius:8px;background:rgba(var(--c-accent-rgb),0.1);border:1px solid rgba(var(--c-accent-rgb),0.2);display:flex;align-items:center;justify-content:center;font-size:15px;color:var(--c-accent);flex-shrink:0"><i class="fa ${u.icon}"></i></div>
           <div><div style="font-size:12px;font-weight:700;color:var(--white)">${u.label}</div><div style="font-size:11px;color:var(--muted);margin-top:2px">${u.desc}</div></div>
@@ -13032,7 +13032,7 @@ function spwStep2() {
     <div style="font-size:11px;color:var(--muted);margin-bottom:14px">${tWizard('spwStep2Sub')}</div>
     <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:14px">
       ${specs.map(s => `
-        <div style="display:flex;align-items:center;gap:10px;padding:9px 12px;background:var(--surface-2);border:1px solid #1a1a22;border-radius:8px">
+        <div style="display:flex;align-items:center;gap:10px;padding:9px 12px;background:var(--surface-2);border:1px solid var(--hairline-strong);border-radius:8px">
           <i class="fa ${s.icon}" style="color:var(--c-accent);width:13px;font-size:12px;flex-shrink:0"></i>
           <span style="font-size:11px;color:var(--muted);width:64px;flex-shrink:0">${s.label}</span>
           <span style="font-size:11px;color:var(--c-text-primary);font-weight:600;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${s.val}</span>
@@ -13056,7 +13056,7 @@ function spwStep3() {
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px">
       ${SPW_GAMES.map(g => `
         <div id="spw-g-${g.id}" onclick="spwToggleGame('${g.id}')"
-          style="background:var(--surface-2);border:1px solid #222;border-radius:8px;padding:10px 12px;cursor:pointer;transition:border-color .15s,background .15s;display:flex;align-items:center;gap:10px"
+          style="background:var(--surface-2);border:1px solid var(--hairline-strong);border-radius:8px;padding:10px 12px;cursor:pointer;transition:border-color .15s,background .15s;display:flex;align-items:center;gap:10px"
           onmouseenter="this.style.borderColor='rgba(var(--c-accent-rgb),0.4)'" onmouseleave="this.style.borderColor=_spwGames.has('${g.id}')?'var(--c-accent)':'#222'">
           <i class="fa ${g.icon}" style="color:var(--c-accent);width:12px;font-size:13px;flex-shrink:0"></i>
           <span style="font-size:11.5px;font-weight:600;color:var(--white)">${g.label}</span>
@@ -13100,7 +13100,7 @@ function spwStep4() {
     <div style="font-size:11px;color:var(--muted);margin-bottom:14px">${tWizard('spwStep4Sub')}</div>
     <div style="display:flex;flex-direction:column;gap:8px">
       ${periphItems.map(p => `
-        <div style="background:var(--surface-2);border:1px solid #1a1a22;border-radius:10px;padding:11px 14px;display:flex;align-items:center;gap:12px">
+        <div style="background:var(--surface-2);border:1px solid var(--hairline-strong);border-radius:10px;padding:11px 14px;display:flex;align-items:center;gap:12px">
           <div style="width:32px;height:32px;border-radius:7px;background:rgba(var(--c-accent-rgb),0.1);border:1px solid rgba(var(--c-accent-rgb),0.2);display:flex;align-items:center;justify-content:center;font-size:13px;color:var(--c-accent);flex-shrink:0"><i class="fa ${p.icon}"></i></div>
           <div style="flex:1">
             <div style="font-size:11px;font-weight:700;color:var(--white)">${p.label}</div>
@@ -13142,7 +13142,7 @@ function spwStep5() {
     <div style="display:flex;flex-direction:column;gap:8px">
       ${connOpts.map(c => `
         <div id="spw-conn-${c.id}" onclick="spwSelectConn('${c.id}')"
-          style="background:${_spwConnType===c.id?'rgba(var(--c-accent-rgb),0.12)':'#111'};border:1px solid ${_spwConnType===c.id?'var(--c-accent)':'#222'};border-radius:10px;padding:12px 16px;cursor:pointer;transition:all .15s;display:flex;align-items:center;gap:14px"
+          style="background:${_spwConnType===c.id?'rgba(var(--c-accent-rgb),0.12)':'var(--surface-2)'};border:1px solid ${_spwConnType===c.id?'var(--c-accent)':'var(--surface-2)'};border-radius:10px;padding:12px 16px;cursor:pointer;transition:all .15s;display:flex;align-items:center;gap:14px"
           onmouseenter="this.style.borderColor='rgba(var(--c-accent-rgb),0.4)'" onmouseleave="if(_spwConnType!=='${c.id}')this.style.borderColor='#222'">
           <div style="width:36px;height:36px;border-radius:8px;background:rgba(var(--c-accent-rgb),0.1);border:1px solid rgba(var(--c-accent-rgb),0.2);display:flex;align-items:center;justify-content:center;font-size:15px;color:var(--c-accent);flex-shrink:0"><i class="fa ${c.icon}"></i></div>
           <div style="flex:1"><div style="font-size:12px;font-weight:700;color:var(--white)">${c.label}</div><div style="font-size:11px;color:var(--muted);margin-top:2px">${c.desc}</div></div>
@@ -13171,7 +13171,7 @@ function spwStep6() {
     <div style="display:flex;flex-direction:column;gap:8px">
       ${safeOpts.map(s => `
         <div id="spw-safe-${s.id}" onclick="spwSelectSafety('${s.id}')"
-          style="background:${_spwSafetyLevel===s.id?'rgba(var(--c-accent-rgb),0.08)':'#111'};border:1px solid ${_spwSafetyLevel===s.id?'var(--c-accent)':'#222'};border-radius:10px;padding:12px 16px;cursor:pointer;transition:all .15s;display:flex;align-items:center;gap:14px"
+          style="background:${_spwSafetyLevel===s.id?'rgba(var(--c-accent-rgb),0.08)':'var(--surface-2)'};border:1px solid ${_spwSafetyLevel===s.id?'var(--c-accent)':'var(--surface-2)'};border-radius:10px;padding:12px 16px;cursor:pointer;transition:all .15s;display:flex;align-items:center;gap:14px"
           onmouseenter="this.style.borderColor='rgba(var(--c-accent-rgb),0.4)'" onmouseleave="if(_spwSafetyLevel!=='${s.id}')this.style.borderColor='#222'">
           <div style="width:36px;height:36px;border-radius:8px;background:rgba(0,0,0,0.2);border:1px solid ${s.color}44;display:flex;align-items:center;justify-content:center;font-size:15px;color:${s.color};flex-shrink:0"><i class="fa ${s.icon}"></i></div>
           <div style="flex:1"><div style="font-size:12px;font-weight:700;color:var(--white)">${s.label}</div><div style="font-size:11px;color:var(--muted);margin-top:2px">${s.desc}</div></div>
@@ -13215,7 +13215,7 @@ async function spwStep7() {
     <div style="display:flex;flex-direction:column;gap:4px;max-height:290px;overflow-y:auto" id="spw-plan-rows">
       ${tweakIds.map(id => {
         const m = metaMap[id]; const impact = m?.gamerImpact; const tier = m?.safetyTier
-        return `<div style="display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:7px;background:var(--surface-2);border:1px solid #1a1a22">
+        return `<div style="display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:7px;background:var(--surface-2);border:1px solid var(--hairline-strong)">
           <input type="checkbox" id="spwrpp-${id}" checked style="accent-color:var(--c-accent);flex-shrink:0">
           <div style="flex:1;min-width:0">
             <div style="font-size:11px;font-weight:600;color:var(--c-text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${tName(id) || id}</div>
@@ -13256,7 +13256,7 @@ async function spwStep8() {
         <div id="spw-run-bar" style="height:100%;background:var(--c-accent);border-radius:3px;width:0%;transition:width .4s ease"></div>
       </div>
     </div>
-    <div id="spw-run-log" style="font-size:11px;color:var(--muted);line-height:1.8;max-height:280px;overflow-y:auto;font-family:monospace;background:#09090d;border-radius:6px;padding:8px 10px"></div>`
+    <div id="spw-run-log" style="font-size:11px;color:var(--muted);line-height:1.8;max-height:280px;overflow-y:auto;font-family:monospace;background:var(--surface-2);border-radius:6px;padding:8px 10px"></div>`
 
   const prevHandler = window._aomProgressHandler
   window._aomProgressHandler = ({ step, total, label, status: taskStatus }) => {
@@ -13374,7 +13374,7 @@ async function buildHardware(c) {
   if (_rpConfirmed) {
     warn.style.background = 'var(--success-bg,#0a1a0a)'
     warn.style.borderColor = '#1a5c35'
-    warn.innerHTML = `<span style="font-size:20px;color:var(--success,#4caf50)"><i class="fa fa-shield-halved"></i></span><div class="hw-warn-text" style="color:var(--success,#4caf50)">${tUI('hwRpConfirmedText')}</div><button class="btn btn-ghost btn-sm" style="flex-shrink:0" onclick="this.closest('#hw-warn-banner').style.display='none'" title="${tUI('hwRpDismiss')}"><i class="fa fa-xmark"></i></button>`
+    warn.innerHTML = `<span style="font-size:20px;color:var(--success,var(--c-success))"><i class="fa fa-shield-halved"></i></span><div class="hw-warn-text" style="color:var(--success,var(--c-success))">${tUI('hwRpConfirmedText')}</div><button class="btn btn-ghost btn-sm" style="flex-shrink:0" onclick="this.closest('#hw-warn-banner').style.display='none'" title="${tUI('hwRpDismiss')}"><i class="fa fa-xmark"></i></button>`
   } else {
     warn.innerHTML = `<span style="font-size:20px"><i class="fa fa-shield-halved"></i></span><div class="hw-warn-text">${tUI('hwWarnText')}</div><button class="btn btn-primary btn-sm" onclick="hwCreateAndConfirmRP()">${tUI('hwCreateRP')}</button>`
   }
@@ -13425,7 +13425,7 @@ async function buildHardware(c) {
 
   const hwNoResults = document.createElement('div')
   hwNoResults.id = 'hw-no-results'
-  hwNoResults.style.cssText = 'display:none;text-align:center;padding:40px 0;color:#444'
+  hwNoResults.style.cssText = 'display:none;text-align:center;padding:40px 0;color:var(--c-text-tertiary)'
   hwNoResults.innerHTML = '<i class="fa fa-magnifying-glass" style="font-size:24px;margin-bottom:8px;display:block"></i><span id="hw-no-results-msg"></span>'
   c.appendChild(hwNoResults)
 
@@ -13501,7 +13501,7 @@ async function buildHardware(c) {
     if (!pc) continue
     const row = document.createElement('div')
     row.className = 'hw-card-extra-row'
-    row.innerHTML = `<button class="btn btn-ghost btn-sm" style="font-size:11px;gap:5px;color:var(--warning,#ff9800);border:1px solid rgba(255,152,0,0.2)" onclick="doCleanPowerPlans(this)"><i class="fa fa-trash-can"></i> ${tUI('hwCleanPowerPlans')}</button>`
+    row.innerHTML = `<button class="btn btn-ghost btn-sm" style="font-size:11px;gap:5px;color:var(--warning,var(--c-warning));border:1px solid rgba(255,152,0,0.2)" onclick="doCleanPowerPlans(this)"><i class="fa fa-trash-can"></i> ${tUI('hwCleanPowerPlans')}</button>`
     pc.appendChild(row)
   }
 
@@ -13554,7 +13554,7 @@ async function buildHardware(c) {
   const topoInner = document.createElement('div')
   topoInner.className = 'hw-tool-panel'
   topoInner.innerHTML = `
-    <div id="hw-topo-pin-indicator" style="display:none;font-size:12px;color:var(--success,#4caf50);background:var(--success-bg);border:1px solid var(--success-bd,var(--c-success-muted));border-radius:var(--r-sm,7px);padding:7px 10px;margin-bottom:10px;display:flex;align-items:center;gap:8px">
+    <div id="hw-topo-pin-indicator" style="display:none;font-size:12px;color:var(--success,var(--c-success));background:var(--success-bg);border:1px solid var(--success-bd,var(--c-success-muted));border-radius:var(--r-sm,7px);padding:7px 10px;margin-bottom:10px;display:flex;align-items:center;gap:8px">
       <i class="fa fa-thumbtack"></i><span>${tUI('hwCpuTopoPinnedNow')} </span><span id="hw-topo-pin-indicator-exe" style="font-weight:600"></span>
     </div>
     <div id="hw-topo-rec" style="margin-bottom:10px"></div>
@@ -13767,10 +13767,10 @@ async function hwTopoInit() {
     const [topo, pinStatus] = await Promise.all([api.cpuGetTopology(), api.cpuGetPinStatus()])
     if (infoEl && topo.ok) {
       const badge = topo.isHybrid
-        ? `<span style="color:var(--c-info);background:#0d2035;border:1px solid #1a4a6a;border-radius:4px;padding:1px 6px;font-size:11px">${tUI('hwCpuTopoHybrid')}</span>`
+        ? `<span style="color:var(--c-info);background:var(--surface-2);border:1px solid var(--c-info-ring);border-radius:4px;padding:1px 6px;font-size:11px">${tUI('hwCpuTopoHybrid')}</span>`
         : topo.is3DVCache
-          ? `<span style="color:#ce93d8;background:#1a0d26;border:1px solid #4a1a6a;border-radius:4px;padding:1px 6px;font-size:11px">${tUI('hwCpuTopo3D')}</span>`
-          : `<span style="color:var(--muted);background:var(--surface-2);border:1px solid #222;border-radius:4px;padding:1px 6px;font-size:11px">${tUI('hwCpuTopoStandard')}</span>`
+          ? `<span style="color:var(--c-accent-fg);background:var(--surface-2);border:1px solid var(--hairline-strong);border-radius:4px;padding:1px 6px;font-size:11px">${tUI('hwCpuTopo3D')}</span>`
+          : `<span style="color:var(--muted);background:var(--surface-2);border:1px solid var(--hairline-strong);border-radius:4px;padding:1px 6px;font-size:11px">${tUI('hwCpuTopoStandard')}</span>`
       const detail = topo.isHybrid
         ? `${topo.pCores}P + ${topo.eCores}E cores · ${topo.logical} logical`
         : `${topo.physical} cores · ${topo.logical} logical`
@@ -13778,9 +13778,9 @@ async function hwTopoInit() {
     }
     if (recEl) {
       if (topo.isHybrid || topo.is3DVCache) {
-        recEl.innerHTML = `<div style="font-size:12px;color:var(--c-success);background:#0a1a0a;border:1px solid #1a3a1a;border-radius:6px;padding:8px 10px"><i class="fa fa-star" style="margin-right:6px"></i>${tUI('hwCpuTopoRecommended')}</div>`
+        recEl.innerHTML = `<div style="font-size:12px;color:var(--c-success);background:var(--surface-2);border:1px solid var(--hairline-strong);border-radius:6px;padding:8px 10px"><i class="fa fa-star" style="margin-right:6px"></i>${tUI('hwCpuTopoRecommended')}</div>`
       } else {
-        recEl.innerHTML = `<div style="font-size:12px;color:var(--c-text-tertiary);background:var(--surface-2);border:1px solid #222;border-radius:6px;padding:8px 10px"><i class="fa fa-circle-info" style="margin-right:6px"></i>${tUI('hwCpuTopoStandardNote')}</div>`
+        recEl.innerHTML = `<div style="font-size:12px;color:var(--c-text-tertiary);background:var(--surface-2);border:1px solid var(--hairline-strong);border-radius:6px;padding:8px 10px"><i class="fa fa-circle-info" style="margin-right:6px"></i>${tUI('hwCpuTopoStandardNote')}</div>`
       }
     }
     if (pinStatus.active && pinStatus.state) {
@@ -13966,7 +13966,7 @@ async function doEffStart(btn) {
   const res = await api.efficiencyStart()
   if (sensorEl) {
     if (res.hasNvidiaSmi) {
-      sensorEl.innerHTML = `<span style="color:var(--success,#4caf50);background:var(--success-bg,#0a1a0a);border:1px solid var(--c-success-muted);border-radius:4px;padding:1px 7px;font-size:11px"><i class="fa fa-circle" style="font-size:11px;vertical-align:middle"></i> ${tUI('hwEffNvidiaSmi')}</span>`
+      sensorEl.innerHTML = `<span style="color:var(--success,var(--c-success));background:var(--success-bg,var(--surface-2));border:1px solid var(--c-success-muted);border-radius:4px;padding:1px 7px;font-size:11px"><i class="fa fa-circle" style="font-size:11px;vertical-align:middle"></i> ${tUI('hwEffNvidiaSmi')}</span>`
     } else {
       sensorEl.innerHTML = `<span style="color:var(--c-warning);background:rgba(255,152,0,0.07);border:1px solid rgba(255,152,0,0.25);border-radius:4px;padding:1px 7px;font-size:11px"><i class="fa fa-circle-half-stroke" style="font-size:11px;vertical-align:middle"></i> ${tUI('hwEffNeutralAmd')}</span><div style="font-size:11px;color:var(--c-text-tertiary);margin-top:4px;line-height:1.4">${tUI('hwEffAccuracyNote')}</div>`
     }
@@ -14081,7 +14081,7 @@ async function doLatStart(btn) {
           barsEl.innerHTML = segments.map(s => {
             const h = Math.max(8, Math.round(s.val / maxMs * 56))
             return `<div style="display:flex;flex-direction:column;align-items:center;gap:3px">
-              <span style="font-size:11px;font-weight:700;color:#ddd">${s.val.toFixed(1)}ms</span>
+              <span style="font-size:11px;font-weight:700;color:var(--c-text-primary)">${s.val.toFixed(1)}ms</span>
               <div style="display:flex;align-items:flex-end;height:60px">
                 <div style="width:40px;height:${h}px;background:${s.color};border-radius:3px"></div>
               </div>
@@ -14434,7 +14434,7 @@ function buildLiveMonitor(c) {
       </button>
       <div style="display:flex;align-items:center;gap:6px">
         <span style="font-size:11px;color:var(--c-text-tertiary)">${tUI('liveMonHost')}:</span>
-        <select id="live-mon-host" style="background:var(--surface-2);border:1px solid #222;border-radius:6px;color:var(--c-text-primary);font-size:11px;padding:4px 8px" onchange="livePingHostChange(this.value)">
+        <select id="live-mon-host" style="background:var(--surface-2);border:1px solid var(--hairline-strong);border-radius:6px;color:var(--c-text-primary);font-size:11px;padding:4px 8px" onchange="livePingHostChange(this.value)">
           <option value="1.1.1.1">Cloudflare (1.1.1.1)</option>
           <option value="8.8.8.8">Google (8.8.8.8)</option>
           <option value="9.9.9.9">Quad9 (9.9.9.9)</option>
@@ -14448,7 +14448,7 @@ function buildLiveMonitor(c) {
         <span style="font-size:11px;color:var(--c-text-tertiary)">${tUI('liveMonJitter')}: <strong id="lm-jitter" style="color:var(--c-text-primary)">—</strong></span>
       </div>
     </div>
-    <canvas id="live-mon-canvas" width="600" height="80" style="width:100%;height:80px;background:#06090f;border-radius:8px;display:block"></canvas>
+    <canvas id="live-mon-canvas" width="600" height="80" style="width:100%;height:80px;background:var(--surface-2);border-radius:8px;display:block"></canvas>
   `
   card.appendChild(grid)
   c.appendChild(card)
@@ -14656,8 +14656,8 @@ async function runNetHealthCheck(btn) {
   }
 
   resultsEl.innerHTML = rows.map(r => `
-    <div style="display:flex;align-items:flex-start;gap:12px;padding:8px 0;border-bottom:1px solid #111">
-      <div style="width:28px;height:28px;border-radius:7px;background:#0d1a2e;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px">
+    <div style="display:flex;align-items:flex-start;gap:12px;padding:8px 0;border-bottom:1px solid var(--hairline-strong)">
+      <div style="width:28px;height:28px;border-radius:7px;background:var(--surface-2);display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px">
         <i class="fa ${r.icon}" style="color:${r.color};font-size:12px"></i>
       </div>
       <div style="flex:1;min-width:0">
@@ -14720,12 +14720,12 @@ async function runDnsBenchmark(btn) {
     return `
       <div style="display:flex;align-items:center;gap:10px;padding:5px 0">
         <div style="width:72px;font-size:11px;font-weight:600;color:var(--c-text-primary);flex-shrink:0">${r.name}</div>
-        <div style="flex:1;height:6px;background:#1a1a2e;border-radius:3px;overflow:hidden">
+        <div style="flex:1;height:6px;background:var(--surface-2);border-radius:3px;overflow:hidden">
           <div style="width:${barPct}%;height:100%;background:${color};border-radius:3px;transition:width .4s ease"></div>
         </div>
         <div style="width:130px;font-size:11px;color:${color};text-align:right;flex-shrink:0">
           ${valText}
-          ${isFastest ? `<span style="margin-left:4px;background:#0d2e1a;color:var(--c-success);border-radius:4px;padding:1px 5px;font-size:11px;font-weight:700">${tUI('dnsBenchFastest')}</span>` : ''}
+          ${isFastest ? `<span style="margin-left:4px;background:var(--surface-2);color:var(--c-success);border-radius:4px;padding:1px 5px;font-size:11px;font-weight:700">${tUI('dnsBenchFastest')}</span>` : ''}
         </div>
         ${!r.fail ? `<button class="btn btn-ghost btn-sm" style="font-size:11px;padding:3px 8px;flex-shrink:0" onclick="applyTweak('${r.tweak}')">${tUI('dnsBenchSet')}</button>` : '<div style="width:72px"></div>'}
       </div>
@@ -15368,7 +15368,7 @@ async function doGPScan(btn, auto = false) {
       <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:36px 16px;color:var(--muted)">
         <i class="fa fa-spinner fa-spin" style="font-size:22px;color:var(--info)"></i>
         <div style="font-size:12px;font-weight:600;color:var(--info)">${tUI('gpScanningTitle')}</div>
-        <div style="font-size:11px;color:#4a4a6a;text-align:center">${tUI('gpScanningSubtitle')}</div>
+        <div style="font-size:11px;color:var(--c-info);text-align:center">${tUI('gpScanningSubtitle')}</div>
       </div>`
   }
   try {
@@ -15467,15 +15467,15 @@ const APP_OPTI_DEFS = [
     bullets:['Disables Steam startup to system tray','Inhibits bootstrap auto-restart (steam.cfg)','Sets steam.exe to IDLE CPU priority via IFEO'] },
   { id:'epic-optimize',        cat:'Launchers',     sub:'Epic Games',   icon:_aoico('Epic Games.ico'),
     bullets:['Sets EpicGamesLauncher.exe to IDLE CPU + I/O priority','Disables auto-start in launcher config (bRunAtStartup=False)'] },
-  { id:'ea-app-optimize',      cat:'Launchers',     sub:'Electronic Arts', icon:'<i class="fa fa-store" style="font-size:22px;color:#ff4747"></i>',
+  { id:'ea-app-optimize',      cat:'Launchers',     sub:'Electronic Arts', icon:'<i class="fa fa-store" style="font-size:22px;color:var(--c-danger)"></i>',
     bullets:['Sets EA Desktop to IDLE CPU + I/O priority','Sets EA background service to IDLE CPU priority'] },
-  { id:'riot-optimize',        cat:'Launchers',     sub:'Riot Games',   icon:'<i class="fa fa-shield-halved" style="font-size:22px;color:#d4313a"></i>',
+  { id:'riot-optimize',        cat:'Launchers',     sub:'Riot Games',   icon:'<i class="fa fa-shield-halved" style="font-size:22px;color:var(--c-danger)"></i>',
     bullets:['Sets RiotClientServices.exe to IDLE CPU + I/O priority','Vanguard anti-cheat is not affected'] },
   { id:'obs-optimize',         cat:'Streaming',     sub:'OBS Project',  icon:_aoico('obs.ico'),
     bullets:['Sets obs64.exe to HIGH CPU priority via IFEO','Encoding threads compete less with game threads'] },
   { id:'nvidia-app-optimize',  cat:'System',        sub:'NVIDIA',       icon:_aoico('Nvidia App.ico'),
     bullets:['Disables NvTelemetryContainer service (stops at boot)','Sets GeForce Experience to IDLE CPU priority'] },
-  { id:'playnite-optimize',    cat:'System',        sub:'Playnite',     icon:'<i class="fa fa-list-ul" style="font-size:22px;color:#a855f7"></i>',
+  { id:'playnite-optimize',    cat:'System',        sub:'Playnite',     icon:'<i class="fa fa-list-ul" style="font-size:22px;color:var(--c-accent-fg)"></i>',
     bullets:['Sets Playnite.DesktopApp.exe to IDLE CPU priority','Sets Playnite to IDLE I/O priority'] },
   { id:'vscode-optimize',      cat:'System',        sub:'Microsoft',    icon:_aoico('VS Code.ico'),
     bullets:['Sets Code.exe to IDLE CPU priority when in the background','Editor stays quiet while gaming'] },
@@ -15823,7 +15823,7 @@ async function buildAppOptimizer(c) {
         const fpBanner = document.createElement('div')
         fpBanner.id = 'ao-fp-banner'
         fpBanner.style.cssText = 'background:rgba(99,102,241,0.07);border:1px solid rgba(99,102,241,0.25);border-radius:10px;padding:12px 16px;margin-bottom:12px'
-        fpBanner.innerHTML = `<div style="font-size:11.5px;font-weight:700;color:#818cf8;margin-bottom:8px"><i class="fa fa-clock-rotate-left"></i> ${tUI('aoFingerprintTitle')}</div>`
+        fpBanner.innerHTML = `<div style="font-size:11.5px;font-weight:700;color:var(--c-info);margin-bottom:8px"><i class="fa fa-clock-rotate-left"></i> ${tUI('aoFingerprintTitle')}</div>`
 
         for (const [id, { driftedAt }] of unreported) {
           const driftDate = new Date(driftedAt).toLocaleDateString()
@@ -15931,7 +15931,7 @@ function _bbUpdatePanel(d) {
       return `<div style="display:flex;align-items:center;gap:8px;font-size:11px;min-height:22px;padding:2px 0">
         <span style="width:130px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--white);font-weight:600">${displayName}</span>
         <span style="font-family:monospace;color:${color};width:70px">${s.cpuPct}% / ${s.cap}%</span>
-        ${s.overBudget ? '<span style="color:var(--danger,#ff4444);font-size:11px;font-weight:700"><i class="fa fa-triangle-exclamation" style="font-size:11px;margin-right:2px"></i>OVER</span>' : ''}
+        ${s.overBudget ? '<span style="color:var(--danger,var(--c-danger));font-size:11px;font-weight:700"><i class="fa fa-triangle-exclamation" style="font-size:11px;margin-right:2px"></i>OVER</span>' : ''}
       </div>`
     }).join('')
   } else {
@@ -16124,7 +16124,7 @@ async function doAppOpti(id, action = 'apply') {
   const needsRestartIds = ['discord-optimize', 'firefox-optimize', 'steam-optimize', 'chrome-optimize', 'edge-optimize', 'brave-optimize', 'opera-gx-optimize', 'spotify-optimize']
   if (!applied && needsRestartIds.includes(id) && card) {
     const hint = document.createElement('div')
-    hint.style.cssText = 'font-size:11px;color:#f59e0b;margin-top:5px;display:flex;align-items:center;gap:4px;opacity:1;transition:opacity 1s'
+    hint.style.cssText = 'font-size:11px;color:var(--c-warning);margin-top:5px;display:flex;align-items:center;gap:4px;opacity:1;transition:opacity 1s'
     hint.innerHTML = '<i class="fa fa-arrow-rotate-right" style="font-size:11px"></i> Restart the app for changes to take effect'
     card.appendChild(hint)
     setTimeout(() => { hint.style.opacity = '0'; setTimeout(() => hint.remove(), 1000) }, 6000)
@@ -16168,11 +16168,11 @@ async function _loadCleanupRegrets() {
     <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px">
       <div style="flex:1">
         <div style="color:var(--c-warning);font-weight:700;margin-bottom:2px"><i class="fa fa-triangle-exclamation" style="margin-right:5px"></i>${bannerText}</div>
-        <div style="color:#9a8a6a">${appList}</div>
+        <div style="color:var(--c-warning)">${appList}</div>
         <div id="regret-details" style="display:none;margin-top:8px;max-height:120px;overflow-y:auto">
           ${regrets.slice(0,15).map(e => {
             const t = e.timeCreated ? new Date(e.timeCreated).toLocaleString(settings.language === 'fi' ? 'fi-FI' : 'en-GB', { dateStyle:'short', timeStyle:'short' }) : ''
-            return `<div style="color:var(--c-text-tertiary);padding:2px 0;border-bottom:1px solid #1e1e1e">${t} — ${e.appName || 'Unknown'}</div>`
+            return `<div style="color:var(--c-text-tertiary);padding:2px 0;border-bottom:1px solid var(--hairline-strong)">${t} — ${e.appName || 'Unknown'}</div>`
           }).join('')}
         </div>
       </div>
@@ -16374,7 +16374,7 @@ function _enhanceCleanupRow(el, row) {
     if (nameEl) {
       const hint = document.createElement('div')
       hint.className = 'cleanup-impact-hint'
-      hint.style.cssText = 'font-size:11px;color:#5a7a9a;margin-top:3px;line-height:1.4;display:flex;align-items:flex-start;gap:4px'
+      hint.style.cssText = 'font-size:11px;color:var(--c-info);margin-top:3px;line-height:1.4;display:flex;align-items:flex-start;gap:4px'
       hint.setAttribute('data-en', impact.en)
       hint.setAttribute('data-fi', impact.fi)
       hint.innerHTML = `<i class="fa fa-circle-info" style="font-size:11px;margin-top:2px;flex-shrink:0;opacity:0.7"></i><span>${impact[lang]}</span>`
@@ -16507,7 +16507,7 @@ async function loadPhantomApps(btn) {
   const summary = tUI('phantomFound').replace('{n}', data.length).replace('{size}', fmt(totalBytes))
   el.innerHTML = `<div style="font-size:11px;color:var(--c-accent-fg);font-weight:600;margin-bottom:8px">${summary}</div>` +
     data.map(row => `
-    <div id="phantom-row-${domId(row.folderPath)}" style="display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-bottom:1px solid #1a1a1a;gap:8px">
+    <div id="phantom-row-${domId(row.folderPath)}" style="display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--hairline-strong);gap:8px">
       <div style="flex:1;min-width:0">
         <div style="font-size:11px;font-weight:600;color:var(--white);white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${escAttr(row.folderPath)}">${escHtml(row.folderName)}</div>
         <div style="font-size:11px;color:var(--c-text-tertiary)">${escHtml(row.label)}</div>
@@ -16581,7 +16581,7 @@ async function loadCleanupTimeline(btn) {
     history.slice(0, 6).forEach(e => {
       const d = new Date(e.ts).toLocaleDateString(settings.language === 'fi' ? 'fi-FI' : 'en-GB', { day:'numeric', month:'short' })
       const itemLine = e.itemCount > 0 ? `<div style="color:var(--c-success);font-size:11px">${e.itemCount} ${tUI('timelineItems')}</div>` : ''
-      html += `<div style="background:var(--surface-2);border:1px solid #1a2e1a;border-radius:6px;padding:5px 8px;font-size:11px">
+      html += `<div style="background:var(--surface-2);border:1px solid var(--hairline-strong);border-radius:6px;padding:5px 8px;font-size:11px">
         <div style="color:var(--c-success);font-weight:700">${fmt(e.freedBytes)}</div>
         <div style="color:var(--c-text-tertiary)">${d}</div>
         ${itemLine}
@@ -16604,13 +16604,13 @@ async function doQuickClean() {
   let _qcRunning = true
   overlay.onclick = e => { if (e.target === overlay && !_qcRunning) overlay.remove() }
   overlay.innerHTML = `
-    <div style="background:#0d1520;border:1px solid #1a2a3a;border-radius:14px;padding:24px 28px;width:420px;max-width:90vw">
+    <div style="background:var(--surface-2);border:1px solid var(--hairline-strong);border-radius:14px;padding:24px 28px;width:420px;max-width:90vw">
       <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
         <span style="font-size:20px;color:var(--c-info)"><i class="fa fa-broom"></i></span>
         <div style="font-size:14px;font-weight:700;color:var(--white)" id="qc-title">${tUI('cleanupProgressTitle')}</div>
       </div>
-      <div style="height:6px;background:#1a2a3a;border-radius:4px;overflow:hidden;margin-bottom:14px">
-        <div id="qc-bar" style="height:100%;width:0%;background:linear-gradient(90deg,var(--c-info),#00D4FF);border-radius:4px;transition:width .3s"></div>
+      <div style="height:6px;background:var(--surface-2);border-radius:4px;overflow:hidden;margin-bottom:14px">
+        <div id="qc-bar" style="height:100%;width:0%;background:linear-gradient(90deg,var(--c-info),var(--c-info-muted));border-radius:4px;transition:width .3s"></div>
       </div>
       <div style="font-size:11px;color:var(--c-text-tertiary);margin-bottom:12px" id="qc-counter">0 / ${total}</div>
       <div id="qc-log" style="max-height:180px;overflow-y:auto;font-size:11px;color:var(--c-text-tertiary);line-height:1.7"></div>
@@ -16965,7 +16965,7 @@ function buildDesktopAppsTab(container) {
     <div style="position:relative;flex:1;min-width:160px">
       <i class="fa fa-magnifying-glass" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--c-text-tertiary);font-size:12px;pointer-events:none"></i>
       <input id="win32-search" type="text" placeholder="${tUI('genSearchPlaceholder')}"
-        style="width:100%;box-sizing:border-box;background:var(--surface-2);border:1px solid #222;border-radius:8px;padding:8px 10px 8px 30px;color:var(--c-text-primary);font-size:12px;outline:none;transition:border-color .15s"
+        style="width:100%;box-sizing:border-box;background:var(--surface-2);border:1px solid var(--hairline-strong);border-radius:8px;padding:8px 10px 8px 30px;color:var(--c-text-primary);font-size:12px;outline:none;transition:border-color .15s"
         onfocus="this.style.borderColor='#333'" onblur="this.style.borderColor='#222'"
         oninput="win32FilterApps(this.value)">
     </div>
@@ -16982,7 +16982,7 @@ function buildDesktopAppsTab(container) {
   // Sort bar
   const sortBar = document.createElement('div')
   sortBar.id = 'win32-sort-bar'
-  sortBar.style.cssText = 'padding:4px 18px;display:flex;gap:4px;font-size:11px;color:#666'
+  sortBar.style.cssText = 'padding:4px 18px;display:flex;gap:4px;font-size:11px;color:var(--c-text-tertiary)'
   sortBar.innerHTML = `
     <span style="margin-right:4px">Sort:</span>
     <button class="btn btn-ghost btn-sm" style="padding:2px 8px;font-size:11px;background:var(--surface-2);color:var(--c-text-tertiary)" onclick="win32Sort('name')">Name</button>
@@ -17148,8 +17148,8 @@ function win32RenderList(apps) {
             ${app.DisplayVersion ? `<span style="font-size:11px;color:var(--c-text-tertiary)">${escHtml(app.DisplayVersion)}</span>` : ''}
           </div>
           ${isSystem ? `<span class="app-warn" title="${tUI('systemComponentTooltip')}"><i class="fa fa-lock"></i> System</span>` : ''}
-          ${rarely ? `<span style="background:#3a2800;color:var(--c-warning);border-radius:4px;padding:1px 6px;font-size:11px;font-weight:600">${tUI('rarelyUsedBadge')}</span>` : ''}
-          ${isOem ? `<span style="background:rgba(229,57,53,.1);color:#ef5350;border:1px solid rgba(229,57,53,.3);border-radius:4px;padding:1px 6px;font-size:11px;font-weight:600">OEM</span>` : ''}
+          ${rarely ? `<span style="background:var(--surface-2);color:var(--c-warning);border-radius:4px;padding:1px 6px;font-size:11px;font-weight:600">${tUI('rarelyUsedBadge')}</span>` : ''}
+          ${isOem ? `<span style="background:rgba(229,57,53,.1);color:var(--c-danger);border:1px solid rgba(229,57,53,.3);border-radius:4px;padding:1px 6px;font-size:11px;font-weight:600">OEM</span>` : ''}
           ${uaBadge}
         </label>
         <div style="display:flex;align-items:center;gap:10px;flex-shrink:0">
@@ -17387,7 +17387,7 @@ function buildDebloater(c) {
     <div class="scanner-btns">
       <button class="btn btn-info btn-sm" onclick="doDebloatScan()"><i class="fa fa-magnifying-glass"></i> ${tUI('scanBtn')}</button>
       <button class="btn btn-sm" style="background:var(--warning-bg);color:var(--warning);border:1px solid var(--c-warning-muted);" onclick="doDebloatRecommended()"><i class="fa fa-gamepad"></i> ${tUI('scanGaming')}</button>
-      <button class="btn btn-sm" style="background:rgba(0,150,255,0.12);color:#4db8ff;border:1px solid rgba(0,150,255,0.3);" onclick="doDevPreset()"><i class="fa fa-code"></i> ${tUI('devPreset')}</button>
+      <button class="btn btn-sm" style="background:rgba(0,150,255,0.12);color:var(--c-info);border:1px solid rgba(0,150,255,0.3);" onclick="doDevPreset()"><i class="fa fa-code"></i> ${tUI('devPreset')}</button>
       <button class="btn btn-sm" style="background:rgba(228,100,255,0.12);color:var(--pink);border:1px solid rgba(228,100,255,0.3);" onclick="doStreamerPreset()"><i class="fa fa-circle-dot"></i> ${tUI('streamerPreset')}</button>
     </div>
   `
@@ -17402,7 +17402,7 @@ function buildDebloater(c) {
   uwpSearch.innerHTML = `
     <i class="fa fa-magnifying-glass" style="position:absolute;left:29px;top:50%;transform:translateY(-50%);color:var(--c-text-tertiary);font-size:12px;pointer-events:none"></i>
     <input id="uwp-search" type="text" placeholder="${tUI('genSearchPlaceholder')}"
-      style="width:100%;box-sizing:border-box;background:var(--surface-2);border:1px solid #222;border-radius:8px;padding:8px 10px 8px 32px;color:var(--c-text-primary);font-size:12px;outline:none;transition:border-color .15s"
+      style="width:100%;box-sizing:border-box;background:var(--surface-2);border:1px solid var(--hairline-strong);border-radius:8px;padding:8px 10px 8px 32px;color:var(--c-text-primary);font-size:12px;outline:none;transition:border-color .15s"
       onfocus="this.style.borderColor='#333'" onblur="this.style.borderColor='#222'"
       oninput="uwpFilterApps(this.value)">
   `
@@ -17636,7 +17636,7 @@ function buildDebloater(c) {
   shellCard.classList.add('bloat-sec-amber')
   const shellBody = document.createElement('div')
   shellBody.id = 'shell-ext-body'
-  shellBody.style.cssText = 'padding:10px 18px;font-size:12px;color:#555'
+  shellBody.style.cssText = 'padding:10px 18px;font-size:12px;color:var(--c-text-tertiary)'
   shellBody.textContent = tUI('shellExtReady')
   shellCard.appendChild(shellBody)
   const shellBtns = document.createElement('div')
@@ -17653,7 +17653,7 @@ function buildDebloater(c) {
   optFeatCard.classList.add('bloat-sec-blue')
   const optFeatBody = document.createElement('div')
   optFeatBody.id = 'opt-feat-body'
-  optFeatBody.style.cssText = 'padding:10px 18px;font-size:12px;color:#555'
+  optFeatBody.style.cssText = 'padding:10px 18px;font-size:12px;color:var(--c-text-tertiary)'
   optFeatBody.textContent = tUI('optFeatReady')
   optFeatCard.appendChild(optFeatBody)
   const optFeatBtns = document.createElement('div')
@@ -18265,7 +18265,7 @@ async function doScanOptFeatures() {
       return `
       <div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--border2)">
         <input type="checkbox" id="opt-feat-chk-${i}" ${feat.enabled ? 'checked' : 'disabled'} style="accent-color:var(--pink)">
-        <span style="flex:1;font-size:11px;color:${feat.enabled ? '#e0e0e0' : '#555'}">${label}</span>
+        <span style="flex:1;font-size:11px;color:${feat.enabled ? 'var(--surface-3)' : 'var(--surface-2)'}">${label}</span>
         ${isSecurity ? `<span style="font-size:11px;color:var(--danger);background:rgba(229,57,53,.12);border:1px solid rgba(229,57,53,.3);padding:1px 6px;border-radius:3px"><i class="fa fa-shield-exclamation"></i> ${tUI('optFeatSecurityRisk')}</span>` : ''}
         <span style="font-size:11px;color:${feat.enabled ? 'var(--c-warning)' : 'var(--success)'}">${feat.enabled ? tUI('optFeatOn') : tUI('optFeatOff')}</span>
       </div>
@@ -18613,7 +18613,7 @@ function buildServiceImpactBody(selectedIds) {
     const breaksHtml = (s.breaks && s.breaks.length)
       ? `<div style="margin-top:4px;padding:4px 8px;background:rgba(231,76,60,0.08);border-radius:4px;border-left:2px solid var(--danger)">
            <div style="font-size:11px;font-weight:700;color:var(--danger);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:2px">${tUI('svcBreaksLabel')}</div>
-           ${s.breaks.map(b => `<div style="font-size:11px;color:#c0787a">• ${b}</div>`).join('')}
+           ${s.breaks.map(b => `<div style="font-size:11px;color:var(--c-danger)">• ${b}</div>`).join('')}
          </div>`
       : ''
     return `
