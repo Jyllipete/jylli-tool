@@ -340,7 +340,7 @@
         <div id="bpm-title" style="font-size:14px;font-weight:800;color:var(--white)">Applying tweaks…</div>
         <div id="bpm-sub" style="font-size:11px;color:var(--muted)">Please wait</div>
       </div>
-      <button id="bpm-close" onclick="document.getElementById('batch-progress-modal').style.display='none'" style="display:none;background:rgba(var(--fx),0.05);border:1px solid var(--hairline-strong);border-radius:6px;padding:4px 10px;color:var(--muted);font-size:11px;cursor:pointer;transition:background .15s;flex-shrink:0" onmouseenter="this.style.background='rgba(255,255,255,0.1)'" onmouseleave="this.style.background='rgba(255,255,255,0.05)'"><i class="fa fa-xmark"></i> Close</button>
+      <button id="bpm-close" onclick="document.getElementById('batch-progress-modal').style.display='none'" style="display:none;background:rgba(var(--fx),0.05);border:1px solid var(--hairline-strong);border-radius:6px;padding:4px 10px;color:var(--muted);font-size:11px;cursor:pointer;transition:background .15s;flex-shrink:0" onmouseenter="this.style.background = 'rgba(255,255,255,0.1)'" onmouseleave="this.style.background='rgba(255,255,255,0.05)'"><i class="fa fa-xmark"></i> Close</button>
     </div>
     <div style="background:rgba(var(--fx),0.05);border-radius:8px;height:6px;overflow:hidden;margin-bottom:10px">
       <div id="bpm-bar" style="height:100%;background:var(--pink);width:0%;transition:width .3s"></div>
@@ -1181,7 +1181,7 @@ async function init(isPremium = false) {
   api.onUpdateGuardStatus?.(({ blocked, blockCount, deferredUntil, activeHoursSet }) => {
     const dot = document.getElementById('pulse-ug-dot')
     const pill = document.getElementById('ug-block-count')
-    if (dot) dot.style.background = blocked ? '#2ecc71' : '#444'
+    if (dot) dot.style.background = blocked ? 'var(--c-success)' : 'var(--c-text-tertiary)'
     if (pill) {
       if (blockCount > 0) {
         pill.textContent = `×${blockCount}`
@@ -1232,7 +1232,7 @@ async function init(isPremium = false) {
         strip.style.background = 'linear-gradient(135deg,rgba(243,156,18,0.07),rgba(230,126,34,0.04))'
         strip.style.borderBottomColor = 'rgba(243,156,18,0.2)'
         const dot = strip.querySelector('span')
-        if (dot) dot.style.background = '#f39c12'
+        if (dot) dot.style.background = 'var(--c-warning)'
         const gameEl = document.getElementById('gw-strip-game')
         if (gameEl) gameEl.textContent = '⏳ Cooling down'
         const fpsEl = document.getElementById('gw-strip-fps')
@@ -1248,7 +1248,7 @@ async function init(isPremium = false) {
     const dot = document.getElementById('pulse-gs-dot')
     if (!manifest) return
     if (action === 'activated' && killed?.length) {
-      if (dot) dot.style.background = '#8e44ad'
+      if (dot) dot.style.background = 'var(--c-accent)'
       const shown = killed.slice(0, 5).map(exe => {
         const name = exe.replace(/\.exe$/i, '')
         const pill = document.createElement('span')
@@ -1276,11 +1276,11 @@ async function init(isPremium = false) {
       }
     } else if (action === 'deactivated' || action === 'mid-session-kill') {
       if (action === 'deactivated') {
-        if (dot) dot.style.background = '#444'
+        if (dot) dot.style.background = 'var(--c-text-tertiary)'
         // Flash pills green briefly then hide
         manifest.querySelectorAll('.gs-pill').forEach(p => {
           p.style.background = 'rgba(46,204,113,0.18)'
-          p.style.color = '#2ecc71'
+          p.style.color = 'var(--c-success)'
           p.style.borderColor = 'rgba(46,204,113,0.35)'
         })
         setTimeout(() => { manifest.style.display = 'none'; manifest.innerHTML = '' }, 2000)
@@ -1969,7 +1969,7 @@ function updateLaunchRulesArmedCount() {
   const armed = rules.filter(Boolean).length
   const total = rules.length
   el.textContent = tUI('launchRulesArmed').replace('{n}', armed).replace('{total}', total)
-  el.style.color = armed === 0 ? 'var(--muted)' : armed === total ? '#2ecc71' : '#f39c12'
+  el.style.color = armed === 0 ? 'var(--muted)' : armed === total ? 'var(--c-success)' : 'var(--c-warning)'
 }
 
 function setLaunchRuleDots(active) {
@@ -2267,8 +2267,8 @@ async function hwCreateAndConfirmRP() {
     if (r.ok) {
       localStorage.setItem('hw_rp_confirmed', Date.now())
       if (banner) {
-        banner.style.background = 'var(--success-bg,#0a1a0a)'
-        banner.style.borderColor = '#1a5c35'
+        banner.style.background = 'var(--success-bg,var(--surface-2))'
+        banner.style.borderColor = 'var(--c-success-ring)'
         banner.innerHTML = `<span style="font-size:20px;color:var(--success,var(--c-success))"><i class="fa fa-shield-halved"></i></span><div class="hw-warn-text" style="color:var(--success,var(--c-success))">${tUI('hwRpConfirmedText')}</div><button class="btn btn-ghost btn-sm" style="flex-shrink:0" onclick="document.getElementById('hw-warn-banner').style.display='none'" title="${tUI('hwRpDismiss')}"><i class="fa fa-xmark"></i></button>`
       }
       appendLog('Restore point created', 'ok')
@@ -2676,8 +2676,8 @@ async function runWizardStep(step) {
         <!-- Auto-Optimize card -->
         <div onclick="wizardChooseAutoOpti()" id="wiz-choice-auto"
           style="background:var(--surface-2);border:1px solid rgba(46,204,113,0.25);border-radius:12px;padding:16px 18px;cursor:pointer;transition:border-color .15s,background .15s"
-          onmouseenter="this.style.borderColor='rgba(46,204,113,0.6)';this.style.background='#0f2015'"
-          onmouseleave="this.style.borderColor='rgba(46,204,113,0.25)';this.style.background='#0d1a10'">
+          onmouseenter="this.style.borderColor = 'rgba(46,204,113,0.6)';this.style.background = 'var(--surface-2)'"
+          onmouseleave="this.style.borderColor = 'rgba(46,204,113,0.25)';this.style.background = 'var(--surface-2)'">
           <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px">
             <div style="width:36px;height:36px;border-radius:9px;background:rgba(46,204,113,0.12);border:1px solid rgba(46,204,113,0.3);display:flex;align-items:center;justify-content:center;font-size:16px;color:var(--success);flex-shrink:0"><i class="fa fa-rocket"></i></div>
             <div>
@@ -2696,8 +2696,8 @@ async function runWizardStep(step) {
         <!-- Manual card -->
         <div onclick="wizardChooseManual()" id="wiz-choice-manual"
           style="background:var(--surface-2);border:1px solid var(--hairline-strong);border-radius:12px;padding:16px 18px;cursor:pointer;transition:border-color .15s,background .15s"
-          onmouseenter="this.style.borderColor='#444';this.style.background='#161616'"
-          onmouseleave="this.style.borderColor='#222';this.style.background='#111'">
+          onmouseenter="this.style.borderColor = 'var(--hairline-strong)';this.style.background = 'var(--surface-2)'"
+          onmouseleave="this.style.borderColor = 'var(--hairline-strong)';this.style.background = 'var(--surface-2)'">
           <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px">
             <div style="width:36px;height:36px;border-radius:9px;background:var(--surface-2);border:1px solid var(--hairline-strong);display:flex;align-items:center;justify-content:center;font-size:16px;color:var(--muted);flex-shrink:0"><i class="fa fa-sliders"></i></div>
             <div>
@@ -5885,10 +5885,10 @@ function toggleAutoPulse() {
   saveSettingsDebounced()
   const toggle = document.getElementById('auto-pulse-toggle')
   if (toggle) {
-    toggle.style.background = autoPulseEnabled ? 'var(--success)' : '#2a2a3a'
-    toggle.style.borderColor = autoPulseEnabled ? 'var(--success)' : '#3a3a4a'
+    toggle.style.background = autoPulseEnabled ? 'var(--c-success)' : 'var(--surface-3)'
+    toggle.style.borderColor = autoPulseEnabled ? 'var(--success)' : 'var(--hairline-strong)'
     toggle.querySelector('div').style.left = autoPulseEnabled ? '16px' : '2px'
-    toggle.nextElementSibling.style.color = autoPulseEnabled ? 'var(--success)' : '#6a6a8a'
+    toggle.nextElementSibling.style.color = autoPulseEnabled ? 'var(--success)' : 'var(--c-info)'
     toggle.nextElementSibling.textContent = tUI('autoPulseLabel')
   }
   toast(autoPulseEnabled ? tUI('autoPulseOnTitle') : tUI('autoPulseOffTitle'), autoPulseEnabled ? tUI('autoPulseOnBody') : '', autoPulseEnabled ? 'ok' : 'info')
@@ -6245,8 +6245,8 @@ function startBiosThermalPolling() {
     const cpuVal = document.getElementById('bios-therm-cpu-val')
     const gpuVal = document.getElementById('bios-therm-gpu-val')
     const peak   = document.getElementById('bios-therm-peak')
-    if (cpuVal) { cpuVal.textContent = cpu.toFixed(0); cpuVal.style.color = cpu >= 95 ? '#e74c3c' : cpu >= 80 ? '#e67e22' : 'var(--pink)' }
-    if (gpuVal) { gpuVal.textContent = gpu.toFixed(0); gpuVal.style.color = gpu >= 95 ? '#e74c3c' : gpu >= 80 ? '#e67e22' : '#3ab8b8' }
+    if (cpuVal) { cpuVal.textContent = cpu.toFixed(0); cpuVal.style.color = cpu >= 95 ? 'var(--c-danger)' : cpu >= 80 ? 'var(--c-warning)' : 'var(--pink)' }
+    if (gpuVal) { gpuVal.textContent = gpu.toFixed(0); gpuVal.style.color = gpu >= 95 ? 'var(--c-danger)' : gpu >= 80 ? 'var(--c-warning)' : 'var(--c-info)' }
     if (peak) peak.textContent = `CPU ${_biosThermPeakCpu.toFixed(0)}°C / GPU ${_biosThermPeakGpu.toFixed(0)}°C`
     drawBiosThermalGraph()
   }, 2000)
@@ -6860,7 +6860,7 @@ async function buildBiosTuner(c) {
             <div style="font-size:11px;font-weight:700;color:var(--white)">${tUI('ryzenCurveAll')}</div>
             <div style="font-size:11px;color:var(--gray)">${tUI('ryzenCurveAllDesc')}</div>
           </div>
-          <input type="range" id="ryzen-curve" min="-30" max="30" value="0" oninput="const v=this.value;document.getElementById('ryzen-curve-val').textContent=(v>0?'+':'')+v;document.getElementById('ryzen-curve-val').style.color=v<0?'#27ae60':v>0?'#e67e22':'var(--gray)'" style="flex:1;accent-color:var(--pink)">
+          <input type="range" id="ryzen-curve" min="-30" max="30" value="0" oninput="const v=this.value;document.getElementById('ryzen-curve-val').textContent=(v>0?'+':'')+v;document.getElementById('ryzen-curve-val').style.color = v<0?'var(--c-success)':v>0?'var(--c-warning)':'var(--gray)'" style="flex:1;accent-color:var(--pink)">
           <span id="ryzen-curve-val" style="width:44px;text-align:right;font-size:12px;font-weight:700;color:var(--gray)">0</span>
         </div>
         <div style="background:var(--surface-2);border:1px solid var(--c-warning-ring);border-radius:6px;padding:7px 12px;font-size:11px;color:var(--c-warning);margin-top:6px">
@@ -6970,7 +6970,7 @@ async function buildBiosTuner(c) {
   ;(async () => {
     const s = await api.fancontrolStatus()
     const el = document.getElementById('fancontrol-status')
-    if (el) { el.textContent = s.running ? '● Running' : '○ Not running'; el.style.color = s.running ? '#2ecc71' : 'var(--gray)' }
+    if (el) { el.textContent = s.running ? '● Running' : '○ Not running'; el.style.color = s.running ? 'var(--c-success)' : 'var(--gray)' }
   })()
   startBiosLhmPolling()
 
@@ -7118,7 +7118,7 @@ async function doFanControlOpen() {
   else setTimeout(async () => {
     const s = await api.fancontrolStatus()
     const el = document.getElementById('fancontrol-status')
-    if (el) { el.textContent = s.running ? '● Running' : '○ Not running'; el.style.color = s.running ? '#2ecc71' : 'var(--gray)' }
+    if (el) { el.textContent = s.running ? '● Running' : '○ Not running'; el.style.color = s.running ? 'var(--c-success)' : 'var(--gray)' }
   }, 1500)
 }
 async function doFanControlBackground() {
@@ -8040,7 +8040,7 @@ function ryzenPreset(ppt, tdc, edc, stapm, tctl, fclk, curve) {
   if (curve !== undefined) {
     const el = document.getElementById('ryzen-curve'); if (el) el.value = curve
     const vEl = document.getElementById('ryzen-curve-val')
-    if (vEl) { vEl.textContent = (curve > 0 ? '+' : '') + curve; vEl.style.color = curve < 0 ? '#27ae60' : curve > 0 ? '#e67e22' : 'var(--gray)' }
+    if (vEl) { vEl.textContent = (curve > 0 ? '+' : '') + curve; vEl.style.color = curve < 0 ? 'var(--c-success)' : curve > 0 ? 'var(--c-warning)' : 'var(--gray)' }
   }
 }
 
@@ -9808,7 +9808,7 @@ function showHealthNudgeIfNeeded() {
   if (!banner) return
   if (healthTs === 0) {
     banner.style.display = 'block'
-    banner.style.background = 'rgba(230,126,34,0.07)'; banner.style.border = '1px solid rgba(230,126,34,0.2)'; banner.style.color = '#e67e22'
+    banner.style.background = 'rgba(230,126,34,0.07)'; banner.style.border = '1px solid rgba(230,126,34,0.2)'; banner.style.color = 'var(--c-warning)'
     banner.innerHTML = `<i class="fa fa-triangle-exclamation"></i> <strong>${tUI('dashHealthNeverRun').split('—')[0].trim()}</strong> — ${tUI('dashHealthNeverRun').split('—').slice(1).join('—').trim()}`
   } else if (ageHours > 72) {
     banner.style.display = 'block'
@@ -9972,10 +9972,10 @@ async function applyAiRec(tweakId, btn) {
     const res = await window.api.runTweak({ id: tweakId, action: 'apply' })
     const ok = res?.ok || res?.result === 'ok'
     btn.textContent   = ok ? tUI('aiApplied') : tUI('aiFailed')
-    btn.style.background = ok ? '#2ECC71' : '#E74C3C'
-    btn.style.color   = '#fff'
-    btn.style.border  = 'none'
-  } catch { btn.textContent = tUI('aiError'); btn.style.background = '#E74C3C'; btn.style.color = '#fff' }
+    btn.style.background = ok ? 'var(--c-success)' : 'var(--c-danger)'
+    btn.style.color = '#fff'
+    btn.style.border = 'none'
+  } catch { btn.textContent = tUI('aiError'); btn.style.background = 'var(--c-danger)'; btn.style.color = '#fff' }
 }
 
 // ─── ARIA Panel helpers ───────────────────────────────────────────────────────
@@ -10457,12 +10457,12 @@ function ariaOnFpsTick({ avgFps, low1Fps }) {
   }
   if (low1El) {
     low1El.textContent = low1Fps
-    low1El.style.color = low1Fps >= 60 ? '#2ecc71' : low1Fps >= 30 ? '#f39c12' : '#e74c3c'
+    low1El.style.color = low1Fps >= 60 ? 'var(--c-success)' : low1Fps >= 30 ? 'var(--c-warning)' : 'var(--c-danger)'
   }
   if (stabEl && avgFps > 0) {
     const stab = Math.max(0, Math.round(100 - ((avgFps - low1Fps) / avgFps * 100)))
     stabEl.textContent = `${stab}%`
-    stabEl.style.color = stab >= 80 ? '#2ecc71' : stab >= 50 ? '#f39c12' : '#e74c3c'
+    stabEl.style.color = stab >= 80 ? 'var(--c-success)' : stab >= 50 ? 'var(--c-warning)' : 'var(--c-danger)'
   }
   if (low1Fps < 30) {
     const now = Date.now()
@@ -11196,7 +11196,7 @@ function _aomApplyUcSelection(id) {
     if (!el.id.startsWith('aom-uc-chk-') && el.id !== 'aom-uc-next') {
       el.classList.toggle('aom-uc-sel', el.id === `aom-uc-${id}`)
       el.style.borderColor = ''
-      el.style.background  = ''
+      el.style.background = ''
     }
   })
   const btn = document.getElementById('aom-uc-next')
@@ -11278,8 +11278,8 @@ function aomApplyCheckStyle(id, checked) {
   const chk  = document.getElementById(`aom-chk-${id}`)
   if (card) card.classList.toggle('checked', checked)
   if (chk) {
-    chk.style.background   = checked ? 'var(--c-success)' : ''
-    chk.style.borderColor  = checked ? 'var(--c-success)' : 'var(--c-border-default)'
+    chk.style.background = checked ? 'var(--c-success)' : ''
+    chk.style.borderColor = checked ? 'var(--c-success)' : 'var(--c-border-default)'
     chk.innerHTML          = checked ? '<i class="fa fa-check"></i>' : ''
   }
 }
@@ -12511,7 +12511,7 @@ async function applyTweakBatch(ids, action = 'apply') {
     try {
       const result = await api.runTweak(id, action)
       // A failed or refused tweak (premium, unknown id, error) must not be recorded as applied.
-      if (!result?.ok) { failed++; if (log && log.lastChild) log.lastChild.style.color = '#e74c3c'; continue }
+      if (!result?.ok) { failed++; if (log && log.lastChild) log.lastChild.style.color = 'var(--c-danger)'; continue }
       settings[`tweak_${id}`] = action === 'apply' ? 'applied' : 'restored'
       if (action === 'restore') {
         const pfStates = getPreflightStates()
@@ -12526,11 +12526,11 @@ async function applyTweakBatch(ids, action = 'apply') {
       if (cardEl) cardEl.classList.toggle('tc-applied', action === 'apply')
       const toggle = document.getElementById(`tct-${id}`)
       if (toggle) toggle.checked = action === 'apply' || (action === 'restore' && getPreflightStates()[id] === true)
-      if (log && log.lastChild) log.lastChild.style.color = result.ok ? '#2ecc71' : '#e74c3c'
+      if (log && log.lastChild) log.lastChild.style.color = result.ok ? 'var(--c-success)' : 'var(--c-danger)'
       if (result.ok) applied++; else failed++
     } catch {
       failed++
-      if (log && log.lastChild) log.lastChild.style.color = '#e74c3c'
+      if (log && log.lastChild) log.lastChild.style.color = 'var(--c-danger)'
     }
   }
 
@@ -12712,7 +12712,7 @@ function spwStep1() {
       ${useCases.map(u => `
         <div id="spw-uc-${u.id}" onclick="spwSelectUseCase('${u.id}')"
           style="background:var(--surface-2);border:1px solid var(--hairline-strong);border-radius:10px;padding:12px 16px;cursor:pointer;transition:border-color .15s,background .15s;display:flex;align-items:center;gap:14px"
-          onmouseenter="this.style.borderColor='rgba(var(--c-accent-rgb),0.4)'" onmouseleave="if(!this.classList.contains('spw-sel'))this.style.borderColor='#222'">
+          onmouseenter="this.style.borderColor = 'rgba(var(--c-accent-rgb),0.4)'" onmouseleave="if(!this.classList.contains('spw-sel'))this.style.borderColor='var(--hairline-strong)'">
           <div style="width:36px;height:36px;border-radius:8px;background:rgba(var(--c-accent-rgb),0.1);border:1px solid rgba(var(--c-accent-rgb),0.2);display:flex;align-items:center;justify-content:center;font-size:15px;color:var(--c-accent);flex-shrink:0"><i class="fa ${u.icon}"></i></div>
           <div><div style="font-size:12px;font-weight:700;color:var(--white)">${u.label}</div><div style="font-size:11px;color:var(--muted);margin-top:2px">${u.desc}</div></div>
           <i class="fa fa-circle-check" id="spw-uc-chk-${u.id}" style="margin-left:auto;font-size:16px;color:var(--c-accent);display:none"></i>
@@ -12728,8 +12728,8 @@ function spwSelectUseCase(id) {
   _spwUseCase = id
   document.querySelectorAll('[id^="spw-uc-"]').forEach(el => {
     const isThis = el.id === `spw-uc-${id}`
-    el.style.borderColor = isThis ? 'var(--c-accent)' : '#222'
-    el.style.background  = isThis ? 'rgba(var(--c-accent-rgb),0.12)' : '#111'
+    el.style.borderColor = isThis ? 'var(--c-accent)' : 'var(--hairline-strong)'
+    el.style.background = isThis ? 'rgba(var(--c-accent-rgb),0.12)' : 'var(--surface-2)'
     el.classList.toggle('spw-sel', isThis)
   })
   document.querySelectorAll('[id^="spw-uc-chk-"]').forEach(el => { el.style.display = 'none' })
@@ -12782,7 +12782,7 @@ function spwStep3() {
       ${SPW_GAMES.map(g => `
         <div id="spw-g-${g.id}" onclick="spwToggleGame('${g.id}')"
           style="background:var(--surface-2);border:1px solid var(--hairline-strong);border-radius:8px;padding:10px 12px;cursor:pointer;transition:border-color .15s,background .15s;display:flex;align-items:center;gap:10px"
-          onmouseenter="this.style.borderColor='rgba(var(--c-accent-rgb),0.4)'" onmouseleave="this.style.borderColor=_spwGames.has('${g.id}')?'var(--c-accent)':'#222'">
+          onmouseenter="this.style.borderColor = 'rgba(var(--c-accent-rgb),0.4)'" onmouseleave="this.style.borderColor=_spwGames.has('${g.id}')?'var(--c-accent)':'var(--hairline-strong)'">
           <i class="fa ${g.icon}" style="color:var(--c-accent);width:12px;font-size:13px;flex-shrink:0"></i>
           <span style="font-size:11.5px;font-weight:600;color:var(--white)">${g.label}</span>
           <i class="fa fa-check" id="spw-g-chk-${g.id}" style="margin-left:auto;font-size:12px;color:var(--c-accent);display:none"></i>
@@ -12803,7 +12803,7 @@ function spwToggleGame(id, forceOn) {
   const on = _spwGames.has(id)
   const el = document.getElementById(`spw-g-${id}`)
   const chk = document.getElementById(`spw-g-chk-${id}`)
-  if (el) { el.style.borderColor = on ? 'var(--c-accent)' : '#222'; el.style.background = on ? 'rgba(var(--c-accent-rgb),0.12)' : '#111' }
+  if (el) { el.style.borderColor = on ? 'var(--c-accent)' : 'var(--hairline-strong)'; el.style.background = on ? 'rgba(var(--c-accent-rgb),0.12)' : 'var(--surface-2)' }
   if (chk) chk.style.display = on ? '' : 'none'
 }
 
@@ -12868,7 +12868,7 @@ function spwStep5() {
       ${connOpts.map(c => `
         <div id="spw-conn-${c.id}" onclick="spwSelectConn('${c.id}')"
           style="background:${_spwConnType===c.id?'rgba(var(--c-accent-rgb),0.12)':'var(--surface-2)'};border:1px solid ${_spwConnType===c.id?'var(--c-accent)':'var(--surface-2)'};border-radius:10px;padding:12px 16px;cursor:pointer;transition:all .15s;display:flex;align-items:center;gap:14px"
-          onmouseenter="this.style.borderColor='rgba(var(--c-accent-rgb),0.4)'" onmouseleave="if(_spwConnType!=='${c.id}')this.style.borderColor='#222'">
+          onmouseenter="this.style.borderColor = 'rgba(var(--c-accent-rgb),0.4)'" onmouseleave="if(_spwConnType!=='${c.id}')this.style.borderColor='var(--hairline-strong)'">
           <div style="width:36px;height:36px;border-radius:8px;background:rgba(var(--c-accent-rgb),0.1);border:1px solid rgba(var(--c-accent-rgb),0.2);display:flex;align-items:center;justify-content:center;font-size:15px;color:var(--c-accent);flex-shrink:0"><i class="fa ${c.icon}"></i></div>
           <div style="flex:1"><div style="font-size:12px;font-weight:700;color:var(--white)">${c.label}</div><div style="font-size:11px;color:var(--muted);margin-top:2px">${c.desc}</div></div>
           <i class="fa fa-circle-check" style="font-size:16px;color:var(--c-accent);${_spwConnType===c.id?'':'display:none'}"></i>
@@ -12897,7 +12897,7 @@ function spwStep6() {
       ${safeOpts.map(s => `
         <div id="spw-safe-${s.id}" onclick="spwSelectSafety('${s.id}')"
           style="background:${_spwSafetyLevel===s.id?'rgba(var(--c-accent-rgb),0.08)':'var(--surface-2)'};border:1px solid ${_spwSafetyLevel===s.id?'var(--c-accent)':'var(--surface-2)'};border-radius:10px;padding:12px 16px;cursor:pointer;transition:all .15s;display:flex;align-items:center;gap:14px"
-          onmouseenter="this.style.borderColor='rgba(var(--c-accent-rgb),0.4)'" onmouseleave="if(_spwSafetyLevel!=='${s.id}')this.style.borderColor='#222'">
+          onmouseenter="this.style.borderColor = 'rgba(var(--c-accent-rgb),0.4)'" onmouseleave="if(_spwSafetyLevel!=='${s.id}')this.style.borderColor='var(--hairline-strong)'">
           <div style="width:36px;height:36px;border-radius:8px;background:rgba(0,0,0,0.2);border:1px solid ${s.color}44;display:flex;align-items:center;justify-content:center;font-size:15px;color:${s.color};flex-shrink:0"><i class="fa ${s.icon}"></i></div>
           <div style="flex:1"><div style="font-size:12px;font-weight:700;color:var(--white)">${s.label}</div><div style="font-size:11px;color:var(--muted);margin-top:2px">${s.desc}</div></div>
           <i class="fa fa-circle-check" style="font-size:16px;color:var(--c-accent);${_spwSafetyLevel===s.id?'':'display:none'}"></i>
@@ -13097,8 +13097,8 @@ async function buildHardware(c) {
   warn.id = 'hw-warn-banner'
   const _rpConfirmed = localStorage.getItem('hw_rp_confirmed')
   if (_rpConfirmed) {
-    warn.style.background = 'var(--success-bg,#0a1a0a)'
-    warn.style.borderColor = '#1a5c35'
+    warn.style.background = 'var(--success-bg,var(--surface-2))'
+    warn.style.borderColor = 'var(--c-success-ring)'
     warn.innerHTML = `<span style="font-size:20px;color:var(--success,var(--c-success))"><i class="fa fa-shield-halved"></i></span><div class="hw-warn-text" style="color:var(--success,var(--c-success))">${tUI('hwRpConfirmedText')}</div><button class="btn btn-ghost btn-sm" style="flex-shrink:0" onclick="this.closest('#hw-warn-banner').style.display='none'" title="${tUI('hwRpDismiss')}"><i class="fa fa-xmark"></i></button>`
   } else {
     warn.innerHTML = `<span style="font-size:20px"><i class="fa fa-shield-halved"></i></span><div class="hw-warn-text">${tUI('hwWarnText')}</div><button class="btn btn-primary btn-sm" onclick="hwCreateAndConfirmRP()">${tUI('hwCreateRP')}</button>`
@@ -16470,20 +16470,20 @@ async function scanCleanupSizes() {
       if (data.userFilePct >= 5) {
         badge.textContent = tUI('cleanupFpUserFiles')
         badge.style.background = 'rgba(248,113,113,0.15)'
-        badge.style.color      = 'var(--c-danger)'
-        badge.style.border     = '1px solid rgba(248,113,113,0.3)'
+        badge.style.color = 'var(--c-danger)'
+        badge.style.border = '1px solid rgba(248,113,113,0.3)'
         badge.style.display    = 'block'
       } else if (data.userFilePct > 0 || data.oldPct < 50) {
         badge.textContent = tUI('cleanupFpCheck')
         badge.style.background = 'rgba(251,191,36,0.15)'
-        badge.style.color      = '#fbbf24'
-        badge.style.border     = '1px solid rgba(251,191,36,0.3)'
+        badge.style.color = 'var(--c-warning)'
+        badge.style.border = '1px solid rgba(251,191,36,0.3)'
         badge.style.display    = 'block'
       } else {
         badge.textContent = tUI('cleanupFpSafe')
         badge.style.background = 'rgba(74,222,128,0.15)'
-        badge.style.color      = 'var(--c-success)'
-        badge.style.border     = '1px solid rgba(74,222,128,0.3)'
+        badge.style.color = 'var(--c-success)'
+        badge.style.border = '1px solid rgba(74,222,128,0.3)'
         badge.style.display    = 'block'
       }
     }
@@ -16691,7 +16691,7 @@ function buildDesktopAppsTab(container) {
       <i class="fa fa-magnifying-glass" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--c-text-tertiary);font-size:12px;pointer-events:none"></i>
       <input id="win32-search" type="text" placeholder="${tUI('genSearchPlaceholder')}"
         style="width:100%;box-sizing:border-box;background:var(--surface-2);border:1px solid var(--hairline-strong);border-radius:8px;padding:8px 10px 8px 30px;color:var(--c-text-primary);font-size:12px;outline:none;transition:border-color .15s"
-        onfocus="this.style.borderColor='#333'" onblur="this.style.borderColor='#222'"
+        onfocus="this.style.borderColor = 'var(--hairline-strong)'" onblur="this.style.borderColor='var(--hairline-strong)'"
         oninput="win32FilterApps(this.value)">
     </div>
     <button class="btn btn-info btn-sm" onclick="doLoadWin32Apps()"><i class="fa fa-rotate"></i> ${tUI('desktopLoadBtn')}</button>
@@ -16752,7 +16752,7 @@ function win32Sort(key) {
   if (_win32SortKey === key) _win32SortDir *= -1
   else { _win32SortKey = key; _win32SortDir = 1 }
   const btns = document.querySelectorAll('#win32-sort-bar button')
-  btns.forEach(b => { b.style.background = b.textContent.trim().toLowerCase() === key ? '#1a1a1a' : ''; b.style.color = b.textContent.trim().toLowerCase() === key ? '#aaa' : '' })
+  btns.forEach(b => { b.style.background = b.textContent.trim().toLowerCase() === key ? 'var(--surface-2)' : ''; b.style.color = b.textContent.trim().toLowerCase() === key ? 'var(--c-text-primary)' : '' })
   win32RenderList(_win32Apps)
 }
 
@@ -17128,7 +17128,7 @@ function buildDebloater(c) {
     <i class="fa fa-magnifying-glass" style="position:absolute;left:29px;top:50%;transform:translateY(-50%);color:var(--c-text-tertiary);font-size:12px;pointer-events:none"></i>
     <input id="uwp-search" type="text" placeholder="${tUI('genSearchPlaceholder')}"
       style="width:100%;box-sizing:border-box;background:var(--surface-2);border:1px solid var(--hairline-strong);border-radius:8px;padding:8px 10px 8px 32px;color:var(--c-text-primary);font-size:12px;outline:none;transition:border-color .15s"
-      onfocus="this.style.borderColor='#333'" onblur="this.style.borderColor='#222'"
+      onfocus="this.style.borderColor = 'var(--hairline-strong)'" onblur="this.style.borderColor='var(--hairline-strong)'"
       oninput="uwpFilterApps(this.value)">
   `
   uwpCard.appendChild(uwpSearch)
@@ -17719,14 +17719,14 @@ async function doScanTaskStates() {
     const state  = states[t.name] || ''
     if (!badge) continue
     if (!state) {
-      badge.textContent = '– N/A'; badge.style.color = '#444'; badge.dataset.state = 'unknown'
+      badge.textContent = '– N/A'; badge.style.color = 'var(--c-text-tertiary)'; badge.dataset.state = 'unknown'
       if (reBtn) reBtn.style.display = 'none'
     } else if (state === 'Disabled') {
       badge.textContent = '✓ off'; badge.style.color = 'var(--success)'; badge.dataset.state = 'disabled'
       if (chk) chk.checked = false
       if (reBtn) reBtn.style.display = ''
     } else {
-      badge.textContent = '● on'; badge.style.color = '#f5a623'; badge.dataset.state = 'enabled'
+      badge.textContent = '● on'; badge.style.color = 'var(--c-warning)'; badge.dataset.state = 'enabled'
       if (reBtn) reBtn.style.display = 'none'
     }
   }
@@ -17868,8 +17868,8 @@ async function doLoadAdsStates() {
     const chk = document.getElementById(`ads-chk-${id}`)
     if (badge) {
       if (state === 'disabled') { badge.textContent = '✓ off'; badge.style.color = 'var(--success)' }
-      else if (state === 'default') { badge.textContent = '– default'; badge.style.color = '#555' }
-      else { badge.textContent = '● on'; badge.style.color = '#f5a623' }
+      else if (state === 'default') { badge.textContent = '– default'; badge.style.color = 'var(--c-text-tertiary)' }
+      else { badge.textContent = '● on'; badge.style.color = 'var(--c-warning)' }
     }
     if (chk) chk.checked = state !== 'disabled'
   }

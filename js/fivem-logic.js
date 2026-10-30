@@ -376,7 +376,7 @@ async function buildFiveM(c) {
   logBody.innerHTML = `
     <div style="padding:0 18px 8px;display:flex;gap:8px;align-items:center">
       <button class="btn btn-secondary btn-sm" onclick="loadFivemLog()"><i class="fa fa-rotate"></i> ${tUI('fivemLogRefresh')}</button>
-      <button class="btn btn-ghost btn-sm" id="fivem-log-classify-btn" onclick="fivemClassifyLog()" style="color:var(--c-accent-fg);border-color:rgba(155,89,182,0.3)" onmouseenter="this.style.background='rgba(155,89,182,0.08)'" onmouseleave="this.style.background=''"><i class="fa fa-magnifying-glass-chart"></i> ${tUI('fivemLogClassify')}</button>
+      <button class="btn btn-ghost btn-sm" id="fivem-log-classify-btn" onclick="fivemClassifyLog()" style="color:var(--c-accent-fg);border-color:rgba(155,89,182,0.3)" onmouseenter="this.style.background = 'rgba(155,89,182,0.08)'" onmouseleave="this.style.background=''"><i class="fa fa-magnifying-glass-chart"></i> ${tUI('fivemLogClassify')}</button>
       <input id="fivem-log-filter" type="text" placeholder="${tUI('fivemLogFilter')}" oninput="filterFivemLog()" style="flex:1;padding:5px 10px;border-radius:6px;border:1px solid var(--border);background:var(--bg-card2,var(--surface-2));color:var(--fg);font-size:11px">
     </div>
     <div id="fivem-log-diagnose-out" style="display:none;margin:0 18px 8px;background:rgba(155,89,182,0.07);border:1px solid rgba(155,89,182,0.2);border-radius:8px;padding:10px 12px;font-size:11px;color:var(--c-text-primary);line-height:1.6"></div>
