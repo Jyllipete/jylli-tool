@@ -800,6 +800,7 @@ LANG.en = {
       startupTitle:'Startup and services', startupLegendImpact:'Impact', startupImpHigh:'High', startupImpMed:'Medium', startupImpLow:'Low', startupLegendHigh:'disable', startupLegendMed:'optional', startupLegendLow:'keep', startupClearSearch:'Clear search',
       gpAutoPulseBadge:'Auto-Pulse', gpAutoPulseActive:'Auto-Pulse active',
       netTweaksActive:'tweaks active', netEthernetAdapter:'Ethernet adapter', netWirelessAdapter:'wireless adapter',
+      pmFreezeErrorTitle:'Freeze error', biosScewinScanRequired:'Run the SCEWIN scan first.', pfFailed:'Scan failed.', pfComplete:'Scan complete.', aoStillActiveTitle:'Tweaks still active after restore', aoStillActiveBody:'These settings are still applied on your system even though you toggled them off. Run Restore to fully undo them.', bsScanPrompt:'Run a scan to see your bloat score.', bloatDesc_clean:'Your system is clean. No action needed.', bloatDesc_moderate:'Moderate bloat detected. Gaming preset recommended.', bloatDesc_bloated:'High bloat. Full scan and cleanup advised.', bloatDesc_critical:'Critical bloat. Immediate action recommended.', saveError:'Could not save the file.',
       motionSnappy:'Snappy',
       motionDefault:'Default',
       motionSmooth:'Smooth',

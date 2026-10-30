@@ -674,3 +674,20 @@
 #page-content .u-row7 { display: flex; align-items: center; gap: 7px; }
 #page-content .u-cap { font-size: 11px; color: var(--c-text-tertiary); }
 #page-content .u-ellip { font-size: 11px; color: var(--c-text-tertiary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* ── System > Restore points ── */
+.j-rp-banner { margin-bottom: 12px; }
+.j-rp-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-bottom: 14px; }
+.j-rp-stat { background: var(--surface-2); box-shadow: none; }
+.j-rp-create { display: flex; gap: 8px; align-items: center; position: relative; flex-wrap: wrap; }
+.j-rp-create .j-search { flex: 1; min-width: 220px; }
+.j-rp-meta { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 10px; }
+.j-rp-body { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(280px, 1fr); gap: 16px; margin-top: 16px; align-items: start; }
+.j-rp-side { display: flex; flex-direction: column; gap: 16px; }
+.j-rp-bar { margin-bottom: 8px; }
+.j-rp-chips { display: flex; gap: 6px; flex-wrap: wrap; }
+.j-rp-sel { display: flex; gap: 10px; align-items: flex-start; margin: 8px 0; }
+.j-rp-sel-body { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.j-rp-info { display: flex; flex-direction: column; gap: 12px; font-size: var(--fs-2); }
+.j-rp-info-t0 { color: var(--c-success); } .j-rp-info-t1 { color: var(--c-info); } .j-rp-info-t2 { color: var(--c-warning); }
+@media (max-width: 1100px) { .j-rp-body { grid-template-columns: 1fr; } }

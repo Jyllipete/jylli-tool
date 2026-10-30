@@ -7,7 +7,7 @@
     "start": "electron .",
     "build": "electron-builder --win --x64",
     "pack": "electron-builder --dir",
-    "check": "node tools/check.js && node tools/scan-injection.js && node tools/check-ui.js && node tools/check-contrast.js",
+    "check": "node tools/check.js && node tools/scan-injection.js && node tools/check-ui.js && node tools/check-contrast.js && node tools/check-keys.js",
     "test": "node --test \"test/**/*.test.js\"",
     "preview": "electron tools/ui-preview/preview-main.js"
   },
