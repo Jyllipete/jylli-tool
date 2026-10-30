@@ -4735,7 +4735,7 @@ async function loadScheduledTasks() {
   const bulk = document.getElementById('sched-bulk-bar')
   if (bulk) bulk.style.display = tasks.length ? 'flex' : 'none'
   if (!tasks.length) {
-    list.innerHTML = `<div class="jx-68">${tUI('schedEmptyState')}</div>`
+    list.innerHTML = String(ui.empty({ icon: 'calendar', title: tUI('schedEmptyState') }))
     return
   }
   try {
@@ -7022,7 +7022,7 @@ async function loadBiosChangeLog() {
   if (!r || !r.ok || !list) return
   if (counter) counter.textContent = r.entries.length ? `(${r.entries.length})` : ''
   if (!r.entries.length) {
-    list.innerHTML = `<div class="jx-5">${tUI('biosChangeLogEmpty')}</div>`
+    list.innerHTML = String(ui.empty({ icon: 'clock-rotate-left', title: tUI('biosChangeLogEmpty') }))
     return
   }
   list.innerHTML = r.entries.map(e => {
@@ -10682,7 +10682,7 @@ async function loadHistoryChart(range) {
       drawHistorySparkline('hist-canvas-ram', data.map(s => s.ram), 'hist-stat-ram', '#3498db')
     })
   } catch {
-    body.innerHTML = `<div class="jx-132">${tUI('dashHistoryEmpty')}</div>`
+    body.innerHTML = String(ui.empty({ icon: 'clock-rotate-left', title: tUI('dashHistoryEmpty') }))
   }
 }
 
@@ -16120,7 +16120,7 @@ async function loadDiskUsage(btn) {
   const data = await api.getDiskUsage().catch(() => [])
   btn.disabled = false
   btn.innerHTML = `<i class="fa fa-magnifying-glass"></i> ${tUI('diskUsageScan')}`
-  if (!data || data.length === 0) { el.innerHTML = `<div class="jx-158">${tUI('diskUsageEmpty')}</div>`; el.style.display = 'block'; return }
+  if (!data || data.length === 0) { el.innerHTML = String(ui.empty({ icon: 'chart-bar', title: tUI('diskUsageEmpty') })); el.style.display = 'block'; return }
   const maxBytes = data[0].bytes || 1
   const fmt = b => b >= 1073741824 ? `${(b/1073741824).toFixed(1)} GB` : b >= 1048576 ? `${Math.round(b/1048576)} MB` : `${Math.round(b/1024)} KB`
   el.innerHTML = data.map(row => {
@@ -16157,7 +16157,7 @@ async function loadPhantomApps(btn) {
   btn.disabled = false
   btn.innerHTML = `<i class="fa fa-magnifying-glass"></i> ${tUI('phantomScan')}`
   if (!data || data.length === 0) {
-    el.innerHTML = `<div class="jx-158">${tUI('phantomEmpty')}</div>`
+    el.innerHTML = String(ui.empty({ icon: 'ghost', title: tUI('phantomEmpty') }))
     el.style.display = 'block'
     return
   }
@@ -17910,7 +17910,7 @@ async function doScanOptFeatures() {
   body.innerHTML = `<div class="jx-47"><i class="fa fa-spinner fa-spin"></i> ${tUI('optFeatScanning')}</div>`
   _scannedOptFeats = await api.getOptionalFeatures().catch(() => [])
   if (!_scannedOptFeats.length) {
-    body.innerHTML = `<div class="jx-47">${tUI('optFeatNone')}</div>`
+    body.innerHTML = String(ui.empty({ icon: 'check', title: tUI('optFeatNone') }))
     return
   }
   const enabled = _scannedOptFeats.filter(f => f.enabled)
