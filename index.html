@@ -3842,7 +3842,7 @@ function _renderStartupList(items) {
   if (!list) return
 
   if (!items.length) {
-    list.innerHTML = `<div class="jx-68">${tUI('startupNoItems')}</div>`
+    list.innerHTML = String(ui.empty({ icon: 'power-off', title: tUI('startupEmptyTitle'), sub: tUI('startupEmptySub'), action: ui.button({ label: tUI('startupRefresh'), icon: 'arrows-rotate', size: 'sm', onclick: 'loadStartupItems(this)' }) }))
     updateStartupHero(items)
     return
   }
@@ -3946,7 +3946,7 @@ async function loadStartupItems(btn) {
   // Handle backend error response
   if (rawItems && !Array.isArray(rawItems) && rawItems.error) {
     toast(tUI('startupRefresh'), rawItems.error, 'err')
-    list.innerHTML = `<div class="jx-68">${tUI('startupNoItems')}</div>`
+    list.innerHTML = String(ui.error({ title: tUI('startupErrorTitle'), sub: rawItems.error, action: ui.button({ label: tUI('startupRetry'), icon: 'arrows-rotate', size: 'sm', onclick: 'loadStartupItems(this)' }) }))
     return
   }
   const items = Array.isArray(rawItems) ? rawItems : []
