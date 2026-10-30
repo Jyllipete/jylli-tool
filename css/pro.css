@@ -169,10 +169,10 @@ input[type="range"] { accent-color: var(--c-accent); }
 .tip .tip-icon { opacity: 0.9; }
 
 /* ── Dialogs ──────────────────────────────────────────────────────────────────────────────────── */
-.modal-overlay, #cmd-palette-overlay, #auto-opti-modal, #onboarding-overlay { background: var(--c-overlay); backdrop-filter: blur(10px) saturate(120%); }
+.modal-overlay, #cmd-palette-overlay, #auto-opti-modal, #onboarding-overlay { background: var(--c-overlay); backdrop-filter: none; }
 .modal, .modal-sheet, .aom-sheet, .wizard-card, #cmd-palette {
-  background: var(--c-bg-elevated); border: 1px solid var(--c-border-default); border-radius: var(--r-xl);
-  box-shadow: var(--shadow-modal), var(--pro-hairline-top);
+  background: var(--c-bg-elevated); border: 1px solid var(--c-border-default); border-radius: var(--r-lg);
+  box-shadow: var(--shadow-modal);
 }
 .modal-sheet-header, .modal-sheet-footer { border-color: var(--c-border-subtle); }
 

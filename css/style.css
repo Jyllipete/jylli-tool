@@ -2870,11 +2870,10 @@ input[type="time"].styled-select { color-scheme: dark; }
 }
 .modal {
   background: var(--c-bg-elevated);
-  -webkit-backdrop-filter: blur(32px); backdrop-filter: blur(32px);
   border: 1px solid var(--c-border-default);
-  border-radius: var(--r-xl);
+  border-radius: var(--r-lg);
   box-shadow: var(--shadow-modal);
-  animation: modalIn var(--dur-medium) var(--ease-spring) both;
+  animation: j-modal-in .16s var(--ease-snap) both;
 }
 @keyframes modalIn {
   from { opacity: 0; transform: scale(0.96) translateY(8px); }
