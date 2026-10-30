@@ -57,3 +57,17 @@ Windows tweaks, CPU/GPU/Power, Network, Games, Apps, FiveM, Latency, Cleanup, De
 3. Pulse as a session card with a visible primary action.
 4. Tokens with a light theme, then delete the legacy CSS.
 5. States, keyboard and contrast pass on every page.
+
+## Round 2 (end of UI 2.0 work)
+
+Reviewed Home and Startup in the light theme and the Pulse page in dark; lint over every page in dark, light and Finnish.
+
+Found and fixed:
+- Startup legend ran its three entries together ("High disable Medium optional"). Each entry is now grouped with spacing.
+- Home temperature cards, the output log, quick actions, process list and several section labels were all-caps in en and fi. They are sentence case now.
+- Confirm dialogs still used a 20px radius, the spring animation and a blurred overlay, unlike the new dialogs. They share the j-modal radius, animation and flat overlay.
+- Confirm dialog colours came from the removed pink accent variables. They use the status tokens.
+- About 140 hard-coded neon status colours and about 450 literal status tints did not follow the light theme. They resolve from the active scheme now.
+- Dead code: hidden spec chips, popover code, a mojibake comment, 105 more CSS rules.
+
+Still open (accepted): the Windows, Hardware, Network, Apps, Games, Debloat and FiveM pages and the lower BIOS sections are tokenised and lint-clean but not rebuilt on `ui.*`, because their logic keeps live state in closures and a rewrite risks tweak behaviour. Inactive sort arrows in the process table sit at 3.3:1 on light (decorative, active state passes). Native range sliders measure 20px tall.
