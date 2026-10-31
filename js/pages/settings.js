@@ -19,7 +19,7 @@ function buildSettings(c) {
   ]
   const section = (id, titleKey, body) => html`<section class="j-settings-sec" id="set-sec-${id}"><h2 class="j-settings-h">${tUI(titleKey)}</h2>${body}</section>`
 
-  const motionBtns = ['snappy', 'default', 'smooth'].map(m => html`<button id="motion-${m}-btn" type="button" class="${ui.cls('j-seg-item', (settings.motionMode || 'default') === m && 'j-seg-active')}" onclick="settingsSetMotionMode('${m}')">${tUI('motion' + m.charAt(0).toUpperCase() + m.slice(1))}</button>`)
+  const motionBtns = ['snappy', 'default', 'smooth', 'reduced'].map(m => html`<button id="motion-${m}-btn" type="button" class="${ui.cls('j-seg-item', (settings.motionMode || 'default') === m && 'j-seg-active')}" onclick="settingsSetMotionMode('${m}')">${tUI('motion' + m.charAt(0).toUpperCase() + m.slice(1))}</button>`)
 
   const out = html`<div class="j-settings">
     <nav class="j-settings-nav" aria-label="Settings">${CATS.map(([id, key, ic]) => html`<button class="j-nav-item" type="button" onclick="document.getElementById('set-sec-${id}').scrollIntoView({behavior:'smooth',block:'start'})"><i class="fa fa-${ic}" aria-hidden="true"></i><span>${tUI(key)}</span></button>`)}</nav>

@@ -491,6 +491,9 @@ app.on('web-contents-created', (_, contents) => {
 })
 const { createAuth } = require('./lib/auth')
 const { createSnapshotStore } = require('./lib/snapshot')
+const { createJournalService } = require('./lib/journal-service')
+const JylliScore = require('./js/score')
+const { createWriteLog, mergeIncoming } = require('./lib/settings-merge')
 let snapshots = null   // per-tweak 'before' values (created at startup, once userData is known)
 const V = require('./lib/validate')
 const Ini = require('./lib/ini')
@@ -1027,7 +1030,7 @@ function updateTrayMenu() {
           for (const [k, v] of Object.entries(profile.tweaks)) {
             if (v === 'applied') {
               const tweakId = k.replace(/^tweak_/, '')
-              if (hasTweak(tweakId) && !isPlanExcluded(tweakId)) await invokeTweak(tweakId, 'apply', () => {}).catch(() => {})
+              if (hasTweak(tweakId) && !isPlanExcluded(tweakId)) await invokeTweak(tweakId, 'apply', () => {}, { via: 'game-watcher' }).catch(() => {})
             }
           }
         }
@@ -1970,7 +1973,7 @@ ipcMain.handle('get-tweak-states', async () => {
 // read tokens nor write a premium flag.
 const PROTECTED_SETTINGS = ['authToken', 'hmacSecret', 'discordUserId', 'authExpiry', 'isPremium', 'settingsHmac']
 // Written by the main process itself; a stale copy held by the renderer must never overwrite them.
-const MAIN_OWNED_SETTINGS = ['lastAutoSnapshot', 'thermalLastAudit', 'aria_insights', 'gameShieldEnabled', 'gameShieldExclusions', 'updateGuardEnabled']
+const MAIN_OWNED_SETTINGS = ['lastRestorePointAt', 'lastAutoSnapshot', 'thermalLastAudit', 'aria_insights', 'gameShieldEnabled', 'gameShieldExclusions', 'updateGuardEnabled']
 ipcMain.handle('load-settings', () => {
   startupTrace('IPC load-settings handler called')
   const s = { ...loadSettings() }
@@ -1978,12 +1981,14 @@ ipcMain.handle('load-settings', () => {
   s.isPremium = !!auth && auth.isPremium()
   return s
 })
+const _settingsWriteLog = createWriteLog()
 ipcMain.handle('save-settings', (_, data) => {
   if (!data || typeof data !== 'object' || Array.isArray(data)) return false
   let clean
   try { clean = JSON.parse(JSON.stringify(data)) } catch { return false }
   if (JSON.stringify(clean).length > 2 * 1024 * 1024) return false
   for (const k of PROTECTED_SETTINGS) delete clean[k]
+  clean = mergeIncoming(clean, _settingsWriteLog.recent())
   const current = loadSettings()
   for (const k of MAIN_OWNED_SETTINGS) { if (k in current) clean[k] = current[k]; else delete clean[k] }
   saveSettings(clean)
@@ -2138,7 +2143,7 @@ ipcMain.handle('load-game-bundle', async (_, name) => {
         if (v === 'applied') {
           const tweakId = k.replace(/^tweak_/, '')
           if (hasTweak(tweakId) && !isPlanExcluded(tweakId)) {
-            await invokeTweak(tweakId, 'apply', () => {}).catch(() => {})
+            await invokeTweak(tweakId, 'apply', () => {}, { via: 'game-watcher' }).catch(() => {})
           }
         }
       }
@@ -3877,11 +3882,42 @@ ipcMain.handle('fivem-cfx-server-info', async (_, shortcode) => {
 function hasTweak(id, action = 'apply') {
   return typeof id === 'string' && Object.prototype.hasOwnProperty.call(TWEAKS, id) && (action === 'apply' || action === 'restore') && typeof TWEAKS[id][action] === 'function'
 }
-async function invokeTweak(id, action = 'apply', send) {
+let _journalSvc = null
+function journalSvc() {
+  if (!_journalSvc) {
+    _journalSvc = createJournalService({
+      file: path.join(app.getPath('userData'), 'jt_journal.jsonl'),
+      runPS, runCmd, tweaks: TWEAKS, hasTweak, isPlanExcluded, requiresPremium,
+      createRestorePoint: async () => { const r = await createRestorePointInternal(() => {}); return { ...r, name: 'JylliTool_AutoOpti' } },
+      emit: (ch, payload) => mainWindow?.webContents.send(ch, payload),
+      loadSettings, saveSettings, writeLog: debugLog,
+      noteSettingsWrites: patch => { for (const [k, v] of Object.entries(patch)) _settingsWriteLog.note(k, v) },
+    })
+    try { _journalSvc.journal.rotate() } catch {}
+  }
+  return _journalSvc
+}
+// Every tweak run is recorded in the change journal (real before/after values). meta: { via, batchId } for non-manual callers.
+async function invokeTweak(id, action = 'apply', send, meta) {
   if (!hasTweak(id, action)) throw new Error(`Unknown tweak or action: ${String(id).slice(0, 60)}/${String(action).slice(0, 12)}`)
   const log = send || ((msg, level = 'info') => mainWindow?.webContents.send('log', { msg, level, ts: new Date().toLocaleTimeString(), source: id }))
-  return TWEAKS[id][action](log, runPS, runCmd, regAdd, regDelete)
+  return journalSvc().invokeTweak(id, action, log, meta)
 }
+
+ipcMain.handle('get-tweak-meta', (_, ids) => journalSvc().tweakMeta(Array.isArray(ids) ? ids.slice(0, 400) : null))
+ipcMain.handle('apply-batch', (_, req) => journalSvc().applyBatch(req))
+ipcMain.handle('journal-list', (_, opts) => {
+  const o = opts && typeof opts === 'object' ? opts : {}
+  return journalSvc().list({ limit: Math.min(Math.max(parseInt(o.limit) || 200, 1), 2000), via: typeof o.via === 'string' ? o.via : undefined,
+    tweakId: typeof o.tweakId === 'string' ? o.tweakId : undefined, batchId: typeof o.batchId === 'string' ? o.batchId : undefined, sessionId: typeof o.sessionId === 'string' ? o.sessionId : undefined })
+})
+ipcMain.handle('journal-undo', (_, req) => {
+  const t = req?.target || {}
+  const target = {}
+  for (const k of ['entryId', 'batchId', 'sessionId']) if (typeof t[k] === 'string' && t[k].length < 64) target[k] = t[k]
+  if (!Object.keys(target).length) return { ok: false, error: 'invalid_target' }
+  return journalSvc().undo(target, { force: req?.force === true })
+})
 
 // ─── Power plan helpers (Intel/AMD Max Performance) ────────────────────────────────────────────────
 const POWER_GUID_RX = /([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i
@@ -4018,9 +4054,10 @@ let _autoOptiRunning = false
 ipcMain.handle('run-auto-opti', async (_, sysInfo) => {
   if (_autoOptiRunning) return { ok: false, aborted: true, reason: 'already-running' }
   _autoOptiRunning = true
-  try { return await runAutoOptiInner(sysInfo) } finally { _autoOptiRunning = false }
+  const batchId = require('crypto').randomBytes(6).toString('hex')
+  try { return await journalSvc().withContext({ via: sysInfo?.via === 'spw' ? 'spw' : 'auto-opti', batchId }, () => runAutoOptiInner(sysInfo, batchId)) } finally { _autoOptiRunning = false }
 })
-async function runAutoOptiInner(sysInfo) {
+async function runAutoOptiInner(sysInfo, batchId = null) {
   const send = (msg, level) => mainWindow?.webContents.send('log', { msg, level, ts: new Date().toLocaleTimeString() })
   const progress = (step, total, label, id = '', status = 'running') => mainWindow?.webContents.send('auto-opti-progress', { step, total, label, id, status })
 
@@ -4072,6 +4109,8 @@ async function runAutoOptiInner(sysInfo) {
   }
 
   const failedTasks = []
+  const appliedIds = [], alreadyIds = [], skippedIds = []
+  { const s = loadSettings(); s.lastRestorePointAt = Date.now(); saveSettings(s) }
   const taskTimeout = (ms) => new Promise((_, rej) => setTimeout(() => rej(new Error(`Timed out after ${ms / 1000}s`)), ms))
   // A timed-out tweak keeps running in the background; give it a bounded grace period so two tweaks never overlap.
   const runTask = async (fn, label) => {
@@ -4100,11 +4139,13 @@ async function runAutoOptiInner(sysInfo) {
             if (alreadyApplied) {
               send(`    Already applied — skipping ${id}`, 'info')
               progress(i + 1, selected.length, label, id, 'skipped')
+              alreadyIds.push(id)
               continue
             }
           }
           await runTask(() => invokeTweak(id, 'apply', (msg, lvl) => send(`    ${msg}`, lvl || 'ok')), id)
           progress(i + 1, selected.length, label, id, 'ok')
+          appliedIds.push(id)
         } catch (e) {
           send(`    Skipped: ${e.message}`, 'warn')
           progress(i + 1, selected.length, label, id, 'failed')
@@ -4113,6 +4154,7 @@ async function runAutoOptiInner(sysInfo) {
       } else {
         send(`    No handler for ${id} — skipped`, 'warn')
         progress(i + 1, selected.length, label, id, 'skipped')
+        skippedIds.push(id)
       }
     }
   } else {
@@ -4159,7 +4201,7 @@ async function runAutoOptiInner(sysInfo) {
   const tweakCount     = selected?.length || 0
   const includedFiveM  = (selected || []).some(id => id.startsWith('fivem-'))
   sessionTweaksCount  += tweakCount
-  return { ok: true, failedTasks }
+  return { ok: true, failedTasks, failed: failedTasks, appliedIds, alreadyIds, skippedIds, restorePointName: 'JylliTool_AutoOpti', batchId }
 }
 
 async function createRestorePointInternal(send) {
@@ -11667,7 +11709,7 @@ ipcMain.handle('start-game-watcher', async () => {
             if (v === 'applied') {
               const tweakId = k.replace(/^tweak_/, '')
               if (hasTweak(tweakId) && !isPlanExcluded(tweakId)) {
-                await invokeTweak(tweakId, 'apply', () => {}).catch(() => {})
+                await invokeTweak(tweakId, 'apply', () => {}, { via: 'game-watcher' }).catch(() => {})
               }
             }
           }
@@ -12279,7 +12321,7 @@ ipcMain.handle('get-health-score', async (_, settings) => {
     } catch { Write-Output 'Unknown' }
   `)
   const diskHealth = diskR.out.trim()
-  scores.disk = diskHealth === 'Healthy' ? 20 : diskHealth === 'Warning' ? 8 : diskHealth === 'Unhealthy' ? 0 : 12
+  scores.disk = diskHealth === 'Healthy' ? 20 : diskHealth === 'Warning' ? 8 : diskHealth === 'Unhealthy' ? 0 : null   // unknown stays unknown
 
   // 4. Tweaks applied (0-30 points)
   const appliedTweaks = Object.entries(settings || {}).filter(([k,v]) => k.startsWith('tweak_') && v === 'applied').length
@@ -12298,12 +12340,16 @@ ipcMain.handle('get-health-score', async (_, settings) => {
   if (driverDate !== 'unknown') {
     const age = (Date.now() - new Date(driverDate)) / (1000 * 60 * 60 * 24)
     scores.drivers = age < 90 ? 15 : age < 180 ? 12 : age < 365 ? 7 : 3
-  } else { scores.drivers = 8 }
+  } else { scores.drivers = null }
 
-  const total = Object.values(scores).reduce((a, b) => a + b, 0)
+  // Components we could not measure are left out and the rest renormalised, instead of being scored as an average guess.
+  const MAXES = { temp: 20, startup: 15, disk: 20, tweaks: 30, drivers: 15 }
+  const blended = JylliScore.blend(Object.entries(MAXES).map(([key, max]) => ({ key, value: scores[key] == null ? null : scores[key] / max, weight: max })))
+  const total = blended.score ?? 0
 
   return {
     total: Math.min(100, total),
+    measured: blended.used, notMeasured: blended.missing,
     breakdown: {
       temp:    { score: scores.temp,    max: 20, label: 'Temp Files',     detail: `${tempMB} MB of temp files` },
       startup: { score: scores.startup, max: 15, label: 'Startup Items',  detail: `${startupCount} startup items` },

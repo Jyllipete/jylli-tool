@@ -13,11 +13,11 @@ function global:Set-ItemProperty {
   process {
     $targets = if ($LiteralPath) { $LiteralPath } else { $Path }
     foreach ($t in $targets) {
-      $before = __JJ_Read $t $Name
+      $isReg = ($t -match '^(HK(LM|CU|CR|U):|.*Registry::)'); $before = if ($isReg) { __JJ_Read $t $Name }
       $splat = @{ LiteralPath = $t; Name = $Name; Value = $Value }
       if ($Type) { $splat.Type = $Type }; if ($Force) { $splat.Force = $true }
       & $global:__JJ_RealSet @splat
-      __JJ_Emit 'reg' $t $Name $before (__JJ_Read $t $Name)
+      if ($isReg) { __JJ_Emit 'reg' $t $Name $before (__JJ_Read $t $Name) }
     }
   }
 }
@@ -29,11 +29,11 @@ function global:New-ItemProperty {
   process {
     $targets = if ($LiteralPath) { $LiteralPath } else { $Path }
     foreach ($t in $targets) {
-      $before = __JJ_Read $t $Name
+      $isReg = ($t -match '^(HK(LM|CU|CR|U):|.*Registry::)'); $before = if ($isReg) { __JJ_Read $t $Name }
       $splat = @{ LiteralPath = $t; Name = $Name; Value = $Value }
       if ($PropertyType) { $splat.PropertyType = $PropertyType }; if ($Force) { $splat.Force = $true }
       & $global:__JJ_RealNew @splat
-      __JJ_Emit 'reg' $t $Name $before (__JJ_Read $t $Name)
+      if ($isReg) { __JJ_Emit 'reg' $t $Name $before (__JJ_Read $t $Name) }
     }
   }
 }
@@ -44,10 +44,10 @@ function global:Remove-ItemProperty {
   process {
     $targets = if ($LiteralPath) { $LiteralPath } else { $Path }
     foreach ($t in $targets) {
-      $before = __JJ_Read $t $Name
+      $isReg = ($t -match '^(HK(LM|CU|CR|U):|.*Registry::)'); $before = if ($isReg) { __JJ_Read $t $Name }
       $splat = @{ LiteralPath = $t; Name = $Name }; if ($Force) { $splat.Force = $true }
       & $global:__JJ_RealRem @splat
-      __JJ_Emit 'reg' $t $Name $before (__JJ_Read $t $Name)
+      if ($isReg) { __JJ_Emit 'reg' $t $Name $before (__JJ_Read $t $Name) }
     }
   }
 }

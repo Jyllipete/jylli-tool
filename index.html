@@ -514,6 +514,7 @@
 <script src="js/theme-sync.js"></script>
 <script src="js/ui.js"></script>
 <script src="js/routes.js"></script>
+<script src="js/score.js"></script>
 <script src="js/shell.js"></script>
 <script src="js/pages/home.js"></script>
 <script src="js/pages/settings.js"></script>
@@ -672,6 +673,7 @@ async function init(isPremium = false) {
   document.getElementById('sidebar-ver').innerHTML      = `v${appVersion} · Jylli Tool<span id="sidebar-thermal-badge" style="display:none;margin-left:6px;font-size:11px;padding:1px 5px;border-radius:8px;background:var(--tg-badge-bg,var(--surface-2));color:var(--tg-badge-color,var(--c-text-primary))"></span>`
 
   // ThermalGuard: wire sidebar badge to thermal ticks
+  api.onSettingsPatch?.(p => { if (p && typeof p === 'object') Object.assign(settings, p) })
   api.onThermalTick(d => { updateThermalGuardBadge(d); if (d?.cpuTemp != null) _lastSensorCpuTemp = parseFloat(d.cpuTemp) || 0 })
   if (settings.thermalGuardEnabled) {
     document.getElementById('sidebar-thermal-badge').style.display = 'inline'
@@ -2139,7 +2141,7 @@ function _playUiTick() {
 function initUiSounds() {
   document.addEventListener('mouseenter', function(e) {
     if (!settings.uiSounds) return
-    if (e.target.matches && e.target.matches('.btn:not(:disabled)')) _playUiTick()
+    if (e.target.matches && e.target.matches('.btn:not(:disabled), .j-btn:not(:disabled)')) _playUiTick()
   }, true)
 }
 function settingsToggleUiSounds(on) {
@@ -2166,9 +2168,8 @@ function settingsSetMotionMode(mode) {
 }
 
 function applyMotionMode(mode) {
-  document.body.classList.remove('motion-snappy', 'motion-smooth')
-  if (mode === 'snappy') document.body.classList.add('motion-snappy')
-  else if (mode === 'smooth') document.body.classList.add('motion-smooth')
+  const cls = ['motion-snappy', 'motion-smooth', 'motion-reduced']
+  for (const el of [document.documentElement, document.body]) { el.classList.remove(...cls); if (cls.includes('motion-' + mode)) el.classList.add('motion-' + mode) }
 }
 
 function settingsToggleAria(on) {
@@ -3063,11 +3064,11 @@ async function doPulseFixMouse(btn) {
 
 
 function computePulseScore() {
-  // Thermal component: (1 - cpuTemp/100) * 100, clamped 0–100
-  const thermalRoom = Math.min(100, Math.max(0, (1 - _lastSensorCpuTemp / 100) * 100))
+  // Thermal component: (1 - cpuTemp/100) * 100, clamped 0–100. Unknown without a CPU temperature reading.
+  const thermalRoom = _lastSensorCpuTemp > 0 ? Math.min(100, Math.max(0, (1 - _lastSensorCpuTemp / 100) * 100)) : null
 
-  // FPS stability: (1 - (avg-low1)/avg), clamped 0–100
-  let fpsStability = 50 // neutral default when no FPS data
+  // FPS stability: (1 - (avg-low1)/avg), clamped 0–100. Unknown without FPS data.
+  let fpsStability = null
   if (_ariaFpsAvg > 0 && _ariaFpsLow1 > 0) {
     fpsStability = Math.min(100, Math.max(0, (1 - (_ariaFpsAvg - _ariaFpsLow1) / _ariaFpsAvg) * 100))
   }
@@ -3075,11 +3076,13 @@ function computePulseScore() {
   // Optimizations applied: steps that returned 'ok' (max 8 expected steps)
   const optiApplied = Math.min(100, (_pulseOptStepsOk / 8) * 100)
 
-  const score = Math.round(
-    thermalRoom   * 0.40 +
-    fpsStability  * 0.35 +
-    optiApplied   * 0.25
-  ) * 10  // scale 0–100 → 0–1000
+  // Unmeasured components are left out and the weights renormalised (js/score.js), never scored as a neutral guess.
+  const blended = JylliScore.blend([
+    { key: 'thermal', value: thermalRoom == null ? null : thermalRoom / 100, weight: 0.40 },
+    { key: 'fps',     value: fpsStability == null ? null : fpsStability / 100, weight: 0.35 },
+    { key: 'opti',    value: optiApplied / 100, weight: 0.25 },
+  ])
+  const score = (blended.score ?? 0) * 10  // scale 0–100 → 0–1000
 
   _lastPulseScore = score
   window._lastPulseScore = score
@@ -3097,11 +3100,12 @@ function computePulseScore() {
 
   if (bdEl) {
     const chips = [
-      [tUI('pulseScoreThermal'), Math.round(thermalRoom  * 4)],
-      [tUI('pulseScoreFps'),     Math.round(fpsStability * 3.5)],
+      [tUI('pulseScoreThermal'), thermalRoom  == null ? null : Math.round(thermalRoom  * 4)],
+      [tUI('pulseScoreFps'),     fpsStability == null ? null : Math.round(fpsStability * 3.5)],
       [tUI('pulseScoreOpti'),    Math.round(optiApplied  * 2.5)],
     ]
     bdEl.innerHTML = chips.map(([label, val]) => {
+      if (val == null) return `<div class="pulse-score-chip"><span class="psc-label">${label}</span><span class="psc-val">—</span></div>`
       const c = val >= 280 ? jStatus('ok') : val >= 175 ? jStatus('warn') : jStatus('err')
       return `<div class="pulse-score-chip"><span class="psc-label">${label}</span><span class="psc-val" style="color:${c}">${val}</span></div>`
     }).join('')
@@ -8755,7 +8759,7 @@ async function initHealthScoreRing() {
   // result.breakdown: { temp: { score, max, label }, startup: { ... }, ... }
   if (factorsEl && result.breakdown) {
     const weak = Object.values(result.breakdown)
-      .filter(f => f.score < f.max * 0.7)
+      .filter(f => f.score != null && f.score < f.max * 0.7)
       .sort((a, b) => (a.score / a.max) - (b.score / b.max))
       .slice(0, 3)
       .map(f => `<span class="jx-422">${f.label}</span>`)
@@ -11951,12 +11955,12 @@ async function spwStep8() {
     }
   }
 
-  const result = await api.runAutoOpti({ ...sysInfo, selectedTweaks: tweakIds })
+  const result = await api.runAutoOpti({ ...sysInfo, selectedTweaks: tweakIds, via: 'spw' })
   window._aomProgressHandler = prevHandler
 
   const log = document.getElementById('spw-run-log')
   const failCount = result?.failedTasks?.length || 0
-  const passCount = tweakIds.length - failCount
+  const passCount = Array.isArray(result?.appliedIds) ? result.appliedIds.length + (result.alreadyIds?.length || 0) : tweakIds.length - failCount
   const rawScore  = Math.min(100, Math.round((passCount / Math.max(tweakIds.length, 1)) * 85 + 10))
   const scoreColor = rawScore >= 70 ? jStatus('ok') : rawScore >= 45 ? jStatus('warn') : 'var(--danger)'
 

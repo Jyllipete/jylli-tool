@@ -806,6 +806,7 @@ LANG.en = {
       motionSnappy:'Snappy',
       motionDefault:'Default',
       motionSmooth:'Smooth',
+      motionReduced:'Reduced',
       motionModeDesc:'Controls the speed of all transitions and animations',
       settingsAdvanced:'Advanced Mode',
       settingsAdvancedDesc:'Unlock Process Manager, Latency Monitor, Ping Test, and BIOS Tuner',

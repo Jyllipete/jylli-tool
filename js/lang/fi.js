@@ -784,6 +784,7 @@ LANG.fi = {
       motionSnappy:'Nopea',
       motionDefault:'Oletus',
       motionSmooth:'Pehmeä',
+      motionReduced:'Vähennetty',
       motionModeDesc:'Säätää kaikkien siirtymien ja animaatioiden nopeuden',
       settingsAdvanced:'Lisätila',
       settingsAdvancedDesc:'Avaa lukitut työkalut: Prosessienhallinta, Viivemonitori, Ping-testi ja BIOS-säätäjä',
