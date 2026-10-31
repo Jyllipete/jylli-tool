@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Twin demo</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="../../css/fonts.css">
+<link rel="stylesheet" href="../../css/tokens.css">
+<link rel="stylesheet" href="../../css/ui.css">
+<style>
+  body { margin: 0; padding: 16px; background: var(--c-bg, #09090b); color: var(--twin-text); font: 13px var(--font, system-ui); }
+  .row { display: flex; gap: 16px; align-items: flex-start; flex-wrap: wrap; }
+  .stage { width: 760px; height: 480px; }
+  .panel { display: grid; gap: 8px; min-width: 260px; }
+  label { display: grid; grid-template-columns: 120px 1fr 48px; gap: 8px; align-items: center; }
+  pre { margin: 0; font-size: 11px; color: var(--twin-text-dim); max-width: 360px; white-space: pre-wrap; }
+</style>
+</head>
+<body>
+<div class="row">
+  <div class="j-twin-stage stage"><div class="j-twin-slot" id="slot"></div><div class="j-twin-inspector" id="twin-inspector" hidden></div></div>
+  <div class="panel">
+    <label>CPU temp <input type="range" id="cpuT" min="0" max="100" value="0"><span id="cpuTv">off</span></label>
+    <label>GPU temp <input type="range" id="gpuT" min="0" max="100" value="0"><span id="gpuTv">off</span></label>
+    <label>CPU load <input type="range" id="cpuL" min="0" max="100" value="12"><span></span></label>
+    <label>GPU load <input type="range" id="gpuL" min="0" max="100" value="8"><span></span></label>
+    <label>Radiator fans <input type="range" id="fans" min="0" max="3" value="0"><span id="fansv">0</span></label>
+    <label>Cooler <select id="cooler"><option value="">unknown</option><option value="aio">AIO</option><option value="air">Air</option></select><span></span></label>
+    <label>Form <select id="form"><option value="">detected</option><option value="laptop">laptop</option></select><span></span></label>
+    <button id="none">No sensors at all</button>
+    <pre id="info"></pre>
+  </div>
+</div>
+<script>
+  // Mock window.api: the real capture of a desktop, plus telemetry the sliders control. Every value is declared here, none is measured.
+  window.JYLLI_TWIN_BUNDLE = '../../js/vendor/three.bundle.js'
+  window.settings = { visuals3d: new URLSearchParams(location.search).get('q') || 'auto' }
+  window.tUI = k => ({ twinAria: 'PC', twinHint: 'Drag to rotate', metricNA: 'Not available' }[k] || k)
+  let cooler = '', form = ''
+  const cap = {}
+  window.api = {
+    getHardwareInventory: async () => {
+      const raw = await (await fetch('../../test/fixtures/sensors/inventory-raw-desktop.json')).json()
+      const src = await (await fetch('../../lib/inventory.js')).text()
+      const m = { exports: {} }; new Function('module', 'exports', 'require', src)(m, m.exports, () => ({}))
+      if (form) raw.chassis = [10]
+      return { ok: true, rig: m.exports.buildRigSpec(raw, cooler ? { cooler } : {}) }
+    },
+    telemetrySubscribe: async () => ({}), telemetryUnsubscribe() {}, telemetryCapabilities: async () => ({ capabilities: cap }), onTwinTelemetry: () => () => {},
+  }
+</script>
+<script src="../../js/telemetry.js"></script>
+<script src="../../js/twin/layout.js"></script>
+<script src="../../js/twin/mapping.js"></script>
+<script src="../../js/twin/motion.js"></script>
+<script src="../../js/twin/fallback.js"></script>
+<script src="../../js/twin/engine.js"></script>
+<script src="../../js/twin/host.js"></script>
+<script>
+  const $ = id => document.getElementById(id)
+  let seq = 0, none = false
+  function push() {
+    const s = {}
+    const set = (k, v) => { if (v != null) s[k] = [v, 100, 'demo'] }
+    if (!none) {
+      set('cpu.load', +$('cpuL').value); set('gpu0.load', +$('gpuL').value); set('ram.load', 47)
+      if (+$('cpuT').value > 0) set('cpu.temp.package', +$('cpuT').value)
+      if (+$('gpuT').value > 0) set('gpu0.temp.core', +$('gpuT').value)
+      for (let i = 1; i <= +$('fans').value; i++) set('mb.fan' + i + '.rpm', 900 + i * 300)
+    }
+    JylliTelemetry.state.snap = { v: 1, seq: ++seq, t: Date.now(), s }
+    $('cpuTv').textContent = +$('cpuT').value || 'off'; $('gpuTv').textContent = +$('gpuT').value || 'off'; $('fansv').textContent = $('fans').value
+    $('info').textContent = JSON.stringify({ state: JylliTwin.state, reason: JylliTwin.reason, quality: JylliTwin.quality, renderer: JylliTwin.rendererName, ghosts: JylliTwin.layout && JylliTwin.layout.ghosts }, null, 1)
+  }
+  for (const id of ['cpuT', 'gpuT', 'cpuL', 'gpuL', 'fans']) $(id).oninput = push
+  $('none').onclick = () => { none = !none; push() }
+  $('cooler').onchange = async e => { cooler = e.target.value; await JylliTwin.setRigDeclared() }
+  $('form').onchange = async e => { form = e.target.value; await JylliTwin.setRigDeclared(); if (JylliTwin.layout) { /* engine rebuilt by host */ } }
+  JylliTwin.on('select', id => { const i = JylliTwin.partInfo(id); const box = $('twin-inspector'); box.hidden = !id; box.textContent = id ? JSON.stringify(i, null, 1) : '' })
+  setInterval(push, 500); push()
+  JylliTwin.attach($('slot'))
+  window.__demo = { push }
+</script>
+</body>
+</html>

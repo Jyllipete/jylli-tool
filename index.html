@@ -516,6 +516,12 @@
 <script src="js/routes.js"></script>
 <script src="js/score.js"></script>
 <script src="js/telemetry.js"></script>
+<script src="js/twin/layout.js"></script>
+<script src="js/twin/mapping.js"></script>
+<script src="js/twin/motion.js"></script>
+<script src="js/twin/fallback.js"></script>
+<script src="js/twin/engine.js"></script>
+<script src="js/twin/host.js"></script>
 <script src="js/shell.js"></script>
 <script src="js/pages/home.js"></script>
 <script src="js/pages/settings.js"></script>
@@ -1723,6 +1729,7 @@ function showPage(page, tabId) {
   window._navTimeout = setTimeout(async () => {
     if (window._navToken !== navToken) return
     c.classList.remove('page-exit')
+    try { JylliTwin.park() } catch {}   // move the persistent 3D canvas out before this page's DOM is replaced
     // Run any registered cleanup for the page we just left
     if (leavingPage && leavingPage !== page && _pageCleanupFns[leavingPage]) {
       try { _pageCleanupFns[leavingPage]() } catch {}

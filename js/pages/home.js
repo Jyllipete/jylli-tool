@@ -24,7 +24,15 @@ function buildDashboard(c) {
   put(html`<div id="spec-warnings"></div>`)
 
   // Hero: health ring, verdict, main actions
-  put(html`<section id="db-hero" class="j-card j-home-hero">
+  put(html`<section id="db-hero" class="j-card j-home-hero j-home-hero-twin">
+    <div class="j-twin-stage" id="home-twin-stage">
+      <div class="j-twin-slot" id="home-twin-slot" data-twin-view="rig:home"></div>
+      <div class="j-twin-hint" id="twin-hint">${tUI('twinHint')}</div>
+      <div class="j-twin-inspector" id="twin-inspector" role="region" aria-live="polite" hidden></div>
+      <ul class="j-twin-parts" id="twin-parts" aria-label="${tUI('twinPartsList')}"></ul>
+    </div>
+    <div class="j-home-hero-side">
+    <div class="j-home-hero-main">
     <div class="j-home-ring">
       <svg width="104" height="104" viewBox="0 0 88 88" aria-hidden="true">
         <circle class="j-ring-bg" cx="44" cy="44" r="34"/>
@@ -43,6 +51,7 @@ function buildDashboard(c) {
       <div id="aom-last-run-badge" class="j-muted" style="display:none"></div>
       <div id="game-watch-indicator" class="j-hstack j-muted" style="display:${gameWatcherRunning ? 'flex' : 'none'}"><span class="j-dot j-dot-ok"></span>${tUI('watchingForGames')}</div>
     </div>
+    </div>
     <div class="j-home-hero-actions">
       ${ui.button({ id: 'auto-opti-btn', label: tUI('dashAutoOptimize'), icon: 'rocket', variant: 'primary', onclick: 'runAutoOpti()' })}
       <div class="j-hstack">
@@ -51,6 +60,7 @@ function buildDashboard(c) {
       </div>
       <div class="auto-opti-progress-bar-track"><div class="auto-opti-progress-bar" id="auto-opti-bar"></div></div>
       <div class="auto-opti-status j-muted" id="auto-opti-status"></div>
+    </div>
     </div>
   </section>`)
 
@@ -215,6 +225,7 @@ function buildDashboard(c) {
     <div class="j-card-body"><div id="db-weekly-stats" class="j-home-weekly"></div></div>
   </section>`)
 
+  twinInit()
   buildSpecWarnings()
   initRadar()
   initQuickHealth()
@@ -229,4 +240,71 @@ function buildDashboard(c) {
   if (window._pendingFrameSession) showFrameSession(window._pendingFrameSession)
 
   loadAiAdvisor()
+}
+
+// ── 3D twin on Home ─────────────────────────────────────────────────────────────────────────────────
+// The stage shows the real rig (JylliTwin). Hover/click a part for its inspector; a keyboard-reachable list mirrors the canvas.
+const TWIN_PART_LABEL = { cpu: 'twinPartCpu', gpu: 'twinPartGpu', ram: 'twinPartRam', storage: 'twinPartStorage', board: 'twinPartBoard', cooler: 'twinPartCooler' }
+function twinInit() {
+  const slot = document.getElementById('home-twin-slot')
+  if (!slot || !window.JylliTwin) return
+  JylliTwin.attach(slot)
+  const list = document.getElementById('twin-parts')
+  const wire = () => {
+    const lay = JylliTwin.layout
+    if (!lay || !list) return false
+    const seen = new Set()
+    list.innerHTML = lay.parts.filter(p => !p.decor && !(p.kind === 'ram-slot' && !p.slot.stick && p.id !== 'ram0')).map(p => {
+      const k = p.label || p.id
+      if (seen.has(k) && k !== 'storage') return ''
+      seen.add(k)
+      return `<li><button type="button" class="j-btn j-btn-ghost j-btn-sm" data-twin-part="${escAttr(p.id)}">${escHtml(tUI(TWIN_PART_LABEL[k] || 'twinPartBoard'))}${p.ghost ? ' · ' + escHtml(tUI('twinNotDetected')) : ''}</button></li>`
+    }).join('')
+    list.querySelectorAll('[data-twin-part]').forEach(b => { b.onclick = () => JylliTwin.select(b.dataset.twinPart) })
+    return true
+  }
+  let tries = 0
+  const t = setInterval(() => { if (wire() || ++tries > 20) clearInterval(t) }, 250)
+  JylliTwin.on('select', id => twinInspect(id))
+  document.getElementById('home-twin-stage')?.addEventListener('keydown', e => { if (e.key === 'Escape') JylliTwin.back() })
+}
+
+function twinInspect(id) {
+  const box = document.getElementById('twin-inspector')
+  const hint = document.getElementById('twin-hint')
+  if (!box) return
+  if (!id) { box.hidden = true; box.innerHTML = ''; if (hint) hint.hidden = false; return }
+  const info = JylliTwin.partInfo(id)
+  if (!info) return
+  if (hint) hint.hidden = true
+  const key = TWIN_PART_LABEL[info.label] || 'twinPartBoard'
+  const facts = twinFacts(info).map(([k, v]) => `<div class="j-twin-row"><span>${escHtml(k)}</span><span>${escHtml(v)}</span></div>`).join('')
+  const metrics = info.metrics.map(m => `<div class="j-twin-row"><span>${escHtml(tUI('sensorKey_' + m))}</span><span class="j-num" data-metric="${escAttr(m)}">—</span></div>`).join('')
+  const ghost = info.ghost ? `<div class="j-twin-ghost-note">${escHtml(tUI(info.note === 'integrated-only' ? 'twinIntegratedOnly' : 'twinNotDetected'))}${twinSetIt(info)}</div>` : ''
+  box.innerHTML = `<div class="j-twin-insp-head"><b>${escHtml(tUI(key))}</b><button type="button" class="j-btn j-btn-ghost j-btn-sm j-btn-icon" id="twin-back" aria-label="${escAttr(tUI('twinBack'))}"><i class="fa fa-xmark" aria-hidden="true"></i></button></div>${ghost}${facts}${metrics}`
+  box.hidden = false
+  document.getElementById('twin-back').onclick = () => JylliTwin.back()
+  try { JylliTelemetry.applyToDom() } catch {}
+}
+
+function twinFacts(info) {
+  const i = info.info || {}, rows = []
+  const add = (k, v) => { if (v != null && v !== '' && v !== false) rows.push([tUI(k), String(v)]) }
+  if (info.label === 'cpu') { add('twinFactModel', i.name); if (i.cores) add('twinFactCores', i.cores + ' / ' + (i.threads || '?')) }
+  else if (info.label === 'gpu') { add('twinFactModel', i.name); add('twinFactDriver', i.driver) }
+  else if (info.label === 'ram') { add('twinFactModel', i.part); if (i.sizeGB) add('twinFactSize', i.sizeGB + ' GB'); if (i.ratedMT) add('twinFactRated', i.ratedMT + ' MT/s'); if (i.speedMT) add('twinFactRunning', i.speedMT + ' MT/s'); if (i.channel) add('twinFactSlot', i.channel + ' (' + tUI('twinSlotUnknown') + ')') }
+  else if (info.label === 'storage') { add('twinFactModel', i.name); if (i.sizeGB) add('twinFactSize', i.sizeGB + ' GB'); add('twinFactBus', i.bus); add('twinFactHealth', i.health) }
+  else if (info.label === 'board') { add('twinFactModel', [i.vendor, i.model].filter(Boolean).join(' ')) }
+  else if (info.label === 'cooler') { add('twinFactType', i.type && i.type !== 'unknown' ? tUI(i.type === 'aio' ? 'twinCoolerAio' : 'twinCoolerAir') : ''); add('twinFactSource', i.source === 'user' ? tUI('twinSourceUser') : '') }
+  return rows
+}
+
+function twinSetIt(info) {
+  if (info.label !== 'cooler') return ''
+  return ` <button type="button" class="j-btn j-btn-sm" onclick="twinDeclare('aio')">${escHtml(tUI('twinCoolerAio'))}</button> <button type="button" class="j-btn j-btn-sm" onclick="twinDeclare('air')">${escHtml(tUI('twinCoolerAir'))}</button>`
+}
+async function twinDeclare(kind) {
+  await api.setDeclaredRig({ cooler: kind })
+  await JylliTwin.setRigDeclared()
+  JylliTwin.back()
 }
