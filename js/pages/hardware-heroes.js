@@ -41,7 +41,7 @@ async function buildStorageHero(c) {
   el.innerHTML = String(ui.html`
     <div class="j-twin-stage j-gpu-stage"><div class="j-twin-slot" id="storage-twin-slot" data-twin-view="rig:home"></div></div>
     <div class="j-gpu-side">
-      <div class="j-gpu-strip">${ui.raw(metricCell('disk.c.pct', 'sensorKey_disk.c.pct'))}</div>
+      <div class="j-gpu-strip">${ui.raw(metricCell('disk.c.pct', 'sensorKey_disk.c.pct'))}${ui.raw(metricCell('disk0.temp', 'sensorKey_disk0.temp'))}</div>
       <div class="j-stat-label">${tUI('twinPartStorage')}</div>
       ${drives.length ? ui.group('', ui.raw(drives.map(d => ui.row({ title: d.name, sub: [d.bus, d.media, d.sizeGB ? d.sizeGB + ' GB' : ''].filter(Boolean).join(' · '), control: d.health ? ui.badge(d.health, d.health === 'Healthy' ? 'success' : 'warning') : '' })).join(''))) : ui.callout(tUI('hwNotDetected'), 'info')}
       <p class="j-muted j-settings-hint">${tUI('hwDriveTempNA')}</p>

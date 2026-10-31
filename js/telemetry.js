@@ -6,7 +6,7 @@
 
   // Unit by key suffix. 'pct' = percent, 'mb' = megabytes (shown as GB above 1024), 'bps' = bytes per second.
   function unitOf(key) {
-    if (/\.temp\./.test(key)) return 'c'
+    if (/\.temp\./.test(key) || /^disk\d+\.temp$/.test(key)) return 'c'
     if (/\.(load|pct|fan\.pct)$/.test(key)) return 'pct'
     if (/\.power(\.limit)?$/.test(key)) return 'w'
     if (/\.clock\./.test(key)) return 'mhz'

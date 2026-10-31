@@ -196,7 +196,7 @@ function buildSettings(c) {
 }
 
 // Settings › Sensors: what the app can read on this PC, and why anything is missing. Reasons come from the telemetry hub.
-const SENSOR_ROWS = ['cpu.load', 'cpu.temp.package', 'cpu.power', 'ram.used', 'gpu0.load', 'gpu0.temp.core', 'gpu0.temp.hotspot', 'gpu0.power', 'gpu0.clock.core', 'gpu0.vram.used', 'gpu0.fan.rpm', 'gpu0.fan.pct', 'net.rx', 'net.tx']
+const SENSOR_ROWS = ['cpu.load', 'cpu.temp.package', 'cpu.power', 'ram.used', 'gpu0.load', 'gpu0.temp.core', 'gpu0.temp.hotspot', 'gpu0.power', 'gpu0.clock.core', 'gpu0.vram.used', 'gpu0.fan.rpm', 'gpu0.fan.pct', 'disk0.temp', 'net.rx', 'net.tx']
 async function settingsRenderSensors(c) {
   const box = c.querySelector('#settings-sensors')
   if (!box) return

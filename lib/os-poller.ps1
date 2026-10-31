@@ -35,6 +35,9 @@ while ($true) {
   $o.net = $nets
   if ($gpuC.Count) { $g = 0.0; foreach ($p in $gpuC) { $g += $p[1].NextValue() }; $o.gpuLoad = [math]::Round([math]::Min(100, $g), 1) }
   if ($tick % 5 -eq 0) { $script:procs = (Get-Process).Count }
+  # Drive temperature: Windows only reports it with administrator rights; without them the value is simply absent.
+  if ($tick % 30 -eq 0) { $script:dtemp = $null; try { $c = Get-PhysicalDisk | Select-Object -First 1 | Get-StorageReliabilityCounter -ErrorAction Stop; if ($c.Temperature -gt 0) { $script:dtemp = [int]$c.Temperature } } catch {} }
+  if ($null -ne $script:dtemp) { $o.diskTemp = $script:dtemp }
   $o.processes = $script:procs
   [Console]::Out.WriteLine(($o | ConvertTo-Json -Compress -Depth 4))
   [Console]::Out.Flush()
