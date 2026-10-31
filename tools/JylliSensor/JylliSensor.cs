@@ -1,4 +1,4 @@
-// JylliSensor.cs — 1000Hz LHM named-pipe sensor bridge for Jylli Tool
+// JylliSensor.cs — 4 Hz LHM named-pipe sensor bridge for Jylli Tool (0 in a frame = no reading)
 // Build: csc /target:exe /optimize /out:JylliSensor.exe JylliSensor.cs
 //        /reference:LibreHardwareMonitorLib.dll
 // Place LibreHardwareMonitorLib.dll alongside this .cs during compilation.
@@ -78,6 +78,7 @@ class JylliSensor
                 // 1000Hz sensor loop
                 while (pipe.IsConnected)
                 {
+                    Array.Clear(_values, 0, _values.Length);   // 0 = no reading this pass; also resets the cpu_core_max running maximum
                     try { computer.Accept(new SensorVisitor(ref _values)); }
                     catch { }
 
@@ -92,7 +93,7 @@ class JylliSensor
                     }
                     catch { break; }
 
-                    Thread.Sleep(1);  // ~1000Hz
+                    Thread.Sleep(250);  // 4 Hz: LHM itself needs several ms per pass, so the old "1000 Hz" busy loop only burned a core
                 }
             }
             catch { }

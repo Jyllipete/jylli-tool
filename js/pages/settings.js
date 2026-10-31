@@ -13,6 +13,7 @@ function buildSettings(c) {
     ['general', 'settingsCatGeneral', 'sliders'],
     ['appearance', 'settingsAppearance', 'palette'],
     ['gaming', 'settingsCatGaming', 'gamepad'],
+    ['sensors', 'settingsCatSensors', 'microchip'],
     ['privacy', 'settingsCatPrivacy', 'user-shield'],
     ['account', 'settingsDiscordAccount', 'circle-user'],
     ['about', 'settingsAbout', 'circle-info'],
@@ -60,6 +61,11 @@ function buildSettings(c) {
         premium ? row(tUI('ariaFpsHud'), tUI('ariaFpsHudDesc'), html`${ui.button({ label: tUI('ariaFpsHudConfigure'), size: 'sm', onclick: 'api.openFpsHudSettings().catch(()=>{})' })}${sw('settings-fps-hud-check', 'settingsToggleFpsHud(this.checked)', tUI('ariaFpsHud'))}`) : '',
       ])}`)}
 
+    ${section('sensors', 'settingsCatSensors', html`
+      <p class="j-muted j-settings-hint">${tUI('sensorsIntro')}</p>
+      <div id="settings-sensors" aria-live="polite">${ui.callout(tUI('sensorsLoading'), 'info')}</div>
+      <p class="j-muted j-settings-hint">${tUI('sensorsDriverNote')}</p>`)}
+
     ${section('privacy', 'settingsCatPrivacy', html`
       ${ui.group('', [
         row(tUI('settingsAnalytics'), tUI('settingsAnalyticsDesc'), sw('settings-analytics-check', 'settingsToggleAnalytics(this.checked)', tUI('settingsAnalytics'))),
@@ -79,6 +85,7 @@ function buildSettings(c) {
     </div>
   </div>`
   c.innerHTML = String(out)
+  settingsRenderSensors(c)
 
   // Theme presets: swatch cards (preview on hover, apply on click)
   const grid = c.querySelector('#theme-grid')
@@ -183,4 +190,21 @@ function buildSettings(c) {
       }
     }
   }
+}
+
+// Settings › Sensors: what the app can read on this PC, and why anything is missing. Reasons come from the telemetry hub.
+const SENSOR_ROWS = ['cpu.load', 'cpu.temp.package', 'cpu.power', 'ram.used', 'gpu0.load', 'gpu0.temp.core', 'gpu0.temp.hotspot', 'gpu0.power', 'gpu0.clock.core', 'gpu0.vram.used', 'gpu0.fan.rpm', 'gpu0.fan.pct', 'net.rx', 'net.tx']
+async function settingsRenderSensors(c) {
+  const box = c.querySelector('#settings-sensors')
+  if (!box) return
+  let r = null
+  try { r = await api.telemetryCapabilities() } catch {}
+  if (!r || !r.capabilities) { box.innerHTML = String(ui.callout(tUI('sensorsUnavailable'), 'warn')); return }
+  const reasonKey = { 'needs-driver': 'metricNeedsDriver', 'not-supported': 'metricNotSupported', 'no-sensor': 'metricNoSensor', stale: 'metricStale', premium: 'metricPremium' }
+  const rows = SENSOR_ROWS.map(key => {
+    const cap = r.capabilities[key] || { available: false, reason: 'no-sensor' }
+    const sub = cap.available ? [cap.source, cap.detail, cap.rateHz ? cap.rateHz + '/s' : ''].filter(Boolean).join(' · ') : tUI(reasonKey[cap.reason] || 'metricNoSensor')
+    return ui.row({ title: tUI('sensorKey_' + key), sub, control: ui.badge(cap.available ? tUI('sensorsOk') : tUI('metricNA'), cap.available ? 'success' : 'neutral') })
+  })
+  box.innerHTML = String(ui.group('', rows))
 }

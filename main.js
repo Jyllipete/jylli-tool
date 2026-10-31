@@ -1250,6 +1250,16 @@ function shutdownBackground() {
   try { stopPresentMon(_pmTweakProc); _pmTweakProc = null } catch {}
 }
 
+// Dev flag: node/electron . --perf-log  -> app.getAppMetrics() every 5 s into userData/perf.log (checks the idle-CPU and memory budgets).
+if (process.argv.includes('--perf-log')) {
+  app.whenReady().then(() => setInterval(() => {
+    try {
+      const m = app.getAppMetrics().map(p => ({ type: p.type, cpu: +p.cpu.percentCPUUsage.toFixed(2), memMB: Math.round((p.memory.workingSetSize || 0) / 1024) }))
+      fs.appendFileSync(path.join(app.getPath('userData'), 'perf.log'), JSON.stringify({ t: new Date().toISOString(), procs: m }) + '
+')
+    } catch {}
+  }, 5000))
+}
 app.on('will-quit', (e) => {
   if (_installingUpdate) return          // second pass, triggered by quitAndInstall: let Electron quit normally
   e.preventDefault()
