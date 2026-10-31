@@ -515,6 +515,7 @@
 <script src="js/ui.js"></script>
 <script src="js/routes.js"></script>
 <script src="js/score.js"></script>
+<script src="js/telemetry.js"></script>
 <script src="js/shell.js"></script>
 <script src="js/pages/home.js"></script>
 <script src="js/pages/settings.js"></script>
@@ -675,6 +676,7 @@ async function init(isPremium = false) {
   // ThermalGuard: wire sidebar badge to thermal ticks
   // Main knows each tweak's real safety tier; cards use it instead of guessing in the renderer.
   api.getTweakMeta?.().then(list => { window._tweakMeta = Object.fromEntries((list || []).map(m => [m.id, m])) }).catch(() => {})
+  try { JylliTelemetry.start() } catch {}
   api.onSettingsPatch?.(p => { if (p && typeof p === 'object') Object.assign(settings, p) })
   api.onThermalTick(d => { updateThermalGuardBadge(d); if (d?.cpuTemp != null) _lastSensorCpuTemp = parseFloat(d.cpuTemp) || 0 })
   if (settings.thermalGuardEnabled) {
@@ -8319,7 +8321,7 @@ async function updateMetrics() {
 
     // GPU tile
     const gpuEl = document.getElementById('db-util-gpu')
-    if (gpuEl) gpuEl.textContent = gpuPct == null ? '—' : `${gpuPct}%`
+    if (gpuEl) { gpuEl.textContent = gpuPct == null ? '—' : `${gpuPct}%`; gpuEl.title = gpuPct == null ? JylliTelemetry.explain('gpu0.load') : '' }
     if (gpuPct != null) {
       _sparkHistory.gpu.push(gpuPct); if (_sparkHistory.gpu.length > SPARK_MAX) _sparkHistory.gpu.shift()
       setTileColor('db-util-gpu', 'mtile-gpu', gpuPct)
@@ -8378,7 +8380,7 @@ async function updateMetrics() {
       updateTempStats('gpu', _tempHistory.gpu)
     } else {
       const gpuTempEl = document.getElementById('db-gpu-temp')
-      if (gpuTempEl) { gpuTempEl.textContent = '—'; gpuTempEl.style.color = '' }
+      if (gpuTempEl) { gpuTempEl.textContent = '—'; gpuTempEl.style.color = ''; gpuTempEl.title = JylliTelemetry.explain('gpu0.temp.core') }
     }
 
     // Disk + net footer bar

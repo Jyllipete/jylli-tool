@@ -785,6 +785,7 @@ LANG.fi = {
       motionDefault:'Oletus',
       motionSmooth:'Pehmeä',
       motionReduced:'Vähennetty',
+      metricNA:'Ei saatavilla', metricNeedsDriver:'vaatii laitteisto-ajurin', metricNotSupported:'laite ei raportoi tätä', metricNoSensor:'ei anturilähdettä', metricStale:'ei lukemaa useaan sekuntiin', metricPremium:'Premium-ominaisuus', metricFrom:'Lähde:', metricAgo:'sitten',
       motionModeDesc:'Säätää kaikkien siirtymien ja animaatioiden nopeuden',
       settingsAdvanced:'Lisätila',
       settingsAdvancedDesc:'Avaa lukitut työkalut: Prosessienhallinta, Viivemonitori, Ping-testi ja BIOS-säätäjä',

@@ -495,6 +495,7 @@ const { createJournalService } = require('./lib/journal-service')
 const JylliScore = require('./js/score')
 const { createHub } = require('./lib/telemetry-hub')
 const { createTelemetryService } = require('./lib/telemetry-service')
+const Inventory = require('./lib/inventory')
 const { createWriteLog, mergeIncoming } = require('./lib/settings-merge')
 let snapshots = null   // per-tweak 'before' values (created at startup, once userData is known)
 const V = require('./lib/validate')
@@ -1863,9 +1864,12 @@ Write-Output "DISK_SIZE_GB=$([math]::Round($disk.Size / 1GB, 0))"
 ipcMain.handle('startup-trace', (_, msg) => startupTrace(`[renderer] ${msg}`))
 ipcMain.handle('get-app-version', () => APP_VERSION)
 ipcMain.handle('get-system-context', () => _systemContext)
-ipcMain.handle('get-system-info', async () => {
+let _sysInfoAt = 0
+ipcMain.handle('get-system-info', async (_, opts) => {
   startupTrace('IPC get-system-info handler entered')
+  if (cachedSysInfo && !opts?.refresh && Date.now() - _sysInfoAt < 10 * 60 * 1000) return cachedSysInfo
   const info = await detectSystemInfo()
+  _sysInfoAt = Date.now()
   startupTrace('IPC get-system-info handler: detectSystemInfo returned, sending to renderer')
   cachedSysInfo = info
   // Cache fields for webhook use, then fire launch webhook now that real values are available
@@ -1889,6 +1893,33 @@ ipcMain.handle('get-system-info', async () => {
   if (settingsDirty) saveSettings(saved)
 
   return info
+})
+
+// RigSpec: the parts list the hardware pages and the 3D rig are built from. Cached on disk for a day; detection gaps stay unknown.
+let _rigCache = null
+const DECLARED_COOLERS = ['aio', 'air']
+const DECLARED_FORMS = ['tower', 'laptop']
+async function getRigSpec(refresh) {
+  const file = path.join(app.getPath('userData'), 'jt_inventory.json')
+  const declared = loadSettings().declaredRig || {}
+  if (!refresh && !_rigCache) { try { const c = JSON.parse(fs.readFileSync(file, 'utf8')); if (c.t && Date.now() - c.t < 24 * 3600 * 1000) _rigCache = c } catch {} }
+  if (refresh || !_rigCache) {
+    const r = await runPS(Inventory.SCRIPT, 30000)
+    let raw = null
+    try { raw = JSON.parse(String(r.out || '').trim()) } catch {}
+    if (!raw) return { ok: false, error: 'inventory_failed' }
+    _rigCache = { t: Date.now(), raw }
+    try { fs.writeFileSync(file, JSON.stringify(_rigCache)) } catch {}
+  }
+  return { ok: true, rig: Inventory.buildRigSpec(_rigCache.raw, declared), detectedAt: _rigCache.t }
+}
+ipcMain.handle('get-hardware-inventory', (_, opts) => getRigSpec(!!opts?.refresh))
+ipcMain.handle('set-declared-rig', (_, d) => {
+  const clean = {}
+  if (DECLARED_COOLERS.includes(d?.cooler)) clean.cooler = d.cooler
+  if (DECLARED_FORMS.includes(d?.formFactor)) clean.formFactor = d.formFactor
+  const s = loadSettings(); s.declaredRig = clean; saveSettings(s)
+  return getRigSpec(false)
 })
 
 ipcMain.handle('is-admin', () => checkAdmin())  // async — returns Promise<boolean>
@@ -1980,7 +2011,7 @@ ipcMain.handle('get-tweak-states', async () => {
 // read tokens nor write a premium flag.
 const PROTECTED_SETTINGS = ['authToken', 'hmacSecret', 'discordUserId', 'authExpiry', 'isPremium', 'settingsHmac']
 // Written by the main process itself; a stale copy held by the renderer must never overwrite them.
-const MAIN_OWNED_SETTINGS = ['lastRestorePointAt', 'lastAutoSnapshot', 'thermalLastAudit', 'aria_insights', 'gameShieldEnabled', 'gameShieldExclusions', 'updateGuardEnabled']
+const MAIN_OWNED_SETTINGS = ['declaredRig', 'lastRestorePointAt', 'lastAutoSnapshot', 'thermalLastAudit', 'aria_insights', 'gameShieldEnabled', 'gameShieldExclusions', 'updateGuardEnabled']
 ipcMain.handle('load-settings', () => {
   startupTrace('IPC load-settings handler called')
   const s = { ...loadSettings() }

@@ -31,6 +31,8 @@ contextBridge.exposeInMainWorld('api', {
   importProfile:      ()           => ipcRenderer.invoke('import-profile'),
   runTweak:           (id, action) => ipcRenderer.invoke('run-tweak', { id, action }),
   getTweakMeta:       (ids)        => ipcRenderer.invoke('get-tweak-meta', ids),
+  getHardwareInventory: (opts)       => ipcRenderer.invoke('get-hardware-inventory', opts),
+  setDeclaredRig:       (d)          => ipcRenderer.invoke('set-declared-rig', d),
   telemetrySubscribe:   ()           => ipcRenderer.invoke('telemetry-subscribe'),
   telemetryUnsubscribe: ()           => ipcRenderer.invoke('telemetry-unsubscribe'),
   telemetryCapabilities: ()          => ipcRenderer.invoke('telemetry-capabilities'),

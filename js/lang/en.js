@@ -807,6 +807,7 @@ LANG.en = {
       motionDefault:'Default',
       motionSmooth:'Smooth',
       motionReduced:'Reduced',
+      metricNA:'Not available', metricNeedsDriver:'needs the hardware driver', metricNotSupported:'not reported by this device', metricNoSensor:'no sensor source', metricStale:'no reading for several seconds', metricPremium:'Premium feature', metricFrom:'From', metricAgo:'ago',
       motionModeDesc:'Controls the speed of all transitions and animations',
       settingsAdvanced:'Advanced Mode',
       settingsAdvancedDesc:'Unlock Process Manager, Latency Monitor, Ping Test, and BIOS Tuner',
