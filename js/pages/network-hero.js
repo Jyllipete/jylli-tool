@@ -110,6 +110,7 @@ async function netHistoryRender(el) {
   if (!box) return
   let hist = []
   try { hist = await api.getSpeedHistory() } catch {}
+  if (!Array.isArray(hist)) hist = []
   box.innerHTML = String(hist.slice(0, 5).map(h => ui.row({ title: html`<span class="j-num">${h.downMbps != null ? h.downMbps.toFixed(0) : '—'} / ${h.upMbps != null ? h.upMbps.toFixed(0) : '—'} Mbit/s</span>`, sub: `${new Date(h.t).toLocaleString()}${h.colo ? ' · ' + h.colo : ''}` })).join(''))
 }
 
