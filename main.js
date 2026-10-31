@@ -9886,42 +9886,56 @@ ipcMain.handle('apply-game-tweak', async (_, { gameId, action, installPath }) =>
   send(`◆ Game Tweak [${gameId}] — ${action}`, 'head')
 
   if (action === 'apply') {
-    // Set HIGH CPU + IO priority for each exe via IFEO
-    for (const exe of exes) {
-      await runPS(`New-Item -Path "${ifeoBase}\\${exe}\\PerfOptions" -Force -EA SilentlyContinue | Out-Null; Set-ItemProperty -Path "${ifeoBase}\\${exe}\\PerfOptions" -Name CpuPriorityClass -Value 3 -Force; Set-ItemProperty -Path "${ifeoBase}\\${exe}\\PerfOptions" -Name IoPriority -Value 3 -Force`)
-      send(`  ${exe}: HIGH CPU + IO priority`, 'ok')
-    }
-    // MMCSS GPU priority
-    await runPS(`Set-ItemProperty -Path "${mmcssBase}" -Name SystemResponsiveness -Value 10 -Force`)
-    await runPS(`Set-ItemProperty -Path "${mmcssBase}\\Tasks\\Games" -Name "GPU Priority" -Value 8 -Force`)
-    await runPS(`Set-ItemProperty -Path "${mmcssBase}\\Tasks\\Games" -Name "Priority" -Value 6 -Force`)
-    await runPS(`Set-ItemProperty -Path "${mmcssBase}\\Tasks\\Games" -Name "Scheduling Category" -Value "High" -Force`)
-    await runPS(`Set-ItemProperty -Path "${mmcssBase}\\Tasks\\Games" -Name "Clock Rate" -Value 10000 -Force`)
-    send('MMCSS game scheduling applied.', 'ok')
+    // Journaled: every value the profile changes (IFEO, MMCSS, FSO flags, Game DVR) is recorded with its real before-value,
+    // so Restore can put exactly those back instead of leaving MMCSS, FSO and DVR in place.
+    await journalSvc().runRecorded(`game-tweak:${gameId}`, 'apply', { via: 'manual' }, async (ps) => {
+      // Set HIGH CPU + IO priority for each exe via IFEO
+      for (const exe of exes) {
+        await ps(`New-Item -Path "${ifeoBase}\\${exe}\\PerfOptions" -Force -EA SilentlyContinue | Out-Null; Set-ItemProperty -Path "${ifeoBase}\\${exe}\\PerfOptions" -Name CpuPriorityClass -Value 3 -Force; Set-ItemProperty -Path "${ifeoBase}\\${exe}\\PerfOptions" -Name IoPriority -Value 3 -Force`)
+        send(`  ${exe}: HIGH CPU + IO priority`, 'ok')
+      }
+      // MMCSS GPU priority
+      await ps(`Set-ItemProperty -Path "${mmcssBase}" -Name SystemResponsiveness -Value 10 -Force`)
+      await ps(`Set-ItemProperty -Path "${mmcssBase}\\Tasks\\Games" -Name "GPU Priority" -Value 8 -Force`)
+      await ps(`Set-ItemProperty -Path "${mmcssBase}\\Tasks\\Games" -Name "Priority" -Value 6 -Force`)
+      await ps(`Set-ItemProperty -Path "${mmcssBase}\\Tasks\\Games" -Name "Scheduling Category" -Value "High" -Force`)
+      await ps(`Set-ItemProperty -Path "${mmcssBase}\\Tasks\\Games" -Name "Clock Rate" -Value 10000 -Force`)
+      send('MMCSS game scheduling applied.', 'ok')
 
-    // Disable fullscreen optimizations for each exe
-    const compat = 'HKCU:\\Software\\Microsoft\\Windows NT\\CurrentVersion\\AppCompatFlags\\Layers'
-    for (const exe of exes) {
-      await runPS(`New-Item -Path "${compat}" -Force -EA SilentlyContinue | Out-Null; Set-ItemProperty -Path "${compat}" -Name "${exe}" -Value "~ DISABLEDXMAXIMIZEDWINDOWEDMODE" -Force`)
-    }
-    send('Fullscreen Optimizations disabled for game exes.', 'ok')
+      // Disable fullscreen optimizations for each exe
+      const compat = 'HKCU:\\Software\\Microsoft\\Windows NT\\CurrentVersion\\AppCompatFlags\\Layers'
+      for (const exe of exes) {
+        await ps(`New-Item -Path "${compat}" -Force -EA SilentlyContinue | Out-Null; Set-ItemProperty -Path "${compat}" -Name "${exe}" -Value "~ DISABLEDXMAXIMIZEDWINDOWEDMODE" -Force`)
+      }
+      send('Fullscreen Optimizations disabled for game exes.', 'ok')
 
-    // Game DVR off
-    await runPS('Set-ItemProperty -Path "HKCU:\\System\\GameConfigStore" -Name GameDVR_Enabled -Value 0 -Force')
-    send('Game DVR disabled.', 'ok')
+      // Game DVR off
+      await ps('Set-ItemProperty -Path "HKCU:\\System\\GameConfigStore" -Name GameDVR_Enabled -Value 0 -Force')
+      send('Game DVR disabled.', 'ok')
 
-    // Defender exclusion for install path
-    if (installPath && V.isSafeGamePath(installPath) && fs.existsSync(installPath)) {
-      await runPS(`Add-MpPreference -ExclusionPath ${V.psQuote(installPath)} -ErrorAction SilentlyContinue`)
-      send(`Defender exclusion added: ${installPath}`, 'ok')
-    } else if (installPath) {
-      send('Defender exclusion skipped: install path is not a valid game folder.', 'warn')
-    }
+      // Defender exclusion for install path
+      if (installPath && V.isSafeGamePath(installPath) && fs.existsSync(installPath)) {
+        await ps(`Add-MpPreference -ExclusionPath ${V.psQuote(installPath)} -ErrorAction SilentlyContinue`)
+        send(`Defender exclusion added: ${installPath}`, 'ok')
+      } else if (installPath) {
+        send('Defender exclusion skipped: install path is not a valid game folder.', 'warn')
+      }
 
-    send(`✓ ${gameId} optimizations applied!`, 'ok')
+      send(`✓ ${gameId} optimizations applied!`, 'ok')
+    })
   } else {
+    // Restore: write the journaled before-values back (IFEO, MMCSS, FSO, Game DVR). Profiles applied before the journal existed
+    // only have the legacy path below, which cannot know what MMCSS/DVR used to be and so leaves them alone.
+    const undone = await journalSvc().undoControl(`game-tweak:${gameId}`).catch(() => ({ ok: false, found: 0 }))
+    if (undone.found > 0 && undone.ok) send(`${gameId}: all journaled changes restored (priorities, MMCSS, fullscreen optimizations, Game DVR).`, 'ok')
+    else if (undone.found > 0) send(`${gameId}: some journaled changes could not be restored — see the History tab.`, 'warn')
+    else send(`${gameId}: no journal entry (applied by an older version) — restoring priorities only; MMCSS/Game DVR are left as they are.`, 'warn')
+    if (undone.found === 0) {
+      const compatK = 'HKCU:\\Software\\Microsoft\\Windows NT\\CurrentVersion\\AppCompatFlags\\Layers'
+      for (const exe of exes) await runPS(`Remove-ItemProperty -Path "${compatK}" -Name "${exe}" -EA SilentlyContinue`)
+    }
     // Restore: set Normal priority
-    for (const exe of exes) {
+    if (undone.found === 0) for (const exe of exes) {
       // Removing the values returns the program to Windows' own defaults (writing 'Normal' explicitly would pin it)
       await runPS(`Remove-ItemProperty -Path "${ifeoBase}\\${exe}\\PerfOptions" -Name CpuPriorityClass -EA SilentlyContinue`)
       await runPS(`Remove-ItemProperty -Path "${ifeoBase}\\${exe}\\PerfOptions" -Name IoPriority -EA SilentlyContinue`)

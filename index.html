@@ -673,6 +673,8 @@ async function init(isPremium = false) {
   document.getElementById('sidebar-ver').innerHTML      = `v${appVersion} · Jylli Tool<span id="sidebar-thermal-badge" style="display:none;margin-left:6px;font-size:11px;padding:1px 5px;border-radius:8px;background:var(--tg-badge-bg,var(--surface-2));color:var(--tg-badge-color,var(--c-text-primary))"></span>`
 
   // ThermalGuard: wire sidebar badge to thermal ticks
+  // Main knows each tweak's real safety tier; cards use it instead of guessing in the renderer.
+  api.getTweakMeta?.().then(list => { window._tweakMeta = Object.fromEntries((list || []).map(m => [m.id, m])) }).catch(() => {})
   api.onSettingsPatch?.(p => { if (p && typeof p === 'object') Object.assign(settings, p) })
   api.onThermalTick(d => { updateThermalGuardBadge(d); if (d?.cpuTemp != null) _lastSensorCpuTemp = parseFloat(d.cpuTemp) || 0 })
   if (settings.thermalGuardEnabled) {
@@ -7881,6 +7883,7 @@ function makeRow({ id, name, desc, danger = false, dangerLabel = 'I understand t
   desc = tDesc(id) || desc
   name = tName(id) || name
   warning = tWarn(id) || warning
+  if (!danger && window._tweakMeta?.[id]?.safetyTier >= 3) danger = true   // main's tier wins: expert-tier tweaks always need the confirmation
   const applied = tweakState(id) === 'applied'
   const pfStates = getPreflightStates()
   const preApplied = !applied && pfStates[id] === true
