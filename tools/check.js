@@ -27,7 +27,8 @@ for (const d of ['js', 'lib']) if (fs.existsSync(path.join(root, d))) for (const
 for (const f of walk(path.join(root, 'test'), ['.js'])) checkJs(f)
 
 let scripts = 0
-for (const f of fs.readdirSync(root).filter(n => n.endsWith('.html'))) {
+// design-*.html are design references (ES-module scripts), not shipped pages
+for (const f of fs.readdirSync(root).filter(n => n.endsWith('.html') && !n.startsWith('design-'))) {
   const html = fs.readFileSync(path.join(root, f), 'utf8')
   const re = /<script(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/script>/gi
   let m, i = 0

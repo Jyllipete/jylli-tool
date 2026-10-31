@@ -2009,7 +2009,7 @@ LANG.en = {
       'cpu-focus-bias':'CPU Focus Bias',
       // Advanced / Hardware
       'nvidia-max-perf':'Force Maximum Performance Mode',
-      'nvidia-low-latency':'NVIDIA Ultra Low-Latency Mode',
+      'nvidia-low-latency':'NVIDIA Low-Latency Driver Hints',
       'disable-hdcp':'Disable HDCP (DRM overhead)',
       'intel-power-plan':'Intel Max Performance Power Plan',
       'amd-power-plan':'AMD Max Performance Power Plan',

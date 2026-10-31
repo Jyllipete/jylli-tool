@@ -1976,7 +1976,7 @@ LANG.fi = {
       'cpu-focus-bias': 'Asettaa ThreadDpcEnable- ja MMCSS-ajastimen etualasäikeen prioriteettivahvistuksen moniydinsuorittimille.',
       // Advanced / Hardware
       'nvidia-max-perf': 'Asettaa PowerMizerLevel=1 GPU-luokan rekisterissä. Pitää GPU:n maksimikelloissa jatkuvasti. Vaatii uudelleenkäynnistyksen.',
-      'nvidia-low-latency': 'Asettaa D3PCLatency=1, F1MaxLatency=0 — vastaa NVIDIA-ohjauspaneelin "Ultra"-asetusta.',
+      'nvidia-low-latency': 'Asettaa D3PCLatency=1, F1MaxLatency=0 — ajurin viiveasetuksia rekisterissä. NVIDIA-ohjauspaneelin asetus on erillinen.',
       'disable-hdcp': 'Saattaa rikkoa HDMI-äänen joillain näytöillä. Vaatii uudelleenkäynnistyksen.',
       'intel-power-plan': 'Luo mukautetun virranhallintasuunnitelman Intel-suorittimille — Speed Shift (HWP) päällä, aggressiivinen Boost-tila, ei C-tila-joutokäyntiä, kaikki ytimet aktiivisina, PCIe- ja USB-keskeytys pois.',
       'amd-power-plan': 'Luo mukautetun virranhallintasuunnitelman AMD-suorittimille — CPPC-suosikkiytimet päällä, aggressiivinen Boost-tila, ei C-tila-joutokäyntiä, kaikki ytimet aktiivisina, PCIe- ja USB-keskeytys pois.',
@@ -2164,7 +2164,7 @@ LANG.fi = {
       'cpu-focus-bias':'CPU-kohdistusasetus',
       // Advanced / Hardware
       'nvidia-max-perf':'Pakota enimmäissuorituskyky',
-      'nvidia-low-latency':'NVIDIA:n erittäin matalaviive-tila',
+      'nvidia-low-latency':'NVIDIA:n matalaviiveen ajurivihjeet',
       'disable-hdcp':'Poista HDCP (DRM-kuorma)',
       'intel-power-plan':'Intelin enimmäissuorituskyky-virransäästösuunnitelma',
       'amd-power-plan':'AMD:n enimmäissuorituskyky-virransäästösuunnitelma',

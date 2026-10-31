@@ -1989,6 +1989,11 @@ ipcMain.handle('save-settings', (_, data) => {
   saveSettings(clean)
   return true
 })
+// IRQ affinity is not implemented in main. These answer "unsupported" so the renderer hides the panel instead of failing silently.
+ipcMain.handle('irq-get-status', () => ({ unsupported: true, active: false }))
+ipcMain.handle('irq-get-devices', () => ({ unsupported: true, devices: [], coreCount: 0 }))
+ipcMain.handle('irq-apply-game-affinity', () => ({ ok: false, unsupported: true }))
+ipcMain.handle('irq-restore-affinity', () => ({ ok: false, unsupported: true }))
 ipcMain.handle('set-startup', (_, enabled) => {
   return setStartupTask(!!enabled)
 })
@@ -2266,7 +2271,7 @@ async function collectMetrics() {
       disk: 0, diskUsed: 0, diskTotal: 0,
       gpu: 0, netDown: 0, netUp: 0,
       uptime: 0, processes: 0,
-      cpuTemp: 0, gpuTemp: 0
+      cpuTemp: null, gpuTemp: null
     }
 
     const cpuTempScript = `
@@ -2290,16 +2295,7 @@ if ($cpu_temp -eq -1) {
     }
   } catch {}
 }
-if ($cpu_temp -eq -1) {
-  try {
-    $zones = Get-CimInstance -Namespace root/wmi -ClassName MSAcpi_ThermalZoneTemperature -ErrorAction Stop
-    $hotZone = $zones | Sort-Object CurrentTemperature -Descending | Select-Object -First 1
-    if ($hotZone) {
-      $t = [math]::Round($hotZone.CurrentTemperature / 10 - 273.15, 1)
-      if ($t -gt 20 -and $t -lt 120) { $cpu_temp = $t }
-    }
-  } catch {}
-}
+// No ACPI thermal-zone fallback: a motherboard zone is not a CPU sensor, so an unknown CPU temperature stays unknown.
 Write-Output "CPU_TEMP=$cpu_temp"`
 
     // Use tagged key=value output to avoid any line-count fragility
@@ -2384,7 +2380,7 @@ Write-Output "GPU_TEMP=0"
     const rawCpuTemp = parseFloat(kv['CPU_TEMP'])
     // Prefer 1000Hz sensor bridge values over WMI poll when bridge is active
     metrics.cpuTemp = (_sensorValues.cpu_package_temp > 0) ? _sensorValues.cpu_package_temp
-                    : (rawCpuTemp > 0) ? rawCpuTemp : 0
+                    : (rawCpuTemp > 0) ? rawCpuTemp : null
     const netRb = kn('NET_RB'), netSb = kn('NET_SB')
     const _netNow = Date.now()
     if (_netPrevBytes && netRb > 0) {
@@ -4762,21 +4758,27 @@ const TWEAKS = {
     }
   },
   'nvidia-low-latency': {
-    name: 'NVIDIA Ultra Low-Latency Mode',
+    name: 'NVIDIA Low-Latency Driver Hints',
     category: 'gpu',
     safetyTier: 1,
     gamerImpact: 'high',
     apply: async (s, ps) => {
-      const base = 'HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Class\\{4d36e968-e325-11ce-bfc1-08002be10318}\\0000'
-      await ps(`Set-ItemProperty -Path "${base}" -Name D3PCLatency -Value 1 -Force -EA SilentlyContinue`)
-      await ps(`Set-ItemProperty -Path "${base}" -Name F1MaxLatency -Value 0 -Force -EA SilentlyContinue`)
-      s('NVIDIA Ultra Low-Latency applied.', 'ok')
+      const base = 'HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Class\\{4d36e968-e325-11ce-bfc1-08002be10318}'
+      const idxs = await gpuClassIndexes(ps, 'nvidia')
+      if (!idxs.length) { s('No NVIDIA adapter found. Nothing was changed.', 'warn'); return }
+      for (const idx of idxs) {
+        await ps(`Set-ItemProperty -Path "${base}\\${idx}" -Name D3PCLatency -Value 1 -Force -EA SilentlyContinue`)
+        await ps(`Set-ItemProperty -Path "${base}\\${idx}" -Name F1MaxLatency -Value 0 -Force -EA SilentlyContinue`)
+      }
+      s('NVIDIA low-latency driver hints applied.', 'ok')
     },
     restore: async (s, ps) => {
-      const base = 'HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Class\\{4d36e968-e325-11ce-bfc1-08002be10318}\\0000'
-      await ps(`Remove-ItemProperty -Path "${base}" -Name D3PCLatency -EA SilentlyContinue`)
-      await ps(`Remove-ItemProperty -Path "${base}" -Name F1MaxLatency -EA SilentlyContinue`)
-      s('NVIDIA latency restored.', 'ok')
+      const base = 'HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Class\\{4d36e968-e325-11ce-bfc1-08002be10318}'
+      for (const idx of await gpuClassIndexes(ps, 'nvidia')) {
+        await ps(`Remove-ItemProperty -Path "${base}\\${idx}" -Name D3PCLatency -EA SilentlyContinue`)
+        await ps(`Remove-ItemProperty -Path "${base}\\${idx}" -Name F1MaxLatency -EA SilentlyContinue`)
+      }
+      s('NVIDIA latency hints restored.', 'ok')
     }
   },
   'disable-hdcp': {
@@ -4785,11 +4787,11 @@ const TWEAKS = {
     safetyTier: 2,
     gamerImpact: 'low',
     apply: async (s, ps) => {
-      await ps('Set-ItemProperty -Path "HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Class\\{4d36e968-e325-11ce-bfc1-08002be10318}\\0000" -Name RMHdcpKeyglobZero -Value 1 -Force -EA SilentlyContinue')
+      for (const idx of await gpuClassIndexes(ps, 'nvidia')) await ps(`Set-ItemProperty -Path "HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Class\\{4d36e968-e325-11ce-bfc1-08002be10318}\\${idx}" -Name RMHdcpKeyglobZero -Value 1 -Force -EA SilentlyContinue`)
       s('HDCP disabled. Reboot required.', 'ok')
     },
     restore: async (s, ps) => {
-      await ps('Remove-ItemProperty -Path "HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Class\\{4d36e968-e325-11ce-bfc1-08002be10318}\\0000" -Name RMHdcpKeyglobZero -EA SilentlyContinue')
+      for (const idx of await gpuClassIndexes(ps, 'nvidia')) await ps(`Remove-ItemProperty -Path "HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Class\\{4d36e968-e325-11ce-bfc1-08002be10318}\\${idx}" -Name RMHdcpKeyglobZero -EA SilentlyContinue`)
       s('HDCP restored.', 'ok')
     }
   },
@@ -8220,7 +8222,8 @@ ipcMain.handle('run-preflight-scan', async () => {
     function svc($n){ $s=Get-Service $n -EA SilentlyContinue; if($s){[string]$s.StartType}else{'MISSING'} }
     function task($path,$name){ $t=Get-ScheduledTask -TaskPath $path -TaskName $name -EA SilentlyContinue; if($t){[string]$t.State}else{'MISSING'} }
     $r = @{}
-    $gpu0 = 'HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Class\\{4d36e968-e325-11ce-bfc1-08002be10318}\\0000'
+    $gpu0 = (Get-ChildItem 'HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Class\\{4d36e968-e325-11ce-bfc1-08002be10318}' -EA SilentlyContinue | Where-Object { $_.PSChildName -match '^\\d{4}$' -and ((gp $_.PSPath 'ProviderName') -match 'NVIDIA') } | Select-Object -First 1).PSPath
+    if (-not $gpu0) { $gpu0 = 'HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Class\\{4d36e968-e325-11ce-bfc1-08002be10318}\\0000' }
     $mm   = 'HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Memory Management'
     $tcpP = 'HKLM:\\SYSTEM\\CurrentControlSet\\Services\\Tcpip\\Parameters'
     $bcd  = try { bcdedit /enum | Out-String } catch { '' }

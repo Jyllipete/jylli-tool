@@ -8367,6 +8367,9 @@ async function updateMetrics() {
       const gpuTempEl = document.getElementById('db-gpu-temp')
       if (gpuTempEl) { gpuTempEl.textContent = `${m.gpuTemp}°C`; gpuTempEl.style.color = tempColor(m.gpuTemp) }
       updateTempStats('gpu', _tempHistory.gpu)
+    } else {
+      const gpuTempEl = document.getElementById('db-gpu-temp')
+      if (gpuTempEl) { gpuTempEl.textContent = '—'; gpuTempEl.style.color = '' }
     }
 
     // Disk + net footer bar
@@ -8917,7 +8920,7 @@ async function loadAiAdvisor() {
 async function applyAiRec(tweakId, btn) {
   btn.disabled = true; btn.textContent = tUI('aiApplying')
   try {
-    const res = await window.api.runTweak({ id: tweakId, action: 'apply' })
+    const res = await window.api.runTweak(tweakId, 'apply')
     const ok = res?.ok || res?.result === 'ok'
     btn.textContent   = ok ? tUI('aiApplied') : tUI('aiFailed')
     btn.style.background = ok ? 'var(--c-success)' : 'var(--c-danger)'
@@ -12220,7 +12223,7 @@ async function buildHardware(c) {
     const ch = document.getElementById('hw-irq-chevron')
     if (ch) ch.style.transform = e.target.open ? 'rotate(90deg)' : ''
   })
-  hwIrqInit()
+  hwIrqInit(irqSec)
 
   // ── CPU Topology Optimizer panel ──────────────────────────────────────────
   const topoSec = makeSection(tUI('hwCpuTopoTitle'), tUI('hwCpuTopoSub'))
@@ -12362,13 +12365,14 @@ function hwRefreshCounters() {
 }
 
 // ─── IRQ Affinity Sculptor UI ─────────────────────────────────────────────────
-async function hwIrqInit() {
+async function hwIrqInit(sec) {
   const statusEl  = document.getElementById('hw-irq-status')
   const devicesEl = document.getElementById('hw-irq-devices')
   const rebootBadge = document.getElementById('hw-irq-reboot-badge')
   if (!statusEl) return
   try {
     const [status, devRes] = await Promise.all([api.irqGetStatus(), api.irqGetDevices()])
+    if (status?.unsupported) { if (sec) sec.style.display = 'none'; return }
     const coreCount = devRes.coreCount || 8
     statusEl.innerHTML = status.active
       ? `<span class="jx-8"><i class="fa fa-circle-dot"></i> ${tUI('hwIrqStatusActive').replace('{n}', coreCount - 1)}</span>`
