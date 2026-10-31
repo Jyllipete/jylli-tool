@@ -1046,7 +1046,7 @@ LANG.en = {
       dashWhatsNew:"WHAT'S NEW",
       dashSpecifications:'Specifications',
       dashOptimization:'Optimization overview',
-      dashPcHealth:'PC Health',
+      dashPcHealth:'Setup score',
       dashAutoOptimize:'Auto-Optimize',
       dashRestorePoint:'Restore Point',
       dashQuickHealth:'Quick Health',

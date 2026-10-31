@@ -1024,7 +1024,7 @@ LANG.fi = {
       dashWhatsNew:'UUDET OMINAISUUDET',
       dashSpecifications:'Tekniset tiedot',
       dashOptimization:'Optimoinnin yleiskatsaus',
-      dashPcHealth:'PC-kunto',
+      dashPcHealth:'Asetuspisteet',
       dashAutoOptimize:'Auto-optimointi',
       dashRestorePoint:'Palautuspiste',
       dashQuickHealth:'Pikatarkistus',

@@ -1,5 +1,19 @@
 # Handoff — Jylli Tool 1.6.0 rework (resume from here after /clear)
 
+## 3.0 "Living hardware" status (2026-10-31)
+
+Plan: `C:\Users\Pete\.claude\plans\the-app-looks-corrently-whimsical-stream.md`. Everything is committed locally on `main`, nothing pushed, version still 1.6.0 (bumps and release are the user's call). Release notes are drafted in `CHANGELOG.md` ("Julkaisematon (3.0)"); the in-app `WHATS_NEW` list in main.js was NOT touched (it would show a 3.0 teaser on a 1.6.0 build).
+
+- **W0 spikes:** WebGL fallback go (`failIfMajorPerformanceCaveat` returns no context under `--disable-gpu`; software renderer is "Microsoft Basic Render Driver"). PowerShell journal prelude works (13/13 writes, ~65 ms per process after optimisation; budget moved to 80 ms). NVIDIA power limit: set/validate/reset verified on the RTX 5070 desktop (`power.management` is "deprecated" on driver 621, so the probe checks numeric limits instead). Sensors without PawnIO: NOT measurable here (PawnIO already installed).
+- **Done:** trust fixes; journal core (`lib/journal*.js`, `cmd-parse`, `settings-merge`, `apply-batch`, `journal-list/undo`); telemetry hub + persistent PowerShell poller + nvidia-smi poller (`lib/telemetry-*.js`, `lib/os-poller.ps1`); inventory/RigSpec; Settings › Sensors; 3D twin (`js/twin/*`, `js/vendor/three.bundle.js` built by `tools/build-three.js`); first-run assembly; stage dock + review sheet (`js/stage.js`); journal view in History; sound palette (`js/sound.js`); GPU hero + power limit (`lib/gpu-power-limit.js`); network hero + speed test + UPnP (`lib/speedtest*.js`, `lib/ssdp.js`); games registry + covers, session recorder + Replay tab; CPU/memory, storage and board cards.
+- **Known blockers / not done (be honest):**
+  1. `assets/sensor/LibreHardwareMonitorLib.dll` is shipped WITHOUT its dependencies (System.Memory, RAMSPDToolkit-NDD, DiskInfoToolkit, HidSharp...), so `JylliSensor.exe` exits immediately in dev and in `dist/`. Needs the full LHM 0.9.6 release bundle (a download: ask first). Until then CPU temperature, CPU power and fans show "Not available". JylliSensor v2 (framed protocol, PDH, foreground window) and `cpu_core_max` reset were only partly done (v1 source fixed: reset per pass, 4 Hz); the foreground-window game detection is not built.
+  2. `tools/journal-coverage.js` + `lib/tweak-manifest.json` (VM-based "now → will be" predictions) not built; the review sheet shows state from → to only. The VM round trip (registry export byte-identical) is covered only by the HKCU test key in `test/journal-ps.test.js`.
+  3. Real-app verification not done: no Electron launch with CDP, perf budgets (`--perf-log`), 50-navigation WebGL leak test, 8 h soak, low-end matrix, design-critique/accessibility review skills, FI copy pass. jsdom smoke/interact and the browser-pane twin demo (`node tools/ui-preview/serve.js`, then `tools/ui-preview/twin-demo.html`) pass.
+  4. Not built: router vendor from MAC (OUI) fallback, region ping UI, Pulse polish, drive temperatures/activity, game detection from sensor foreground data, View Transitions "Open GPU", F6 region cycling.
+  5. Score card still reads "PC health" (plan: label as setup checklist).
+- **Gotchas:** the Bash tool strips backslashes in heredocs and `node -e` strings: write patch scripts with the Write tool (see the scratchpad `patch*.js` pattern: exact-string replace that aborts on a miss). `lib/journal-prelude.ps1` is read through fs (asar ok); `lib/os-poller.ps1` must stay in `asarUnpack` because PowerShell runs it by path.
+
 ## UI 2.0 status (2026-10-30)
 
 - Dialog a11y: `_openModal/_closeModal` (js/ui-helpers.js) give every modal role=dialog, aria-labelledby, focus in/out and a Tab trap; tablists support Arrow/Home/End; toast container is a polite live region; `tools/check-keys.js` guards translation keys of rebuilt pages.
