@@ -501,6 +501,9 @@ const Smi = require('./lib/nvidia-smi')
 const SpeedTest = require('./lib/speedtest')
 const SpeedTransport = require('./lib/speedtest-transport')
 const Ssdp = require('./lib/ssdp')
+const GamesRegistry = require('./lib/games-registry')
+const SessionRec = require('./lib/session-recorder')
+const FrameStats = require('./lib/frame-stats')
 const { createWriteLog, mergeIncoming } = require('./lib/settings-merge')
 let snapshots = null   // per-tweak 'before' values (created at startup, once userData is known)
 const V = require('./lib/validate')
@@ -4083,6 +4086,75 @@ ipcMain.handle('run-speed-test', async () => {
   } catch (e) { return { ok: false, reason: 'failed', error: String(e.message || e).slice(0, 200) } } finally { _speedRunning = false }
 })
 ipcMain.handle('get-speed-history', () => { try { return JSON.parse(fs.readFileSync(SPEED_HISTORY(), 'utf8')) } catch { return [] } })
+
+// ─── Games registry (Steam + Epic), covers and session replay ───────────────────────────────────────────
+let _gamesCache = null
+async function steamRoot() {
+  const r = await runCmd('reg query "HKCU\\Software\\Valve\\Steam" /v SteamPath')
+  const m = String(r.out).match(/SteamPath\s+REG_SZ\s+(.+)/i)
+  const p = m ? m[1].trim().replace(/\//g, '\\') : 'C:\\Program Files (x86)\\Steam'
+  return fs.existsSync(p) ? p : null
+}
+const GAMES_IO = { join: (...p) => path.join(...p), readFile: p => { try { return fs.readFileSync(p, 'utf8') } catch { return null } }, listDir: d => { try { return fs.readdirSync(d) } catch { return [] } } }
+async function getGamesRegistry(refresh) {
+  if (_gamesCache && !refresh && Date.now() - _gamesCache.t < 5 * 60 * 1000) return _gamesCache
+  const root = await steamRoot()
+  const presets = {}
+  for (const id of Object.keys(GAME_EXE_MAP)) presets[id] = id
+  const epicDir = path.join(process.env.PROGRAMDATA || 'C:\\ProgramData', 'Epic', 'EpicGamesLauncher', 'Data', 'Manifests')
+  _gamesCache = { t: Date.now(), steamRoot: root, games: GamesRegistry.scan({ steamRoot: root, epicDir, io: GAMES_IO, presets }) }
+  return _gamesCache
+}
+ipcMain.handle('get-games-registry', async (_, opts) => { const g = await getGamesRegistry(!!(opts && opts.refresh)); return { ok: true, games: g.games.map(x => ({ id: x.id, source: x.source, name: x.name, aliases: x.aliases })) } })
+// Covers come from Steam's own cache on this PC, downscaled and returned as data: URLs. Nothing is downloaded.
+const _coverCache = new Map()
+ipcMain.handle('get-game-cover', async (_, id) => {
+  if (typeof id !== 'string' || id.length > 64) return null
+  if (_coverCache.has(id)) return _coverCache.get(id)
+  const reg = await getGamesRegistry(false)
+  const g = GamesRegistry.resolve(reg.games, id)
+  let url = null
+  try {
+    if (g && g.source === 'steam' && reg.steamRoot) {
+      const { nativeImage } = require('electron')
+      const dir = path.join(reg.steamRoot, 'appcache', 'librarycache', g.appid)
+      let best = null
+      const consider = f => { try { const img = nativeImage.createFromPath(f); const s = img.getSize(); if (s.width >= 300 && s.height / s.width >= 1.3 && (!best || s.width > best.s.width)) best = { img, s } } catch {} }
+      for (const f of GamesRegistry.coverCandidates(reg.steamRoot, g.appid, path.join)) if (fs.existsSync(f) && /library_600x900/.test(f)) consider(f)
+      if (!best) { try { for (const f of fs.readdirSync(dir)) { const p = path.join(dir, f); if (/\.jpe?g$/i.test(f)) consider(p); else if (fs.statSync(p).isDirectory()) for (const f2 of fs.readdirSync(p)) if (/\.jpe?g$/i.test(f2)) consider(path.join(p, f2)) } } catch {} }
+      if (!best) { const hdr = path.join(dir, 'header.jpg'); if (fs.existsSync(hdr)) { const img = nativeImage.createFromPath(hdr); best = { img, s: img.getSize() } } }
+      if (best) url = best.img.resize({ width: 300 }).toDataURL()
+    } else if (g && g.install && g.exe) {
+      const icon = await app.getFileIcon(path.join(g.install, g.exe), { size: 'large' })
+      url = icon.toDataURL()
+    }
+  } catch {}
+  _coverCache.set(id, url)
+  return url
+})
+// Session replay: frame bins + 1 Hz telemetry recorded while PresentMon runs for a game; see lib/session-recorder.js
+const SESSIONS_DIR = () => path.join(app.getPath('userData'), 'sessions')
+let _sessionRec = null, _sessionTimer = null
+function sessionRecStart(gameId) {
+  try {
+    _sessionRec = SessionRec.createRecorder()
+    _sessionRec.start({ gameId, gameName: gameId })
+    clearInterval(_sessionTimer)
+    _sessionTimer = setInterval(() => {
+      const v = {}; for (const k of SessionRec.TELEMETRY_KEYS) v[k] = _hub.value(k)
+      _sessionRec.onTelemetry(v)
+    }, 1000)
+  } catch {}
+}
+function sessionRecFinish() {
+  clearInterval(_sessionTimer); _sessionTimer = null
+  try {
+    const s = _sessionRec && _sessionRec.finish(); _sessionRec = null
+    if (s) { SessionRec.save(SESSIONS_DIR(), s, fs, path); mainWindow?.webContents.send('session-saved', { id: s.id, game: s.game, summary: s.summary }) }
+  } catch {}
+}
+ipcMain.handle('list-sessions', () => SessionRec.list(SESSIONS_DIR(), fs, path))
+ipcMain.handle('get-session', (_, id) => { const s = SessionRec.load(SESSIONS_DIR(), id, fs, path); return s ? { ok: true, session: s, advice: SessionRec.advice(s) } : { ok: false } })
 
 ipcMain.handle('get-tweak-meta', (_, ids) => journalSvc().tweakMeta(Array.isArray(ids) ? ids.slice(0, 400) : null))
 ipcMain.handle('apply-batch', (_, req) => journalSvc().applyBatch(req))
@@ -11931,6 +12003,7 @@ ipcMain.handle('start-game-watcher', async () => {
           }
         } catch {}
         _pmSessionProc = spawnPresentMon(null, gamePid)
+        if (_pmSessionProc) sessionRecStart(detectedGame)
         if (_pmSessionProc) {
           _pmSessionFile = null
           _pmSessionProc.once('exit', (code) => {
@@ -11974,6 +12047,7 @@ ipcMain.handle('start-game-watcher', async () => {
       if (_pmSessionProc) {
         stopPresentMon(_pmSessionProc); _pmSessionProc = null
         await new Promise(r => setTimeout(r, 400))
+        sessionRecFinish()
         const sessionStats = parsePresentMonCsvFromBuffer(_pmFrameBuffer)
         if (sessionStats) {
           _sessionFps = { avgFps: Math.round(1000 / sessionStats.mean), low1Fps: Math.round(1000 / sessionStats.p1Low) }
@@ -13445,10 +13519,12 @@ function spawnPresentMon(outputFile, gamePid) {
         if (!t) continue
         if (!_pmHeader) {
           _pmHeader = t
+          proc._msIdx = t.split(',').map(h => h.trim()).findIndex(h => /MsBetweenPresents|msFrameTime|msBetweenPresents/i.test(h))
           _pmFrameBuffer.push(t)
           continue
         }
         _pmFrameBuffer.push(t)
+        if (_sessionRec && _sessionRec.active && proc._msIdx >= 0) { const v = parseFloat(t.split(',')[proc._msIdx]); if (v > 0) _sessionRec.onFrame(v) }
         if (_pmFrameBuffer.length > PM_FRAME_BUF_MAX + 1) _pmFrameBuffer.splice(1, 1)
       }
     })
