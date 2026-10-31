@@ -67,7 +67,7 @@
       metal: new T.MeshStandardMaterial({ color: 0x2a2a33, roughness: 0.38, metalness: 0.8 }),
       dark: new T.MeshStandardMaterial({ color: 0x101014, roughness: 0.55, metalness: 0.5 }),
       pcb: new T.MeshStandardMaterial({ color: 0xffffff, map: pcbTexture(T), roughness: 0.8, metalness: 0.25 }),
-      silver: new T.MeshStandardMaterial({ color: 0x8a8a95, roughness: 0.3, metalness: 0.9 }),
+      silver: new T.MeshStandardMaterial({ color: 0x3a3a44, roughness: 0.65, metalness: 0.45 }),
     }
     const ghostMat = new T.LineDashedMaterial({ color: 0x9a9aa8, dashSize: 0.12, gapSize: 0.1, transparent: true, opacity: 0.45 })
     const glowMats = []   // { mat, base, ... }, driven by state
@@ -140,7 +140,7 @@
         case 'board': add(g, new T.Mesh(new T.BoxGeometry(...p.size), mats.pcb), p.id); break
         case 'cpu': {
           const ihs = add(g, new T.Mesh(rbox(...p.size, 0.05), mats.silver), p.id)
-          const glow = glowMat(1); const under = new T.Mesh(new T.PlaneGeometry(p.size[0] * 1.5, p.size[1] * 1.5), glow.mat); under.position.z = -0.05; g.add(under); entry.glow.push(glow)
+          const glow = glowMat(0.45); const under = new T.Mesh(new T.PlaneGeometry(p.size[0] * 1.5, p.size[1] * 1.5), glow.mat); under.position.z = -0.05; g.add(under); entry.glow.push(glow)
           break
         }
         case 'aio': {
