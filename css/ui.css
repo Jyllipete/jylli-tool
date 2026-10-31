@@ -893,3 +893,17 @@
 .j-journal-entry summary > :first-child { flex: 1; min-width: 0; }
 .j-journal-diff { display: flex; justify-content: space-between; gap: 12px; padding: 3px 0 3px 12px; font-size: var(--fs-2); color: var(--c-text-secondary); border-top: 1px solid var(--hairline); }
 .j-journal-empty { padding: 18px 0; }
+
+/* ═══ GPU hero (js/pages/gpu-hero.js) ═══ */
+.j-gpu-hero { display: grid; grid-template-columns: minmax(280px, 1fr) minmax(300px, 1.1fr); gap: 0; padding: 0; overflow: hidden; margin-bottom: 14px; }
+.j-gpu-stage { min-height: 280px; }
+.j-gpu-side { padding: 16px 20px; display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.j-gpu-strip { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px 14px; }
+.j-gpu-val { font: 500 var(--fs-5)/1.2 var(--font-mono); min-width: 6ch; }
+.j-gpu-val.j-metric-na { font-size: var(--fs-2); color: var(--c-text-tertiary); }
+.j-gpu-pl { display: flex; flex-direction: column; gap: 8px; }
+.j-gpu-pl-head { display: flex; justify-content: space-between; gap: 12px; }
+.j-gpu-pl-row { display: flex; align-items: center; gap: 12px; }
+.j-gpu-pl-row input[type=range] { flex: 1; accent-color: var(--c-accent); }
+.j-gpu-pl-scale { display: flex; justify-content: space-between; font-size: var(--fs-1); }
+@media (max-width: 1100px) { .j-gpu-hero { grid-template-columns: 1fr; } .j-gpu-strip { grid-template-columns: repeat(3, minmax(0, 1fr)); } }

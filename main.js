@@ -496,6 +496,8 @@ const JylliScore = require('./js/score')
 const { createHub } = require('./lib/telemetry-hub')
 const { createTelemetryService } = require('./lib/telemetry-service')
 const Inventory = require('./lib/inventory')
+const { createPowerLimit } = require('./lib/gpu-power-limit')
+const Smi = require('./lib/nvidia-smi')
 const { createWriteLog, mergeIncoming } = require('./lib/settings-merge')
 let snapshots = null   // per-tweak 'before' values (created at startup, once userData is known)
 const V = require('./lib/validate')
@@ -1270,7 +1272,7 @@ app.on('will-quit', (e) => {
   const sessionEndPromise = duration > 10000
     ? webhookSessionEnd(duration, sessionPageVisits, sessionTweaksCount)
     : Promise.resolve()
-  const cleanup = Promise.all([(sessionEndPromise || Promise.resolve()).finally(() => destroyDiscordRPC().catch(() => {})), resumeAllFrozen(), snapshots?.load('update-guard') ? setUpdateGuard(false) : null])
+  const cleanup = Promise.all([(sessionEndPromise || Promise.resolve()).finally(() => destroyDiscordRPC().catch(() => {})), resumeAllFrozen(), (_powerLimit ? _powerLimit.onQuit().catch(() => {}) : null), snapshots?.load('update-guard') ? setUpdateGuard(false) : null])
   const timeout = new Promise(resolve => setTimeout(resolve, 6500))
   Promise.race([cleanup, timeout]).finally(() => {
     if (_updateReady && autoUpdater) {
@@ -3963,6 +3965,7 @@ function journalSvc() {
       emit: (ch, payload) => mainWindow?.webContents.send(ch, payload),
       loadSettings, saveSettings, writeLog: debugLog,
       noteSettingsWrites: patch => { for (const [k, v] of Object.entries(patch)) _settingsWriteLog.note(k, v) },
+      handlers: { 'gpu-power-limit': powerLimitSvc().undoHandler },
     })
     try { _journalSvc.journal.rotate() } catch {}
   }
@@ -3974,6 +3977,46 @@ async function invokeTweak(id, action = 'apply', send, meta) {
   const log = send || ((msg, level = 'info') => mainWindow?.webContents.send('log', { msg, level, ts: new Date().toLocaleTimeString(), source: id }))
   return journalSvc().invokeTweak(id, action, log, meta)
 }
+
+// ─── NVIDIA power limit (lib/gpu-power-limit.js): the only GPU write the app offers ───────────────────
+let _powerLimit = null
+let _plDefaultW = null
+const PL_SENTINEL = () => path.join(app.getPath('userData'), 'pl-active.json')
+function powerLimitSvc() {
+  if (!_powerLimit) {
+    _powerLimit = createPowerLimit({
+      run: args => new Promise(resolve => require('child_process').execFile(Smi.exePath(), args, { windowsHide: true, timeout: 15000 }, (err, stdout, stderr) => resolve({ ok: !err, out: String(stdout || ''), err: String(stderr || (err && err.message) || '') }))),
+      query: () => new Promise(resolve => require('child_process').execFile(Smi.exePath(), ['--query-gpu=' + Smi.FIELDS.join(','), '--format=csv,noheader,nounits'], { windowsHide: true, timeout: 10000 }, (err, stdout) => resolve(err ? [] : Smi.parseQuery(stdout)))),
+      isLaptop: async () => { const rig = (await getRigSpec(false)).rig; return rig ? (rig.formFactor === 'laptop' ? true : rig.formFactor === 'tower' ? false : undefined) : undefined },
+      isAdmin: () => checkAdmin(),
+      readSentinel: async () => { try { return JSON.parse(fs.readFileSync(PL_SENTINEL(), 'utf8')) } catch { return null } },
+      writeSentinel: async s => { fs.writeFileSync(PL_SENTINEL(), JSON.stringify(s)) },
+      clearSentinel: async () => { try { fs.unlinkSync(PL_SENTINEL()) } catch {} },
+      record: f => journalSvc().journal.record(f),
+      emit: (ch, payload) => mainWindow?.webContents.send(ch, payload),
+      policy: () => (loadSettings().gpuPowerLimitPolicy === 'persist' ? 'persist' : 'session'),
+    })
+  }
+  return _powerLimit
+}
+ipcMain.handle('gpu-power-limit-get', async () => { const r = await powerLimitSvc().get(); if (r.default) _plDefaultW = r.default; return r })
+ipcMain.handle('gpu-power-limit-set', async (_, req) => {
+  if (!requiresPremium('gpu-power-limit-set')) return { ok: false, reason: 'premium_required' }
+  const w = Number(req && req.watts)
+  return powerLimitSvc().set({ watts: Number.isInteger(w) ? w : NaN, confirmAboveDefault: req && req.confirmAboveDefault === true, via: 'manual' })
+})
+ipcMain.handle('gpu-power-limit-reset', async () => {
+  if (!requiresPremium('gpu-power-limit-reset')) return { ok: false, reason: 'premium_required' }
+  return powerLimitSvc().reset('manual')
+})
+// Thermal guard + crash recovery. Both only act when the app itself changed the limit (the sentinel file exists).
+app.whenReady().then(() => {
+  setTimeout(() => powerLimitSvc().recover().then(r => { if (r.recovered) mainWindow?.webContents.send('log', { msg: 'GPU power limit was restored to its original value after the last session ended unexpectedly.', level: 'warn', ts: new Date().toLocaleTimeString() }) }).catch(() => {}), 8000)
+  setInterval(() => {
+    if (_plDefaultW == null || !fs.existsSync(PL_SENTINEL())) return
+    powerLimitSvc().guard(_hub.value('gpu0.temp.core'), _hub.value('gpu0.power.limit'), _plDefaultW).catch(() => {})
+  }, 1000)
+})
 
 ipcMain.handle('get-tweak-meta', (_, ids) => journalSvc().tweakMeta(Array.isArray(ids) ? ids.slice(0, 400) : null))
 ipcMain.handle('apply-batch', (_, req) => journalSvc().applyBatch(req))

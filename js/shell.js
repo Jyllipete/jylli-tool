@@ -51,8 +51,9 @@
   }
 
   async function hardwareTab(c, tab) {
-    if (!settings.isPremium) return _buildTabPremiumLock(c, 'hardware')
+    if (!settings.isPremium) { await _buildTabPremiumLock(c, 'hardware'); if (tab === 'gpu') buildGpuHero(c, { readOnly: true }); return }
     await buildHardware(c)
+    if (tab === 'gpu') buildGpuHero(c)
     const allowed = HW_TAB_SECTIONS[tab] || new Set()
     c.querySelectorAll('.section-card[data-sec-id]').forEach(el => { el.style.display = allowed.has(el.dataset.secId) ? '' : 'none' })
   }

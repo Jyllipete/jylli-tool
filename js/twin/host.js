@@ -129,11 +129,21 @@
     startLoop()
   }
 
+  /** data-twin-view: "rig:home" (whole PC) or "rig:gpu" (the card isolated and framed). */
+  function applyView(slot) {
+    if (!H.engine || !slot) return
+    const v = (slot.dataset.twinView || 'rig:home').split(':')[1] || 'home'
+    H.view = v
+    if (v === 'gpu') { H.engine.setView('gpu', { snap: false }); H.engine.setReveal(new Map([['gpu', 1], ['board', 1]])) }
+    else { H.engine.setReveal(null); H.engine.setView('home', { snap: false }) }
+  }
+
   function mount(slot) {
     const c = H.engine.domElement
     if (c.parentElement !== slot) slot.appendChild(c)
     sizeToSlot()
     slot.classList.add('j-twin-live')
+    applyView(slot)
     if (!H.ro && root.ResizeObserver) { H.ro = new ResizeObserver(sizeToSlot); H.ro.observe(slot) }
     if (!H.io && root.IntersectionObserver) { H.io = new IntersectionObserver(es => { H.visible = es[0].isIntersecting }); H.io.observe(slot) }
     if (!H.loopId && H.state === 'live') startLoop()
