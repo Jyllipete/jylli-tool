@@ -3972,6 +3972,7 @@ function journalSvc() {
       loadSettings, saveSettings, writeLog: debugLog,
       noteSettingsWrites: patch => { for (const [k, v] of Object.entries(patch)) _settingsWriteLog.note(k, v) },
       handlers: { 'gpu-power-limit': powerLimitSvc().undoHandler },
+      manifest: (() => { try { return require('./lib/tweak-manifest.json') } catch { return {} } })(),
     })
     try { _journalSvc.journal.rotate() } catch {}
   }

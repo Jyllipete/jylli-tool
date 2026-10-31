@@ -284,8 +284,9 @@ function twinInspect(id) {
   const key = TWIN_PART_LABEL[info.label] || 'twinPartBoard'
   const facts = twinFacts(info).map(([k, v]) => `<div class="j-twin-row"><span>${escHtml(k)}</span><span>${escHtml(v)}</span></div>`).join('')
   const metrics = info.metrics.map(m => `<div class="j-twin-row"><span>${escHtml(tUI('sensorKey_' + m))}</span><span class="j-num" data-metric="${escAttr(m)}">—</span></div>`).join('')
+  const openGpu = id === 'gpu' && !info.ghost ? `<button type="button" class="j-btn j-btn-sm" onclick="twinOpenGpu()">${escHtml(tUI('twinOpenGpu'))}</button>` : ''
   const ghost = info.ghost ? `<div class="j-twin-ghost-note">${escHtml(tUI(info.note === 'integrated-only' ? 'twinIntegratedOnly' : 'twinNotDetected'))}${twinSetIt(info)}</div>` : ''
-  box.innerHTML = `<div class="j-twin-insp-head"><b>${escHtml(tUI(key))}</b><button type="button" class="j-btn j-btn-ghost j-btn-sm j-btn-icon" id="twin-back" aria-label="${escAttr(tUI('twinBack'))}"><i class="fa fa-xmark" aria-hidden="true"></i></button></div>${ghost}${facts}${metrics}`
+  box.innerHTML = `<div class="j-twin-insp-head"><b>${escHtml(tUI(key))}</b><button type="button" class="j-btn j-btn-ghost j-btn-sm j-btn-icon" id="twin-back" aria-label="${escAttr(tUI('twinBack'))}"><i class="fa fa-xmark" aria-hidden="true"></i></button></div>${ghost}${facts}${metrics}${openGpu}`
   box.hidden = false
   document.getElementById('twin-back').onclick = () => JylliTwin.back()
   try { JylliTelemetry.applyToDom() } catch {}
@@ -333,4 +334,20 @@ function twinFirstRun(slot) {
       bar.querySelector('#twin-assembly-close').onclick = () => bar.remove()
     } else if (JylliTwin.state === 'static' || ++tries > 40) { clearInterval(wait); settings.assemblyDone = true; api.saveSettings(settings) }
   }, 300)
+}
+
+// "Open GPU": the stage morphs into the GPU hero's stage (View Transitions; plain navigation when unsupported or motion is reduced).
+function twinOpenGpu() {
+  const go = () => { window._activeTab = window._activeTab || {}; window._activeTab.optimize = 'gpu'; showPage('hardware') }
+  const stage = document.getElementById('home-twin-stage')
+  const reduced = document.body.classList.contains('motion-reduced') || matchMedia('(prefers-reduced-motion: reduce)').matches
+  if (!document.startViewTransition || reduced || !stage) return go()
+  stage.style.viewTransitionName = 'part-gpu'
+  const vt = document.startViewTransition(async () => {
+    go()
+    await new Promise(r => setTimeout(r, 450))
+    const s2 = document.getElementById('gpu-hero')?.querySelector('.j-twin-stage')
+    if (s2) s2.style.viewTransitionName = 'part-gpu'
+  })
+  vt.finished.finally(() => { document.querySelectorAll('.j-twin-stage').forEach(e => { e.style.viewTransitionName = '' }) })
 }

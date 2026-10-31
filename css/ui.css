@@ -928,3 +928,6 @@
 .j-replay-canvas { width: 100%; height: 200px; display: block; margin: 10px 0 4px; }
 .j-replay-scrub { width: 100%; accent-color: var(--c-accent); }
 .j-replay-stage { min-height: 220px; margin: 10px 0; border-radius: var(--r-md); border: 1px solid var(--twin-line); }
+
+.j-region-focus { outline: 2px solid var(--c-accent); outline-offset: -2px; }
+::view-transition-group(part-gpu) { animation-duration: calc(240ms * var(--motion-scale)); animation-timing-function: var(--ease-out); }

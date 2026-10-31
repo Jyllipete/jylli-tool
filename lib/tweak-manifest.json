@@ -1,0 +1,1152 @@
+{
+ "game-dvr": {
+  "touches": [
+   {
+    "kind": "reg",
+    "target": "HKCU:\\System\\GameConfigStore\\GameDVR_Enabled",
+    "after": "0"
+   },
+   {
+    "kind": "reg",
+    "target": "HKCU:\\System\\GameConfigStore\\GameDVR_FSEBehaviorMode",
+    "after": "2"
+   },
+   {
+    "kind": "reg",
+    "target": "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\GameDVR\\AllowGameDVR",
+    "after": "0"
+   },
+   {
+    "kind": "reg",
+    "target": "HKCU:\\SOFTWARE\\Microsoft\\GameBar\\UseNexusForGameBarEnabled",
+    "after": "0"
+   }
+  ],
+  "dynamic": false,
+  "untracked": 0,
+  "fidelity": "exact"
+ },
+ "telemetry": {
+  "touches": [
+   {
+    "kind": "reg",
+    "target": "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\DataCollection\\AllowTelemetry",
+    "after": "0"
+   },
+   {
+    "kind": "service",
+    "target": "DiagTrack",
+    "after": "disabled"
+   },
+   {
+    "kind": "service",
+    "target": "dmwappushservice",
+    "after": "disabled"
+   }
+  ],
+  "dynamic": false,
+  "untracked": 0,
+  "fidelity": "exact"
+ },
+ "visual-effects": {
+  "touches": [
+   {
+    "kind": "reg",
+    "target": "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\VisualEffects\\VisualFXSetting",
+    "after": "2"
+   }
+  ],
+  "dynamic": false,
+  "untracked": 0,
+  "fidelity": "exact"
+ },
+ "mmcss": {
+  "touches": [
+   {
+    "kind": "reg",
+    "target": "${base}\\SystemResponsiveness",
+    "after": "10"
+   },
+   {
+    "kind": "reg",
+    "target": "${base}\\Tasks\\Games\\GPU Priority",
+    "after": "8"
+   },
+   {
+    "kind": "reg",
+    "target": "${base}\\Tasks\\Games\\Priority",
+    "after": "6"
+   },
+   {
+    "kind": "reg",
+    "target": "${base}\\Tasks\\Games\\Clock Rate",
+    "after": "10000"
+   }
+  ],
+  "dynamic": true,
+  "untracked": 0,
+  "fidelity": "exact"
+ },
+ "global-timer-resolution": {
+  "touches": [
+   {
+    "kind": "reg",
+    "target": "HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Session Manager\\kernel\\GlobalTimerResolutionRequests",
+    "after": "1"
+   }
+  ],
+  "dynamic": false,
+  "untracked": 0,
+  "fidelity": "exact"
+ },
+ "sysmain": {
+  "touches": [
+   {
+    "kind": "service",
+    "target": "SysMain",
+    "after": "disabled"
+   }
+  ],
+  "dynamic": false,
+  "untracked": 0,
+  "fidelity": "exact"
+ },
+ "power-throttling": {
+  "touches": [
+   {
+    "kind": "reg",
+    "target": "HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Power\\PowerThrottling\\PowerThrottlingOff",
+    "after": "1"
+   }
+  ],
+  "dynamic": false,
+  "untracked": 0,
+  "fidelity": "exact"
+ },
+ "hpet": {
+  "touches": [
+   {
+    "kind": "bcd",
+    "target": "disabledynamictick",
+    "after": "yes"
+   },
+   {
+    "kind": "bcd",
+    "target": "useplatformtick",
+    "after": "yes"
+   }
+  ],
+  "dynamic": false,
+  "untracked": 0,
+  "fidelity": "exact"
+ },
+ "tsc-sync": {
+  "touches": [
+   {
+    "kind": "bcd",
+    "target": "tscsyncpolicy",
+    "after": "enhanced"
+   }
+  ],
+  "dynamic": false,
+  "untracked": 0,
+  "fidelity": "exact"
+ },
+ "gpu-hwsch": {
+  "touches": [
+   {
+    "kind": "reg",
+    "target": "HKLM:\\SYSTEM\\CurrentControlSet\\Control\\GraphicsDrivers\\HwSchMode",
+    "after": "2"
+   }
+  ],
+  "dynamic": false,
+  "untracked": 0,
+  "fidelity": "exact"
+ },
+ "ntfs": {
+  "touches": [],
+  "dynamic": false,
+  "untracked": 0,
+  "fidelity": "none"
+ },
+ "msi-mode": {
+  "touches": [],
+  "dynamic": true,
+  "untracked": 0,
+  "fidelity": "exact"
+ },
+ "memory-compression": {
+  "touches": [],
+  "dynamic": false,
+  "untracked": 0,
+  "fidelity": "none"
+ },
+ "bcd-tweaks": {
+  "touches": [
+   {
+    "kind": "bcd",
+    "target": "bootlog",
+    "after": "no"
+   }
+  ],
+  "dynamic": false,
+  "untracked": 0,
+  "fidelity": "exact"
+ },
+ "spectre-meltdown": {
+  "touches": [
+   {
+    "kind": "reg",
+    "target": "HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Memory Management\\FeatureSettingsOverride",
+    "after": "3"
+   },
+   {
+    "kind": "reg",
+    "target": "HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Memory Management\\FeatureSettingsOverrideMask",
+    "after": "3"
+   }
+  ],
+  "dynamic": false,
+  "untracked": 0,
+  "fidelity": "exact"
+ },
+ "cortana": {
+  "touches": [
+   {
+    "kind": "reg",
+    "target": "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\Windows Search\\AllowCortana",
+    "after": "0"
+   },
+   {
+    "kind": "service",
+    "target": "WSearch",
+    "after": "disabled"
+   }
+  ],
+  "dynamic": false,
+  "untracked": 0,
+  "fidelity": "exact"
+ },
+ "hibernate": {
+  "touches": [],
+  "dynamic": false,
+  "untracked": 0,
+  "fidelity": "exact"
+ },
+ "explorer-perf": {
+  "touches": [
+   {
+    "kind": "reg",
+    "target": "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced\\LaunchTo",
+    "after": "1"
+   },
+   {
+    "kind": "reg",
+    "target": "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Serialize\\StartupDelayInMSec",
+    "after": "0"
+   }
+  ],
+  "dynamic": false,
+  "untracked": 0,
+  "fidelity": "exact"
+ },
+ "win-tips": {
+  "touches": [],
+  "dynamic": true,
+  "untracked": 0,
+  "fidelity": "exact"
+ },
+ "priority-sep": {
+  "touches": [
+   {
+    "kind": "reg",
+    "target": "HKLM:\\SYSTEM\\CurrentControlSet\\Control\\PriorityControl\\Win32PrioritySeparation",
+    "after": "38"
+   },
+   {
+    "kind": "reg",
+    "target": "HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Multimedia\\SystemProfile\\SystemResponsiveness",
+    "after": "10"
+   }
+  ],
+  "dynamic": false,
+  "untracked": 0,
+  "fidelity": "exact"
+ },
+ "tdr-delay": {
+  "touches": [
+   {
+    "kind": "reg",
+    "target": "HKLM:\\SYSTEM\\CurrentControlSet\\Control\\GraphicsDrivers\\TdrLevel",
+    "after": "3"
+   },
+   {
+    "kind": "reg",
+    "target": "HKLM:\\SYSTEM\\CurrentControlSet\\Control\\GraphicsDrivers\\TdrDelay",
+    "after": "10"
+   }
+  ],
+  "dynamic": false,
+  "untracked": 0,
+  "fidelity": "exact"
+ },
+ "disable-fso": {
+  "touches": [
+   {
+    "kind": "reg",
+    "target": "HKCU:\\System\\GameConfigStore\\GameDVR_DXGIHonorFSEWindowsCompatible",
+    "after": "1"
+   },
+   {
+    "kind": "reg",
+    "target": "HKCU:\\System\\GameConfigStore\\GameDVR_FSEBehaviorMode",
+    "after": "2"
+   }
+  ],
+  "dynamic": false,
+  "untracked": 0,
+  "fidelity": "exact"
+ },
+ "disable-background-apps": {
+  "touches": [
+   {
+    "kind": "reg",
+    "target": "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\BackgroundAccessApplications\\GlobalUserDisabled",
+    "after": "1"
+   }
+  ],
+  "dynamic": false,
+  "untracked": 0,
+  "fidelity": "exact"
+ },
+ "disable-auto-maintenance": {
+  "touches": [
+   {
+    "kind": "reg",
+    "target": "HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Schedule\\Maintenance\\MaintenanceDisabled",
+    "after": "1"
+   }
+  ],
+  "dynamic": false,
+  "untracked": 1,
+  "fidelity": "partial"
+ },
+ "disable-mouse-accel": {
+  "touches": [],
+  "dynamic": false,
+  "untracked": 0,
+  "fidelity": "exact"
+ },
+ "disable-delivery-opt": {
+  "touches": [
+   {
+    "kind": "reg",
+    "target": "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\DeliveryOptimization\\DODownloadMode",
+    "after": "0"
+   }
+  ],
+  "dynamic": false,
+  "untracked": 0,
+  "fidelity": "exact"
+ },
+ "usb-suspend": {
+  "touches": [],
+  "dynamic": true,
+  "untracked": 0,
+  "fidelity": "exact"
+ },
+ "nvidia-max-perf": {
+  "touches": [
+   {
+    "kind": "reg",
+    "target": "${base}\\${idx}\\PowerMizerEnable",
+    "after": "1"
+   },
+   {
+    "kind": "reg",
+    "target": "${base}\\${idx}\\PowerMizerLevel",
+    "after": "1"
+   },
+   {
+    "kind": "reg",
+    "target": "${base}\\${idx}\\PowerMizerLevelAC",
+    "after": "1"
+   },
+   {
+    "kind": "reg",
+    "target": "${base}\\${idx}\\PerfLevelSrc",
+    "after": "8738"
+   }
+  ],
+  "dynamic": true,
+  "untracked": 0,
+  "fidelity": "exact"
+ },
+ "nvidia-low-latency": {
+  "touches": [
+   {
+    "kind": "reg",
+    "target": "${base}\\${idx}\\D3PCLatency",
+    "after": "1"
+   },
+   {
+    "kind": "reg",
+    "target": "${base}\\${idx}\\F1MaxLatency",
+    "after": "0"
+   }
+  ],
+  "dynamic": true,
+  "untracked": 0,
+  "fidelity": "exact"
+ },
+ "disable-hdcp": {
+  "touches": [
+   {
+    "kind": "reg",
+    "target": "HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Class\\{4d36e968-e325-11ce-bfc1-08002be10318}\\${idx}\\RMHdcpKeyglobZero",
+    "after": "1"
+   }
+  ],
+  "dynamic": true,
+  "untracked": 0,
+  "fidelity": "exact"
+ },
+ "intel-power-plan": {
+  "touches": [],
+  "dynamic": false,
+  "untracked": 0,
+  "fidelity": "none"
+ },
+ "amd-power-plan": {
+  "touches": [],
+  "dynamic": false,
+  "untracked": 0,
+  "fidelity": "none"
+ },
+ "cpu-parking": {
+  "touches": [],
+  "dynamic": false,
+  "untracked": 0,
+  "fidelity": "exact"
+ },
+ "cstates": {
+  "touches": [],
+  "dynamic": false,
+  "untracked": 0,
+  "fidelity": "exact"
+ },
+ "nvme-latency": {
+  "touches": [
+   {
+    "kind": "reg",
+    "target": "HKLM:\\SYSTEM\\CurrentControlSet\\Control\\StorPort\\TelemetryPerformanceHighResolutionTimer",
+    "after": "0"
+   },
+   {
+    "kind": "reg",
+    "target": "HKLM:\\SYSTEM\\CurrentControlSet\\Control\\StorPort\\BusyPauseTime",
+    "after": "0"
+   }
+  ],
+  "dynamic": false,
+  "untracked": 0,
+  "fidelity": "exact"
+ },
+ "speed-shift": {
+  "touches": [],
+  "dynamic": false,
+  "untracked": 0,
+  "fidelity": "exact"
+ },
+ "pcie-power": {
+  "touches": [],
+  "dynamic": false,
+  "untracked": 0,
+  "fidelity": "exact"
+ },
+ "tcp-stack": {
+  "touches": [],
+  "dynamic": false,
+  "untracked": 1,
+  "fidelity": "partial"
+ },
+ "qos-reserve": {
+  "touches": [
+   {
+    "kind": "reg",
+    "target": "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\Psched\\NonBestEffortLimit",
+    "after": "0"
+   }
+  ],
+  "dynamic": false,
+  "untracked": 0,
+  "fidelity": "exact"
+ },
+ "winsock-reset": {
+  "touches": [],
+  "dynamic": false,
+  "untracked": 1,
+  "fidelity": "partial"
+ },
+ "tcp-keepalive": {
+  "touches": [
+   {
+    "kind": "reg",
+    "target": "HKLM:\\SYSTEM\\CurrentControlSet\\Services\\Tcpip\\Parameters\\KeepAliveTime",
+    "after": "30000"
+   },
+   {
+    "kind": "reg",
+    "target": "HKLM:\\SYSTEM\\CurrentControlSet\\Services\\Tcpip\\Parameters\\KeepAliveInterval",
+    "after": "1000"
+   }
+  ],
+  "dynamic": false,
+  "untracked": 0,
+  "fidelity": "exact"
+ },
+ "flush-dns": {
+  "touches": [],
+  "dynamic": false,
+  "untracked": 0,
+  "fidelity": "none"
+ },
+ "dns-cloudflare": {
+  "touches": [],
+  "dynamic": false,
+  "untracked": 0,
+  "fidelity": "none"
+ },
+ "dns-google": {
+  "touches": [],
+  "dynamic": false,
+  "untracked": 0,
+  "fidelity": "none"
+ },
+ "dns-doh": {
+  "touches": [],
+  "dynamic": false,
+  "untracked": 1,
+  "fidelity": "partial"
+ },
+ "dns-quad9": {
+  "touches": [],
+  "dynamic": false,
+  "untracked": 0,
+  "fidelity": "none"
+ },
+ "dns-adguard": {
+  "touches": [],
+  "dynamic": false,
+  "untracked": 0,
+  "fidelity": "none"
+ },
+ "dns-custom": {
+  "touches": [],
+  "dynamic": false,
+  "untracked": 0,
+  "fidelity": "none"
+ },
+ "disable-netbios": {
+  "touches": [],
+  "dynamic": true,
+  "untracked": 0,
+  "fidelity": "exact"
+ },
+ "disable-ipv6": {
+  "touches": [
+   {
+    "kind": "reg",
+    "target": "HKLM:\\SYSTEM\\CurrentControlSet\\Services\\Tcpip6\\Parameters\\DisabledComponents",
+    "after": "255"
+   }
+  ],
+  "dynamic": false,
+  "untracked": 0,
+  "fidelity": "exact"
+ },
+ "disable-wpad": {
+  "touches": [
+   {
+    "kind": "service",
+    "target": "WinHttpAutoProxySvc",
+    "after": "disabled"
+   }
+  ],
+  "dynamic": false,
+  "untracked": 0,
+  "fidelity": "exact"
+ },
+ "disable-autoproxy": {
+  "touches": [
+   {
+    "kind": "reg",
+    "target": "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Internet Settings\\AutoDetect",
+    "after": "0"
+   }
+  ],
+  "dynamic": false,
+  "untracked": 0,
+  "fidelity": "exact"
+ },
+ "net-throttling": {
+  "touches": [
+   {
+    "kind": "reg",
+    "target": "HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Multimedia\\SystemProfile\\NetworkThrottlingIndex",
+    "after": "0xFFFFFFFF"
+   }
+  ],
+  "dynamic": false,
+  "untracked": 0,
+  "fidelity": "exact"
+ },
+ "tcp-buffers": {
+  "touches": [
+   {
+    "kind": "reg",
+    "target": "HKLM:\\SYSTEM\\CurrentControlSet\\Services\\Tcpip\\Parameters\\DefaultTTL",
+    "after": "64"
+   }
+  ],
+  "dynamic": true,
+  "untracked": 0,
+  "fidelity": "exact"
+ },
+ "nic-offloads": {
+  "touches": [],
+  "dynamic": false,
+  "untracked": 1,
+  "fidelity": "partial"
+ },
+ "nic-interrupt-mod": {
+  "touches": [],
+  "dynamic": false,
+  "untracked": 1,
+  "fidelity": "partial"
+ },
+ "nic-flow-control": {
+  "touches": [],
+  "dynamic": false,
+  "untracked": 1,
+  "fidelity": "partial"
+ },
+ "nic-energy-efficient": {
+  "touches": [],
+  "dynamic": false,
+  "untracked": 1,
+  "fidelity": "partial"
+ },
+ "nic-rss-affinity": {
+  "touches": [],
+  "dynamic": false,
+  "untracked": 1,
+  "fidelity": "partial"
+ },
+ "nic-ndis-poll": {
+  "touches": [],
+  "dynamic": false,
+  "untracked": 1,
+  "fidelity": "partial"
+ },
+ "tcp-retransmit": {
+  "touches": [
+   {
+    "kind": "reg",
+    "target": "HKLM:\\SYSTEM\\CurrentControlSet\\Services\\Tcpip\\Parameters\\TcpMaxDataRetransmissions",
+    "after": "3"
+   }
+  ],
+  "dynamic": false,
+  "untracked": 0,
+  "fidelity": "exact"
+ },
+ "tcp-ctcp": {
+  "touches": [],
+  "dynamic": false,
+  "untracked": 1,
+  "fidelity": "partial"
+ },
+ "tcp-task-offload": {
+  "touches": [
+   {
+    "kind": "reg",
+    "target": "HKLM:\\SYSTEM\\CurrentControlSet\\Services\\Tcpip\\Parameters\\DisableTaskOffload",
+    "after": "0"
+   }
+  ],
+  "dynamic": false,
+  "untracked": 0,
+  "fidelity": "exact"
+ },
+ "tcp-timedwait": {
+  "touches": [
+   {
+    "kind": "reg",
+    "target": "HKLM:\\SYSTEM\\CurrentControlSet\\Services\\Tcpip\\Parameters\\TcpTimedWaitDelay",
+    "after": "30"
+   }
+  ],
+  "dynamic": false,
+  "untracked": 0,
+  "fidelity": "exact"
+ },
+ "net-del-ack": {
+  "touches": [
+   {
+    "kind": "reg",
+    "target": "HKLM:\\SYSTEM\\CurrentControlSet\\Services\\Tcpip\\Parameters\\TcpDelAckTicks",
+    "after": "0"
+   }
+  ],
+  "dynamic": false,
+  "untracked": 0,
+  "fidelity": "exact"
+ },
+ "net-max-ports": {
+  "touches": [],
+  "dynamic": false,
+  "untracked": 1,
+  "fidelity": "partial"
+ },
+ "clean-temp": {
+  "touches": [],
+  "dynamic": false,
+  "untracked": 0,
+  "fidelity": "none"
+ },
+ "clean-browsers": {
+  "touches": [],
+  "dynamic": false,
+  "untracked": 0,
+  "fidelity": "none"
+ },
+ "clean-discord": {
+  "touches": [],
+  "dynamic": false,
+  "untracked": 0,
+  "fidelity": "none"
+ },
+ "clean-nvidia": {
+  "touches": [],
+  "dynamic": false,
+  "untracked": 0,
+  "fidelity": "none"
+ },
+ "clean-winsxs": {
+  "touches": [],
+  "dynamic": false,
+  "untracked": 0,
+  "fidelity": "none"
+ },
+ "clean-eventlogs": {
+  "touches": [],
+  "dynamic": false,
+  "untracked": 0,
+  "fidelity": "none"
+ },
+ "clean-errorlogs": {
+  "touches": [],
+  "dynamic": false,
+  "untracked": 0,
+  "fidelity": "none"
+ },
+ "clean-thumbnails": {
+  "touches": [],
+  "dynamic": false,
+  "untracked": 0,
+  "fidelity": "none"
+ },
+ "clean-fontcache": {
+  "touches": [],
+  "dynamic": false,
+  "untracked": 1,
+  "fidelity": "partial"
+ },
+ "clean-browser-history": {
+  "touches": [],
+  "dynamic": false,
+  "untracked": 0,
+  "fidelity": "none"
+ },
+ "clean-steam": {
+  "touches": [],
+  "dynamic": false,
+  "untracked": 0,
+  "fidelity": "none"
+ },
+ "clean-gameservices": {
+  "touches": [],
+  "dynamic": false,
+  "untracked": 0,
+  "fidelity": "none"
+ },
+ "clean-old-windows": {
+  "touches": [],
+  "dynamic": false,
+  "untracked": 0,
+  "fidelity": "none"
+ },
+ "clean-vs-temp": {
+  "touches": [],
+  "dynamic": false,
+  "untracked": 0,
+  "fidelity": "none"
+ },
+ "clean-recycle": {
+  "touches": [],
+  "dynamic": false,
+  "untracked": 0,
+  "fidelity": "none"
+ },
+ "clean-spotify": {
+  "touches": [],
+  "dynamic": false,
+  "untracked": 0,
+  "fidelity": "none"
+ },
+ "clean-xbox": {
+  "touches": [],
+  "dynamic": false,
+  "untracked": 0,
+  "fidelity": "none"
+ },
+ "clean-msstore": {
+  "touches": [],
+  "dynamic": false,
+  "untracked": 0,
+  "fidelity": "none"
+ },
+ "clean-roblox": {
+  "touches": [],
+  "dynamic": false,
+  "untracked": 0,
+  "fidelity": "none"
+ },
+ "fivem-clear-cache": {
+  "touches": [],
+  "dynamic": false,
+  "untracked": 0,
+  "fidelity": "none"
+ },
+ "fivem-priority": {
+  "touches": [
+   {
+    "kind": "reg",
+    "target": "${base}\\${exe}\\PerfOptions\\CpuPriorityClass",
+    "after": "3"
+   }
+  ],
+  "dynamic": true,
+  "untracked": 0,
+  "fidelity": "exact"
+ },
+ "fivem-io-priority": {
+  "touches": [
+   {
+    "kind": "reg",
+    "target": "${base}\\${exe}\\PerfOptions\\IoPriority",
+    "after": "3"
+   }
+  ],
+  "dynamic": true,
+  "untracked": 0,
+  "fidelity": "exact"
+ },
+ "fivem-defender": {
+  "touches": [],
+  "dynamic": false,
+  "untracked": 1,
+  "fidelity": "partial"
+ },
+ "fivem-hang-fix": {
+  "touches": [],
+  "dynamic": false,
+  "untracked": 0,
+  "fidelity": "none"
+ },
+ "fivem-gamebar": {
+  "touches": [
+   {
+    "kind": "reg",
+    "target": "HKCU:\\System\\GameConfigStore\\GameDVR_Enabled",
+    "after": "0"
+   },
+   {
+    "kind": "reg",
+    "target": "HKCU:\\System\\GameConfigStore\\GameDVR_FSEBehaviorMode",
+    "after": "2"
+   }
+  ],
+  "dynamic": true,
+  "untracked": 0,
+  "fidelity": "exact"
+ },
+ "fivem-mouse-accel": {
+  "touches": [],
+  "dynamic": false,
+  "untracked": 0,
+  "fidelity": "exact"
+ },
+ "fivem-power-plan": {
+  "touches": [],
+  "dynamic": false,
+  "untracked": 0,
+  "fidelity": "exact"
+ },
+ "fivem-network": {
+  "touches": [
+   {
+    "kind": "reg",
+    "target": "${base}\\TcpAckFrequency",
+    "after": "1"
+   },
+   {
+    "kind": "reg",
+    "target": "${base}\\TCPNoDelay",
+    "after": "1"
+   },
+   {
+    "kind": "reg",
+    "target": "${base}\\TcpDelAckTicks",
+    "after": "0"
+   },
+   {
+    "kind": "reg",
+    "target": "${base}\\DefaultTTL",
+    "after": "64"
+   },
+   {
+    "kind": "reg",
+    "target": "${base}\\MaxUserPort",
+    "after": "65534"
+   },
+   {
+    "kind": "reg",
+    "target": "${base}\\TcpTimedWaitDelay",
+    "after": "30"
+   }
+  ],
+  "dynamic": true,
+  "untracked": 0,
+  "fidelity": "exact"
+ },
+ "fivem-mmcss": {
+  "touches": [
+   {
+    "kind": "reg",
+    "target": "${base}\\SystemResponsiveness",
+    "after": "10"
+   },
+   {
+    "kind": "reg",
+    "target": "${base}\\Tasks\\Games\\GPU Priority",
+    "after": "8"
+   },
+   {
+    "kind": "reg",
+    "target": "${base}\\Tasks\\Games\\Priority",
+    "after": "6"
+   },
+   {
+    "kind": "reg",
+    "target": "${base}\\Tasks\\Games\\Clock Rate",
+    "after": "10000"
+   }
+  ],
+  "dynamic": true,
+  "untracked": 0,
+  "fidelity": "exact"
+ },
+ "fivem-fso": {
+  "touches": [],
+  "dynamic": true,
+  "untracked": 0,
+  "fidelity": "exact"
+ },
+ "fivem-gpu": {
+  "touches": [
+   {
+    "kind": "reg",
+    "target": "HKLM:\\SYSTEM\\CurrentControlSet\\Control\\GraphicsDrivers\\HwSchMode",
+    "after": "2"
+   }
+  ],
+  "dynamic": true,
+  "untracked": 0,
+  "fidelity": "exact"
+ },
+ "fivem-vm": {
+  "touches": [
+   {
+    "kind": "reg",
+    "target": "${base}\\DisablePagingExecutive",
+    "after": "1"
+   },
+   {
+    "kind": "reg",
+    "target": "${base}\\LargeSystemCache",
+    "after": "0"
+   }
+  ],
+  "dynamic": true,
+  "untracked": 0,
+  "fidelity": "exact"
+ },
+ "fivem-commandline": {
+  "touches": [],
+  "dynamic": false,
+  "untracked": 0,
+  "fidelity": "none"
+ },
+ "fivem-streaming-mem": {
+  "touches": [],
+  "dynamic": false,
+  "untracked": 0,
+  "fidelity": "none"
+ },
+ "fivem-worker-threads": {
+  "touches": [],
+  "dynamic": false,
+  "untracked": 0,
+  "fidelity": "none"
+ },
+ "fivem-disable-crash-reporter": {
+  "touches": [],
+  "dynamic": false,
+  "untracked": 0,
+  "fidelity": "none"
+ },
+ "fivem-disable-anticheat-upload": {
+  "touches": [],
+  "dynamic": false,
+  "untracked": 0,
+  "fidelity": "none"
+ },
+ "fivem-disable-update-checks": {
+  "touches": [],
+  "dynamic": false,
+  "untracked": 0,
+  "fidelity": "none"
+ },
+ "fivem-preload-ipl": {
+  "touches": [],
+  "dynamic": false,
+  "untracked": 0,
+  "fidelity": "none"
+ },
+ "fivem-reduce-draw-distance": {
+  "touches": [],
+  "dynamic": false,
+  "untracked": 0,
+  "fidelity": "none"
+ },
+ "fix-valorant-cfg": {
+  "touches": [],
+  "dynamic": true,
+  "untracked": 0,
+  "fidelity": "exact"
+ },
+ "fix-valorant-hvci": {
+  "touches": [],
+  "dynamic": true,
+  "untracked": 0,
+  "fidelity": "exact"
+ },
+ "fix-nvidia-cp": {
+  "touches": [],
+  "dynamic": false,
+  "untracked": 0,
+  "fidelity": "none"
+ },
+ "fix-wifi": {
+  "touches": [],
+  "dynamic": true,
+  "untracked": 3,
+  "fidelity": "partial"
+ },
+ "fix-bluetooth": {
+  "touches": [],
+  "dynamic": true,
+  "untracked": 0,
+  "fidelity": "exact"
+ },
+ "fix-2502": {
+  "touches": [],
+  "dynamic": false,
+  "untracked": 0,
+  "fidelity": "none"
+ },
+ "fix-ms-store": {
+  "touches": [],
+  "dynamic": true,
+  "untracked": 1,
+  "fidelity": "partial"
+ },
+ "fix-audio": {
+  "touches": [],
+  "dynamic": false,
+  "untracked": 1,
+  "fidelity": "partial"
+ },
+ "fix-winsock": {
+  "touches": [],
+  "dynamic": false,
+  "untracked": 1,
+  "fidelity": "partial"
+ },
+ "reboot-now": {
+  "touches": [],
+  "dynamic": false,
+  "untracked": 0,
+  "fidelity": "none"
+ },
+ "fix-windows-defender": {
+  "touches": [
+   {
+    "kind": "reg",
+    "target": "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows Defender\\DisableAntiSpyware",
+    "after": "0"
+   },
+   {
+    "kind": "service",
+    "target": "WinDefend",
+    "after": "auto"
+   }
+  ],
+  "dynamic": true,
+  "untracked": 1,
+  "fidelity": "partial"
+ },
+ "fix-print-spooler": {
+  "touches": [],
+  "dynamic": false,
+  "untracked": 0,
+  "fidelity": "none"
+ },
+ "fix-search": {
+  "touches": [],
+  "dynamic": false,
+  "untracked": 0,
+  "fidelity": "none"
+ },
+ "fix-usb-ghosting": {
+  "touches": [
+   {
+    "kind": "service",
+    "target": "LGHUBUpdaterService",
+    "after": "Disabled"
+   }
+  ],
+  "dynamic": true,
+  "untracked": 6,
+  "fidelity": "partial"
+ },
+ "fix-phantom-hid": {
+  "touches": [],
+  "dynamic": false,
+  "untracked": 0,
+  "fidelity": "none"
+ }
+}

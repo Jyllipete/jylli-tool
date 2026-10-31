@@ -21,7 +21,7 @@
     return [...staged].map(([id, action]) => {
       const m = meta[id] || {}
       const from = stateOf(id) === 'applied' ? 'applied' : 'default'
-      return { id, action, name: m.name || id, tier: m.safetyTier ?? null, from, to: action === 'apply' ? 'applied' : 'default', reboot: !!m.reboot }
+      return { id, action, name: m.name || id, tier: m.safetyTier ?? null, from, to: action === 'apply' ? 'applied' : 'default', reboot: !!m.reboot, touches: m.touches ?? null, fidelity: m.fidelity || 'unknown' }
     }).sort((a, b) => (b.tier ?? 0) - (a.tier ?? 0) || a.name.localeCompare(b.name))
   }
 
@@ -96,7 +96,7 @@
     const tier = x => x == null ? '' : `<span class="j-badge j-badge-${x >= 3 ? 'danger' : x === 2 ? 'warning' : 'neutral'}">${esc(tUI('stageTier' + Math.min(3, x)))}</span>`
     const label = s => tUI(s === 'applied' ? 'stageStateOn' : 'stageStateDefault')
     m.innerHTML = `<div class="modal"><div class="modal-title" id="stage-modal-title">${esc(tUI('stageReviewTitle'))}</div>
-      <div class="j-stage-list">${rows.map(r => `<div class="j-stage-row"><div class="j-stage-name">${esc(tName(r.id) || r.name)} ${tier(r.tier)}</div><div class="j-stage-change j-muted">${esc(label(r.from))} → <b>${esc(label(r.to))}</b></div></div>`).join('')}</div>
+      <div class="j-stage-list">${rows.map(r => `<div class="j-stage-row"><div class="j-stage-name">${esc(tName(r.id) || r.name)} ${tier(r.tier)}</div><div class="j-stage-change j-muted">${esc(label(r.from))} → <b>${esc(label(r.to))}</b>${r.touches ? ' · ' + esc(t('stageTouches', { n: r.touches })) : ''}${r.fidelity === 'partial' ? ' · ' + esc(tUI('stagePartial')) : ''}</div></div>`).join('')}</div>
       <div class="jx-93"><button class="btn btn-ghost btn-sm" id="stage-modal-close">${esc(tUI('close'))}</button><button class="btn btn-primary btn-sm" id="stage-modal-apply">${esc(tUI('stageApply'))} <kbd>Ctrl+Enter</kbd></button></div></div>`
     m.querySelector('#stage-modal-close').onclick = () => _closeModal('stage-modal')
     m.querySelector('#stage-modal-apply').onclick = () => { _closeModal('stage-modal'); apply() }
