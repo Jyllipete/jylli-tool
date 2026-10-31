@@ -498,6 +498,9 @@ const { createTelemetryService } = require('./lib/telemetry-service')
 const Inventory = require('./lib/inventory')
 const { createPowerLimit } = require('./lib/gpu-power-limit')
 const Smi = require('./lib/nvidia-smi')
+const SpeedTest = require('./lib/speedtest')
+const SpeedTransport = require('./lib/speedtest-transport')
+const Ssdp = require('./lib/ssdp')
 const { createWriteLog, mergeIncoming } = require('./lib/settings-merge')
 let snapshots = null   // per-tweak 'before' values (created at startup, once userData is known)
 const V = require('./lib/validate')
@@ -4017,6 +4020,69 @@ app.whenReady().then(() => {
     powerLimitSvc().guard(_hub.value('gpu0.temp.core'), _hub.value('gpu0.power.limit'), _plDefaultW).catch(() => {})
   }, 1000)
 })
+
+// ─── Network: topology, router identity (UPnP, gateway only) and the speed test ─────────────────────────
+let _gwCache = null
+async function getGatewayInfo() {
+  if (_gwCache && Date.now() - _gwCache.t < 10 * 60 * 1000) return _gwCache.v
+  const r = await runPS(`
+    $gw = (Get-NetRoute -DestinationPrefix 0.0.0.0/0 -EA SilentlyContinue | Sort-Object RouteMetric | Select-Object -First 1).NextHop
+    if ($gw -and $gw -ne '0.0.0.0') {
+      Write-Output "GW=$gw"
+      $p = Test-Connection -ComputerName $gw -Count 3 -EA SilentlyContinue
+      if ($p) { Write-Output ("LAT=" + [math]::Round(($p | Measure-Object -Property ResponseTime -Average).Average, 1)) }
+    }`, 15000)
+  const gw = (String(r.out).match(/GW=([\d.]+)/) || [])[1] || null
+  const lat = parseFloat((String(r.out).match(/LAT=([\d.]+)/) || [])[1])
+  let identity = null
+  if (gw && Ssdp.isPrivateIp(gw)) identity = await ssdpIdentity(gw).catch(() => null)
+  const v = { gateway: gw ? { ip: gw, latencyMs: Number.isFinite(lat) ? lat : null } : null, identity }
+  _gwCache = { t: Date.now(), v }
+  return v
+}
+function ssdpIdentity(gatewayIp) {
+  return new Promise(resolve => {
+    const dgram = require('dgram'), http = require('http')
+    const sock = dgram.createSocket('udp4'), found = []
+    const done = async () => {
+      try { sock.close() } catch {}
+      const pick = Ssdp.pickGatewayDescription(found, gatewayIp)
+      if (!pick) return resolve(null)
+      http.get(pick.url, { timeout: 2000 }, res => {
+        let body = ''
+        res.on('data', d => { body += d; if (body.length > 65536) res.destroy() })
+        res.on('end', () => { const d = Ssdp.parseDeviceXml(body); resolve(d ? { manufacturer: d.manufacturer, model: d.model, friendlyName: d.friendlyName, source: 'upnp' } : null) })
+        res.on('error', () => resolve(null))
+      }).on('error', () => resolve(null)).on('timeout', function () { this.destroy(); resolve(null) })
+    }
+    sock.on('message', (msg, rinfo) => { const p = Ssdp.parseSsdpResponse(msg.toString('utf8')); if (p && rinfo.address === p.host) found.push(p) })
+    sock.on('error', () => resolve(null))
+    sock.bind(0, () => { try { sock.send(Buffer.from(Ssdp.MSEARCH), 1900, '239.255.255.250') } catch { resolve(null) } })
+    setTimeout(done, 1800)
+  })
+}
+ipcMain.handle('net-topology', async () => {
+  const [gw, rig] = await Promise.all([getGatewayInfo(), getRigSpec(false)])
+  return { ok: true, gateway: gw.gateway, identity: gw.identity, adapters: rig.ok ? rig.rig.adapters : [] }
+})
+let _speedRunning = false
+const SPEED_HISTORY = () => path.join(app.getPath('userData'), 'jt_speedtests.json')
+ipcMain.handle('run-speed-test', async () => {
+  if (_speedRunning) return { ok: false, reason: 'already-running' }
+  _speedRunning = true
+  try {
+    const res = await SpeedTest.run({ now: Date.now, fetchChunked: SpeedTransport.fetchChunked, latencyProbe: SpeedTransport.latencyProbe },
+      { onProgress: p => mainWindow?.webContents.send('speedtest-progress', p) })
+    if (res.ok) {
+      let hist = []
+      try { hist = JSON.parse(fs.readFileSync(SPEED_HISTORY(), 'utf8')) } catch {}
+      hist.unshift({ t: res.startedAt, downMbps: res.downMbps, upMbps: res.upMbps, latencyMs: res.latency.ms, jitterMs: res.latency.jitterMs, loadedLatencyMs: res.loadedLatency.ms, colo: res.colo, bytes: res.bytes })
+      try { fs.writeFileSync(SPEED_HISTORY(), JSON.stringify(hist.slice(0, 50))) } catch {}
+    }
+    return res
+  } catch (e) { return { ok: false, reason: 'failed', error: String(e.message || e).slice(0, 200) } } finally { _speedRunning = false }
+})
+ipcMain.handle('get-speed-history', () => { try { return JSON.parse(fs.readFileSync(SPEED_HISTORY(), 'utf8')) } catch { return [] } })
 
 ipcMain.handle('get-tweak-meta', (_, ids) => journalSvc().tweakMeta(Array.isArray(ids) ? ids.slice(0, 400) : null))
 ipcMain.handle('apply-batch', (_, req) => journalSvc().applyBatch(req))

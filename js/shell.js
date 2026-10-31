@@ -31,7 +31,7 @@
     cpumem: c => hardwareTab(c, 'cpumem'),
     gpu: c => hardwareTab(c, 'gpu'),
     power: c => hardwareTab(c, 'power'),
-    network: c => buildNetwork(c),
+    network: async c => { await buildNetwork(c); buildNetworkHero(c) },
     fixes: c => buildFixes(c),
     pulse: c => buildPulse(c),
     games: async c => { if (!settings.isPremium) await _buildTabPremiumLock(c, 'game-opti'); else await buildGameOpti(c) },

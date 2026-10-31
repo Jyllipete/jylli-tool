@@ -907,3 +907,12 @@
 .j-gpu-pl-row input[type=range] { flex: 1; accent-color: var(--c-accent); }
 .j-gpu-pl-scale { display: flex; justify-content: space-between; font-size: var(--fs-1); }
 @media (max-width: 1100px) { .j-gpu-hero { grid-template-columns: 1fr; } .j-gpu-strip { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+
+/* ═══ Network hero (js/pages/network-hero.js) ═══ */
+.j-net-hero { display: grid; grid-template-columns: minmax(300px, 1.1fr) minmax(300px, 1fr); gap: 0; padding: 0; overflow: hidden; margin-bottom: 14px; }
+.j-net-stage { min-height: 260px; }
+.j-net-canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+.j-net-side { padding: 16px 20px; display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.j-net-speed-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin: 8px 0; }
+.j-net-hist { margin-top: 6px; }
+@media (max-width: 1100px) { .j-net-hero { grid-template-columns: 1fr; } .j-net-speed-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
