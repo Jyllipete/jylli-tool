@@ -787,7 +787,7 @@ LANG.fi = {
       motionReduced:'Vähennetty',
       hwMemBelow:'Alle nimellisnopeuden',
       hwMemBelowTip:'Tämä muisti käy hitaammin kuin sen nimellisnopeus. XMP tai EXPO voi olla pois päältä BIOSissa.',
-      hwMemAtRated:'Nimellisnopeudella',
+      hwMemAtRated:'Nimellisnopeudella tai yli',
       hwNotDetected:'Windows ei tunnistanut',
       hwDriveTempNA:'Aseman lämpötila ja aktiivisuus vaativat laitteistoanturin, eikä niitä näytetä ilman sitä.',
       hwPowerPlan:'Aktiivinen virrankäyttösuunnitelma',

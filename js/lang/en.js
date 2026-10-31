@@ -809,7 +809,7 @@ LANG.en = {
       motionReduced:'Reduced',
       hwMemBelow:'Below rated speed',
       hwMemBelowTip:'This memory runs slower than it is rated for. XMP or EXPO may be switched off in the BIOS.',
-      hwMemAtRated:'At rated speed',
+      hwMemAtRated:'At or above rated speed',
       hwNotDetected:'Not detected by Windows',
       hwDriveTempNA:'Drive temperature and activity need a hardware sensor and are not shown without one.',
       hwPowerPlan:'Active power plan',

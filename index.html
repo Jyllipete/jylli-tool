@@ -8361,7 +8361,7 @@ async function updateMetrics() {
       _tempHistory.cpu.push(m.cpuTemp)
       if (_tempHistory.cpu.length > TEMP_MAX_POINTS) _tempHistory.cpu.shift()
       const tempEl = document.getElementById('db-cpu-temp')
-      if (tempEl) { tempEl.textContent = `${m.cpuTemp}°C`; tempEl.style.color = tempColor(m.cpuTemp) }
+      if (tempEl) { tempEl.textContent = `${Math.round(m.cpuTemp)}°C`; tempEl.style.color = tempColor(m.cpuTemp) }
       updateTempStats('cpu', _tempHistory.cpu)
       document.getElementById('cpu-temp-nosensor')?.remove()
     } else if (_tempHistory.cpu.length === 0 && !document.getElementById('cpu-temp-nosensor') && Date.now() - _metricsStartTime > 10000) {
@@ -8381,7 +8381,7 @@ async function updateMetrics() {
       _tempHistory.gpu.push(m.gpuTemp)
       if (_tempHistory.gpu.length > TEMP_MAX_POINTS) _tempHistory.gpu.shift()
       const gpuTempEl = document.getElementById('db-gpu-temp')
-      if (gpuTempEl) { gpuTempEl.textContent = `${m.gpuTemp}°C`; gpuTempEl.style.color = tempColor(m.gpuTemp) }
+      if (gpuTempEl) { gpuTempEl.textContent = `${Math.round(m.gpuTemp)}°C`; gpuTempEl.style.color = tempColor(m.gpuTemp) }
       updateTempStats('gpu', _tempHistory.gpu)
     } else {
       const gpuTempEl = document.getElementById('db-gpu-temp')

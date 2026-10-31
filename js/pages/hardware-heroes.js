@@ -16,7 +16,7 @@ async function buildCpuMemHero(c) {
   const stickRows = sticks.map(s => {
     const below = s.ratedMT && s.speedMT && s.speedMT < s.ratedMT * 0.95
     const tip = below ? `<span class="j-badge j-badge-warning" title="${escAttr(tUI('hwMemBelowTip'))}">${escHtml(tUI('hwMemBelow'))}</span>` : (s.ratedMT && s.speedMT ? `<span class="j-badge j-badge-success">${escHtml(tUI('hwMemAtRated'))}</span>` : '')
-    return ui.row({ title: `${s.channel ? tUI('twinFactSlot') + ' ' + s.channel + ' · ' : ''}${s.sizeGB || '?'} GB ${s.type || ''}`, sub: [s.part, s.ratedMT ? tUI('twinFactRated') + ' ' + s.ratedMT + ' MT/s' : '', s.speedMT ? tUI('twinFactRunning') + ' ' + s.speedMT + ' MT/s' : ''].filter(Boolean).join(' · '), control: tip })
+    return ui.row({ title: `${s.channel ? tUI('twinFactSlot') + ' ' + s.channel + ' · ' : ''}${s.sizeGB || '?'} GB ${s.type || ''}`, sub: [s.part, s.ratedMT ? tUI('twinFactRated') + ' ' + s.ratedMT + ' MT/s' : '', s.speedMT ? tUI('twinFactRunning') + ' ' + s.speedMT + ' MT/s' : ''].filter(Boolean).join(' · '), control: ui.raw(tip) })
   }).join('')
   el.innerHTML = String(ui.html`
     <div class="j-twin-stage j-gpu-stage"><div class="j-twin-slot" id="cpumem-twin-slot" data-twin-view="rig:home"></div></div>

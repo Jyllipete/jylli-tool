@@ -85,7 +85,7 @@
     renderFallback(slot)
     const want = setting()
     if (want === 'off') { H.state = 'static'; H.reason = 'off-by-setting'; return }
-    if (H.engine) { mount(slot); return }
+    if (H.engine) { H.state = 'live'; mount(slot); return }
     H.state = 'loading'
     const idle = root.requestIdleCallback || (cb => setTimeout(cb, 120))
     idle(async () => {

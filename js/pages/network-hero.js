@@ -27,6 +27,7 @@ function buildNetworkHero(c) {
 const NET_FLOW = { particles: [], raf: 0, adapters: [], t: 0 }
 
 async function netHeroInit(el) {
+  const { html } = ui
   let topo = null
   try { topo = await api.netTopology() } catch {}
   const box = el.querySelector('#net-id')
@@ -106,6 +107,7 @@ function netDrawStart(el) {
 }
 
 async function netHistoryRender(el) {
+  const { html } = ui
   const box = (el || document).querySelector('#net-speed-history')
   if (!box) return
   let hist = []

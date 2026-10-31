@@ -325,11 +325,12 @@ function twinFirstRun(slot) {
       bar.className = 'j-twin-assembly'
       bar.innerHTML = `<span>${escHtml(tUI('twinAssembling'))}</span><button type="button" class="j-btn j-btn-ghost j-btn-sm" id="twin-skip">${escHtml(tUI('twinSkip'))}</button>`
       stage.appendChild(bar)
-      document.getElementById('twin-skip').onclick = () => JylliTwin.skipAssembly()
+      const skip = bar.querySelector('#twin-skip'); if (skip) skip.onclick = () => JylliTwin.skipAssembly()
       await JylliTwin.assemble({ reduced: document.body.classList.contains('motion-reduced') || matchMedia('(prefers-reduced-motion: reduce)').matches })
       settings.assemblyDone = true; api.saveSettings(settings)
+      if (!bar.isConnected) return          // the user left Home during the animation
       bar.innerHTML = `<span>${escHtml(tUI('twinAssembled'))}</span><button type="button" class="j-btn j-btn-primary j-btn-sm" onclick="runAutoOpti()">${escHtml(tUI('dashAutoOptimize'))}</button><button type="button" class="j-btn j-btn-ghost j-btn-sm" id="twin-assembly-close">${escHtml(tUI('close'))}</button>`
-      document.getElementById('twin-assembly-close').onclick = () => bar.remove()
+      bar.querySelector('#twin-assembly-close').onclick = () => bar.remove()
     } else if (JylliTwin.state === 'static' || ++tries > 40) { clearInterval(wait); settings.assemblyDone = true; api.saveSettings(settings) }
   }, 300)
 }
