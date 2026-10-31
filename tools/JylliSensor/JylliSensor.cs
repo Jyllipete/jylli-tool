@@ -27,6 +27,12 @@ class JylliSensor
         "cpu_usage",
         "ram_usage",
         "gpu_mem_usage",
+        // appended in 3.0 (the schema is sent first, so readers map by id): fans, pump, memory junction
+        "gpu_fan_rpm",
+        "gpu_fan_pct",
+        "gpu_mem_temp",
+        "mb_fan1", "mb_fan2", "mb_fan3", "mb_fan4",
+        "cooler_pump_rpm",
     };
 
     static float[] _values = new float[SENSOR_ORDER.Length];
@@ -38,8 +44,8 @@ class JylliSensor
             IsCpuEnabled        = true,
             IsGpuEnabled        = true,
             IsMemoryEnabled     = true,
-            IsMotherboardEnabled = false,
-            IsControllerEnabled  = false,
+            IsMotherboardEnabled = true,    // fans/pump only report with the hardware driver or admin rights; otherwise they stay 0 = no reading
+            IsControllerEnabled  = true,
             IsNetworkEnabled     = false,
             IsStorageEnabled     = false,
         };
@@ -78,7 +84,8 @@ class JylliSensor
                 // 1000Hz sensor loop
                 while (pipe.IsConnected)
                 {
-                    Array.Clear(_values, 0, _values.Length);   // 0 = no reading this pass; also resets the cpu_core_max running maximum
+                    Array.Clear(_values, 0, _values.Length);
+                    SensorVisitor.FanSlot = 0;   // 0 = no reading this pass; also resets the cpu_core_max running maximum
                     try { computer.Accept(new SensorVisitor(ref _values)); }
                     catch { }
 
@@ -110,6 +117,7 @@ class JylliSensor
 class SensorVisitor : IVisitor
 {
     private float[] _vals;
+    public static int FanSlot;   // next free mb_fanN slot in this pass
 
     public SensorVisitor(ref float[] vals) { _vals = vals; }
 
@@ -148,11 +156,17 @@ class SensorVisitor : IVisitor
             case HardwareType.GpuIntel:
                 if (sensor.SensorType == SensorType.Temperature)
                 {
-                    if (sensor.Name.Contains("Core") || sensor.Name == "GPU Core")
+                    if (sensor.Name.Contains("Memory Junction"))
+                        _vals[12] = v;  // gpu_mem_temp
+                    else if (sensor.Name.Contains("Core") || sensor.Name == "GPU Core")
                         _vals[3] = v;  // gpu_core_temp
                     else if (sensor.Name.Contains("Hot Spot") || sensor.Name.Contains("Junction"))
                         _vals[4] = v;  // gpu_hotspot_temp
                 }
+                else if (sensor.SensorType == SensorType.Fan)
+                    _vals[10] = v;  // gpu_fan_rpm
+                else if (sensor.SensorType == SensorType.Control && sensor.Name.Contains("Fan"))
+                    _vals[11] = v;  // gpu_fan_pct
                 else if (sensor.SensorType == SensorType.Power && sensor.Name.Contains("Total"))
                     _vals[5] = v;  // gpu_power
                 else if (sensor.SensorType == SensorType.Load)
@@ -161,6 +175,17 @@ class SensorVisitor : IVisitor
                         _vals[6] = v;  // gpu_usage
                     else if (sensor.Name.Contains("Memory"))
                         _vals[9] = v;  // gpu_mem_usage
+                }
+                break;
+
+            case HardwareType.Motherboard:
+            case HardwareType.SuperIO:
+            case HardwareType.EmbeddedController:
+            case HardwareType.Cooler:
+                if (sensor.SensorType == SensorType.Fan)
+                {
+                    if (sensor.Name.IndexOf("Pump", StringComparison.OrdinalIgnoreCase) >= 0) _vals[17] = v;   // cooler_pump_rpm
+                    else if (FanSlot < 4) _vals[13 + FanSlot++] = v;                                          // mb_fan1..4
                 }
                 break;
 
