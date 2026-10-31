@@ -493,6 +493,8 @@ const { createAuth } = require('./lib/auth')
 const { createSnapshotStore } = require('./lib/snapshot')
 const { createJournalService } = require('./lib/journal-service')
 const JylliScore = require('./js/score')
+const { createHub } = require('./lib/telemetry-hub')
+const { createTelemetryService } = require('./lib/telemetry-service')
 const { createWriteLog, mergeIncoming } = require('./lib/settings-merge')
 let snapshots = null   // per-tweak 'before' values (created at startup, once userData is known)
 const V = require('./lib/validate')
@@ -818,6 +820,10 @@ function stopSensorBridge() {
 }
 
 ipcMain.handle('sensor-get-schema',  () => _sensorSchema || [])
+ipcMain.handle('telemetry-subscribe', () => { telemetrySvc().start(); telemetrySvc().subscribe(); return { ok: true, snapshot: _hub.snapshot() } })
+ipcMain.handle('telemetry-unsubscribe', () => { telemetrySvc().unsubscribe(); return { ok: true } })
+ipcMain.handle('telemetry-capabilities', () => ({ capabilities: _hub.capabilities(TELEMETRY_EXPECTED_KEYS), context: _hub.getContext() }))
+const TELEMETRY_EXPECTED_KEYS = ['cpu.load', 'cpu.temp.package', 'cpu.power', 'ram.used', 'gpu0.load', 'gpu0.temp.core', 'gpu0.temp.hotspot', 'gpu0.power', 'gpu0.clock.core', 'gpu0.vram.used', 'gpu0.fan.rpm', 'gpu0.fan.pct', 'net.rx', 'net.tx']
 ipcMain.handle('sensor-get-rate',    () => _sensorHz)
 ipcMain.handle('sensor-bridge-status', () => ({ active: !!_sensorSocket, hz: _sensorHz, sensors: _sensorSchema?.length || 0 }))
 
@@ -1249,6 +1255,7 @@ app.on('will-quit', (e) => {
   shutdownBackground()
   stopLhm()
   stopSensorBridge()
+  try { _telemetry?.stop() } catch {}
   const duration = Date.now() - sessionStartTime
   const sessionEndPromise = duration > 10000
     ? webhookSessionEnd(duration, sessionPageVisits, sessionTweaksCount)
@@ -2267,7 +2274,29 @@ let _lastMetrics = null
 let _metricsInterval = null
 let _metricsCollecting = false
 
+// Live numbers come from the telemetry hub (persistent PowerShell poller + nvidia-smi + sensor bridge): no process spawn per tick.
+// Missing values are null, never 0. The per-call collector below only runs while the poller is not delivering.
+const _hub = createHub()
+let _telemetry = null
+function telemetrySvc() {
+  if (!_telemetry) {
+    _telemetry = createTelemetryService({
+      hub: _hub, spawn: require('child_process').spawn, exists: fs.existsSync,
+      emit: (ch, payload) => mainWindow?.webContents.send(ch, payload),
+      isVisible: () => !!mainWindow && !mainWindow.isDestroyed() && mainWindow.isVisible() && !mainWindow.isMinimized(),
+      scriptPath: assetPath('lib', 'os-poller.ps1'),
+      getSensorValues: () => _sensorValues, sensorRunning: () => !!_sensorSocket, log: debugLog,
+    })
+  }
+  return _telemetry
+}
 async function collectMetrics() {
+  const t = telemetrySvc()
+  t.start()
+  if (t.osHealthy()) { _lastMetrics = _hub.legacyMetrics(); return }
+  return collectMetricsLegacy()
+}
+async function collectMetricsLegacy() {
   if (_metricsCollecting) return   // skip if previous collection still running
   _metricsCollecting = true
   try {

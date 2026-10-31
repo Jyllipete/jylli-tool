@@ -8308,7 +8308,7 @@ async function updateMetrics() {
     Shell.metrics(m)
 
     // Metric tiles
-    const cpuPct = m.cpu || 0, gpuPct = m.gpu || 0, ramPct = m.ram || 0
+    const cpuPct = m.cpu || 0, gpuPct = m.gpu ?? null, ramPct = m.ram || 0   // gpu stays null when no GPU load source exists
 
     // CPU tile — update data first, then batch canvas draws in RAF
     const cpuEl = document.getElementById('db-util-cpu')
@@ -8319,10 +8319,12 @@ async function updateMetrics() {
 
     // GPU tile
     const gpuEl = document.getElementById('db-util-gpu')
-    if (gpuEl) gpuEl.textContent = `${gpuPct}%`
-    _sparkHistory.gpu.push(gpuPct); if (_sparkHistory.gpu.length > SPARK_MAX) _sparkHistory.gpu.shift()
-    setTileColor('db-util-gpu', 'mtile-gpu', gpuPct)
-    updateTrend('gpu', gpuPct)
+    if (gpuEl) gpuEl.textContent = gpuPct == null ? '—' : `${gpuPct}%`
+    if (gpuPct != null) {
+      _sparkHistory.gpu.push(gpuPct); if (_sparkHistory.gpu.length > SPARK_MAX) _sparkHistory.gpu.shift()
+      setTileColor('db-util-gpu', 'mtile-gpu', gpuPct)
+      updateTrend('gpu', gpuPct)
+    }
 
     // RAM tile
     const ramEl = document.getElementById('db-util-memory')

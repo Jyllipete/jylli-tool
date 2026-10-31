@@ -41,6 +41,7 @@
       "installerHeader": "assets/installer-header.bmp"
     },
     "asarUnpack": [
+      "lib/os-poller.ps1",
       "assets/lhm/**",
       "assets/fancontrol/**",
       "assets/cpuz/**",
