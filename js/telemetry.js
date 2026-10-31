@@ -93,7 +93,7 @@
     if (state.subscribed || !root.api || !root.api.telemetrySubscribe) return
     state.subscribed = true
     state.off = root.api.onTwinTelemetry(snap => { state.snap = snap; applyToDom() })
-    try { const r = await root.api.telemetrySubscribe(); if (r && r.snapshot) state.snap = r.snapshot } catch {}
+    try { const r = await root.api.telemetrySubscribe(); if (r && r.snapshot) { state.snap = r.snapshot; applyToDom() } } catch {}
     refreshCaps()
     state.capTimer = setInterval(refreshCaps, 10000)
   }

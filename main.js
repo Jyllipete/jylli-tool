@@ -4156,6 +4156,12 @@ function sessionRecFinish() {
 ipcMain.handle('list-sessions', () => SessionRec.list(SESSIONS_DIR(), fs, path))
 ipcMain.handle('get-session', (_, id) => { const s = SessionRec.load(SESSIONS_DIR(), id, fs, path); return s ? { ok: true, session: s, advice: SessionRec.advice(s) } : { ok: false } })
 
+ipcMain.handle('get-power-plan', async () => {
+  const r = await runCmd('powercfg /getactivescheme')
+  const m = String(r.out).match(/GUID:\s*([0-9a-f-]{36})\s*\((.*?)\)/i)
+  return m ? { guid: m[1], name: m[2] } : { name: null }
+})
+
 ipcMain.handle('get-tweak-meta', (_, ids) => journalSvc().tweakMeta(Array.isArray(ids) ? ids.slice(0, 400) : null))
 ipcMain.handle('apply-batch', (_, req) => journalSvc().applyBatch(req))
 ipcMain.handle('journal-list', (_, opts) => {

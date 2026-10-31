@@ -1,5 +1,34 @@
 # Changelog
 
+## Julkaisematon (3.0 "Living hardware")
+
+### Luotettavuus
+- **Muutosloki**: jokainen sovelluksen tekemä muutos kirjataan todellisine ennen/jälkeen-arvoineen (`userData/jt_journal.jsonl`); Kumoa palauttaa tallennetut arvot ja kysyy ensin, jos arvo on muuttunut
+- **Yksi käyttöönottoputki** (`apply-batch`): Auto-Optimize, älykäs profiiliopas, valmistellut muutokset ja pelivahti kirjautuvat samaan lokiin; Auto-Optimize palauttaa tarkan listan käyttöön otetuista, ohitetuista ja epäonnistuneista
+- Puuttuva anturi näytetään muodossa "Ei saatavilla" (syyn kanssa), ei koskaan nollana; CPU-lämpötila ei enää lainaa emolevyn lämpövyöhykettä; terveyspisteet jättävät mittaamattomat osat pois ja normalisoivat
+- Korjauksia: AI-suositusten "Käytä" toimii, NVIDIA-säädöt käyttävät oikeaa näyttö-ohjaimen avainta, pelien palautus kumoaa myös MMCSS-, FSO- ja DVR-muutokset, IRQ-paneeli piilotetaan kun ei tuettu
+
+### Ulkoasu
+- **Elävä 3D-malli** koneestasi (Three.js, proseduraalinen, rakennettu havaitusta laitteistosta); kuumuus ja tuulettimet näkyvät vain jos anturilukema on olemassa; tunnistamattomat osat piirretään haamuina; kannettava piirretään kannettavana
+- Staattinen SVG-varakuva kun 3D ei ole käytettävissä (ohjelmistopiirto, hidas GPU tai pois päältä); Asetukset › Ulkoasu › 3D-visuaalit
+- Ensikäynnistyksen kokoamisanimaatio, ohitettavissa; ei aja mitään automaattisesti
+- Tarkista ensin -tila (Asetukset › Yleiset › Muutosten käyttöönotto): muutokset kerätään telakkaan ja otetaan käyttöön yhtenä erä
+- Historia-välilehti: muutosloki puuna (istunto › erä › muutos) ja kumoaminen
+- Valinnaiset ääniefektit (oletuksena pois)
+- Uusi Toisto-välilehti: pelisessiot ruudunpäivityksineen, kuormineen ja lämpötiloineen sekä todisteisiin perustuvat havainnot; pelit kansikuvineen Etusivulla (Steam/Epic)
+
+### Laitteisto ja verkko
+- GPU: reaaliaikaiset lukemat ja NVIDIA:n tehoraja (vain pöytäkone, validoitu, palautuu sovelluksen sulkeutuessa, lämpösuoja)
+- Verkko: yhteydet sovittimittain todellisista laskureista, reitittimen tunnistus UPnP:llä (vain yhdyskäytävältä), Cloudflare-nopeustesti (vain käyttäjän käynnistämänä)
+- CPU ja muisti: todellinen nimellis- ja käyntinopeus; Virta ja tallennus: asemat ja virrankäyttösuunnitelma; BIOS: emolevyn oikea malli
+- Asetukset › Anturit: mitä luetaan ja miksi jokin puuttuu
+
+### Tekniset
+- Pysyvä PowerShell-kyselijä ja nvidia-smi korvaavat sekunnin välein käynnistettävät prosessit; `--perf-log`-lippu
+- `lib/`: journal, journal-runner, journal-prelude, cmd-parse, settings-merge, telemetry-hub/service, inventory, gpu-power-limit, speedtest, ssdp, games-registry, session-recorder; `js/twin/`: layout, mapping, motion, fallback, engine, host
+- Three.js 0.170.0 paketoituna (`tools/build-three.js`, `tools/check-vendor.js`); `--motion-scale` ja Vähennetty-liikeasetus
+- **Tiedossa**: JylliSensorin paketoitu LHM-kirjasto puuttuu riippuvuuksia (System.Memory, RAMSPDToolkit-NDD, DiskInfoToolkit), joten laitteistoanturisilta ei käynnisty; ilman sitä CPU-lämpötila ja tuulettimet näytetään "Ei saatavilla"
+
 ## Julkaisematon (UI 2.0)
 
 ### 🎨 Ulkoasu

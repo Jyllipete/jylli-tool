@@ -44,7 +44,7 @@
     startup: c => buildStartupManager(c),
     diagnostics: c => buildPreflight(c),
     processes: c => buildProcessManager(c),
-    bios: c => buildBiosTuner(c),
+    bios: async c => { await buildBiosTuner(c); await buildBoardCard(c) },
     scheduler: c => buildScheduler(c),
     restore: c => buildRestorePoints(c),
     history: c => buildChangelog(c),
@@ -55,6 +55,8 @@
     if (!settings.isPremium) { await _buildTabPremiumLock(c, 'hardware'); if (tab === 'gpu') buildGpuHero(c, { readOnly: true }); return }
     await buildHardware(c)
     if (tab === 'gpu') buildGpuHero(c)
+    else if (tab === 'cpumem') await buildCpuMemHero(c)
+    else if (tab === 'power') await buildStorageHero(c)
     const allowed = HW_TAB_SECTIONS[tab] || new Set()
     c.querySelectorAll('.section-card[data-sec-id]').forEach(el => { el.style.display = allowed.has(el.dataset.secId) ? '' : 'none' })
   }

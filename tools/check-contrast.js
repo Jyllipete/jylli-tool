@@ -40,6 +40,9 @@ const TEXT = [
   ['--c-warning', 4.5, ['--surface-0', '--surface-1']],
   ['--c-danger', 4.5, ['--surface-0', '--surface-1']],
   ['--c-info', 4.5, ['--surface-0', '--surface-1']],
+  // 3D stage overlays (inspector, hints, assembly bar) sit on the always-dark stage in both schemes
+  ['--twin-text', 4.5, ['--twin-bg-a', '--twin-bg-b']],
+  ['--twin-text-dim', 4.5, ['--twin-bg-a', '--twin-bg-b']],
 ]
 
 // accent presets: --on-accent text on the accent fill, and --c-accent-fg as text (accent is mixed toward white/black; approximate with the mix)

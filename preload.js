@@ -32,6 +32,7 @@ contextBridge.exposeInMainWorld('api', {
   runTweak:           (id, action) => ipcRenderer.invoke('run-tweak', { id, action }),
   getTweakMeta:       (ids)        => ipcRenderer.invoke('get-tweak-meta', ids),
   getHardwareInventory: (opts)       => ipcRenderer.invoke('get-hardware-inventory', opts),
+  getPowerPlan:         ()           => ipcRenderer.invoke('get-power-plan'),
   getGamesRegistry:     (o)          => ipcRenderer.invoke('get-games-registry', o),
   getGameCover:         (id)         => ipcRenderer.invoke('get-game-cover', id),
   listSessions:         ()           => ipcRenderer.invoke('list-sessions'),
