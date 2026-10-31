@@ -807,6 +807,7 @@ LANG.en = {
       motionDefault:'Default',
       motionSmooth:'Smooth',
       motionReduced:'Reduced',
+      twinInspector:'Part details',
       twinOpenGpu:'Open GPU',
       stageTouches:'{n} values',
       stagePartial:'part of it cannot be undone exactly',

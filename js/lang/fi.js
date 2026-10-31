@@ -785,6 +785,7 @@ LANG.fi = {
       motionDefault:'Oletus',
       motionSmooth:'Pehmeä',
       motionReduced:'Vähennetty',
+      twinInspector:'Osan tiedot',
       twinOpenGpu:'Avaa GPU',
       stageTouches:'{n} arvoa',
       stagePartial:'osaa ei voi kumota täsmälleen',

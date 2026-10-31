@@ -250,7 +250,7 @@
         g.mat.emissive.copy(g.color); g.mat.emissiveIntensity = g.level * (quality === 'full' ? 1.6 : 1.1)
       }
       if (state) syncFans(state.caseFans)
-      fansCache.forEach((f, i) => { const lv = state && state.caseFans[i]; if (lv != null) f.g.userData.spin.rotation.z -= dt * (1 + lv * 14) })
+      fansCache.forEach((f, i) => { const lv = state && state.caseFans[i]; if (lv != null && !reducedMotion()) f.g.userData.spin.rotation.z -= dt * (1 + lv * 14) })
       if (state && state.pump) { /* the pump has no moving part to show; its RPM only appears in the inspector */ }
     }
 
@@ -285,8 +285,9 @@
       const wp = new T.Vector3(); e.group.getWorldPosition(wp)
       camTarget = [wp.x, wp.y, wp.z, FOCUS_DIST[id] || FOCUS_DIST[e.p.kind] || 8, 0.3, 0.12]
     }
+    const reducedMotion = () => document.body.classList.contains('motion-reduced') || (root.matchMedia && root.matchMedia('(prefers-reduced-motion: reduce)').matches)
     function stepCamera(dt) {
-      Mo().springStep(cam, [camTarget[0], camTarget[1], camTarget[2], camTarget[3], camTarget[4] + user.yaw, camTarget[5] + user.pitch], dt, 9)
+      Mo().springStep(cam, [camTarget[0], camTarget[1], camTarget[2], camTarget[3], camTarget[4] + user.yaw, camTarget[5] + user.pitch], dt, reducedMotion() ? 80 : 9)
       const [lx, ly, lz, dist, yaw, pitch] = cam.x
       camera.position.set(lx + Math.sin(yaw) * Math.cos(pitch) * dist, ly + Math.sin(pitch) * dist, lz + Math.cos(yaw) * Math.cos(pitch) * dist)
       camera.lookAt(lx, ly, lz)

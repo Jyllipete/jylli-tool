@@ -931,3 +931,10 @@
 
 .j-region-focus { outline: 2px solid var(--c-accent); outline-offset: -2px; }
 ::view-transition-group(part-gpu) { animation-duration: calc(240ms * var(--motion-scale)); animation-timing-function: var(--ease-out); }
+
+#j-sidebar:focus-visible, #page-content:focus-visible, #stage-dock:focus-visible, #j-statusbar:focus-visible { outline: 2px solid var(--c-accent); outline-offset: -2px; }
+.j-journal-entry-row { display: flex; align-items: flex-start; gap: 8px; }
+.j-journal-entry-row .j-journal-entry { flex: 1; min-width: 0; }
+.j-twin-svg .j-twin-part { stroke: rgba(255,255,255,0.55); }
+.j-twin-svg .j-twin-decor { stroke: rgba(255,255,255,0.32); }
+.j-twin-svg .j-twin-ghost { stroke: rgba(255,255,255,0.5); }

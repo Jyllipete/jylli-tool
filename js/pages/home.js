@@ -28,7 +28,7 @@ function buildDashboard(c) {
     <div class="j-twin-stage" id="home-twin-stage">
       <div class="j-twin-slot" id="home-twin-slot" data-twin-view="rig:home"></div>
       <div class="j-twin-hint" id="twin-hint">${tUI('twinHint')}</div>
-      <div class="j-twin-inspector" id="twin-inspector" role="region" aria-live="polite" hidden></div>
+      <div class="j-twin-inspector" id="twin-inspector" role="region" aria-label="${tUI('twinInspector')}" aria-live="polite" hidden></div>
       <ul class="j-twin-parts" id="twin-parts" aria-label="${tUI('twinPartsList')}"></ul>
     </div>
     <div class="j-home-hero-side">
