@@ -47,7 +47,7 @@ async function gpuPowerLimitRender(box) {
     <div class="j-muted j-gpu-pl-scale"><span>${st.min} W</span><span>${tUI('plDefault')}: ${st.default} W</span><span>${st.max} W</span></div>
     ${st.needsAdmin ? ui.callout(html`${tUI('plNeedsAdmin')} <a href="#" onclick="api.relaunchAdmin();return false">${tUI('dashRelaunchAdmin')}</a>`, 'warn') : ''}
     <div class="j-hstack">
-      ${ui.button({ id: 'pl-apply', label: tUI('plApply'), variant: 'primary', size: 'sm', onclick: 'gpuPowerLimitApply()' })}
+      ${ui.button({ id: 'pl-apply', label: tUI('plApply'), size: 'sm', onclick: 'gpuPowerLimitApply()' })}
       ${ui.button({ id: 'pl-reset', label: tUI('plReset'), size: 'sm', onclick: 'gpuPowerLimitReset()' })}
       ${ui.badge(changed ? tUI('plCustom') : tUI('plStock'), changed ? 'accent' : 'neutral')}
     </div>

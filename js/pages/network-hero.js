@@ -12,7 +12,7 @@ function buildNetworkHero(c) {
     <div class="j-net-side">
       <div class="j-net-id" id="net-id" aria-live="polite">${ui.callout(tUI('netHeroChecking'), 'info')}</div>
       <div class="j-net-speed">
-        <div class="j-hstack"><b>${tUI('netSpeedTitle')}</b><span class="j-grow"></span>${ui.button({ id: 'net-speed-btn', label: tUI('netSpeedRun'), icon: 'gauge-high', variant: 'primary', size: 'sm', onclick: 'netSpeedRun()' })}</div>
+        <div class="j-hstack"><b>${tUI('netSpeedTitle')}</b><span class="j-grow"></span>${ui.button({ id: 'net-speed-btn', label: tUI('netSpeedRun'), icon: 'gauge-high', size: 'sm', onclick: 'netSpeedRun()' })}</div>
         <p class="j-muted j-settings-hint">${tUI('netSpeedNote')}</p>
         <div class="j-net-speed-grid" id="net-speed-grid">${['netDown', 'netUp', 'netLatency', 'netJitter'].map(k => html`<div><div class="j-stat-label">${tUI(k)}</div><div class="j-gpu-val j-num" data-nsv="${k}">—</div></div>`)}</div>
         <div class="j-muted" id="net-speed-meta"></div>
