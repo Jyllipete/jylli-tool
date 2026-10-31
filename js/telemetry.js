@@ -68,14 +68,15 @@
   }
 
   // ── Runtime ─────────────────────────────────────────────────────────────────────────────────────────────
-  const state = { snap: null, caps: {}, shown: {}, subscribed: false, off: null }
+  const state = { snap: null, override: null, caps: {}, shown: {}, subscribed: false, off: null }
 
   function applyToDom() {
-    if (typeof document === 'undefined' || !state.snap) return
+    const snap = state.override || state.snap
+    if (typeof document === 'undefined' || !snap) return
     const t = (typeof tUI === 'function') ? tUI : k => k
     for (const el of document.querySelectorAll('[data-metric]')) {
       const key = el.getAttribute('data-metric')
-      const r = fmt(key, state.snap.s[key], state.caps[key], t, state.shown[key])
+      const r = fmt(key, snap.s[key], state.caps[key], t, state.shown[key])
       if (r.ok) state.shown[key] = Number(r.text)
       const text = r.ok ? `${r.text}${r.unit ? (r.unit === '%' || r.unit === '°C' ? '' : ' ') + r.unit : ''}` : r.text
       if (el.textContent !== text) el.textContent = text
@@ -113,7 +114,10 @@
   }
   function value(key) { const e = state.snap && state.snap.s[key]; return e && e[0] != null ? e[0] : null }
 
-  const api = { fmt, ease, hysteresis, unitOf, fmtBytes, start, stop, explain, value, applyToDom, state }
+  /** Replay: show a recorded snapshot instead of the live one (null returns to live). */
+  function setOverride(snap) { state.override = snap || null; applyToDom() }
+
+  const api = { fmt, ease, hysteresis, unitOf, fmtBytes, start, stop, explain, value, applyToDom, state, setOverride }
   root.JylliTelemetry = api
   if (typeof module !== 'undefined' && module.exports) module.exports = api
 })(typeof window !== 'undefined' ? window : globalThis)

@@ -187,7 +187,7 @@
     const dt = (now - H.lastFrame) / 1000
     if (!H.probe && dt < 1 / fps - 0.002) return   // uncapped while probing so the intervals show what the GPU can do
     H.lastFrame = now
-    const snap = root.JylliTelemetry && root.JylliTelemetry.state.snap
+    const snap = root.JylliTelemetry && (root.JylliTelemetry.state.override || root.JylliTelemetry.state.snap)
     if (snap && snap.seq !== H.lastSeq) { H.lastSeq = snap.seq; H.visual = Map_().visualState(snap); H.engine.setState(H.visual) }
     H.engine.render(Math.min(dt, 0.1))
     if (H.probe) {

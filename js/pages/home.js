@@ -83,6 +83,8 @@ function buildDashboard(c) {
     </div>
   </div>`)
 
+  buildGameCarousel(c)
+
   // Temperatures
   const temp = (w, labelKey) => html`<section class="j-card temp-panel" id="panel-${w}-temp">
     <div class="j-card-head"><h3 class="j-card-title">${tUI(labelKey)}</h3><span class="temp-value j-num" id="db-${w}-temp">—</span></div>

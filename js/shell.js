@@ -11,7 +11,7 @@
   const SECTION_SUB_KEYS = { home: 'navHomeSub', optimize: 'navOptimizeSub', gaming: 'navGamingSub', clean: 'navCleanSub', system: 'navSystemSub', settings: 'navSettingsSub' }
   const TAB_KEYS = {
     windows: 'tabWindows', cpumem: 'tabCPUMem', gpu: 'tabGPU', power: 'tabPower', network: 'tabNetwork', fixes: 'tabFixes',
-    pulse: 'tabPulse', games: 'tabGames', apps: 'tabApps', fivem: 'tabFiveM', latency: 'tabLatency',
+    pulse: 'tabPulse', games: 'tabGames', apps: 'tabApps', fivem: 'tabFiveM', latency: 'tabLatency', replay: 'tabReplay',
     cleanup: 'tabCleanup', debloat: 'tabDebloater', startup: 'tabStartup',
     diagnostics: 'tabDiagnostics', processes: 'tabProcesses', bios: 'tabBios', scheduler: 'tabScheduler', restore: 'tabRestore', history: 'tabHistory',
   }
@@ -38,6 +38,7 @@
     apps: c => buildAppOptimizer(c),
     fivem: c => buildFiveM(c),
     latency: c => buildLatencyMonitor(c),
+    replay: c => { _pageCleanupFns['replay'] = replayClose; return buildReplay(c) },
     cleanup: c => buildCleanup(c),
     debloat: c => buildDebloater(c),
     startup: c => buildStartupManager(c),

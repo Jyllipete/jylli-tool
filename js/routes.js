@@ -20,6 +20,7 @@
       { id: 'apps', page: 'app-optimizer' },
       { id: 'fivem', page: 'fivem' },
       { id: 'latency', page: 'latency-monitor' },
+      { id: 'replay', page: 'replay' },
     ] },
     { id: 'clean', icon: 'broom', tabs: [
       { id: 'cleanup', page: 'cleanup' },
