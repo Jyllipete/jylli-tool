@@ -1255,8 +1255,7 @@ if (process.argv.includes('--perf-log')) {
   app.whenReady().then(() => setInterval(() => {
     try {
       const m = app.getAppMetrics().map(p => ({ type: p.type, cpu: +p.cpu.percentCPUUsage.toFixed(2), memMB: Math.round((p.memory.workingSetSize || 0) / 1024) }))
-      fs.appendFileSync(path.join(app.getPath('userData'), 'perf.log'), JSON.stringify({ t: new Date().toISOString(), procs: m }) + '
-')
+      fs.appendFileSync(path.join(app.getPath('userData'), 'perf.log'), JSON.stringify({ t: new Date().toISOString(), procs: m }) + '\n')
     } catch {}
   }, 5000))
 }
