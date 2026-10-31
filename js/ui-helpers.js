@@ -285,8 +285,11 @@ async function submitBugReport() {
 // ─── Undo last tweak ─────────────────────────────────────────────────────────
 let _lastAppliedTweak = null
 let _undoTimer = null
-function showUndoSnackbar(id, name) {
+let _lastJournalId = null
+function showUndoSnackbar(id, name, journalId) {
   _lastAppliedTweak = id
+  _lastJournalId = journalId || null
+  window._journalUndoTarget = journalId ? { entryId: journalId } : null
   const bar = document.getElementById('undo-snackbar')
   const label = document.getElementById('undo-snackbar-label')
   if (!bar) return
@@ -299,7 +302,25 @@ function hideUndoSnackbar() {
   document.getElementById('undo-snackbar')?.classList.remove('visible')
   clearTimeout(_undoTimer)
 }
+// Undo goes through the change journal when the apply was recorded (it writes the real before-values back and asks first if
+// something changed since); otherwise it falls back to the tweak's own Restore.
 async function undoLastTweak() {
+  const target = window._journalUndoTarget
+  if (target) {
+    hideUndoSnackbar()
+    window._journalUndoTarget = null
+    let res = await api.journalUndo({ target })
+    if (res && res.conflict) {
+      let ok = false
+      try { await showConfirm({ title: tUI('undoConflictTitle'), body: escHtml(tUI('undoConflictBody')), okText: tUI('undoOverwrite'), okStyle: 'warning' }); ok = true } catch {}
+      if (ok) res = await api.journalUndo({ target, force: true })
+      else return
+    }
+    if (res && res.ok) { try { JylliSound.play('undo') } catch {} toast(tUI('undoDone'), '', 'ok'); try { invalidatePageCache(currentPage); showPage(currentPage) } catch {} }
+    else toast(tUI('undoFailed'), '', 'err')
+    _lastAppliedTweak = null
+    return
+  }
   if (!_lastAppliedTweak) return
   hideUndoSnackbar()
   await applyTweak(_lastAppliedTweak, 'restore')

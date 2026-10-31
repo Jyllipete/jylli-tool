@@ -2300,8 +2300,9 @@ ipcMain.handle('run-tweak', async (_, req) => {
 
   if (!hasTweak(id, action)) return { ok: false, error: 'unknown_tweak_or_action' }
   try {
-    const result = await invokeTweak(id, action, send)
-    return { ok: true, result }
+    let entry = null
+    const result = await invokeTweak(id, action, send, { onEntry: e => { entry = e } })
+    return { ok: true, result, journalId: entry ? entry.id : null, fidelity: entry ? entry.fidelity : 'intent' }
   } catch (e) {
     send(`Error in ${id}: ${e.message}`, 'err')
     return { ok: false, error: e.message }

@@ -266,6 +266,7 @@ function twinInit() {
   let tries = 0
   const t = setInterval(() => { if (wire() || ++tries > 20) clearInterval(t) }, 250)
   JylliTwin.on('select', id => twinInspect(id))
+  JylliTwin.on('assemble', () => { try { JylliSound.play('click') } catch {} })
   if (!settings.assemblyDone) twinFirstRun(slot)
   document.getElementById('home-twin-stage')?.addEventListener('keydown', e => { if (e.key === 'Escape') JylliTwin.back() })
 }

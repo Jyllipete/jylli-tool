@@ -873,3 +873,23 @@
 
 .j-twin-assembly { position: absolute; left: 12px; right: 12px; bottom: 10px; display: flex; align-items: center; gap: 10px; padding: 8px 10px; background: rgba(14,14,18,0.86); border: 1px solid var(--twin-line); border-radius: var(--r-md); font-size: var(--fs-2); color: var(--twin-text); }
 .j-twin-assembly > span { flex: 1; min-width: 0; }
+
+/* ═══ Stage dock + review sheet (js/stage.js) ═══ */
+.j-stage-dock { display: flex; align-items: center; gap: 8px; padding: 8px 16px; background: var(--surface-1); border-top: 1px solid var(--hairline-strong); font-size: var(--fs-2); flex: none; }
+.j-stage-dock[hidden] { display: none; }
+.j-stage-count { color: var(--c-text-secondary); }
+.j-stage-dock .j-btn-primary { box-shadow: 0 0 0 1px color-mix(in oklab, var(--c-accent) 60%, transparent), 0 0 18px color-mix(in oklab, var(--c-accent) 35%, transparent); }   /* the one primary action of the view: the only glow on chrome */
+.j-stage-list { max-height: 50vh; overflow-y: auto; margin: 10px 0; }
+.j-stage-row { display: flex; justify-content: space-between; gap: 12px; padding: 8px 0; border-top: 1px solid var(--hairline); }
+.j-stage-name { display: flex; gap: 8px; align-items: center; }
+.tweak-badge.staged { color: var(--c-accent-fg); }
+
+/* ═══ History > Journal (js/journal-view.js) ═══ */
+.j-journal-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 10px; font-size: var(--fs-2); }
+.j-journal-session { margin-bottom: 14px; }
+.j-journal-session-head, .j-journal-batch-head { display: flex; align-items: center; gap: 10px; padding: 6px 0; }
+.j-journal-batch { margin: 0 0 8px 12px; padding-left: 12px; border-left: 1px solid var(--hairline-strong); }
+.j-journal-entry summary { display: flex; align-items: center; gap: 8px; padding: 5px 0; cursor: pointer; font-size: var(--fs-3); list-style: none; }
+.j-journal-entry summary > :first-child { flex: 1; min-width: 0; }
+.j-journal-diff { display: flex; justify-content: space-between; gap: 12px; padding: 3px 0 3px 12px; font-size: var(--fs-2); color: var(--c-text-secondary); border-top: 1px solid var(--hairline); }
+.j-journal-empty { padding: 18px 0; }

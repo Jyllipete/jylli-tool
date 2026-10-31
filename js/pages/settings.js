@@ -38,6 +38,7 @@ function buildSettings(c) {
         row(tUI('settingsStartup'), tUI('settingsStartupDesc'), sw('settings-startup-check', 'settingsToggleStartup(this.checked)', tUI('settingsStartup'))),
         row(tUI('settingsAdvanced'), tUI('settingsAdvancedDesc'), html`<span id="settings-adv-pill">${sw('settings-adv-check', 'toggleAdvancedMode()', tUI('settingsAdvanced'))}</span>`),
         row(tUI('settingsDiscordRpc'), tUI('settingsDiscordRpcDesc'), sw('settings-rpc-check', 'settingsToggleDiscordRpc(this.checked)', tUI('settingsDiscordRpc'))),
+        row(tUI('applyMode'), tUI('applyModeDesc'), html`<div class="j-seg">${['immediate', 'review'].map(v => html`<button type="button" data-applymode="${v}" class="${ui.cls('j-seg-item', (settings.applyMode || 'immediate') === v && 'j-seg-active')}" onclick="settingsSetApplyMode('${v}')">${tUI('applyMode_' + v)}</button>`)}</div>`),
         row(tUI('settingsUiSounds'), tUI('settingsUiSoundsDesc'), sw('settings-sounds-check', 'settingsToggleUiSounds(this.checked)', tUI('settingsUiSounds'))),
       ])}`)}
 
@@ -223,4 +224,11 @@ function settingsVisuals3dStatus() {
   if (!el || !window.JylliTwin) return
   const why = { 'off-by-setting': 'twinWhyOff', 'webgl-unavailable': 'twinWhyWebgl', 'software-renderer': 'twinWhySoftware', 'too-slow': 'twinWhySlow', 'bundle-missing': 'twinWhyBundle', 'context-lost': 'twinWhyLost', 'quality-static': 'twinWhyOff' }
   el.textContent = JylliTwin.state === 'live' ? '· ' + tUI('twinStateLive') + ' (' + JylliTwin.quality + ')' : JylliTwin.state === 'static' ? '· ' + tUI(why[JylliTwin.reason] || 'twinWhyOff') : ''
+}
+
+function settingsSetApplyMode(v) {
+  settings.applyMode = v === 'review' ? 'review' : 'immediate'
+  api.saveSettings(settings)
+  document.querySelectorAll('[data-applymode]').forEach(b => b.classList.toggle('j-seg-active', b.dataset.applymode === settings.applyMode))
+  if (settings.applyMode === 'immediate' && window.JylliStage && JylliStage.count) JylliStage.discard()
 }

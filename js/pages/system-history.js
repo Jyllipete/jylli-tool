@@ -4,6 +4,11 @@ function buildChangelog(c) {
   const { html } = ui
   c.innerHTML = String(html`
     ${ui.card({
+      title: tUI('journalTitle'),
+      sub: tUI('journalSub'),
+      body: html`<div id="journal-box" class="j-journal">${ui.empty({ icon: 'clock-rotate-left', title: tUI('historyLoading') })}</div>`,
+    })}
+    ${ui.card({
       title: tUI('historyTitle'),
       sub: tUI('historySubtitle'),
       actions: html`<span id="cl-count" class="j-muted"></span>${ui.button({ label: tUI('historyRefresh'), icon: 'arrows-rotate', size: 'sm', onclick: 'loadChangelogPage()' })}${ui.button({ label: tUI('historyClear'), icon: 'trash', size: 'sm', variant: 'danger', onclick: 'doClearChangelog()' })}`,
@@ -12,6 +17,7 @@ function buildChangelog(c) {
     })}`)
   c.appendChild(makeTip(`${tUI('historyStoragePath')}: %APPDATA%\petes-tweaking-utility\ptu_changelog.json`, 'info'))
   loadChangelogPage()
+  try { JylliJournalView.render(document.getElementById('journal-box')) } catch {}
 }
 
 async function loadChangelogPage() {
