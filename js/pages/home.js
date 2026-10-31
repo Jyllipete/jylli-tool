@@ -266,6 +266,7 @@ function twinInit() {
   let tries = 0
   const t = setInterval(() => { if (wire() || ++tries > 20) clearInterval(t) }, 250)
   JylliTwin.on('select', id => twinInspect(id))
+  if (!settings.assemblyDone) twinFirstRun(slot)
   document.getElementById('home-twin-stage')?.addEventListener('keydown', e => { if (e.key === 'Escape') JylliTwin.back() })
 }
 
@@ -307,4 +308,25 @@ async function twinDeclare(kind) {
   await api.setDeclaredRig({ cooler: kind })
   await JylliTwin.setRigDeclared()
   JylliTwin.back()
+}
+
+// First run: the rig assembles itself from what was detected, then offers Auto-Optimize. It never runs anything by itself.
+function twinFirstRun(slot) {
+  let tries = 0
+  const wait = setInterval(async () => {
+    if (JylliTwin.state === 'live') {
+      clearInterval(wait)
+      const stage = document.getElementById('home-twin-stage')
+      if (!stage) return
+      const bar = document.createElement('div')
+      bar.className = 'j-twin-assembly'
+      bar.innerHTML = `<span>${escHtml(tUI('twinAssembling'))}</span><button type="button" class="j-btn j-btn-ghost j-btn-sm" id="twin-skip">${escHtml(tUI('twinSkip'))}</button>`
+      stage.appendChild(bar)
+      document.getElementById('twin-skip').onclick = () => JylliTwin.skipAssembly()
+      await JylliTwin.assemble({ reduced: document.body.classList.contains('motion-reduced') || matchMedia('(prefers-reduced-motion: reduce)').matches })
+      settings.assemblyDone = true; api.saveSettings(settings)
+      bar.innerHTML = `<span>${escHtml(tUI('twinAssembled'))}</span><button type="button" class="j-btn j-btn-primary j-btn-sm" onclick="runAutoOpti()">${escHtml(tUI('dashAutoOptimize'))}</button><button type="button" class="j-btn j-btn-ghost j-btn-sm" id="twin-assembly-close">${escHtml(tUI('close'))}</button>`
+      document.getElementById('twin-assembly-close').onclick = () => bar.remove()
+    } else if (JylliTwin.state === 'static' || ++tries > 40) { clearInterval(wait); settings.assemblyDone = true; api.saveSettings(settings) }
+  }, 300)
 }

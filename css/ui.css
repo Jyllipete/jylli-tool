@@ -870,3 +870,6 @@
 .j-twin-parts:focus-within, .j-twin-parts:hover { opacity: 1; }
 .j-metric-na { color: var(--twin-text-dim); }
 @media (max-width: 1100px) { #page-content .j-home-hero-twin { grid-template-columns: 1fr; } .j-twin-stage { min-height: 260px; border-right: 0; border-bottom: 1px solid var(--twin-line); } }
+
+.j-twin-assembly { position: absolute; left: 12px; right: 12px; bottom: 10px; display: flex; align-items: center; gap: 10px; padding: 8px 10px; background: rgba(14,14,18,0.86); border: 1px solid var(--twin-line); border-radius: var(--r-md); font-size: var(--fs-2); color: var(--twin-text); }
+.j-twin-assembly > span { flex: 1; min-width: 0; }

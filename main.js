@@ -1488,7 +1488,8 @@ function saveSettings(data) {
 // ─── System Info Detection ────────────────────────────────────────────────────
 function emitSpecProgress(label, detail = '') {
   startupTrace(`emitSpecProgress: "${label}" / "${detail}"`)
-  mainWindow?.webContents.send('spec-progress', { label, detail })
+  const st = [[/^CPU detected/, 'cpu'], [/^RAM detected/, 'ram'], [/^GPU detected/, 'gpu'], [/^Storage detected/, 'disk'], [/^Network detected/, 'net'], [/^Done/, 'board']].find(([rx]) => rx.test(label))
+  mainWindow?.webContents.send('spec-progress', { label, detail, ...(st ? { stage: st[1], done: true } : {}) })
 }
 
 async function detectSystemInfo() {

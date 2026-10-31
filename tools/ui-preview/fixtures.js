@@ -47,6 +47,19 @@ function respond(name, args, ctx) {
     case 'getAppVersion': return '1.6.0'
     case 'getBootTime': return now - 93600000
     case 'getSystemInfo': return sysInfo
+    // 3.0: hardware inventory and telemetry. sensors: 'full' | 'partial' (default: no CPU temperature, no fans) | 'none'
+    case 'getHardwareInventory': return { ok: true, rig: require('../../lib/inventory').buildRigSpec(require('../../test/fixtures/sensors/inventory-raw-desktop.json')), detectedAt: now }
+    case 'setDeclaredRig': return { ok: true, rig: require('../../lib/inventory').buildRigSpec(require('../../test/fixtures/sensors/inventory-raw-desktop.json'), args[0] || {}) }
+    case 'telemetrySubscribe': return { ok: true, snapshot: { v: 1, seq: 1, t: now, s: {} } }
+    case 'telemetryUnsubscribe': return { ok: true }
+    case 'telemetryCapabilities': {
+      const mode = ctx.sensors || 'partial'
+      const cap = (available, extra) => available ? { available: true, source: 'os', detail: 'fixture', rateHz: 1, ...extra } : { available: false, reason: 'needs-driver' }
+      const on = mode !== 'none'
+      return { capabilities: { 'cpu.load': cap(on), 'cpu.temp.package': cap(mode === 'full'), 'gpu0.load': cap(on), 'gpu0.temp.core': cap(on), 'gpu0.fan.rpm': cap(mode === 'full'), 'net.rx': cap(on) }, context: { sensorRunning: mode === 'full' } }
+    }
+    case 'getTweakMeta': return []
+    case 'journalList': return []
     case 'isAdmin': case 'checkIsAdmin': return true
     case 'relaunchAdmin': return { ok: true }
     case 'getMetrics': return metrics(Date.now() / 3000)

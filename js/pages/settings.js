@@ -49,6 +49,7 @@ function buildSettings(c) {
         row(tUI('settingsCustomAccent'), tUI('settingsAccentHint'), html`<div class="tc-accent-row" id="accent-row"><div class="tc-accent-swatch-wrap" id="accent-swatch-wrap"><div class="tc-accent-swatch-circle" id="accent-swatch-circle"></div><input type="color" id="accent-color-picker"></div>${ui.button({ label: tUI('settingsReset'), size: 'sm', onclick: 'resetAccentColor()' })}</div>`),
         row(tUI('colorScheme'), tUI('colorSchemeDesc'), html`<div class="j-seg">${['system', 'dark', 'light'].map(v => html`<button type="button" data-scheme="${v}" class="${ui.cls('j-seg-item', (settings.colorScheme || 'dark') === v && 'j-seg-active')}" onclick="settingsSetScheme('${v}')">${tUI('scheme' + v.charAt(0).toUpperCase() + v.slice(1))}</button>`)}</div>`),
         row(tUI('motionMode'), tUI('motionModeDesc'), html`<div class="j-seg">${motionBtns}</div>`),
+        row(tUI('visuals3d'), html`${tUI('visuals3dDesc')} <span id="visuals3d-status" class="j-muted"></span>`, html`<div class="j-seg">${['auto', 'full', 'reduced', 'off'].map(v => html`<button type="button" data-v3d="${v}" class="${ui.cls('j-seg-item', (settings.visuals3d || 'auto') === v && 'j-seg-active')}" onclick="settingsSetVisuals3d('${v}')">${tUI('visuals3d_' + v)}</button>`)}</div>`),
       ])}`)}
 
     ${section('gaming', 'settingsCatGaming', html`
@@ -86,6 +87,7 @@ function buildSettings(c) {
   </div>`
   c.innerHTML = String(out)
   settingsRenderSensors(c)
+  settingsVisuals3dStatus()
 
   // Theme presets: swatch cards (preview on hover, apply on click)
   const grid = c.querySelector('#theme-grid')
@@ -207,4 +209,18 @@ async function settingsRenderSensors(c) {
     return ui.row({ title: tUI('sensorKey_' + key), sub, control: ui.badge(cap.available ? tUI('sensorsOk') : tUI('metricNA'), cap.available ? 'success' : 'neutral') })
   })
   box.innerHTML = String(ui.group('', rows))
+}
+
+function settingsSetVisuals3d(v) {
+  settings.visuals3d = ['auto', 'full', 'reduced', 'off'].includes(v) ? v : 'auto'
+  api.saveSettings(settings)
+  document.querySelectorAll('[data-v3d]').forEach(b => b.classList.toggle('j-seg-active', b.dataset.v3d === settings.visuals3d))
+  try { JylliTwin.applySetting() } catch {}
+  settingsVisuals3dStatus()
+}
+function settingsVisuals3dStatus() {
+  const el = document.getElementById('visuals3d-status')
+  if (!el || !window.JylliTwin) return
+  const why = { 'off-by-setting': 'twinWhyOff', 'webgl-unavailable': 'twinWhyWebgl', 'software-renderer': 'twinWhySoftware', 'too-slow': 'twinWhySlow', 'bundle-missing': 'twinWhyBundle', 'context-lost': 'twinWhyLost', 'quality-static': 'twinWhyOff' }
+  el.textContent = JylliTwin.state === 'live' ? '· ' + tUI('twinStateLive') + ' (' + JylliTwin.quality + ')' : JylliTwin.state === 'static' ? '· ' + tUI(why[JylliTwin.reason] || 'twinWhyOff') : ''
 }

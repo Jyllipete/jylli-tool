@@ -73,5 +73,20 @@ else {
   }
 }
 
+// 3. No hardware vendor/model literals in pages or the twin: every hardware name on screen comes from detection.
+// Lines that only strip a brand prefix from a detected string (.replace) are fine.
+{
+  const rx = /\b(RTX|GTX|Ryzen|Radeon|GeForce|Humax|I225|Realtek|Core i[3579]|Threadripper|Xeon)\b/
+  for (const d of ['js/twin', 'js/pages']) {
+    const dir = path.join(__dirname, '..', d)
+    if (!fs.existsSync(dir)) continue
+    for (const f of fs.readdirSync(dir).filter(n => n.endsWith('.js'))) {
+      fs.readFileSync(path.join(dir, f), 'utf8').split(/\r?\n/).forEach((line, i) => {
+        if (rx.test(line) && !/\.replace\(/.test(line)) fail(`${d}/${f}:${i + 1} hardware name literal: ${line.trim().slice(0, 80)}`)
+      })
+    }
+  }
+}
+
 console.log(failures ? `\n${failures} failure(s)` : '✔ ui checks ok')
 process.exit(failures ? 1 : 0)

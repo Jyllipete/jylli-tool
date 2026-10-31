@@ -27,7 +27,7 @@ const dom = new JSDOM(fs.readFileSync(ROOT + 'index.html', 'utf8'), {
     Object.defineProperty(w, 'localStorage', { value: ls }); Object.defineProperty(w, 'sessionStorage', { value: ls })
     w.api = api
     w.matchMedia = w.matchMedia || (() => ({ matches: false, addListener() {}, removeListener() {}, addEventListener() {}, removeEventListener() {} }))
-    w.HTMLCanvasElement.prototype.getContext = () => new Proxy({}, { get: (t, p) => (p === 'canvas' ? {} : () => ({ addColorStop() {}, width: 0 })), set: () => true })
+    w.HTMLCanvasElement.prototype.getContext = (kind) => /webgl/i.test(String(kind)) ? null : new Proxy({}, { get: (t, p) => (p === 'canvas' ? {} : () => ({ addColorStop() {}, width: 0 })), set: () => true })
     w.ResizeObserver = class { observe() {} disconnect() {} unobserve() {} }
     w.IntersectionObserver = class { observe() {} disconnect() {} unobserve() {} }
     w.scrollTo = () => {}; w.Element.prototype.scrollTo = () => {}; w.Element.prototype.scrollIntoView = () => {}

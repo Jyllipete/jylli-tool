@@ -42,6 +42,19 @@
     return H.rig
   }
 
+  /** Cheap probe before the 700 KB bundle is fetched: no hardware WebGL (or only software rendering) means the silhouette stays. */
+  function webglAvailable() {
+    try {
+      const c = document.createElement('canvas')
+      const gl = c.getContext('webgl2', { failIfMajorPerformanceCaveat: true }) || c.getContext('webgl', { failIfMajorPerformanceCaveat: true })
+      if (!gl) return false
+      const ext = gl.getExtension('WEBGL_debug_renderer_info')
+      H.rendererName = ext ? gl.getParameter(ext.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER)
+      const lose = gl.getExtension('WEBGL_lose_context'); if (lose) lose.loseContext()
+      return true
+    } catch { return false }
+  }
+
   function loadBundle() {
     if (root.THREE && root.THREE.Addons) return Promise.resolve(true)
     if (H.bundlePromise) return H.bundlePromise
@@ -77,6 +90,8 @@
     const idle = root.requestIdleCallback || (cb => setTimeout(cb, 120))
     idle(async () => {
       if (H.slot !== slot) return
+      if (!webglAvailable()) { H.state = 'static'; H.reason = 'webgl-unavailable'; return }
+      if (Mo().isSoftwareRenderer(H.rendererName)) { H.state = 'static'; H.reason = 'software-renderer'; return }
       const ok = await loadBundle()
       if (!ok) { H.state = 'static'; H.reason = 'bundle-missing'; return }
       if (H.slot !== slot) return
@@ -209,6 +224,28 @@
     cv.addEventListener('pointerleave', () => { if (!H.drag && H.engine) { H.engine.setHover(null); emit('hover', null) } })
   }
 
+  // ── assembly: parts appear one by one, from what detection actually found; skippable, never longer than ~6 s ──
+  const STAGE_OF = id => id === 'cpu' || id === 'cooler' ? 'cpu' : id.startsWith('ram') ? 'ram' : id === 'gpu' || id === 'gpu-laptop' ? 'gpu' : id.startsWith('drive') ? 'disk' : 'board'
+  const ORDER = ['board', 'cpu', 'ram', 'gpu', 'disk']
+  /** Returns a promise that resolves when assembly ends (finished or skipped). Without live 3D it resolves at once. */
+  function assemble({ reduced = false } = {}) {
+    return new Promise(resolve => {
+      const eng = H.engine
+      if (!eng || H.state !== 'live' || reduced) { resolve('skipped'); return }
+      const shown = new Map()
+      const all = eng.partIds()
+      const set = stage => { all.forEach(id => { if (STAGE_OF(id) === stage) shown.set(id, true) }); eng.setReveal(new Map(shown)) }
+      eng.setReveal(new Map())
+      let i = 0, done = false
+      const finish = why => { if (done) return; done = true; clearInterval(t); document.removeEventListener('keydown', onKey); eng.setReveal(null); H.assembling = false; resolve(why) }
+      const onKey = e => { if (e.key === 'Escape') finish('skipped') }
+      document.addEventListener('keydown', onKey)
+      H.assembling = true; H.skipAssembly = () => finish('skipped')
+      const t = setInterval(() => { if (i < ORDER.length) { set(ORDER[i]); emit('assemble', ORDER[i]); i++ } else finish('done') }, 850)
+      set(ORDER[i]); emit('assemble', ORDER[i]); i++
+    })
+  }
+
   function select(id) { if (H.engine) H.engine.focus(id); emit('select', id) }
   function back() { if (H.engine) H.engine.focus(null); emit('select', null) }
 
@@ -222,7 +259,7 @@
   async function setRigDeclared() { H.rig = null; H.layout = null; await ensureRig(); if (H.engine) H.engine.build(H.layout); if (H.slot) renderFallback(H.slot) }
 
   root.JylliTwin = {
-    attach, park, select, back, on, partInfo, setRigDeclared,
+    attach, park, select, back, on, partInfo, setRigDeclared, assemble, skipAssembly() { H.skipAssembly && H.skipAssembly() },
     get state() { return H.state }, get reason() { return H.reason }, get quality() { return H.quality }, get rendererName() { return H.rendererName },
     get layout() { return H.layout }, get rig() { return H.rig },
     applySetting() { if (H.slot) { const s = H.slot; park(); teardownEngine(); attach(s) } },

@@ -83,6 +83,7 @@
     const parts = new Map()      // id -> { group, glow:[...], fans:[...], layoutPart }
     const pickables = []
     let layout = null, hoverId = null, focusId = null, fansCache = []
+    let reveal = null      // null = everything shown; else Map(partId -> target 0|1), eased below
 
     function disposeWorld() {
       world.traverse(o => { if (o.geometry) o.geometry.dispose(); if (o.material && !Object.values(mats).includes(o.material) && o.material !== ghostMat) o.material.dispose?.() })
@@ -109,7 +110,7 @@
       layout = lay
       for (const p of lay.parts) {
         const g = new T.Group(); g.position.set(...p.pos); world.add(g)
-        const entry = { group: g, glow: [], fans: [], p }
+        const entry = { group: g, glow: [], fans: [], p, base: p.pos.slice(), r: 1 }
         parts.set(p.id, entry)
         if (p.decor) { buildDecor(p, g); continue }
         if (p.ghost) { g.add(ghostBox(p.size)); const hit = new T.Mesh(new T.BoxGeometry(...p.size), new T.MeshBasicMaterial({ visible: false })); add(g, hit, p.id); continue }
@@ -253,6 +254,19 @@
       if (state && state.pump) { /* the pump has no moving part to show; its RPM only appears in the inspector */ }
     }
 
+    function setReveal(map) { reveal = map; if (!map) for (const e of parts.values()) { e.r = 1; e.group.visible = true; e.group.scale.setScalar(1); e.group.position.set(...e.base) } else for (const e of parts.values()) e.r = 0 }
+    function stepReveal(dt) {
+      if (!reveal) return
+      const k = 1 - Math.exp(-dt / 0.22)
+      for (const [id, e] of parts) {
+        const target = reveal.get(id) ? 1 : 0
+        e.r += (target - e.r) * k
+        e.group.visible = e.r > 0.02
+        e.group.position.set(e.base[0], e.base[1] + (1 - e.r) * 0.9, e.base[2])
+        e.group.scale.setScalar(0.94 + 0.06 * e.r)
+      }
+    }
+
     // ── camera ────────────────────────────────────────────────────────────────────────
     const cam = { x: [0, 0, 0, 0, 0, 0], v: [0, 0, 0, 0, 0, 0] }    // look x/y/z, dist, yaw, pitch
     let camTarget = [0, 0, 0, 14, 0.4, 0.1], user = { yaw: 0, pitch: 0 }, viewName = 'home'
@@ -303,14 +317,14 @@
       if (composer) { composer.setPixelRatio(renderer.getPixelRatio()); composer.setSize(w, h); bloom.resolution.set(w, h) }
     }
     function render(dt) {
-      stepCamera(dt); applyState(dt)
+      stepCamera(dt); stepReveal(dt); applyState(dt)
       if (composer) composer.render(dt); else renderer.render(scene, camera)
     }
     function setAccent(rgb) { accent = rgb; accentColor.setRGB(...rgb); rim.color.setRGB(...rgb); if (scene.background) scene.background.dispose(); scene.background = backdrop(rgb) }
     function dispose() { disposeWorld(); try { composer && composer.dispose?.() } catch {} pmrem.dispose(); envTex.dispose(); renderer.dispose(); renderer.forceContextLoss?.() }
 
     setupComposer()
-    return { domElement: dom, rendererName, build, setState, setView, focus, pick, setHover, resize, render, setAccent, dispose, settled,
+    return { domElement: dom, rendererName, build, setReveal, partIds: () => [...parts.keys()], setState, setView, focus, pick, setHover, resize, render, setAccent, dispose, settled,
       nudge(dyaw, dpitch) { user.yaw = Math.max(-0.5, Math.min(0.5, user.yaw + dyaw)); user.pitch = Math.max(-0.25, Math.min(0.25, user.pitch + dpitch)) },
       release() { user.yaw = user.pitch = 0 }, get focusId() { return focusId }, parts: () => [...parts.keys()] }
   }
