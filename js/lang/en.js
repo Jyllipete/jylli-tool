@@ -865,6 +865,7 @@ LANG.en = {
       netSpeedUsed:'{mb} MB used',
       netSpeedConfirmTitle:'Run the speed test?',
       netSpeedConfirmBody:'The test downloads and uploads data for about 20 seconds and can use up to roughly 250 MB. On a metered or mobile connection you may want to skip it.',
+      netLiveTraffic:'Live traffic', netLiveDown:'down', netLiveUp:'up', netNodeAdapterUnknown:'No active adapter', netNodeRegionPing:'Region ping',
       gpuStripAria:'Live graphics card readings',
       gpuStripPowerPct:'Power of limit',
       gpuStripClockMem:'Memory clock',

@@ -859,6 +859,7 @@
 .j-twin-svg [data-heat="warm"] { stroke: var(--c-warning); }
 .j-twin-svg [data-heat="hot"] { stroke: var(--c-danger); }
 .j-twin-hint { position: absolute; left: 14px; bottom: 12px; font-size: var(--fs-1); color: var(--twin-text-dim); pointer-events: none; }
+.j-twin-assembly ~ .j-twin-hint, .j-twin-stage:has(.j-twin-assembly) .j-twin-hint { opacity: 0; }   /* the assembly/auto-optimize bar sits in the same corner */
 .j-twin-inspector { position: absolute; right: 12px; top: 12px; width: min(250px, calc(100% - 24px)); max-height: calc(100% - 24px); overflow: auto; padding: 12px 14px; background: rgba(14,14,18,0.86); border: 1px solid var(--twin-line); border-radius: var(--r-md); backdrop-filter: blur(6px); font-size: var(--fs-2); }
 .j-twin-inspector[hidden], .j-twin-hint[hidden] { display: none; }
 .j-twin-insp-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
@@ -909,13 +910,20 @@
 @media (max-width: 1100px) { .j-gpu-hero { grid-template-columns: 1fr; } .j-gpu-strip { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 
 /* ═══ Network hero (js/pages/network-hero.js) ═══ */
-.j-net-hero { display: grid; grid-template-columns: minmax(300px, 1.1fr) minmax(300px, 1fr); gap: 0; padding: 0; overflow: hidden; margin-bottom: 14px; }
-.j-net-stage { min-height: 260px; }
+.j-net-hero { display: flex; flex-direction: column; gap: 0; padding: 0; overflow: hidden; margin-bottom: 14px; }
+.j-net-strip { display: flex; align-items: center; gap: 22px; padding: 14px 20px; border-bottom: 1px solid var(--hairline); flex-wrap: wrap; }
+.j-net-live { min-width: 10ch; }
+.j-net-stage { min-height: 420px; }
 .j-net-canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
-.j-net-side { padding: 16px 20px; display: flex; flex-direction: column; gap: 14px; min-width: 0; }
-.j-net-speed-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin: 8px 0; }
+.j-net-labels { position: absolute; inset: 0; pointer-events: none; }
+.j-net-label { position: absolute; display: flex; flex-direction: column; align-items: center; gap: 2px; font-size: var(--fs-2); text-align: center; color: var(--twin-text); text-shadow: 0 1px 3px rgba(0,0,0,.6); white-space: nowrap; }
+.j-net-label span { color: var(--twin-text-dim); font-size: var(--fs-1); }
+.j-net-label:nth-child(1) { left: 16%; bottom: 10px; transform: translateX(-50%); }
+.j-net-label:nth-child(2) { left: 50%; bottom: 10px; transform: translateX(-50%); }
+.j-net-label:nth-child(3) { left: 84%; bottom: 10px; transform: translateX(-50%); }
+.j-net-foot { display: grid; grid-template-columns: minmax(240px, 1fr) minmax(240px, 1.2fr); gap: 20px; padding: 16px 20px; }
 .j-net-hist { margin-top: 6px; }
-@media (max-width: 1100px) { .j-net-hero { grid-template-columns: 1fr; } .j-net-speed-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 900px) { .j-net-foot { grid-template-columns: 1fr; } .j-net-strip { gap: 14px; } }
 
 /* ═══ Game carousel + replay ═══ */
 .j-home-games[hidden] { display: none; }

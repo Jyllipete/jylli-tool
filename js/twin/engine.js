@@ -1,28 +1,35 @@
 'use strict'
-// Three.js scene for the rig. Everything is procedural, built from the layout (js/twin/layout.js) and driven by the visual state
-// (js/twin/mapping.js). Reads window.THREE (js/vendor/three.bundle.js). It never reads telemetry itself and holds no numbers of its
-// own: with no state the rig is neutral. Not unit-tested (needs WebGL); the pure parts it relies on are.
+// Three.js scene for the rig. Everything is procedural, built from the layout (js/twin/layout.js), the model kit (js/twin/kit.js)
+// and driven by the visual state (js/twin/mapping.js). Reads window.THREE (js/vendor/three.bundle.js). It never reads telemetry
+// itself and holds no numbers of its own: with no state the rig is neutral. Not unit-tested (needs WebGL); the pure parts it
+// relies on are. Showcase rule: every part the kit can model is always drawn (case, fans, shrouds); glow, heat tint and fan spin
+// still come only from real readings (js/twin/mapping.js), and undetected hardware stays a ghost.
 ;(function (root) {
   const Mo = () => root.JylliTwinMotion
   const Ma = () => root.JylliTwinMapping
+  const Kit = () => root.JylliTwinKit
 
   const VIEWS = {
     // camera target [x, y, z] and distance for each framing
-    home: { look: [0.2, -0.2, -0.8], dist: 22.5, yaw: 0.4, pitch: 0.1 },
+    home: { look: [0.2, -0.3, -0.6], dist: 25, yaw: 0.46, pitch: 0.14 },
     gpu: { look: [-0.3, -1.4, -0.7], dist: 8.4, yaw: 0.34, pitch: 0.18 },
     laptop: { look: [0, 0, 0], dist: 10.5, yaw: 0.5, pitch: 0.75 },
   }
   const FOCUS_DIST = { gpu: 7.5, cpu: 6.4, cooler: 7.5, ram0: 6.5, board: 11, storage: 7 }
+  const CASE_FAN_ORDER = ['fanFront0', 'fanFront1', 'fanFront2', 'fanRear']
 
   function create({ accent = [0.55, 0.49, 0.96], quality = 'full', preferLowPower = true } = {}) {
     const T = root.THREE
     const A = T.Addons
+    const kit = Kit(); kit.init(T)
     const renderer = new T.WebGLRenderer({ antialias: false, alpha: true, powerPreference: preferLowPower ? 'low-power' : 'high-performance', failIfMajorPerformanceCaveat: true })
     const gl = renderer.getContext()
     const dbg = gl.getExtension('WEBGL_debug_renderer_info')
     const rendererName = dbg ? gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER)
     renderer.toneMapping = T.ACESFilmicToneMapping
-    renderer.toneMappingExposure = 1.4
+    renderer.toneMappingExposure = 1.8
+    renderer.shadowMap.enabled = true
+    renderer.shadowMap.type = T.PCFSoftShadowMap
     renderer.setClearColor(0x000000, 0)
     const dom = renderer.domElement
     dom.className = 'j-twin-canvas'
@@ -33,76 +40,84 @@
     function backdrop(rgb) {
       const c = document.createElement('canvas'); c.width = c.height = 256
       const x = c.getContext('2d'), r = (v, k) => Math.round(v * 255 * k)
-      x.fillStyle = '#08080b'; x.fillRect(0, 0, 256, 256)
-      const g = x.createRadialGradient(108, 160, 4, 108, 160, 190)
-      g.addColorStop(0, 'rgba(' + r(rgb[0], 1) + ',' + r(rgb[1], 1) + ',' + r(rgb[2], 1) + ',0.2)'); g.addColorStop(0.5, 'rgba(16,16,21,0.9)'); g.addColorStop(1, 'rgba(8,8,11,1)')
+      x.fillStyle = '#07070a'; x.fillRect(0, 0, 256, 256)
+      const g = x.createRadialGradient(118, 150, 4, 118, 150, 200)
+      g.addColorStop(0, 'rgba(' + r(rgb[0], 1) + ',' + r(rgb[1], 1) + ',' + r(rgb[2], 1) + ',0.16)'); g.addColorStop(0.55, 'rgba(14,14,19,0.92)'); g.addColorStop(1, 'rgba(7,7,10,1)')
       x.fillStyle = g; x.fillRect(0, 0, 256, 256)
       const t = new T.CanvasTexture(c); t.colorSpace = T.SRGBColorSpace; return t
     }
     scene.background = backdrop(accent)
-    const camera = new T.PerspectiveCamera(32, 1, 0.1, 100)
+    const camera = new T.PerspectiveCamera(30, 1, 0.1, 100)
+
+    const accentColor = new T.Color(...accent)
+    const mats = kit.materials(accentColor)
     const pmrem = new T.PMREMGenerator(renderer)
-    const envTex = pmrem.fromScene(new A.RoomEnvironment(), 0.04).texture
+    const envTex = pmrem.fromScene(kit.studioScene(), 0.035).texture
     scene.environment = envTex
     scene.environmentIntensity = 1.0
-    const key = new T.DirectionalLight(0xffffff, 2.2); key.position.set(4, 8, 10); scene.add(key)
-    scene.add(new T.HemisphereLight(0xb8b8ff, 0x1a1a22, 0.9))
-    const rim = new T.PointLight(new T.Color(...accent), 18, 30, 2); rim.position.set(-6, 3, 4); scene.add(rim)
+    const key = new T.DirectionalLight(0xffffff, 4.8); key.position.set(5, 9, 8); key.castShadow = true
+    key.shadow.mapSize.set(1024, 1024); key.shadow.camera.near = 1; key.shadow.camera.far = 30
+    key.shadow.camera.left = -10; key.shadow.camera.right = 10; key.shadow.camera.top = 10; key.shadow.camera.bottom = -10
+    key.shadow.bias = -0.0015
+    scene.add(key)
+    const fill = new T.DirectionalLight(0xaab0ff, 1.6); fill.position.set(-4, 4, -6); scene.add(fill)
+    const beauty = new T.DirectionalLight(0xffffff, 2.4); beauty.position.set(9, 3, 16); scene.add(beauty)   // camera-side "product shot" fill, keeps the facing panel readable
+    scene.add(new T.HemisphereLight(0xb8b8ff, 0x16161c, 1.1))
+    const rim = new T.PointLight(new T.Color(...accent), 28, 32, 2); rim.position.set(-6.5, 3, 4); scene.add(rim)
 
     let composer = null, bloom = null
     function setupComposer() {
       composer = null; bloom = null
-      if (quality !== 'full') return
-      const rt = new T.WebGLRenderTarget(8, 8, { type: T.HalfFloatType, samples: 4 })
+      if (quality === 'static') return
+      const full = quality === 'full'
+      const rt = new T.WebGLRenderTarget(8, 8, full ? { type: T.HalfFloatType, samples: 4 } : {})
       composer = new A.EffectComposer(renderer, rt)
       composer.addPass(new A.RenderPass(scene, camera))
-      bloom = new A.UnrealBloomPass(new T.Vector2(512, 512), 0.55, 0.5, 0.82)   // threshold .85: only emissive parts bloom
+      bloom = new A.UnrealBloomPass(new T.Vector2(512, 512), 0.5, 0.5, 0.86)   // high threshold: only emissive parts bloom
       composer.addPass(bloom)
+      if (!full) { try { composer.addPass(new A.SMAAPass(8, 8)) } catch {} }
+      if (full) {
+        try {
+          const vign = new A.ShaderPass({
+            uniforms: { tDiffuse: { value: null }, amount: { value: 0.28 } },
+            vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }',
+            fragmentShader: 'uniform sampler2D tDiffuse; uniform float amount; varying vec2 vUv; void main(){ vec4 c = texture2D(tDiffuse, vUv); vec2 d = vUv - 0.5; float v = 1.0 - amount * dot(d,d) * 2.2; gl_FragColor = vec4(c.rgb * v, c.a); }',
+          })
+          composer.addPass(vign)
+        } catch {}
+      }
       composer.addPass(new A.OutputPass())
     }
 
-    // ── materials ───────────────────────────────────────────────────────────────────────
-    const accentColor = new T.Color(...accent)
-    const mats = {
-      metal: new T.MeshStandardMaterial({ color: 0x2a2a33, roughness: 0.38, metalness: 0.8 }),
-      dark: new T.MeshStandardMaterial({ color: 0x101014, roughness: 0.55, metalness: 0.5 }),
-      pcb: new T.MeshStandardMaterial({ color: 0xffffff, map: pcbTexture(T), roughness: 0.8, metalness: 0.25 }),
-      silver: new T.MeshStandardMaterial({ color: 0x3a3a44, roughness: 0.65, metalness: 0.45 }),
-    }
+    // ── glow materials: driven by state every frame; `strength` is a per-part multiplier (hover lifts it) ────────────────────
     const ghostMat = new T.LineDashedMaterial({ color: 0x9a9aa8, dashSize: 0.12, gapSize: 0.1, transparent: true, opacity: 0.45 })
     const glowMats = []   // { mat, base, ... }, driven by state
     function glowMat(strength = 1) {
-      const m = new T.MeshStandardMaterial({ color: 0x060608, roughness: 0.4, metalness: 0.1, emissive: accentColor.clone(), emissiveIntensity: 0.25 })
-      const g = { mat: m, strength, level: 0.25, target: 0.25, color: accentColor.clone() }
+      const m = new T.MeshStandardMaterial({ color: 0x060608, roughness: 0.4, metalness: 0.1, emissive: accentColor.clone(), emissiveIntensity: 0.22 })
+      const g = { mat: m, strength, level: 0.22, target: 0.22, color: accentColor.clone() }
       glowMats.push(g)
       return g
     }
+    const sharedMats = new Set(Object.values(mats))
 
     // ── scene content ─────────────────────────────────────────────────────────────────
     const world = new T.Group(); scene.add(world)
     const parts = new Map()      // id -> { group, glow:[...], fans:[...], layoutPart }
     const pickables = []
-    let layout = null, hoverId = null, focusId = null, fansCache = []
+    let layout = null, hoverId = null, focusId = null, fansCache = [], decorFans = [], gpuFans = []
     let reveal = null      // null = everything shown; else Map(partId -> target 0|1), eased below
 
     function disposeWorld() {
-      world.traverse(o => { if (o.geometry) o.geometry.dispose(); if (o.material && !Object.values(mats).includes(o.material) && o.material !== ghostMat) o.material.dispose?.() })
-      world.clear(); parts.clear(); pickables.length = 0; glowMats.length = 0; fansCache = []
+      world.traverse(o => {
+        if (o.geometry) o.geometry.dispose()
+        if (o.material && !sharedMats.has(o.material) && o.material !== ghostMat) o.material.dispose?.()
+      })
+      world.clear(); parts.clear(); pickables.length = 0; glowMats.length = 0; fansCache = []; decorFans = []; gpuFans = []
     }
-    function rbox(w, h, d, r = 0.06) { return new A.RoundedBoxGeometry(w, h, d, 3, Math.min(r, w / 2.1, h / 2.1, d / 2.1)) }
-    function add(group, mesh, partId) { mesh.userData.partId = partId; group.add(mesh); pickables.push(mesh); return mesh }
+    function add(group, mesh, partId) { mesh.userData.partId = partId; mesh.castShadow = true; mesh.receiveShadow = true; group.add(mesh); pickables.push(mesh); return mesh }
     function ghostBox(size) {
       const e = new T.EdgesGeometry(new T.BoxGeometry(size[0], size[1], size[2]))
       const l = new T.LineSegments(e, ghostMat); l.computeLineDistances(); return l
-    }
-    function makeFan(r, level) {
-      const g = new T.Group(), spin = new T.Group(); g.add(spin)
-      const bladeGeo = new T.BoxGeometry(r * 0.5, r * 0.8, 0.03)
-      for (let i = 0; i < 7; i++) { const b = new T.Mesh(bladeGeo, mats.dark); b.position.set(0, r * 0.45, 0); const piv = new T.Group(); piv.rotation.z = (i / 7) * Math.PI * 2; b.rotation.y = 0.5; piv.add(b); spin.add(piv) }
-      spin.add(new T.Mesh(new T.CylinderGeometry(r * 0.22, r * 0.22, 0.1, 20).rotateX(Math.PI / 2), mats.metal))
-      const ring = glowMat(0.6); g.add(new T.Mesh(new T.TorusGeometry(r * 0.98, 0.04, 8, 48), ring.mat))
-      g.userData = { spin, level }
-      return { g, ring }
     }
 
     function build(lay) {
@@ -112,118 +127,92 @@
         const g = new T.Group(); g.position.set(...p.pos); world.add(g)
         const entry = { group: g, glow: [], fans: [], p, base: p.pos.slice(), r: 1 }
         parts.set(p.id, entry)
-        if (p.decor) { buildDecor(p, g); continue }
+        if (p.decor) { buildDecor(p, g, entry); continue }
         if (p.ghost) { g.add(ghostBox(p.size)); const hit = new T.Mesh(new T.BoxGeometry(...p.size), new T.MeshBasicMaterial({ visible: false })); add(g, hit, p.id); continue }
         buildPart(p, g, entry)
       }
-      // soft floor shadow
-      const sh = new T.Mesh(new T.PlaneGeometry(14, 8), new T.MeshBasicMaterial({ map: shadowTex(T), transparent: true, opacity: 0.55, depthWrite: false }))
-      sh.rotation.x = -Math.PI / 2; sh.position.set(0, lay.formFactor === 'laptop' ? -0.5 : -5.4, -0.5); world.add(sh)
+      world.add(kit.groundPlane(mats, 14, 10).translateY(lay.formFactor === 'laptop' ? -0.5 : -5.4))
     }
 
-    function buildDecor(p, g) {
+    function buildDecor(p, g, entry) {
       if (p.kind === 'case') {
-        // glass-panel frame only: the rig has to stay visible
-        const e = new T.EdgesGeometry(new T.BoxGeometry(...p.size))
-        g.add(new T.LineSegments(e, new T.LineBasicMaterial({ color: 0x6a6a78, transparent: true, opacity: 0.45 })))
+        g.add(kit.caseTower(mats, p.size))
       } else if (p.kind === 'psu') {
-        g.add(new T.Mesh(rbox(...p.size, 0.12), mats.dark))
+        g.add(kit.psuShroud(mats, p.size))
       } else if (p.kind === 'laptop-body') {
-        g.add(new T.Mesh(rbox(...p.size, 0.12), mats.metal))
+        g.add(kit.laptopBody(mats, p.size))
       } else if (p.kind === 'battery') {
-        g.add(new T.Mesh(rbox(...p.size, 0.05), mats.dark))
+        g.add(new T.Mesh(kit.rbox(...p.size, 0.05), mats.satin))
+      } else if (p.kind === 'case-fan') {
+        const ring = glowMat(0.55)
+        const { group, spin } = kit.fan(mats, p.size[0] / 2, { ringMat: ring.mat })
+        if (p.rot) group.rotation.set(...p.rot)
+        g.add(group); entry.glow.push(ring)
+        decorFans.push({ spinGroup: spin, ring, index: decorFans.length })
       }
     }
 
+    // Visual content is always a kit model (showcase); picking is always one invisible hit box sized to the part, so detail
+    // never has to be tagged or kept flat for raycasting.
     function buildPart(p, g, entry) {
+      add(g, invisHit(p.size), p.id)
       switch (p.kind) {
-        case 'board': add(g, new T.Mesh(new T.BoxGeometry(...p.size), mats.pcb), p.id); break
+        case 'board': g.add(kit.board(mats, p.size)); break
         case 'cpu': {
-          const ihs = add(g, new T.Mesh(rbox(...p.size, 0.05), mats.silver), p.id)
-          const glow = glowMat(0.45); const under = new T.Mesh(new T.PlaneGeometry(p.size[0] * 1.5, p.size[1] * 1.5), glow.mat); under.position.z = -0.05; g.add(under); entry.glow.push(glow)
+          g.add(new T.Mesh(kit.rbox(...p.size, 0.04), mats.chrome))
+          const glow = glowMat(0.45); const under = new T.Mesh(new T.PlaneGeometry(p.size[0] * 1.6, p.size[1] * 1.6), glow.mat); under.position.z = -0.05; g.add(under); entry.glow.push(glow)
           break
         }
         case 'aio': {
-          const pump = add(g, new T.Mesh(new T.CylinderGeometry(p.size[0] / 2, p.size[0] / 2, 0.6, 40).rotateX(Math.PI / 2), mats.metal), p.id)
-          pump.position.z = p.size[2] / 2
-          const ring = glowMat(1); const rg = new T.Mesh(new T.TorusGeometry(p.size[0] / 2 - 0.02, 0.05, 10, 60), ring.mat); rg.position.z = p.size[2] / 2 + 0.31; g.add(rg); entry.glow.push(ring)
+          g.add(kit.aioPump(mats, p.size))
+          const pumpTop = p.size[2] / 2
+          const ring = glowMat(1); const rg = new T.Mesh(new T.TorusGeometry(p.size[0] / 2 - 0.02, 0.05, 10, 60), ring.mat); rg.position.z = pumpTop + 0.01; g.add(rg); entry.glow.push(ring)
           const rd = p.rad
-          const rad = add(world, new T.Mesh(rbox(...rd.size, 0.05), mats.dark), p.id); rad.position.set(...rd.pos)
-          // tubes from the pump to the radiator, a real AIO has exactly two
+          const rad = kit.radiatorFins(mats, rd.size); rad.position.set(...rd.pos); world.add(rad)
           for (const dx of [-0.35, 0.35]) {
             const curve = new T.CatmullRomCurve3([new T.Vector3(p.pos[0] + dx, p.pos[1] + 0.5, p.pos[2] + 0.5), new T.Vector3(p.pos[0] + dx * 1.6, p.pos[1] + 1.4, p.pos[2] + 0.7), new T.Vector3(rd.pos[0] - 2.2 + dx, rd.pos[1] - 0.45, rd.pos[2] + 0.2)])
-            const tube = new T.Mesh(new T.TubeGeometry(curve, 24, 0.07, 8), mats.dark); world.add(tube)
+            const tube = new T.Mesh(new T.TubeGeometry(curve, 24, 0.07, 8), mats.satin); world.add(tube)
           }
           break
         }
         case 'air': {
-          const stack = add(g, new T.Mesh(rbox(p.size[0], p.size[1], 0.9, 0.06), mats.silver), p.id)
-          stack.position.z = 0.4
+          g.add(kit.airCoolerStack(mats, p.size))
+          const { group } = kit.fan(mats, Math.min(p.size[0], p.size[1]) * 0.42, { ringMat: null })
+          group.position.z = p.size[2] / 2 + 0.05; g.add(group)
           break
         }
         case 'ram-slot': {
-          const slot = add(g, new T.Mesh(new T.BoxGeometry(...p.size), mats.dark), p.id)
           if (p.slot && p.slot.stick) {
-            const st = add(g, new T.Mesh(rbox(p.size[0] * 0.8, p.size[1] - 0.1, 0.3, 0.04), mats.metal), p.id); st.position.z = 0.2
-            const led = glowMat(0.8); const strip = new T.Mesh(new T.BoxGeometry(p.size[0] * 0.8, 0.12, 0.05), led.mat); strip.position.set(0, p.size[1] / 2 - 0.1, 0.38); g.add(strip); entry.glow.push(led)
-          }
-          void slot
+            g.add(kit.ramStick(mats, p.size, [accentColor.r, accentColor.g, accentColor.b]))
+            const led = glowMat(0.8); const strip = new T.Mesh(new T.BoxGeometry(p.size[0] * 0.76, 0.1, 0.05), led.mat); strip.position.set(0, p.size[1] / 2 - 0.12, 0.42); g.add(strip); entry.glow.push(led)
+          } else g.add(new T.Mesh(new T.BoxGeometry(...p.size), mats.satin))
           break
         }
         case 'ram-slot-flat': {
-          add(g, new T.Mesh(rbox(...p.size, 0.03), p.slot && p.slot.stick ? mats.metal : mats.dark), p.id)
+          const mat = p.slot && p.slot.stick ? mats.chrome : mats.satin
+          g.add(new T.Mesh(kit.rbox(...p.size, 0.03), mat))
           break
         }
         case 'gpu': {
-          add(g, new T.Mesh(rbox(...p.size, 0.1), mats.metal), p.id)
-          const back = new T.Mesh(rbox(p.size[0] * 0.98, p.size[1] * 0.96, 0.05, 0.03), mats.dark); back.position.z = -p.size[2] / 2 - 0.02; g.add(back)
-          // straight grille lines: the fan count is unknown, so no fans are implied
-          for (let i = 0; i < 9; i++) { const l = new T.Mesh(new T.BoxGeometry(p.size[0] * 0.8, 0.025, 0.02), mats.dark); l.position.set(0, -p.size[1] * 0.3 + i * (p.size[1] * 0.07), p.size[2] / 2 + 0.005); g.add(l) }
-          const edge = glowMat(1); const strip = new T.Mesh(new T.BoxGeometry(p.size[0] * 0.96, 0.05, 0.04), edge.mat); strip.position.set(0, p.size[1] / 2 - 0.02, p.size[2] / 2 + 0.02); g.add(strip); entry.glow.push(edge)
+          g.add(kit.gpuShroud(mats, p.size))
+          const edge = glowMat(1); const strip = new T.Mesh(new T.BoxGeometry(p.size[0] * 0.94, 0.05, 0.04), edge.mat); strip.position.set(0, p.size[1] / 2 - 0.02, p.size[2] / 2 + 0.03); g.add(strip); entry.glow.push(edge)
+          // shroud fans: always drawn (showcase); spin only follows the one real fan reading the GPU reports
+          const n = 3, fr = Math.min(p.size[1], p.size[2]) * 0.42
+          for (let i = 0; i < n; i++) {
+            const { group, spin } = kit.fan(mats, fr, { ringMat: null, frame: false })
+            group.position.set(-p.size[0] / 2 + (p.size[0] / n) * (i + 0.5), 0, p.size[2] / 2 + 0.04)
+            g.add(group)
+            gpuFans.push({ spinGroup: spin })
+          }
           break
         }
-        case 'gpu-laptop': add(g, new T.Mesh(rbox(...p.size, 0.02), mats.metal), p.id); break
-        case 'nvme': {
-          add(g, new T.Mesh(rbox(...p.size, 0.02), mats.metal), p.id)
-          break
-        }
-        case 'sata': add(g, new T.Mesh(rbox(...p.size, 0.03), mats.metal), p.id); break
-        default: add(g, new T.Mesh(new T.BoxGeometry(...p.size), mats.dark), p.id)
+        case 'gpu-laptop': g.add(new T.Mesh(kit.rbox(...p.size, 0.02), mats.anodised)); break
+        case 'nvme': g.add(kit.nvmeStick(mats, p.size)); break
+        case 'sata': g.add(kit.sataDrive(mats, p.size)); break
+        default: g.add(new T.Mesh(new T.BoxGeometry(...p.size), mats.satin))
       }
     }
-
-    function pcbTexture(T2) {
-      const c = document.createElement('canvas'); c.width = c.height = 512
-      const x = c.getContext('2d'); x.fillStyle = '#17171d'; x.fillRect(0, 0, 512, 512)
-      x.strokeStyle = 'rgba(255,255,255,.075)'; x.lineWidth = 1.4
-      let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647
-      for (let i = 0; i < 170; i++) { let px = rnd() * 512, py = rnd() * 512; x.beginPath(); x.moveTo(px, py); for (let j = 0; j < 4; j++) { if (j % 2) py += (rnd() - 0.5) * 90; else px += (rnd() - 0.5) * 110; x.lineTo(px, py) } x.stroke() }
-      x.fillStyle = 'rgba(255,255,255,.1)'; for (let i = 0; i < 150; i++) x.fillRect(rnd() * 512, rnd() * 512, 2, 2)
-      const t = new T2.CanvasTexture(c); t.colorSpace = T2.SRGBColorSpace; t.wrapS = t.wrapT = T2.RepeatWrapping; t.repeat.set(1.3, 1.6); return t
-    }
-    function shadowTex(T2) {
-      const c = document.createElement('canvas'); c.width = c.height = 128
-      const x = c.getContext('2d'), gr = x.createRadialGradient(64, 64, 0, 64, 64, 64)
-      gr.addColorStop(0, 'rgba(0,0,0,.8)'); gr.addColorStop(1, 'rgba(0,0,0,0)')
-      x.fillStyle = gr; x.fillRect(0, 0, 128, 128)
-      const t = new T2.CanvasTexture(c); return t
-    }
-
-    // ── radiator fans: exactly as many as there are real fan readings ──────────────────
-    function syncFans(levels) {
-      const rad = parts.get('cooler')
-      if (!rad || !rad.p.rad) return
-      if (fansCache.length === levels.length) return
-      for (const f of fansCache) { f.g.parent && f.g.parent.remove(f.g); const i = glowMats.indexOf(f.ring); if (i >= 0) glowMats.splice(i, 1) }
-      fansCache = []
-      const n = Math.min(3, levels.length)
-      const rd = rad.p.rad, r = Math.min(rd.size[0] / (n || 1) / 2 - 0.1, 0.85)
-      for (let i = 0; i < n; i++) {
-        const f = makeFan(r, 0)
-        f.g.position.set(rd.pos[0] - rd.size[0] / 2 + (rd.size[0] / n) * (i + 0.5), rd.pos[1], rd.pos[2] + rd.size[2] / 2 + 0.1)
-        world.add(f.g); fansCache.push(f)
-      }
-    }
+    function invisHit(size) { return new T.Mesh(new T.BoxGeometry(...size), new T.MeshBasicMaterial({ visible: false })) }
 
     // ── state -> materials (called by the host on every telemetry tick) ────────────────
     let state = null
@@ -235,7 +224,7 @@
       for (const [id, e] of parts) {
         const st = stFor(id)
         for (const g of e.glow) {
-          let level = 0.55, col = accent
+          let level = 0.5, col = accent
           if (st) {
             if (st.heat != null) { col = M.heatColor(st.heat, accent); level = 0.35 + (st.load != null ? st.load : 0.3) * 1.1 }
             else if (st.load != null) level = 0.25 + st.load * 0.9
@@ -245,13 +234,40 @@
           g.color.setRGB(...col)
         }
       }
+      // decorative case fans: spin/glow only for the indexes we actually have a reading for
+      const caseReal = (state && state.caseFans) || []
+      for (const f of decorFans) {
+        const lv = caseReal[f.index]
+        f.ring.target = (lv != null ? 0.4 + lv * 0.8 : 0.18) * f.ring.strength
+        if (!reducedMotion() && lv != null) f.spinGroup.rotation.z -= dt * (1 + lv * 14)
+      }
+      // GPU shroud fans: one real reading drives all three
+      const gpuFan = state && state.gpu && state.gpu.fan
+      if (!reducedMotion() && gpuFan != null) for (const f of gpuFans) f.spinGroup.rotation.z -= dt * (1 + gpuFan * 16)
       for (const g of glowMats) {
         g.level += (g.target - g.level) * k
-        g.mat.emissive.copy(g.color); g.mat.emissiveIntensity = g.level * (quality === 'full' ? 1.6 : 1.1)
+        g.mat.emissive.copy(g.color); g.mat.emissiveIntensity = g.level * (quality === 'full' ? 1.5 : 1.05)
       }
       if (state) syncFans(state.caseFans)
-      fansCache.forEach((f, i) => { const lv = state && state.caseFans[i]; if (lv != null && !reducedMotion()) f.g.userData.spin.rotation.z -= dt * (1 + lv * 14) })
+      fansCache.forEach((f, i) => { const lv = state && state.caseFans[i]; if (lv != null && !reducedMotion()) f.spin.rotation.z -= dt * (1 + lv * 14) })
       if (state && state.pump) { /* the pump has no moving part to show; its RPM only appears in the inspector */ }
+    }
+
+    // ── radiator fans: exactly as many as there are real fan readings ──────────────────
+    function syncFans(levels) {
+      const rad = parts.get('cooler')
+      if (!rad || !rad.p.rad) return
+      if (fansCache.length === levels.length) return
+      for (const f of fansCache) { f.group.parent && f.group.parent.remove(f.group); const i = glowMats.indexOf(f.ring); if (i >= 0) glowMats.splice(i, 1) }
+      fansCache = []
+      const n = Math.min(3, levels.length)
+      const rd = rad.p.rad, r = Math.min(rd.size[0] / (n || 1) / 2 - 0.1, 0.85)
+      for (let i = 0; i < n; i++) {
+        const ring = glowMat(0.6)
+        const { group, spin } = kit.fan(mats, r, { ringMat: ring.mat })
+        group.position.set(rd.pos[0] - rd.size[0] / 2 + (rd.size[0] / n) * (i + 0.5), rd.pos[1], rd.pos[2] + rd.size[2] / 2 + 0.12)
+        world.add(group); fansCache.push({ group, spin, ring })
+      }
     }
 
     function setReveal(map) { reveal = map; if (!map) for (const e of parts.values()) { e.r = 1; e.group.visible = true; e.group.scale.setScalar(1); e.group.position.set(...e.base) } else for (const e of parts.values()) e.r = 0 }
@@ -315,7 +331,10 @@
       renderer.setPixelRatio(quality === 'full' ? Math.min(dpr || 1, 1.5) : 1)
       renderer.setSize(w, h, false)
       camera.aspect = w / Math.max(h, 1); camera.updateProjectionMatrix()
-      if (composer) { composer.setPixelRatio(renderer.getPixelRatio()); composer.setSize(w, h); bloom.resolution.set(w, h) }
+      if (composer) {
+        composer.setPixelRatio(renderer.getPixelRatio()); composer.setSize(w, h)
+        if (bloom) bloom.resolution.set(w, h)
+      }
     }
     function render(dt) {
       stepCamera(dt); stepReveal(dt); applyState(dt)

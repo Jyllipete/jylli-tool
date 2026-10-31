@@ -18,6 +18,7 @@
     const ff = layout.formFactor
     const out = [`<svg class="j-twin-svg" viewBox="0 0 400 300" role="img" aria-label="${esc(label)}" xmlns="http://www.w3.org/2000/svg">`]
     for (const p of layout.parts) {
+      if (p.kind === 'case-fan') continue   // showcase-only decor; the compact silhouette stays to the detected parts
       const r = project(ff, p)
       const x = (r.cx - r.w / 2).toFixed(1), y = (r.cy - r.h / 2).toFixed(1), w = r.w.toFixed(1), h = r.h.toFixed(1)
       let cls = 'j-twin-part'

@@ -843,6 +843,7 @@ LANG.fi = {
       netSpeedUsed:'{mb} Mt käytetty',
       netSpeedConfirmTitle:'Suoritetaanko nopeustesti?',
       netSpeedConfirmBody:'Testi lataa ja lähettää dataa noin 20 sekunnin ajan ja voi kuluttaa enintään noin 250 Mt. Mitatussa tai mobiiliyhteydessä testin voi jättää väliin.',
+      netLiveTraffic:'Liikenne nyt', netLiveDown:'alas', netLiveUp:'ylös', netNodeAdapterUnknown:'Ei aktiivista sovitinta', netNodeRegionPing:'Alueen vasteaika',
       gpuStripAria:'Näytönohjaimen reaaliaikaiset lukemat',
       gpuStripPowerPct:'Osuus tehorajasta',
       gpuStripClockMem:'Muistin kellotaajuus',

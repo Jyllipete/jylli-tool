@@ -2,19 +2,28 @@
 // Optimize > Network hero: PC -> router -> internet with one link per active adapter. Particle flow comes from the REAL per-adapter
 // rx/tx counters (telemetry keys net.<adapter>.rx|tx); with no reading a link is drawn still, with no particles. Router identity
 // is from UPnP on the gateway only (or "not identified"). The speed test is the user's explicit action and reports what it measured.
+// The stage is the 3D scene (js/twin/netscene.js) when WebGL is available; otherwise the 2D canvas below is the whole picture.
 function buildNetworkHero(c) {
   const { html } = ui
   const el = document.createElement('section')
   el.id = 'net-hero'
   el.className = 'j-card j-net-hero'
   el.innerHTML = String(html`
-    <div class="j-twin-stage j-net-stage"><canvas id="net-canvas" class="j-net-canvas" aria-hidden="true"></canvas><div class="j-net-labels" id="net-labels"></div></div>
-    <div class="j-net-side">
-      <div class="j-net-id" id="net-id" aria-live="polite">${ui.callout(tUI('netHeroChecking'), 'info')}</div>
-      <div class="j-net-speed">
-        <div class="j-hstack"><b>${tUI('netSpeedTitle')}</b><span class="j-grow"></span>${ui.button({ id: 'net-speed-btn', label: tUI('netSpeedRun'), icon: 'gauge-high', size: 'sm', onclick: 'netSpeedRun()' })}</div>
+    <div class="j-net-strip" id="net-strip">
+      <div class="j-net-live"><div class="j-stat-label">${tUI('netLiveTraffic')}</div><div class="j-gpu-val j-num" id="net-live-val">—</div></div>
+      ${['netDown', 'netUp', 'netLatency', 'netJitter'].map(k => html`<div><div class="j-stat-label">${tUI(k)}</div><div class="j-gpu-val j-num" data-nsv="${k}">—</div></div>`)}
+      <span class="j-grow"></span>
+      ${ui.button({ id: 'net-speed-btn', label: tUI('netSpeedRun'), icon: 'gauge-high', size: 'sm', onclick: 'netSpeedRun()' })}
+    </div>
+    <div class="j-twin-stage j-net-stage" id="net-stage">
+      <canvas id="net-canvas" class="j-net-canvas" aria-hidden="true"></canvas>
+      <div id="net-3d-slot" class="j-twin-slot"></div>
+      <div class="j-net-labels" id="net-labels"></div>
+    </div>
+    <div class="j-net-foot">
+      <div id="net-id" aria-live="polite">${ui.callout(tUI('netHeroChecking'), 'info')}</div>
+      <div>
         <p class="j-muted j-settings-hint">${tUI('netSpeedNote')}</p>
-        <div class="j-net-speed-grid" id="net-speed-grid">${['netDown', 'netUp', 'netLatency', 'netJitter'].map(k => html`<div><div class="j-stat-label">${tUI(k)}</div><div class="j-gpu-val j-num" data-nsv="${k}">—</div></div>`)}</div>
         <div class="j-muted" id="net-speed-meta"></div>
         <div id="net-speed-history" class="j-net-hist"></div>
       </div>
@@ -24,7 +33,7 @@ function buildNetworkHero(c) {
   return el
 }
 
-const NET_FLOW = { particles: [], raf: 0, adapters: [], t: 0 }
+const NET_FLOW = { particles: [], raf: 0, adapters: [], t: 0, scene: null, scene3d: null }
 
 async function netHeroInit(el) {
   const { html } = ui
@@ -32,6 +41,7 @@ async function netHeroInit(el) {
   try { topo = await api.netTopology() } catch {}
   const box = el.querySelector('#net-id')
   if (!box) return
+  NET_FLOW.topo = topo
   if (!topo || !topo.ok) { box.innerHTML = String(ui.callout(tUI('netHeroUnavailable'), 'warn')) }
   else {
     const gw = topo.gateway, id = topo.identity
@@ -43,7 +53,81 @@ async function netHeroInit(el) {
     NET_FLOW.adapters = (topo.adapters || []).filter(a => a.up)
   }
   netHistoryRender(el)
-  netDrawStart(el)
+  netLabelsRender(el)
+  netLiveStart(el)
+  try {
+    const stage = el.querySelector('#net-stage'), slot = el.querySelector('#net-3d-slot')
+    const readAccentRGB = () => { try { const i = document.createElement('i'); i.style.color = 'var(--c-accent)'; i.style.display = 'none'; document.body.appendChild(i); const m = getComputedStyle(i).color.match(/[\d.]+/g); i.remove(); if (m && m.length >= 3) return [m[0] / 255, m[1] / 255, m[2] / 255] } catch {} return [0.55, 0.49, 0.96] }
+    const scene3d = window.JylliTwinNet && await JylliTwinNet.create(slot, { accent: readAccentRGB() })
+    if (scene3d) {
+      NET_FLOW.scene3d = scene3d
+      stage.classList.add('j-twin-live')
+      const ro = new ResizeObserver(() => { const r = stage.getBoundingClientRect(); if (r.width > 4 && r.height > 4) scene3d.resize(Math.round(r.width), Math.round(r.height), devicePixelRatio || 1) })
+      ro.observe(stage)
+      netLiveLoop3d(el)
+    } else {
+      netDrawStart(el)   // no WebGL: the 2D canvas is the whole picture
+    }
+  } catch { netDrawStart(el) }
+}
+
+/** Live traffic strip number: sum of real rx/tx across up adapters, "—" with no reading. */
+function netLiveStart(el) {
+  const val = el.querySelector('#net-live-val')
+  if (!val) return
+  const fmt = n => n >= 1048576 ? (n / 1048576).toFixed(1) + ' MB/s' : n >= 1024 ? (n / 1024).toFixed(0) + ' KB/s' : n + ' B/s'
+  const tick = () => {
+    if (!document.body.contains(val)) return
+    const snap = window.JylliTelemetry && JylliTelemetry.state.snap
+    let down = 0, up = 0, any = false
+    for (const a of NET_FLOW.adapters) {
+      const rx = snap && a.name ? snap.s['net.' + a.name + '.rx'] : null, tx = snap && a.name ? snap.s['net.' + a.name + '.tx'] : null
+      if (rx && rx[0] != null) { down += rx[0]; any = true }
+      if (tx && tx[0] != null) { up += tx[0]; any = true }
+    }
+    val.textContent = any ? fmt(down) + ' ' + tUI('netLiveDown') + ' / ' + fmt(up) + ' ' + tUI('netLiveUp') : tUI('metricNA')
+    setTimeout(tick, 1000)
+  }
+  tick()
+}
+
+/** HTML labels under each 3D node: adapter info / router identity / last speed-test server, every value with no source shown as "—". */
+async function netLabelsRender(el) {
+  const box = el.querySelector('#net-labels')
+  if (!box) return
+  const topo = NET_FLOW.topo
+  const a0 = NET_FLOW.adapters[0]
+  const pcSub = a0 ? [a0.desc, [a0.media, a0.speed].filter(Boolean).join(' · ')].filter(Boolean).join(' — ') : tUI('netNodeAdapterUnknown')
+  const id = topo && topo.identity
+  const idText = id ? [id.manufacturer, id.model].filter(Boolean).join(' ') || id.friendlyName : null
+  const gw = topo && topo.gateway
+  const routerSub = idText ? (gw && gw.latencyMs != null ? gw.latencyMs + ' ms' : tUI('metricNA')) : tUI('netRouterUnknown')
+  let hist = []
+  try { hist = await api.getSpeedHistory() } catch {}
+  const last = Array.isArray(hist) ? hist[0] : null
+  const netSub = last ? [last.colo, last.pingMs != null ? last.pingMs + ' ms' : null].filter(Boolean).join(' · ') : tUI('metricNA')
+  box.innerHTML = [
+    { label: tUI('netNodePc'), sub: pcSub },
+    { label: tUI('netNodeRouter'), sub: idText || routerSub },
+    { label: tUI('netNodeInternet'), sub: netSub },
+  ].map(n => `<div class="j-net-label"><b>${escHtml(n.label)}</b><span>${escHtml(n.sub)}</span></div>`).join('')
+}
+
+function netLiveLoop3d(el) {
+  const scene3d = NET_FLOW.scene3d
+  if (!scene3d) return
+  const step = () => {
+    if (!document.body.contains(el)) return
+    const ads = NET_FLOW.adapters.length ? NET_FLOW.adapters : []
+    const snap = window.JylliTelemetry && JylliTelemetry.state.snap
+    const levels = ads.length ? ads.map(a => {
+      const rx = snap && a.name ? snap.s['net.' + a.name + '.rx'] : null, tx = snap && a.name ? snap.s['net.' + a.name + '.tx'] : null
+      return { rx: rx && rx[0] != null ? rx[0] : null, tx: tx && tx[0] != null ? tx[0] : null }
+    }) : [{ rx: null, tx: null }]
+    scene3d.setTraffic(levels)
+    setTimeout(step, 400)
+  }
+  step()
 }
 
 function netDrawStart(el) {
@@ -121,7 +205,7 @@ async function netSpeedRun() {
   if (!btn || btn.disabled) return
   try { await showConfirm({ title: tUI('netSpeedConfirmTitle'), body: escHtml(tUI('netSpeedConfirmBody')), okText: tUI('netSpeedRun'), okStyle: 'info', icon: 'fa-gauge-high' }) } catch { return }
   btn.disabled = true
-  const grid = document.getElementById('net-speed-grid'), meta = document.getElementById('net-speed-meta')
+  const grid = document.getElementById('net-strip'), meta = document.getElementById('net-speed-meta')
   const set = (k, v) => { const e = grid.querySelector(`[data-nsv="${k}"]`); if (e) e.textContent = v }
   set('netDown', '…'); set('netUp', '…'); set('netLatency', '…'); set('netJitter', '…'); meta.textContent = tUI('netSpeedRunning')
   const off = api.onSpeedTestProgress ? api.onSpeedTestProgress(p => { set(p.phase === 'down' ? 'netDown' : 'netUp', p.mbps ? p.mbps.toFixed(0) + ' Mbit/s' : '…') }) : null
@@ -135,4 +219,5 @@ async function netSpeedRun() {
   meta.textContent = [r.colo ? tUI('netSpeedServer').replace('{colo}', r.colo) : '', r.loadedLatency && r.loadedLatency.ms != null ? tUI('netSpeedLoaded').replace('{ms}', r.loadedLatency.ms.toFixed(0)) : '', tUI('netSpeedUsed').replace('{mb}', Math.round(r.bytes / 1048576))].filter(Boolean).join(' · ')
   try { JylliSound.play('apply') } catch {}
   netHistoryRender(document)
+  netLabelsRender(document.getElementById('net-hero') || document)
 }

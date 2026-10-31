@@ -65,6 +65,10 @@
     })
     if (!(rig.drives || []).length) parts.push(part('drive0', 'nvme', [-2.0, 0.5, -1.55], [1.7, 0.34, 0.06], { ghost: true, label: 'storage', info: {} }))
     parts.push(part('psu', 'psu', [0, -4.4, -0.4], [7.2, 1.2, 3.4], { decor: true }))
+    // Showcase case fans: a tower always has intake and exhaust fans, but spin is driven only by real sensor readings (see
+    // js/twin/mapping.js state.caseFans and js/twin/engine.js). Purely cosmetic, never implies a part/fan count was detected.
+    ;[-3.1, 0, 3.1].forEach((y, i) => parts.push(part('fanFront' + i, 'case-fan', [0, y, 2.15], [2.6, 2.6, 0.25], { decor: true })))
+    parts.push(part('fanRear', 'case-fan', [0, 2.9, -2.2], [1.6, 1.6, 0.25], { decor: true, rot: [0, Math.PI, 0] }))
     return parts
   }
 

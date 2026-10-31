@@ -10,6 +10,8 @@ const ADDONS = {
   RenderPass: 'three/addons/postprocessing/RenderPass.js',
   UnrealBloomPass: 'three/addons/postprocessing/UnrealBloomPass.js',
   OutputPass: 'three/addons/postprocessing/OutputPass.js',
+  ShaderPass: 'three/addons/postprocessing/ShaderPass.js',
+  SMAAPass: 'three/addons/postprocessing/SMAAPass.js',
   RoundedBoxGeometry: 'three/addons/geometries/RoundedBoxGeometry.js',
   RoomEnvironment: 'three/addons/environments/RoomEnvironment.js',
   mergeGeometries: 'three/addons/utils/BufferGeometryUtils.js',
