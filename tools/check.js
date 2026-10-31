@@ -14,7 +14,7 @@ function checkJs(file) {
 
 function walk(dir, exts, out = []) {
   for (const f of fs.readdirSync(dir, { withFileTypes: true })) {
-    if (f.name === 'node_modules' || f.name === 'dist' || f.name.startsWith('.')) continue
+    if (f.name === 'node_modules' || f.name === 'dist' || f.name === 'vendor' || f.name.startsWith('.')) continue   // js/vendor holds the minified three bundle, checked by check-vendor.js
     const p = path.join(dir, f.name)
     if (f.isDirectory()) walk(p, exts, out)
     else if (exts.includes(path.extname(f.name))) out.push(p)
