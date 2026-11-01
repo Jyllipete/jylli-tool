@@ -4,7 +4,7 @@
 // "Not available" with its reason and nothing is made up. Only shown when the hero window is big enough for them.
 // `layout` is the pure part (unit-tested): it puts plates on the window's left and right edges, level with their part, without overlap.
 ;(function (root) {
-  const W = 176, H = 58, GAP = 8, PAD = 12
+  const W = 176, H = 58, GAP = 8, PAD = 12, CW = 132, CH = 48   // CW/CH: compact plates for narrower windows (one number each)
 
   /** anchors: [{id,x,y}] screen px. win: {left,top,right,bottom}. Returns [{id, x, y, side}] (plate top-left). */
   function layout(anchors, win, size = { w: W, h: H }) {
@@ -21,9 +21,11 @@
     return out
   }
   /** Big enough to host plates without covering the rig. */
-  const fits = win => win && (win.right - win.left) >= 560 && (win.bottom - win.top) >= 250
+  const fits = win => win && (win.right - win.left) >= 420 && (win.bottom - win.top) >= 250
+  /** Full plates when the window is wide, compact ones when it is not. */
+  const sizeFor = win => ((win.right - win.left) >= 600 ? { w: W, h: H, compact: false } : { w: CW, h: CH, compact: true })
 
-  const api = { layout, fits, SIZE: { w: W, h: H } }
+  const api = { layout, fits, sizeFor, SIZE: { w: W, h: H } }
   root.JylliCallouts = api
   if (typeof module !== 'undefined' && module.exports) module.exports = api
   if (typeof document === 'undefined') return
@@ -66,16 +68,18 @@
     if (!fits(rect)) { if (box) teardown(); lastWin = null; return }
     if (!box || lastWin !== win) { if (!build(win)) return; lastWin = win }
     const anchors = items.map(i => { const a = JylliTwin.anchor(i.id); return a && { id: i.id, x: a.x, y: a.y } }).filter(Boolean)
-    const pos = new Map(layout(anchors, rect).map(p => [p.id, p]))
+    const size = sizeFor(rect)
+    const pos = new Map(layout(anchors, rect, size).map(p => [p.id, p]))
     for (const it of items) {
       const p = pos.get(it.id), a = anchors.find(x => x.id === it.id)
       it.el.hidden = it.dot.style.display = it.line.style.display = !p ? 'none' : ''
       if (!p) { it.el.hidden = true; continue }
       it.el.hidden = false
+      it.el.classList.toggle('jx-co-compact', size.compact); it.el.style.width = size.w + 'px'; it.el.style.height = size.h + 'px'
       const k = root.JylliWorld && JylliWorld.reduced() ? 1 : 0.25
       it.p = it.p ? { x: it.p.x + (p.x - it.p.x) * k, y: it.p.y + (p.y - it.p.y) * k } : { x: p.x, y: p.y }
       it.el.style.transform = `translate(${it.p.x.toFixed(1)}px,${it.p.y.toFixed(1)}px)`
-      const ex = p.side === 'left' ? it.p.x + W : it.p.x, ey = it.p.y + H / 2
+      const ex = p.side === 'left' ? it.p.x + size.w : it.p.x, ey = it.p.y + size.h / 2
       it.line.setAttribute('x1', ex); it.line.setAttribute('y1', ey); it.line.setAttribute('x2', a.x); it.line.setAttribute('y2', a.y)
       it.dot.setAttribute('cx', a.x); it.dot.setAttribute('cy', a.y)
     }

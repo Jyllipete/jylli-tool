@@ -163,7 +163,7 @@
   }
   function syncCenter(snap) {
     if (!H.engine || !H.worldSlot) return
-    if (!H.win || !H.win.isConnected) { H.engine.setCenter(null); return }
+    if (H.boot || !H.win || !H.win.isConnected) { H.engine.setCenter(null); return }   // the boot stage frames the rig itself
     const r = H.win.getBoundingClientRect(), w = H.worldSlot.getBoundingClientRect()
     if (r.width < 4) { H.engine.setCenter(null); return }
     // a window smaller than the screen gets a proportionally smaller rig, so it stays inside its frame instead of covering the cards around it

@@ -1,7 +1,7 @@
 // Tiny static file server for browser-based previews (no dependencies): node tools/ui-preview/serve.js [port]
 // Serves the repo root so pages such as tools/ui-preview/twin-demo.html can load css/, js/ and test fixtures.
 // /app opens the REAL index.html with `window.api` answered by tools/ui-preview/fixtures.js (the same mock the Electron preview uses):
-// no registry, services, PowerShell or network is ever touched. Add ?lang=fi&tier=free to change the fixture context.
+// no registry, services, PowerShell or network is ever touched. Add ?lang=fi&tier=free to change the fixture context, ?slow=2500 to make every answer slow.
 const http = require('http'), fs = require('fs'), path = require('path')
 const root = path.join(__dirname, '..', '..')
 const port = Number(process.argv[2]) || 5177
@@ -33,6 +33,8 @@ http.createServer((req, res) => {
       try {
         const { respond } = require('./fixtures')
         const ctx = { lang: url.searchParams.get('lang') || 'en', premium: (url.searchParams.get('tier') || 'premium') === 'premium' }
+        const slow = Number(url.searchParams.get('slow')) || 0   // ?slow=2500 delays every answer, so the boot screen lasts like a real scan
+        if (slow && !/^(loadSettings|getSettings)$/.test(url.pathname.slice(7))) await new Promise(r => setTimeout(r, slow))
         const v = await respond(url.pathname.slice(7), JSON.parse(body || '[]'), ctx)
         res.writeHead(200, { 'Content-Type': 'application/json' }).end(JSON.stringify({ v: v === undefined ? null : v }))
       } catch (e) { res.writeHead(200, { 'Content-Type': 'application/json' }).end(JSON.stringify({ v: null, error: String(e && e.message || e) })) }

@@ -84,7 +84,7 @@ test('callouts: plates sit on the window edges, level with their part, never ove
   }
   assert.strictEqual(out.find(p => p.id === 'cpu').side, 'left')
   assert.strictEqual(out.find(p => p.id === 'ram0').side, 'right')
-  assert.ok(C.fits(win)); assert.ok(!C.fits({ left: 0, top: 0, right: 400, bottom: 300 })); assert.ok(!C.fits({ left: 0, top: 0, right: 800, bottom: 200 }))
+  assert.ok(C.fits(win)); assert.ok(C.fits({ left: 0, top: 0, right: 480, bottom: 300 }) && C.sizeFor({ left: 0, right: 480 }).compact); assert.ok(!C.sizeFor(win).compact); assert.ok(!C.fits({ left: 0, top: 0, right: 400, bottom: 300 })); assert.ok(!C.fits({ left: 0, top: 0, right: 800, bottom: 200 }))
 })
 
 test('symptoms: plain words in English or Finnish find the right page', () => {
