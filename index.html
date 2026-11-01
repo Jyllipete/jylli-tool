@@ -1816,12 +1816,12 @@ function showPage(page, tabId) {
 
     // Stagger section cards
     c.querySelectorAll('.section-card').forEach((card, i) => {
+      if (i > 7) return   // cards far down the page are off screen: no point animating them
       card.style.animationDelay = `${i * 20}ms`
       card.classList.add('section-card-enter')
     })
-    // Directional page-enter — fires on populated content
+    // Directional page-enter — fires on populated content (no forced reflow: page-enter was removed before the exit, so adding it starts fresh)
     if (_navDir === -1) c.classList.add('dir-up')
-    void c.offsetWidth
     c.classList.add('page-enter')
   }, _exitDur)
 }
