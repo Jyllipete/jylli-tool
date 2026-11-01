@@ -79,8 +79,10 @@
       const r = fmt(key, snap.s[key], state.caps[key], t, state.shown[key])
       if (r.ok) state.shown[key] = Number(r.text)
       const text = r.ok ? `${r.text}${r.unit ? (r.unit === '%' || r.unit === '°C' ? '' : ' ') + r.unit : ''}` : r.text
-      if (el.textContent !== text) el.textContent = text
-      el.title = r.title
+      if (root.JylliOdo && el.hasAttribute('data-odo')) root.JylliOdo.set(el, text)
+      else if (el.textContent !== text) el.textContent = text
+      // with the provenance tag (4.0) the native tooltip is replaced; without it the title stays
+      if (root.JylliProv) { el.setAttribute('data-prov', r.title); el.removeAttribute('title') } else el.title = r.title
       el.classList.toggle('j-metric-na', !r.ok)
     }
   }

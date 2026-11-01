@@ -64,6 +64,7 @@
     d.querySelector('#stage-discard').onclick = discard
     d.querySelector('#stage-review').onclick = review
     d.querySelector('#stage-apply').onclick = () => apply()
+    if (root.JylliHold) JylliHold.attach(d.querySelector('#stage-apply'), 650, () => apply())   // 4.0: hold to apply (a plain click still works in Classic)
   }
 
   function mark(id) {
@@ -100,6 +101,7 @@
       <div class="jx-93"><button class="btn btn-ghost btn-sm" id="stage-modal-close">${esc(tUI('close'))}</button><button class="btn btn-primary btn-sm" id="stage-modal-apply">${esc(tUI('stageApply'))} <kbd>Ctrl+Enter</kbd></button></div></div>`
     m.querySelector('#stage-modal-close').onclick = () => _closeModal('stage-modal')
     m.querySelector('#stage-modal-apply').onclick = () => { _closeModal('stage-modal'); apply() }
+    if (root.JylliHold) JylliHold.attach(m.querySelector('#stage-modal-apply'), 650, () => { _closeModal('stage-modal'); apply() })
     _openModal('stage-modal')
   }
 
@@ -110,6 +112,8 @@
     const items = [...staged].map(([tweakId, action]) => ({ tweakId, action }))
     const d = dock(); d.querySelectorAll('button').forEach(b => { b.disabled = true })
     const btn = d.querySelector('#stage-apply'); if (btn) btn.textContent = tUI('stageApplying')
+    // the light leaves the button for the part each change touches while the batch runs
+    const lit = root.JylliWorld ? JylliWorld.pulseTo(btn, JylliWorld.partsFor(items.map(i => i.tweakId))) : Promise.resolve()
     let res = null
     try { res = await root.api.applyBatch({ items, via: 'stage', restorePoint: 'auto', label: 'staged' }) } catch (e) { res = { ok: false, error: String(e && e.message || e) } }
     applying = false
@@ -122,6 +126,7 @@
     touched.forEach(mark); render()
     try { invalidatePageCache(currentPage) } catch {}
     try { root.JylliSound && JylliSound.play(okIds.size ? 'apply' : 'warning') } catch {}
+    if (okIds.size && root.JylliChrono) { await lit; try { JylliChrono.noteApplied({ batchId: res.batchId, n: okIds.size, parts: JylliWorld.partsFor([...okIds]) }) } catch {} }
     if (okIds.size) { toast(t('stageDone', { n: okIds.size }), failed.length ? t('stageFailedSome', { n: failed.length }) : '', failed.length ? 'warn' : 'ok'); if (res.batchId) showBatchUndo(res.batchId, okIds.size) }
     else toast(tUI('stageNothing'), '', 'warn')
   }

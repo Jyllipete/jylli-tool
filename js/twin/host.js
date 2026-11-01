@@ -76,7 +76,15 @@
     svg.innerHTML = Fb().svgFor(lay, H.visual, { label })
   }
 
-  async function attach(slot) {
+  function attach(slot) {
+    const w = worldOn() && document.getElementById('world-slot')
+    if (!w || (H.boot && H.boot.slot)) return attachSlot(slot)
+    H.worldSlot = w
+    if (slot && slot !== w) setWindow(slot)
+    return H.slot === w ? Promise.resolve() : attachSlot(w)
+  }
+
+  async function attachSlot(slot) {
     if (!slot) return
     // While the boot stage owns the canvas, a page that wants it waits: bootEnd() hands it over after the transition.
     if (H.boot && H.boot.slot && slot !== H.boot.slot) { H.boot.pending = slot; return }
@@ -139,16 +147,49 @@
     H.view = v
     if (v === 'boot') { H.engine.setBoot(true); H.engine.setPowered(H.boot && H.boot.powered ? 1 : 0); H.engine.setReveal(new Map()); H.engine.setView('boot', { snap: true }); applyBoot(); return }
     H.engine.setBoot(false); H.engine.setPowered(1)
-    if (v === 'gpu') { H.engine.setView('gpu', { snap: false }); H.engine.setReveal(new Map([['gpu', 1], ['board', 1]])) }
+    if (v === 'gpu') { H.engine.setView('gpu', { snap: false }); H.engine.setReveal(H.worldSlot ? null : new Map([['gpu', 1], ['board', 1]])) }
     else { H.engine.setReveal(null); H.engine.setView('home', { snap: false }) }
+    if (H.worldSlot && slot.dataset.twinFocus) H.engine.focus(slot.dataset.twinFocus)
   }
+
+  // ── world mode (4.0): the canvas lives in #world-slot behind the whole app. A page's hero slot is only a "window": the rig is
+  // centred on it and the camera takes the slot's shot, but the scene keeps showing through the glass around it. ──
+  const worldOn = () => !!(root.JylliWorld && root.JylliWorld.enabled())
+  function worldClass() { const w = H.worldSlot && H.worldSlot.parentElement; if (w) w.classList.toggle('has-window', !!H.win) }
+  function setWindow(slot) {
+    H.win = slot; worldClass()
+    try { renderFallback(slot) } catch {}   // shown only while 3D is not running (css: body.world-live hides it)
+    if (H.engine) { applyView(slot); syncCenter(true) }
+  }
+  function syncCenter(snap) {
+    if (!H.engine || !H.worldSlot) return
+    if (!H.win || !H.win.isConnected) { H.engine.setCenter(null); return }
+    const r = H.win.getBoundingClientRect(), w = H.worldSlot.getBoundingClientRect()
+    if (r.width < 4) { H.engine.setCenter(null); return }
+    // a window smaller than the screen gets a proportionally smaller rig, so it stays inside its frame instead of covering the cards around it
+    // only the part of the window that is on screen counts: a hero scrolled mostly out of view lets the rig drift back to the middle
+    const top = Math.max(r.top, w.top), bottom = Math.min(r.bottom, w.bottom), vis = bottom - top
+    if (vis < r.height * 0.35 || vis < 80) { H.engine.setCenter(null); return }
+    const zoom = Math.max(0.4, Math.min(1, (vis / Math.max(w.height, 1)) * 1.05))
+    H.engine.setCenter(r.left + r.width / 2 - w.left, (top + bottom) / 2 - w.top, snap, zoom)
+  }
+  /** Leave world mode (Classic, light scheme): the canvas goes back to the park and pages host it in their own slots again. */
+  function exitWorld() {
+    if (!H.worldSlot) return
+    stopLoop(); H.win = null
+    if (H.engine) { H.engine.setCenter(null); parkEl().appendChild(H.engine.domElement) }
+    H.worldSlot.classList.remove('j-twin-live'); H.slot = null; H.worldSlot = null; H.wl = false
+    document.body.classList.remove('world-live')
+  }
+  /** A page without a hero slot asks for a camera shot of one part (null = the whole rig). */
+  function shot(id) { if (!H.engine) return; H.engine.setReveal(null); if (id) H.engine.focus(id); else H.engine.setView('home', { snap: false }) }
 
   function mount(slot) {
     const c = H.engine.domElement
     if (c.parentElement !== slot) slot.appendChild(c)
     sizeToSlot()
     slot.classList.add('j-twin-live')
-    applyView(slot)
+    applyView(H.win || slot); if (H.worldSlot) syncCenter(true)
     if (!H.ro && root.ResizeObserver) { H.ro = new ResizeObserver(sizeToSlot); H.ro.observe(slot) }
     if (!H.io && root.IntersectionObserver) { H.io = new IntersectionObserver(es => { H.visible = es[0].isIntersecting }); H.io.observe(slot) }
     if (!H.loopId && H.state === 'live') startLoop()
@@ -162,6 +203,7 @@
   }
 
   function park() {
+    if (H.worldSlot && H.slot === H.worldSlot) { H.win = null; worldClass(); if (H.engine) H.engine.setCenter(null); return }   // the world canvas never leaves its slot
     if (H.ro) { H.ro.disconnect(); H.ro = null }
     if (H.io) { H.io.disconnect(); H.io = null }
     if (H.engine) parkEl().appendChild(H.engine.domElement)
@@ -171,6 +213,7 @@
   }
 
   function teardown(reason) {
+    if (H.worldSlot) { H.wl = false; document.body.classList.remove('world-live') }
     stopLoop()
     if (H.engine) { try { H.engine.dispose() } catch {} H.engine = null }
     H.state = 'static'; H.reason = reason
@@ -185,7 +228,7 @@
     if (!H.engine || !H.slot) return
     const fps = H.probe ? 60 : Mo().targetFps({
       visible: document.visibilityState === 'visible' && H.visible,
-      gameForeground: !!(root._systemContext && root._systemContext.gameRunning),
+      gameForeground: !!(root._gameRunning || (root._systemContext && root._systemContext.gameRunning)),
       msSinceInput: Date.now() - H.lastInput, interacting: H.interacting || !!H.boot || !H.engine.settled(),
     })
     if (fps === 0) return
@@ -193,6 +236,7 @@
     if (!H.probe && dt < 1 / fps - 0.002) return   // uncapped while probing so the intervals show what the GPU can do
     H.lastFrame = now
     const snap = root.JylliTelemetry && (root.JylliTelemetry.state.override || root.JylliTelemetry.state.snap)
+    if (H.worldSlot) { syncCenter(); const live = H.state === 'live'; if (live !== H.wl) { H.wl = live; document.body.classList.toggle('world-live', live) } }
     if (snap && snap.seq !== H.lastSeq) { H.lastSeq = snap.seq; H.visual = Map_().visualState(snap); H.engine.setState(H.visual) }
     H.engine.render(Math.min(dt, 0.1))
     if (H.probe) {
@@ -206,6 +250,7 @@
     }
   }
   function stepDown(next) {
+    if (H.worldSlot) { H.wl = false; document.body.classList.remove('world-live') }
     const slot = H.slot
     const was = H.engine
     stopLoop(); if (was) { try { was.dispose() } catch {} } H.engine = null
@@ -301,6 +346,7 @@
     park()
     if (H.engine) { H.engine.setBoot(false); H.engine.setPowered(1); H.engine.setReveal(null); H.probe = { frames: [], start: performance.now(), last: 0 } }
     if (pending) attach(pending)
+    else if (worldOn()) attach(null)
   }
 
   function select(id) { if (H.engine) H.engine.focus(id); emit('select', id) }
@@ -316,7 +362,11 @@
   async function setRigDeclared() { H.rig = null; H.layout = null; await ensureRig(); if (H.engine) H.engine.build(H.layout); if (H.slot) renderFallback(H.slot) }
 
   root.JylliTwin = {
-    attach, park, select, back, on, partInfo, setRigDeclared, assemble, skipAssembly() { H.skipAssembly && H.skipAssembly() },
+    attach, park, shot, exitWorld, select, back, on, partInfo,
+    get win() { return H.win },
+    anchor(id) { return H.engine && H.slot ? H.engine.screenPos(id) : null },   // CSS px relative to the canvas, null when unknown or behind the camera
+    pulse(id) { if (H.engine) H.engine.pulse(id) },
+    partIds() { return H.engine ? H.engine.partIds() : [] }, setRigDeclared, assemble, skipAssembly() { H.skipAssembly && H.skipAssembly() },
     bootBegin, bootStage, bootPower, bootRevealAll, bootAnchor, bootPulse, bootSettle, bootEnd, bootStageOf,
     get bootPending() { return (H.boot && H.boot.pending) || null },
     get bootActive() { return !!H.bootActive }, get bootAssembled() { return !!H.assembledByBoot },

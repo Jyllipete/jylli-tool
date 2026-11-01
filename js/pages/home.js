@@ -283,7 +283,7 @@ function twinInspect(id) {
   if (hint) hint.hidden = true
   const key = TWIN_PART_LABEL[info.label] || 'twinPartBoard'
   const facts = twinFacts(info).map(([k, v]) => `<div class="j-twin-row"><span>${escHtml(k)}</span><span>${escHtml(v)}</span></div>`).join('')
-  const metrics = info.metrics.map(m => `<div class="j-twin-row"><span>${escHtml(tUI('sensorKey_' + m))}</span><span class="j-num" data-metric="${escAttr(m)}">—</span></div>`).join('')
+  const metrics = info.metrics.map(m => `<div class="j-twin-row"><span>${escHtml(tUI('sensorKey_' + m))}</span><span class="j-num" data-odo data-metric="${escAttr(m)}">—</span></div>`).join('')
   const openGpu = id === 'gpu' && !info.ghost ? `<button type="button" class="j-btn j-btn-sm" onclick="twinOpenGpu()">${escHtml(tUI('twinOpenGpu'))}</button>` : ''
   const ghost = info.ghost ? `<div class="j-twin-ghost-note">${escHtml(tUI(info.note === 'integrated-only' ? 'twinIntegratedOnly' : 'twinNotDetected'))}${twinSetIt(info)}</div>` : ''
   box.innerHTML = `<div class="j-twin-insp-head"><b>${escHtml(tUI(key))}</b><button type="button" class="j-btn j-btn-ghost j-btn-sm j-btn-icon" id="twin-back" aria-label="${escAttr(tUI('twinBack'))}"><i class="fa fa-xmark" aria-hidden="true"></i></button></div>${ghost}${facts}${metrics}${openGpu}`

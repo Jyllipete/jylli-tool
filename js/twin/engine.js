@@ -3,7 +3,7 @@
 // and driven by the visual state (js/twin/mapping.js). Reads window.THREE (js/vendor/three.bundle.js). It never reads telemetry
 // itself and holds no numbers of its own: with no state the rig is neutral. Not unit-tested (needs WebGL); the pure parts it
 // relies on are. Showcase rule: every part the kit can model is always drawn (case, fans, shrouds) and decor lights keep a steady
-// ambient glow; heat tint, load surges and fan spin still come only from real readings (js/twin/mapping.js), and undetected
+// ambient glow and the case fans idle-spin slowly; heat tint, load surges, case-fan speed-up and GPU fan spin come only from real readings (js/twin/mapping.js), and undetected
 // hardware stays a frosted x-ray ghost (empty RAM slots are real, empty slots).
 ;(function (root) {
   const Mo = () => root.JylliTwinMotion
@@ -24,6 +24,7 @@
   // view would look through them). Distances clear the glass (case half-depth ~2.3).
   const FOCUS_DIST = { gpu: 10, cpu: 9, cooler: 9.5, ram0: 9, board: 13, storage: 9 }
   const FOCUS_YAW = 0.5, FOCUS_PITCH = 0.14
+  const IDLE_SPIN = 0.9   // rad/s: showcase case fans turn slowly without a reading; a real motherboard fan reading drives their speed
   const AMB = 2.5   // steady emissive level of decor lights; readings move a part's own glow around it
 
   function create({ accent = [0.55, 0.49, 0.96], quality = 'full', preferLowPower = true } = {}) {
@@ -268,7 +269,7 @@
       for (const f of decorFans) {
         const lv = caseReal[f.index]
         f.ring.target = AMB * (lv != null ? 1 + lv * 0.5 : 1) * f.ring.strength
-        if (!reducedMotion() && lv != null) f.spinGroup.rotation.z -= dt * (1 + lv * 14)
+        if (!reducedMotion()) f.spinGroup.rotation.z -= dt * (lv != null ? 1 + lv * 14 : IDLE_SPIN)
       }
       // GPU shroud fans: one real reading drives all three
       const gpuFan = state && state.gpu && state.gpu.fan
@@ -364,10 +365,27 @@
 
     // ── frame ─────────────────────────────────────────────────────────────────────────────────────────────────────────
     let lastSize = ''
+    // World mode: the canvas is the whole window and the rig is centred on a page's "window" (a hero slot) by shifting the
+    // projection, so each page keeps its composition while the scene shows through the glass around it.
+    let cw = 1, ch = 1, ctrT = null, ctrC = null
+    function setCenter(x, y, snap, zoom = 1) {
+      if (x == null && !ctrT && !ctrC) return   // already centred: this is called every frame by the host
+      ctrT = x == null ? null : { x, y, z: zoom }
+      if (!ctrT) { ctrC = null; camera.zoom = 1; camera.clearViewOffset(); camera.updateProjectionMatrix(); return }
+      if (snap || !ctrC) ctrC = { x, y, z: zoom }
+    }
+    function stepCenter(dt) {
+      if (!ctrT) return
+      const k = reducedMotion() ? 1 : 1 - Math.exp(-dt * 7)
+      ctrC.x += (ctrT.x - ctrC.x) * k; ctrC.y += (ctrT.y - ctrC.y) * k; ctrC.z += (ctrT.z - ctrC.z) * k
+      camera.zoom = ctrC.z
+      camera.setViewOffset(cw, ch, cw / 2 - ctrC.x, ch / 2 - ctrC.y, cw, ch)
+    }
+    const centerSettled = () => !ctrT || (Math.abs(ctrT.x - ctrC.x) < 0.5 && Math.abs(ctrT.y - ctrC.y) < 0.5 && Math.abs(ctrT.z - ctrC.z) < 0.002)
     function resize(w, h, dpr) {
       const pr = quality === 'full' ? Math.min(dpr || 1, 1.5) : 1, key = w + 'x' + h + '@' + pr
       if (key === lastSize) return   // re-attaching to a same-sized slot must not rebuild the MSAA/bloom targets
-      lastSize = key
+      lastSize = key; cw = w; ch = h
       renderer.setPixelRatio(pr)
       renderer.setSize(w, h, false)
       camera.aspect = w / Math.max(h, 1); camera.updateProjectionMatrix()
@@ -377,7 +395,7 @@
       }
     }
     function render(dt) {
-      stepCamera(dt); stepReveal(dt); stepPulse(dt); applyState(dt)
+      stepCamera(dt); stepCenter(dt); stepReveal(dt); stepPulse(dt); applyState(dt)
       if (composer) composer.render(dt); else renderer.render(scene, camera)
     }
     function setAccent(rgb) {
@@ -388,7 +406,7 @@
     function dispose() { disposeWorld(); try { composer && composer.dispose?.() } catch {} pmrem.dispose(); envTex.dispose(); renderer.dispose(); renderer.forceContextLoss?.() }
 
     setupComposer()
-    return { domElement: dom, rendererName, build, setReveal, revealTo, pulse, setPowered, setBoot, screenPos, partIds: () => [...parts.keys()], setState, setView, focus, pick, setHover, resize, render, setAccent, dispose, settled,
+    return { domElement: dom, rendererName, build, setReveal, revealTo, pulse, setPowered, setBoot, screenPos, partIds: () => [...parts.keys()], setState, setView, focus, pick, setHover, resize, render, setAccent, dispose, setCenter, settled: () => settled() && centerSettled(),
       nudge(dyaw, dpitch) { user.yaw = Math.max(-0.5, Math.min(0.5, user.yaw + dyaw)); user.pitch = Math.max(-0.25, Math.min(0.25, user.pitch + dpitch)) },
       release() { user.yaw = user.pitch = 0 }, get focusId() { return focusId }, parts: () => [...parts.keys()] }
   }

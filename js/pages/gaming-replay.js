@@ -49,6 +49,7 @@ async function replayOpen(id) {
       <canvas id="replay-canvas" class="j-replay-canvas" width="900" height="200" role="img" aria-label="${tUI('replayChartAria')}"></canvas>
       <input type="range" id="replay-scrub" min="0" max="${Math.max(0, s.bins.length - 1)}" value="0" step="1" aria-label="${tUI('replayScrub')}" class="j-replay-scrub">
       <div id="replay-readout" class="j-muted j-num" aria-live="polite"></div>
+      ${ui.button({ label: tUI('shareCard'), icon: 'image', size: 'sm', onclick: 'replayShareCard()' })}
       <div class="j-home-chips" id="replay-series">${have.length ? have.map(([k, label]) => html`<label class="j-check"><input type="checkbox" data-rs="${k}" ${REPLAY.series.has(k) ? 'checked' : ''}> ${tUI(label)}</label>`) : html`<span class="j-muted">${tUI('replayNoSensors')}</span>`}</div>
       <div class="j-stat-label j-home-label">${tUI('replayAdvice')}</div>
       <div id="replay-advice">${r.advice.length ? r.advice.map(a => ui.callout(tUI('replayAdvice_' + a.id).replace(/\{(\w+)\}/g, (m, k) => a.evidence[k] ?? m), a.severity === 'warn' ? 'warn' : 'info')).join('') : html`<span class="j-muted">${tUI('replayAdviceNone')}</span>`}</div>`,
@@ -96,5 +97,10 @@ function replayDraw() {
     for (const key of Object.keys(s.series)) { const v = replayValueAt(s, key, REPLAY.t); snap.s[key] = [v, 0, 'replay'] }
     JylliTelemetry.setOverride(snap)
   }
+}
+function replayShareCard() {
+  if (!REPLAY.session || !window.JylliShareCard) return
+  const rig = window.JylliTwin && JylliTwin.rig ? { gpu: ((JylliTwin.rig.gpus || [])[0] || {}).name, cpu: (JylliTwin.rig.cpu || {}).name } : null
+  JylliShareCard.save(REPLAY.session, rig)
 }
 function replayClose() { try { JylliTelemetry.setOverride(null) } catch {} }

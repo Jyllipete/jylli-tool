@@ -50,6 +50,7 @@ function buildSettings(c) {
         row(tUI('settingsCustomAccent'), tUI('settingsAccentHint'), html`<div class="tc-accent-row" id="accent-row"><div class="tc-accent-swatch-wrap" id="accent-swatch-wrap"><div class="tc-accent-swatch-circle" id="accent-swatch-circle"></div><input type="color" id="accent-color-picker"></div>${ui.button({ label: tUI('settingsReset'), size: 'sm', onclick: 'resetAccentColor()' })}</div>`),
         row(tUI('colorScheme'), tUI('colorSchemeDesc'), html`<div class="j-seg">${['system', 'dark', 'light'].map(v => html`<button type="button" data-scheme="${v}" class="${ui.cls('j-seg-item', (settings.colorScheme || 'dark') === v && 'j-seg-active')}" onclick="settingsSetScheme('${v}')">${tUI('scheme' + v.charAt(0).toUpperCase() + v.slice(1))}</button>`)}</div>`),
         row(tUI('motionMode'), tUI('motionModeDesc'), html`<div class="j-seg">${motionBtns}</div>`),
+        row(tUI('uiMode'), tUI('uiModeDesc'), html`<div class="j-seg">${['cinematic', 'balanced', 'light', 'classic'].map(v => html`<button type="button" data-uimode="${v}" class="${ui.cls('j-seg-item', (settings.uiMode || 'balanced') === v && 'j-seg-active')}" onclick="settingsSetUiMode('${v}')">${tUI('uiMode_' + v)}</button>`)}</div>`),
         row(tUI('visuals3d'), html`${tUI('visuals3dDesc')} <span id="visuals3d-status" class="j-muted"></span>`, html`<div class="j-seg">${['auto', 'full', 'reduced', 'off'].map(v => html`<button type="button" data-v3d="${v}" class="${ui.cls('j-seg-item', (settings.visuals3d || 'auto') === v && 'j-seg-active')}" onclick="settingsSetVisuals3d('${v}')">${tUI('visuals3d_' + v)}</button>`)}</div>`),
       ])}`)}
 
@@ -210,6 +211,15 @@ async function settingsRenderSensors(c) {
     return ui.row({ title: tUI('sensorKey_' + key), sub, control: ui.badge(cap.available ? tUI('sensorsOk') : tUI('metricNA'), cap.available ? 'success' : 'neutral') })
   })
   box.innerHTML = String(ui.group('', rows))
+}
+
+function settingsSetUiMode(v) {
+  settings.uiMode = ['cinematic', 'balanced', 'light', 'classic'].includes(v) ? v : 'balanced'
+  api.saveSettings(settings)
+  document.querySelectorAll('[data-uimode]').forEach(b => b.classList.toggle('j-seg-active', b.dataset.uimode === settings.uiMode))
+  const was = document.body.classList.contains('world-on')
+  try { JylliWorld.apply() } catch {}
+  if (was !== document.body.classList.contains('world-on')) { try { showPage(currentPage) } catch {} }   // pages re-attach their twin slot in the new mode
 }
 
 function settingsSetVisuals3d(v) {

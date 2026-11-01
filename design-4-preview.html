@@ -1,0 +1,894 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Jylli Tool 4.0 prototype</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- Jylli Tool 4.0 "Through the glass": clickable vertical slice (see UI_4_0_PLAN.md). Serve the repo root: node tools/ui-preview/serve.js, open /design-4-preview.html.
+     The 3D rig is the real twin; every number here is SIMULATED and labelled so. -->
+<link rel="stylesheet" href="css/fonts.css">
+<link rel="stylesheet" href="css/tokens.css">
+<link rel="stylesheet" href="css/ui.css">
+<style>
+:root {
+  --bg: #07070A; --t1: #EDEDF0; --t2: rgba(237,237,240,.74); --t3: rgba(237,237,240,.54);
+  --acc: #8B7CF6; --acc-rgb: 139,124,246; --acc-text: #B9AFFB;
+  --ok: #3DD68C; --warn: #F5A524; --bad: #F2555A; --info: #4C9EFF;
+  --spring: cubic-bezier(.16,1,.3,1); --glide: 640ms;
+  --lx: 400px; --ly: 120px;
+  --font: 'Geist', system-ui, sans-serif; --mono: 'Geist Mono', ui-monospace, monospace;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; overflow: hidden; background: var(--bg); color: var(--t1); font: 13px/1.45 var(--font); letter-spacing: -.003em; -webkit-font-smoothing: antialiased; }
+button { font: inherit; color: inherit; cursor: pointer; }
+:focus-visible { outline: 2px solid var(--acc); outline-offset: 2px; }
+
+/* ── stage ───────────────────────────────────────────────────────────── */
+#stage { position: fixed; inset: 0; background: radial-gradient(ellipse 70% 60% at 40% 58%, rgba(var(--acc-rgb), .17), transparent 70%), radial-gradient(ellipse at 50% 120%, #14141c, var(--bg) 60%); overflow: hidden; }
+#slot, #netslot { position: absolute; top: 0; bottom: 0; left: -130px; right: 130px; transition: opacity var(--glide) var(--spring), transform var(--glide) var(--spring), filter var(--glide) var(--spring); }
+#slot canvas, #netslot canvas { width: 100% !important; height: 100% !important; display: block; }
+#netslot { left: 84px; right: 464px; opacity: 0; transform: scale(.92); pointer-events: none; }
+#netslot canvas { filter: brightness(2.6) contrast(1.25) saturate(1.4); }   /* the net scene is lit for the 2D hero; lift it for the full-bleed stage */
+body.net #slot { opacity: 0; transform: scale(1.18); filter: blur(6px); pointer-events: none; }
+body.net #netslot { opacity: 1; transform: none; pointer-events: auto; }
+#slot .j-twin-hint, #slot .j-twin-fallback { display: none; }
+#grain { position: fixed; inset: 0; pointer-events: none; background: radial-gradient(ellipse at 50% 50%, transparent 55%, rgba(0,0,0,.55)); }
+#sweep { position: fixed; top: 0; bottom: 0; width: 160px; left: -200px; pointer-events: none; background: linear-gradient(90deg, transparent, rgba(var(--acc-rgb), .22), rgba(255,255,255,.28) 50%, rgba(var(--acc-rgb), .22), transparent); filter: blur(2px); opacity: 0; }
+#sweep.go { animation: sweep 2.4s cubic-bezier(.5,0,.5,1) forwards; }
+@keyframes sweep { 0% { left: -200px; opacity: 0 } 10% { opacity: 1 } 90% { opacity: 1 } 100% { left: 100%; opacity: 0 } }
+body.gaming-live #grain { background: #000; opacity: .0; }
+
+/* ── glass material: shared light via --mx/--my set per element from the one light ── */
+.glass { position: relative; border-radius: 18px; background: linear-gradient(180deg, rgba(34,34,42,.58), rgba(14,14,19,.74)); backdrop-filter: blur(24px) saturate(1.5) brightness(.9); -webkit-backdrop-filter: blur(24px) saturate(1.5) brightness(.9); box-shadow: 0 24px 70px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.07), inset 0 0 0 1px rgba(255,255,255,.035), inset 0 0 40px var(--heat, transparent); --mx: 50%; --my: 0%; }
+.glass::before { content: ''; position: absolute; inset: 0; border-radius: inherit; padding: 1px; pointer-events: none; background: radial-gradient(320px circle at var(--mx) var(--my), rgba(255,255,255,.62), rgba(255,255,255,.10) 55%, rgba(255,255,255,.04)); -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude; }
+.glass::after { content: ''; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; background: radial-gradient(380px circle at var(--mx) var(--my), rgba(255,255,255,.07), transparent 65%); }
+body.q-light .glass, body.q-classic .glass { backdrop-filter: none; -webkit-backdrop-filter: none; background: linear-gradient(180deg, rgba(28,28,34,.94), rgba(16,16,21,.97)); }
+body.q-cinematic .glass { backdrop-filter: blur(36px) saturate(1.8) brightness(.85); -webkit-backdrop-filter: blur(36px) saturate(1.8) brightness(.85); }
+body.q-classic #stage { display: none; }
+body.q-classic { background: #0b0b0e; }
+body.q-classic #leaders, body.q-classic .callout { display: none; }
+
+/* ── chrome ──────────────────────────────────────────────────────────── */
+#topbar { position: fixed; top: 10px; left: 88px; right: 16px; height: 36px; display: flex; align-items: center; gap: 12px; z-index: 5; }
+#topbar .brand { font-weight: 600; letter-spacing: -.02em; font-size: 14px; display: flex; align-items: center; gap: 8px; }
+#topbar .brand i { width: 10px; height: 10px; border-radius: 50%; background: var(--acc); box-shadow: 0 0 14px 2px rgba(var(--acc-rgb), .8); }
+.pill { font-size: 11.5px; padding: 3px 10px; border-radius: 99px; background: rgba(255,255,255,.06); color: var(--t2); border: 1px solid rgba(255,255,255,.08); }
+.pill.demo { color: var(--warn); border-color: rgba(245,165,36,.3); background: rgba(245,165,36,.08); }
+.sp { flex: 1; }
+.kbd { font: 11px var(--mono); padding: 2px 6px; border-radius: 5px; background: rgba(255,255,255,.07); color: var(--t2); border: 1px solid rgba(255,255,255,.08); }
+#search { display: flex; gap: 8px; align-items: center; height: 32px; padding: 0 8px 0 12px; border-radius: 10px; background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.08); color: var(--t3); }
+#search:hover { background: rgba(255,255,255,.08); color: var(--t2); }
+
+#rail { position: fixed; left: 12px; top: 56px; bottom: 124px; width: 60px; z-index: 6; padding: 10px 8px; display: flex; flex-direction: column; gap: 6px; border-radius: 20px; overflow: hidden; transition: width 320ms var(--spring); }
+#rail:hover, #rail:focus-within { width: 176px; }
+#rail button { display: flex; align-items: center; gap: 12px; height: 44px; padding: 0 12px; border: 0; border-radius: 12px; background: transparent; color: var(--t3); white-space: nowrap; text-align: left; position: relative; transition: background 160ms, color 160ms; }
+#rail button:hover { background: rgba(255,255,255,.06); color: var(--t1); }
+#rail button.on { background: rgba(var(--acc-rgb), .16); color: #fff; }
+#rail button.on::before { content: ''; position: absolute; left: -9px; top: 12px; bottom: 12px; width: 3px; border-radius: 3px; background: var(--acc); box-shadow: 0 0 12px var(--acc); }
+#rail svg { width: 20px; height: 20px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+#rail span { opacity: 0; transition: opacity 200ms; font-weight: 500; }
+#rail:hover span, #rail:focus-within span { opacity: 1; }
+#rail .gap { flex: 1; }
+#rail kbd { margin-left: auto; font: 10.5px var(--mono); opacity: 0; color: var(--t3); }
+#rail:hover kbd { opacity: 1; }
+
+#plate { position: fixed; right: 16px; top: 56px; bottom: 124px; width: 440px; z-index: 4; padding: 22px 22px 20px; overflow-y: auto; scrollbar-width: thin; scrollbar-color: rgba(255,255,255,.15) transparent; transition: opacity 220ms var(--spring), transform 220ms var(--spring); }
+#plate.out { opacity: 0; transform: translateX(26px) scale(.985); }
+#plate.in { animation: plateIn 520ms var(--spring); }
+@keyframes plateIn { from { opacity: 0; transform: translateX(34px) scale(.985); } }
+body.gaming-live #plate { opacity: .96; }
+.crumb { color: var(--t3); font-size: 12px; margin-bottom: 2px; }
+h1 { margin: 0 0 4px; font-size: 22px; font-weight: 600; letter-spacing: -.02em; }
+.sub { color: var(--t2); margin: 0 0 16px; font-size: 13px; }
+.tabs { display: flex; gap: 4px; padding: 3px; background: rgba(255,255,255,.05); border-radius: 11px; margin-bottom: 16px; }
+.tabs button { flex: 1; border: 0; background: transparent; padding: 7px 0; border-radius: 8px; color: var(--t2); font-weight: 500; }
+.tabs button.on { background: rgba(255,255,255,.1); color: #fff; box-shadow: inset 0 1px 0 rgba(255,255,255,.1); }
+.hero { display: flex; align-items: flex-end; gap: 6px; margin: 4px 0 2px; }
+.hero .stat .odo { font-size: 68px; letter-spacing: -.04em; font-weight: 600; }
+.hero .stat { gap: 6px; }
+.hero .stat small { font-size: 20px; color: var(--t3); }
+.callout { background: linear-gradient(180deg, rgba(28,28,38,.86), rgba(12,12,18,.92)); }
+.grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 14px 0; }
+.cell { padding: 12px 14px; border-radius: 12px; background: rgba(255,255,255,.045); border: 1px solid rgba(255,255,255,.06); }
+.cell label { display: block; color: var(--t3); font-size: 12px; margin-bottom: 2px; }
+.stat { display: inline-flex; align-items: baseline; gap: 3px; }
+.stat .odo { font-size: 22px; font-weight: 600; letter-spacing: -.03em; }
+.stat small { color: var(--t3); font-family: var(--mono); font-size: 12px; }
+.odo { font-family: var(--mono); font-feature-settings: 'tnum'; display: inline-flex; line-height: 1; height: 1em; overflow: hidden; vertical-align: baseline; }
+.od-c { display: inline-block; height: 1em; overflow: hidden; }
+.od-c[data-d] { width: .62em; text-align: center; }
+.od-c i { display: block; font-style: normal; line-height: 1; transition: transform 640ms cubic-bezier(.2,.9,.25,1.08); }
+body.mr .od-c i, body.mr * { transition-duration: 0ms !important; animation-duration: 0ms !important; }
+.odo.pending { animation: shimmer 1s ease-in-out infinite; }
+@keyframes shimmer { 50% { opacity: .35; } }
+[data-src] { cursor: help; }
+[data-src]:hover { text-decoration: underline dotted rgba(255,255,255,.4); text-underline-offset: 5px; }
+.bar { height: 8px; border-radius: 6px; background: rgba(255,255,255,.07); overflow: hidden; }
+.bar > i { display: block; height: 100%; border-radius: 6px; background: linear-gradient(90deg, rgba(var(--acc-rgb), .7), var(--acc)); transition: width 700ms var(--spring); box-shadow: 0 0 14px rgba(var(--acc-rgb), .6); }
+.row { display: flex; align-items: center; gap: 10px; padding: 9px 0; border-top: 1px solid rgba(255,255,255,.06); }
+.row:first-of-type { border-top: 0; }
+.row .grow { flex: 1; }
+.dot { width: 8px; height: 8px; border-radius: 50%; background: var(--ok); flex: none; }
+.dot.warn { background: var(--warn); } .dot.bad { background: var(--bad); } .dot.off { background: var(--t3); }
+.muted { color: var(--t3); font-size: 12px; }
+.badge { font-size: 11.5px; padding: 2px 8px; border-radius: 99px; background: rgba(61,214,140,.12); color: var(--ok); }
+.badge.rec { background: rgba(245,165,36,.14); color: var(--warn); }
+.lbl { font-size: 12px; color: var(--t3); margin: 18px 0 6px; font-weight: 500; }
+
+.btn { height: 38px; padding: 0 16px; border-radius: 11px; border: 1px solid rgba(255,255,255,.1); background: rgba(255,255,255,.07); font-weight: 500; transition: background 140ms, transform 140ms; }
+.btn:hover { background: rgba(255,255,255,.12); }
+.btn:active { transform: scale(.985); }
+.btn.sm { height: 30px; padding: 0 12px; font-size: 12.5px; }
+.hold { --p: 0; position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; height: 48px; border-radius: 13px; border: 1px solid rgba(var(--acc-rgb), .55); background: rgba(var(--acc-rgb), .16); color: #fff; font-weight: 600; font-size: 14px; user-select: none; box-shadow: 0 10px 30px -10px rgba(var(--acc-rgb), .65), inset 0 1px 0 rgba(255,255,255,.15); }
+.hold::before { content: ''; position: absolute; inset: 0; background: linear-gradient(90deg, rgba(var(--acc-rgb), .9), var(--acc)); transform-origin: left; transform: scaleX(var(--p)); }
+.hold > * { position: relative; }
+.hold.holding { transform: scale(.99); }
+.hold:disabled { opacity: .45; cursor: default; box-shadow: none; }
+.hold .ring { width: 18px; height: 18px; border-radius: 50%; background: conic-gradient(#fff calc(var(--p) * 360deg), rgba(255,255,255,.25) 0); -webkit-mask: radial-gradient(circle, transparent 5px, #000 6px); mask: radial-gradient(circle, transparent 5px, #000 6px); }
+input[type=range] { width: 100%; accent-color: var(--acc); }
+.seg { display: flex; gap: 4px; flex-wrap: wrap; }
+.seg button { padding: 6px 12px; border-radius: 9px; border: 1px solid rgba(255,255,255,.09); background: rgba(255,255,255,.04); color: var(--t2); }
+.seg button.on { background: rgba(var(--acc-rgb), .2); border-color: rgba(var(--acc-rgb), .55); color: #fff; }
+.replaybadge { display: none; align-items: center; gap: 8px; margin-bottom: 12px; padding: 7px 12px; border-radius: 10px; background: rgba(76,158,255,.12); color: #9CC8FF; border: 1px solid rgba(76,158,255,.3); font-size: 12.5px; }
+body.replay .replaybadge { display: flex; }
+.ring-wrap { display: flex; align-items: center; gap: 18px; margin: 6px 0 16px; }
+.score { position: relative; width: 104px; height: 104px; flex: none; }
+.score svg { width: 104px; height: 104px; transform: rotate(-90deg); }
+.score circle { fill: none; stroke-width: 7; stroke-linecap: round; }
+.score .tr { stroke: rgba(255,255,255,.08); }
+.score .fg { stroke: var(--acc); filter: drop-shadow(0 0 6px rgba(var(--acc-rgb), .8)); transition: stroke-dashoffset 1s var(--spring); }
+.score .odo { position: absolute; inset: 0; margin: auto; font-size: 30px; font-weight: 600; justify-content: center; align-items: center; height: 1em; width: max-content; }
+
+/* callouts + leaders */
+#leaders, #fx { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 3; }
+#fx { z-index: 9; }
+.callout { position: fixed; left: 0; top: 0; z-index: 3; min-width: 168px; padding: 10px 14px 11px; border-radius: 14px; pointer-events: auto; will-change: transform; transition: opacity 300ms; }
+.callout.hide { opacity: 0; pointer-events: none; }
+.callout h4 { margin: 0 0 4px; font-size: 12px; font-weight: 500; color: var(--t2); display: flex; align-items: center; gap: 6px; }
+.callout .ms { display: flex; gap: 16px; }
+.callout .stat .odo { font-size: 20px; }
+.callout .sub2 { color: var(--t3); font-size: 11.5px; margin-top: 3px; }
+
+#chrono { position: fixed; left: 88px; right: 16px; bottom: 12px; height: 100px; z-index: 5; padding: 10px 16px 10px; }
+.ch-head { display: flex; align-items: center; gap: 12px; height: 22px; font-size: 12px; }
+.ch-head b { font-weight: 600; }
+.ch-head .leg { color: var(--t3); display: flex; gap: 12px; align-items: center; }
+.ch-head .leg i { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 5px; vertical-align: -0px; }
+#ch-track { position: absolute; left: 16px; right: 16px; top: 36px; bottom: 10px; cursor: ew-resize; touch-action: none; }
+#ch-track svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.ch-sess { position: absolute; bottom: 0; height: 7px; border-radius: 4px; background: rgba(61,214,140,.55); }
+.ch-sess:hover { background: var(--ok); }
+.ch-mark { position: absolute; top: 2px; width: 12px; height: 12px; margin-left: -6px; background: var(--acc); transform: rotate(45deg); border-radius: 3px; box-shadow: 0 0 12px rgba(var(--acc-rgb), .9); border: 0; padding: 0; }
+.ch-mark.new { animation: markIn 700ms var(--spring); }
+@keyframes markIn { from { transform: rotate(45deg) scale(0); } }
+.ch-mark.gone { transition: all 500ms; opacity: 0; transform: rotate(45deg) scale(0); }
+.ch-day { position: absolute; bottom: -2px; font-size: 10.5px; color: var(--t3); transform: translateX(-50%); white-space: nowrap; }
+.ch-day::before { content: ''; position: absolute; left: 50%; bottom: 14px; height: 6px; width: 1px; background: rgba(255,255,255,.12); }
+#ch-head { position: absolute; top: -4px; bottom: 6px; width: 2px; margin-left: -1px; background: #fff; box-shadow: 0 0 10px rgba(255,255,255,.7); border-radius: 2px; pointer-events: none; }
+#ch-head::after { content: attr(data-t); position: absolute; top: -4px; left: 50%; transform: translate(-50%, -100%); white-space: nowrap; font-size: 11px; padding: 2px 8px; border-radius: 6px; background: #fff; color: #111; font-weight: 600; }
+#ch-pop { position: fixed; z-index: 12; padding: 12px 14px; width: 250px; display: none; }
+#ch-pop.show { display: block; animation: plateIn 300ms var(--spring); }
+
+#prov { position: fixed; z-index: 30; pointer-events: none; padding: 6px 10px; border-radius: 9px; font-size: 11.5px; background: rgba(240,240,246,.96); color: #15151a; box-shadow: 0 10px 30px rgba(0,0,0,.5); opacity: 0; transform: translateY(4px); transition: opacity 120ms, transform 120ms; max-width: 280px; }
+#prov.show { opacity: 1; transform: none; }
+#prov b { display: block; font-weight: 600; } #prov span { color: #66666f; }
+#toast { position: fixed; left: 50%; bottom: 124px; transform: translate(-50%, 20px); z-index: 20; padding: 10px 16px; border-radius: 12px; display: flex; align-items: center; gap: 14px; opacity: 0; pointer-events: none; transition: all 360ms var(--spring); }
+#toast.show { opacity: 1; transform: translate(-50%, 0); pointer-events: auto; }
+#toast button { border: 0; background: rgba(255,255,255,.12); padding: 4px 10px; border-radius: 7px; font-weight: 600; }
+
+#palette { position: fixed; inset: 0; z-index: 40; display: none; align-items: flex-start; justify-content: center; padding-top: 14vh; background: rgba(4,4,8,.55); backdrop-filter: blur(6px); }
+#palette.show { display: flex; animation: fade 200ms; }
+@keyframes fade { from { opacity: 0 } }
+#palette .box { width: min(640px, 92vw); padding: 10px; }
+#palette input { width: 100%; height: 52px; padding: 0 16px; font: 17px var(--font); color: #fff; background: transparent; border: 0; outline: 0; border-bottom: 1px solid rgba(255,255,255,.08); }
+#palette ul { list-style: none; margin: 6px 0 0; padding: 0; max-height: 46vh; overflow: auto; }
+#palette li { display: flex; align-items: center; gap: 12px; padding: 10px 14px; border-radius: 11px; color: var(--t2); cursor: pointer; }
+#palette li.on { background: rgba(var(--acc-rgb), .2); color: #fff; }
+#palette li em { font-style: normal; margin-left: auto; font-size: 11.5px; color: var(--t3); }
+#palette li .chip { width: 8px; height: 8px; border-radius: 50%; background: var(--acc); box-shadow: 0 0 10px var(--acc); }
+#intro { position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 2; text-align: center; pointer-events: none; transition: opacity 800ms; color: var(--t2); }
+#intro b { display: block; font-size: 26px; letter-spacing: -.03em; color: #fff; }
+#paused { position: fixed; left: 50%; top: 84px; transform: translateX(-50%); z-index: 7; padding: 10px 18px; border-radius: 14px; display: none; text-align: center; }
+body.gaming-live #paused { display: block; }
+#sharecard { width: 100%; border-radius: 12px; margin-top: 10px; border: 1px solid rgba(255,255,255,.1); }
+/* Windows tweaks page: wide plate, rows, dock, review sheet */
+#plate.wide { width: 700px; }
+body.wide #slot { left: -270px; right: 270px; }
+.tw-tools { display: flex; gap: 8px; margin: 2px 0 10px; }
+.tw-tools input { flex: 1; height: 38px; padding: 0 12px; border-radius: 11px; border: 1px solid rgba(255,255,255,.1); background: rgba(255,255,255,.05); color: #fff; font: 13px var(--font); }
+.tw-chips { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px; }
+.tw-chips button { padding: 5px 11px; border-radius: 99px; border: 1px solid rgba(255,255,255,.09); background: rgba(255,255,255,.04); color: var(--t2); font-size: 12px; }
+.tw-chips button.on { background: rgba(var(--acc-rgb), .22); border-color: rgba(var(--acc-rgb), .6); color: #fff; }
+.tw-chips button b { font-weight: 500; color: var(--t3); margin-left: 4px; }
+.tw-g { margin: 16px 2px 4px; font-size: 12px; color: var(--t3); font-weight: 500; display: flex; gap: 8px; }
+.tw { display: flex; align-items: flex-start; gap: 12px; padding: 10px 10px 10px 12px; border-radius: 13px; border: 1px solid transparent; position: relative; transition: background 160ms, border-color 160ms; }
+.tw:hover { background: rgba(255,255,255,.05); border-color: rgba(255,255,255,.07); }
+.tw.staged { background: rgba(var(--acc-rgb), .09); border-color: rgba(var(--acc-rgb), .35); }
+.tw.staged::before { content: ''; position: absolute; left: -1px; top: 12px; bottom: 12px; width: 3px; border-radius: 3px; background: var(--acc); box-shadow: 0 0 10px var(--acc); }
+.tw-b { flex: 1; min-width: 0; }
+.tw-t { font-weight: 500; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.badge.st { background: rgba(var(--acc-rgb), .2); color: var(--acc-text); }
+.badge.adv { background: rgba(242,85,90,.14); color: #FF8E92; }
+.sw { flex: none; width: 38px; height: 22px; margin-top: 1px; border-radius: 99px; border: 1px solid rgba(255,255,255,.12); background: rgba(255,255,255,.08); position: relative; padding: 0; transition: background 200ms, box-shadow 200ms; }
+.sw::after { content: ''; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: #cfcfd8; transition: transform 260ms var(--spring), background 200ms; }
+.sw[aria-checked=true] { background: var(--acc); border-color: transparent; box-shadow: 0 0 14px rgba(var(--acc-rgb), .6); }
+.sw[aria-checked=true]::after { transform: translateX(16px); background: #fff; }
+.tw-x { flex: none; width: 26px; height: 26px; border: 0; border-radius: 8px; background: transparent; color: var(--t3); transition: transform 220ms var(--spring), background 140ms; }
+.tw-x:hover { background: rgba(255,255,255,.08); color: #fff; }
+.tw-x[aria-expanded=true] { transform: rotate(90deg); }
+.tw-c { margin-top: 8px; padding: 8px 10px; border-radius: 10px; background: rgba(0,0,0,.28); border: 1px solid rgba(255,255,255,.05); }
+.tc { display: flex; gap: 8px; align-items: baseline; font-size: 11.5px; padding: 3px 0; }
+.tc i { font-style: normal; font-size: 10.5px; padding: 1px 6px; border-radius: 5px; background: rgba(255,255,255,.08); color: var(--t2); flex: none; }
+.tc code { font: 11px var(--mono); color: var(--t2); overflow-wrap: anywhere; flex: 1; }
+.tc b { font: 600 11px var(--mono); color: var(--acc-text); flex: none; }
+.tw-note { margin-top: 6px; font-size: 11.5px; color: var(--t3); }
+#tw-dock { position: sticky; bottom: -8px; margin-top: 14px; padding: 10px 12px; border-radius: 14px; display: none; align-items: center; gap: 10px; background: linear-gradient(180deg, rgba(40,34,70,.92), rgba(20,17,40,.96)); border: 1px solid rgba(var(--acc-rgb), .5); box-shadow: 0 14px 40px -10px rgba(var(--acc-rgb), .55); }
+#tw-dock.show { display: flex; animation: plateIn 360ms var(--spring); }
+#tw-dock .grow { flex: 1; font-weight: 500; }
+.btn.pri { background: var(--acc); border-color: transparent; color: #fff; font-weight: 600; box-shadow: 0 8px 22px -8px rgba(var(--acc-rgb), .9); }
+.btn.pri:hover { background: #9a8cf8; }
+#sheet { position: fixed; inset: 0; z-index: 35; display: none; align-items: center; justify-content: center; background: rgba(4,4,8,.5); backdrop-filter: blur(4px); }
+#sheet.show { display: flex; animation: fade 200ms; }
+#sheet .box { width: min(560px, 94vw); max-height: 82vh; overflow: auto; padding: 22px; }
+.rv { display: flex; gap: 10px; align-items: center; padding: 9px 0; border-top: 1px solid rgba(255,255,255,.07); }
+.rv .grow { flex: 1; }
+.rv .tr { font: 600 11.5px var(--mono); padding: 3px 8px; border-radius: 6px; }
+.rv .tr.to-on { background: rgba(61,214,140,.14); color: var(--ok); } .rv .tr.to-off { background: rgba(245,165,36,.14); color: var(--warn); }
+@media (max-width: 1000px) { #plate { width: 360px; } }
+</style>
+</head>
+<body class="q-balanced">
+<div id="stage"><div id="slot"></div><div id="netslot"></div><div id="grain"></div><div id="sweep"></div></div>
+<div id="intro"><b>Jylli Tool</b>Building your rig…</div>
+<svg id="leaders"></svg><svg id="fx"></svg>
+<div id="callouts"></div>
+
+<div id="topbar">
+  <div class="brand"><i></i>Jylli Tool <span class="muted" style="font-weight:400">4.0</span></div>
+  <span class="pill demo" data-src="Prototype|All values on this page are simulated. In the app each one shows its real source here.">Prototype · simulated data</span>
+  <span class="sp"></span>
+  <button id="search" class="glass-lite" aria-label="Open command palette">Search anything, or describe a problem <span class="kbd">Ctrl K</span></button>
+</div>
+
+<nav id="rail" class="glass" aria-label="Sections"></nav>
+<main id="plate" class="glass" aria-live="polite"></main>
+<div id="paused" class="glass"><b>Stage paused · 0 fps</b><div class="muted">A game is in front. Jylli renders nothing until it closes.</div></div>
+
+<section id="chrono" class="glass" aria-label="Chronoline">
+  <div class="ch-head"><b>Chronoline</b>
+    <span class="leg"><span><i style="background:#8B7CF6"></i>Changes</span><span><i style="background:#3DD68C"></i>Game sessions</span><span><i style="background:#4C9EFF"></i>GPU temperature</span></span>
+    <span class="sp"></span><span id="ch-state" class="muted">Live · drag to rewind your PC</span><button class="btn sm" id="ch-live">Now</button></div>
+  <div id="ch-track"></div>
+</section>
+<div id="ch-pop" class="glass"></div>
+<div id="prov"></div>
+<div id="toast" class="glass"><span id="toast-t"></span><button id="toast-b">Undo</button></div>
+<div id="sheet"><div class="box glass" id="sheet-box" role="dialog" aria-label="Review changes"></div></div>
+<div id="palette"><div class="box glass"><input id="pq" placeholder="Try: stutter, high ping, fans loud, free space…" autocomplete="off" aria-label="Command palette"><ul id="pl"></ul></div></div>
+
+<script>
+window.JYLLI_TWIN_BUNDLE = 'js/vendor/three.bundle.js'
+try { localStorage.removeItem('jt_twin_q') } catch {}   // a slow preview pane must not leave the twin stuck on the static silhouette
+window.settings = { visuals3d: new URLSearchParams(location.search).get('q') || 'full' }
+window.tUI = k => ({ twinAria: 'Your PC', twinHint: '', metricNA: 'Not available' }[k] || k)
+window.api = {
+  getHardwareInventory: async () => {
+    const raw = await (await fetch('test/fixtures/sensors/inventory-raw-desktop.json')).json()
+    const src = await (await fetch('lib/inventory.js')).text()
+    const m = { exports: {} }; new Function('module', 'exports', 'require', src)(m, m.exports, () => ({}))
+    return { ok: true, rig: m.exports.buildRigSpec(raw, {}) }
+  },
+  telemetrySubscribe: async () => ({}), telemetryUnsubscribe() {}, telemetryCapabilities: async () => ({ capabilities: {} }), onTwinTelemetry: () => () => {},
+}
+</script>
+<script src="js/telemetry.js"></script>
+<script src="js/twin/layout.js"></script>
+<script src="js/twin/mapping.js"></script>
+<script src="js/twin/motion.js"></script>
+<script src="js/twin/fallback.js"></script>
+<script src="js/twin/kit.js"></script>
+<script src="js/twin/engine.js"></script>
+<script src="js/twin/host.js"></script>
+<script src="js/twin/netscene.js"></script>
+<script>
+'use strict'
+const $ = (s, r = document) => r.querySelector(s), $$ = (s, r = document) => [...r.querySelectorAll(s)]
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v))
+const lerp = (a, b, t) => a + (b - a) * t
+const NOW = Date.now()
+
+/* ───────── audio (off until enabled in Settings) ───────── */
+const S = { sound: false, view: 'home', optTab: 'win', quality: 'balanced', motion: 'full', replay: null, applied: { profile: false, cpuPlan: false, clean: false, ram: false }, gpuLimit: 285, gpuLimitPending: 285, speed: null, gameLive: false, scanned: null, junk: 7.5 }
+let actx
+function beep(f = 520, d = .06, type = 'sine', g = .05) {
+  if (!S.sound) return
+  try { actx = actx || new AudioContext(); const o = actx.createOscillator(), a = actx.createGain(); o.type = type; o.frequency.value = f; a.gain.value = g; a.gain.exponentialRampToValueAtTime(.0001, actx.currentTime + d); o.connect(a).connect(actx.destination); o.start(); o.stop(actx.currentTime + d) } catch {}
+}
+
+/* ───────── simulated history (labelled demo) ───────── */
+function rng(seed) { return () => (seed = (seed * 1664525 + 1013904223) >>> 0) / 4294967296 }
+const N = 168, rnd = rng(7)
+const SESSIONS = [[20, 24, 'Cyberpunk 2077'], [44, 47, 'Apex Legends'], [68, 73, 'Forza Horizon 5'], [92, 95, 'Apex Legends'], [118, 123, 'Cyberpunk 2077'], [142, 146, 'Forza Horizon 5']]
+const hist = Array.from({ length: N }, (_, i) => {
+  const inS = SESSIONS.some(s => i >= s[0] && i < s[1])
+  const load = inS ? 68 + rnd() * 28 : 4 + rnd() * 14
+  return { load, cpuT: 36 + load * .34 + rnd() * 3, gpuT: 35 + load * .46 + rnd() * 3, inS }
+})
+const CHANGES = [
+  { i: 30, label: 'Disabled Xbox Game Bar', part: 'board', hist: true },
+  { i: 75, label: 'GPU power limit', part: 'gpu', from: '285 W', to: '260 W', hist: true },
+  { i: 125, label: 'Cleaned 3.1 GB', part: 'drive0', hist: true },
+]
+const timeLabel = i => { const d = new Date(NOW - (N - 1 - i) * 3600e3); return d.toLocaleDateString('en', { weekday: 'short' }) + ' ' + String(d.getHours()).padStart(2, '0') + ':00' }
+
+/* ───────── live values (simulated) ───────── */
+const V = {}
+let tt = 0
+function simulate(dt) {
+  tt += dt
+  const w = (p, a) => Math.sin(tt * p) * a
+  const gl = S.gameLive ? 82 + w(.7, 9) : 11 + w(.5, 5) + w(1.9, 3), cl = S.gameLive ? 64 + w(.6, 12) : 9 + w(.6, 4) + w(2.3, 2)
+  const cut = (285 - S.gpuLimit)
+  const live = {
+    'cpu.load': clamp(cl, 2, 100), 'cpu.temp': 41 + cl * .3 + w(.3, 1.2) - (S.applied.cpuPlan ? 2 : 0), 'cpu.clock': 4.55 + cl * .004 + (S.applied.cpuPlan ? .2 : 0) + w(.8, .05), 'cpu.power': 28 + cl * 1.1,
+    'gpu.load': clamp(gl, 1, 100), 'gpu.temp': 38 + gl * .42 + w(.25, 1) - cut * .14, 'gpu.power': (24 + gl * 2.6) * (S.gpuLimit / 285), 'gpu.fan': 28 + gl * .38 - cut * .05, 'gpu.clock': 1.9 + gl * .0123 - cut * .0007 + w(.7, .03), 'gpu.limit': S.gpuLimit,
+    'ram.used': 11.4 + (S.gameLive ? 6 : 0) + w(.15, .3) - (S.applied.ram ? 2.1 : 0), 'ram.pct': 0,
+    'disk.free': 612 + (S.applied.clean ? S.junk : 0), 'disk.temp': 38 + w(.2, 1.5), 'disk.junk': S.applied.clean ? 0 : S.junk,
+    'net.down': S.speed ? S.speed.down : 0.4 + Math.abs(w(.9, .3)), 'net.up': S.speed ? S.speed.up : .05 + Math.abs(w(1.3, .04)), 'net.ping': S.speed ? S.speed.ping : 3 + Math.abs(w(.5, 1)),
+    'score': 78 + (S.applied.profile ? 9 : 0) + (S.applied.clean ? 3 : 0) + (S.applied.ram ? 2 : 0) + (S.scanned ? 2 : 0),
+  }
+  live['ram.pct'] = live['ram.used'] / 32 * 100
+  if (S.replay != null) {
+    const h = hist[S.replay]
+    Object.assign(live, { 'cpu.load': h.load * .8, 'cpu.temp': h.cpuT, 'gpu.load': h.load, 'gpu.temp': h.gpuT, 'gpu.power': 20 + h.load * 2.5, 'gpu.fan': 28 + h.load * .38, 'cpu.power': 25 + h.load, 'gpu.clock': 1.9 + h.load * .0123, 'cpu.clock': 4.55 + h.load * .004 })
+  }
+  Object.assign(V, live)
+}
+function pushTelemetry() {
+  const s = {}, set = (k, v) => { s[k] = [v, 100, 'demo'] }
+  set('cpu.load', V['cpu.load']); set('gpu0.load', V['gpu.load']); set('ram.load', V['ram.pct'])
+  set('cpu.temp.package', V['cpu.temp']); set('gpu0.temp.core', V['gpu.temp']); set('gpu0.fan.pct', V['gpu.fan'])
+  for (let i = 1; i <= 3; i++) set('mb.fan' + i + '.rpm', 700 + V['cpu.load'] * 9 + i * 120)
+  JylliTelemetry.state.snap = { v: 1, seq: (pushTelemetry.n = (pushTelemetry.n || 0) + 1), t: Date.now(), s }
+}
+
+/* ───────── odometer ───────── */
+function odo(el, v, dec = 0) {
+  const s = dec ? v.toFixed(dec) : String(Math.round(v))
+  if (el._s === s) return
+  if (!el._c || el._c.length !== s.length) {
+    el.textContent = ''; el._c = []
+    for (const ch of s) {
+      const c = document.createElement('span'); c.className = 'od-c'
+      if (/\d/.test(ch)) { c.dataset.d = 1; c.innerHTML = '<i>' + '0<br>1<br>2<br>3<br>4<br>5<br>6<br>7<br>8<br>9' + '</i>' } else c.textContent = ch
+      el.append(c); el._c.push(c)
+    }
+    el.querySelectorAll('i').forEach(i => { i.style.transition = 'none' }); requestAnimationFrame(() => requestAnimationFrame(() => el.querySelectorAll('i').forEach(i => { i.style.transition = '' })))
+  }
+  ;[...s].forEach((ch, i) => { const c = el._c[i]; if (c.dataset.d) c.firstChild.style.transform = `translateY(${-(+ch) * 10}%)` })
+  el._s = s; el.setAttribute('aria-label', s); el.setAttribute('role', 'text')
+}
+const SRC = {
+  'cpu.temp': ['CPU Package temperature', 'LibreHardwareMonitor'], 'cpu.load': ['CPU Total load', 'Windows performance counters'], 'cpu.clock': ['CPU effective clock', 'LibreHardwareMonitor'], 'cpu.power': ['CPU Package power', 'LibreHardwareMonitor'],
+  'gpu.temp': ['GPU Core temperature', 'nvidia-smi'], 'gpu.load': ['GPU utilisation', 'nvidia-smi'], 'gpu.power': ['GPU board power', 'nvidia-smi'], 'gpu.fan': ['GPU fan speed', 'nvidia-smi'], 'gpu.clock': ['GPU graphics clock', 'nvidia-smi'], 'gpu.limit': ['GPU power limit (read back)', 'nvidia-smi'],
+  'ram.used': ['Memory in use', 'Windows performance counters'], 'ram.pct': ['Memory load', 'Windows performance counters'], 'disk.free': ['Free space on C:', 'Windows file system'], 'disk.temp': ['Drive temperature', 'SMART via LibreHardwareMonitor'], 'disk.junk': ['Removable files found', 'Cleanup scan'],
+  'net.down': ['Download', 'Jylli speed test'], 'net.up': ['Upload', 'Jylli speed test'], 'net.ping': ['Latency', 'Jylli speed test'], 'score': ['Health score', 'Computed from 11 checks'],
+}
+function N_(k, dec, unit, extra = '') { return `<span class="stat"><span class="odo" data-k="${k}" data-d="${dec}" data-src="${(SRC[k] || [k, ''])[0]}|${(SRC[k] || ['', ''])[1]}"></span><small>${unit}</small></span>${extra}` }
+function refreshNumbers() {
+  const rep = S.replay != null
+  $$('.odo[data-k]').forEach(el => { const v = V[el.dataset.k]; if (v != null && !el.classList.contains('hold-off')) odo(el, v, +el.dataset.d) })
+  $$('[data-heat]').forEach(el => { const t = V[el.dataset.heat]; const k = clamp((t - 42) / 40, 0, 1); el.style.setProperty('--heat', `hsl(${210 - k * 195} 85% 55% / ${.06 + k * .3})`) })
+}
+
+/* ───────── provenance tags ───────── */
+const prov = $('#prov')
+document.addEventListener('pointerover', e => {
+  const el = e.target.closest('[data-src]'); if (!el) return
+  const [what, src] = el.dataset.src.split('|'), rep = S.replay != null
+  prov.innerHTML = `<b>${what}</b>${src ? 'from ' + src + (rep ? ' · recorded ' + timeLabel(S.replay) : ' · 0.4 s ago') : ''}<br><span>${src ? 'Prototype: simulated value' : ''}</span>`
+  const r = el.getBoundingClientRect(); prov.classList.add('show')
+  prov.style.left = clamp(r.left, 8, innerWidth - 290) + 'px'; prov.style.top = (r.top - prov.offsetHeight - 8 < 8 ? r.bottom + 8 : r.top - prov.offsetHeight - 8) + 'px'
+})
+document.addEventListener('pointerout', e => { if (e.target.closest('[data-src]')) prov.classList.remove('show') })
+
+/* ───────── hold to apply ───────── */
+function hold(btn, ms, done) {
+  if (!btn) return
+  let raf, t0, on = false
+  const set = p => btn.style.setProperty('--p', p)
+  const tick = () => { const p = clamp((performance.now() - t0) / ms, 0, 1); set(p); if (p >= 1) end(true); else { raf = requestAnimationFrame(tick); if (Math.random() < .12) beep(300 + p * 500, .03, 'triangle', .02) } }
+  const start = () => { if (on || btn.disabled) return; on = true; t0 = performance.now(); btn.classList.add('holding'); tick() }
+  const end = ok => { if (!on) return; on = false; cancelAnimationFrame(raf); btn.classList.remove('holding'); if (ok) { set(1); setTimeout(() => set(0), 500); done(btn) } else set(0) }
+  btn.addEventListener('pointerdown', e => { try { btn.setPointerCapture(e.pointerId) } catch {} start() })
+  btn.addEventListener('pointerup', () => end(false)); btn.addEventListener('pointercancel', () => end(false)); btn.addEventListener('lostpointercapture', () => end(false))
+  btn.addEventListener('keydown', e => { if ((e.key === ' ' || e.key === 'Enter') && !e.repeat) { e.preventDefault(); start() } })
+  btn.addEventListener('keyup', e => { if (e.key === ' ' || e.key === 'Enter') end(false) })
+}
+const HOLD = (label, id = '') => `<button class="hold" ${id ? `id="${id}"` : ''}><span class="ring"></span><span>${label}</span></button>`
+
+/* ───────── anchors, fx, leaders ───────── */
+let slotRect = { left: 0, top: 0 }
+const aRig = id => { const p = JylliTwin.anchor(id); return p ? { x: p.x + slotRect.left, y: p.y + slotRect.top } : null }
+const NS = 'http://www.w3.org/2000/svg'
+function travel(a, b, ms = 800, cb, rev = false) {
+  if (!a || !b) { cb && cb(); return }
+  const fx = $('#fx'), path = document.createElementNS(NS, 'path'), dot = document.createElementNS(NS, 'circle'), halo = document.createElementNS(NS, 'circle')
+  const mx = (a.x + b.x) / 2, my = Math.min(a.y, b.y) - 90
+  path.setAttribute('d', `M${a.x},${a.y} Q${mx},${my} ${b.x},${b.y}`)
+  path.setAttribute('fill', 'none'); path.setAttribute('stroke', 'url(#fxg)'); path.setAttribute('stroke-width', 2.2); path.setAttribute('stroke-linecap', 'round')
+  dot.setAttribute('r', 5); dot.setAttribute('fill', '#fff'); halo.setAttribute('r', 16); halo.setAttribute('fill', 'rgba(139,124,246,.35)'); halo.setAttribute('style', 'filter:blur(5px)')
+  fx.append(path, halo, dot)
+  const len = path.getTotalLength(); const t0 = performance.now()
+  const step = now => {
+    const p = clamp((now - t0) / ms, 0, 1), e = 1 - Math.pow(1 - p, 3), q = path.getPointAtLength(len * e)
+    dot.setAttribute('cx', q.x); dot.setAttribute('cy', q.y); halo.setAttribute('cx', q.x); halo.setAttribute('cy', q.y)
+    path.setAttribute('stroke-dasharray', `${len * e} ${len}`); path.setAttribute('stroke-dashoffset', 0)
+    path.style.opacity = 1 - p * .6
+    if (p < 1) requestAnimationFrame(step); else { cb && cb(); path.style.transition = dot.style.transition = halo.style.transition = 'opacity 500ms'; path.style.opacity = dot.style.opacity = halo.style.opacity = 0; setTimeout(() => { path.remove(); dot.remove(); halo.remove() }, 520) }
+  }
+  requestAnimationFrame(step)
+}
+$('#fx').innerHTML = '<defs><linearGradient id="fxg" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="100%" y2="0"><stop offset="0" stop-color="#8B7CF6" stop-opacity=".1"/><stop offset="1" stop-color="#fff"/></linearGradient></defs>'
+const centerOf = el => { const r = el.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 } }
+
+/* ───────── callouts ───────── */
+const CALLS = {
+  home: [
+    { id: 'cpu', name: 'Processor', dx: -250, dy: -100, m: [['cpu.temp', 0, '°C'], ['cpu.load', 0, '%']], heat: 'cpu.temp' },
+    { id: 'gpu', name: 'Graphics card', dx: -270, dy: 60, m: [['gpu.temp', 0, '°C'], ['gpu.power', 0, 'W']], heat: 'gpu.temp' },
+    { id: 'ram0', name: 'Memory', dx: 40, dy: -170, m: [['ram.used', 1, 'GB']] },
+    { id: 'drive0', name: 'Storage', dx: 40, dy: 400, m: [['disk.free', 0, 'GB free']] },
+  ],
+  cpu: [{ id: 'cpu', name: 'CPU Package', dx: -330, dy: -120, m: [['cpu.power', 0, 'W'], ['cpu.clock', 2, 'GHz']], heat: 'cpu.temp' }],
+  gpu: [{ id: 'gpu', name: 'GPU Core', dx: -320, dy: -150, m: [['gpu.clock', 2, 'GHz'], ['gpu.fan', 0, '%']], heat: 'gpu.temp' }, { id: 'gpu', name: 'Board power', dx: -330, dy: 140, m: [['gpu.power', 0, 'W'], ['gpu.limit', 0, 'W cap']] }],
+  ram: [{ id: 'ram0', name: 'DDR5-6000', dx: -300, dy: -110, m: [['ram.used', 1, 'GB'], ['ram.pct', 0, '%']] }],
+  clean: [{ id: 'drive0', name: 'NVMe C:', dx: -300, dy: -110, m: [['disk.free', 0, 'GB free'], ['disk.temp', 0, '°C']] }],
+  net: [{ net: 'pc', name: 'This PC', dx: 0, dy: -210, m: [['net.down', 0, 'Mbps']] }, { net: 'router', name: 'Router', dx: 0, dy: -190, m: [['net.ping', 0, 'ms']] }, { net: 'internet', name: 'Internet', dx: 0, dy: -210, m: [['net.up', 0, 'Mbps up']] }],
+}
+let callEls = []
+const leaders = $('#leaders')
+function buildCallouts() {
+  const box = $('#callouts'); box.innerHTML = ''; callEls = []
+  const key = S.view === 'optimize' ? (S.optTab === 'net' ? 'net' : S.optTab) : S.view === 'clean' ? 'clean' : S.view === 'home' ? 'home' : null
+  const defs = (key && CALLS[key]) || []
+  defs.forEach((d, i) => {
+    const el = document.createElement('div'); el.className = 'callout glass hide'
+    if (d.heat) el.dataset.heat = d.heat
+    el.innerHTML = `<h4>${d.name}</h4><div class="ms">${d.m.map(m => N_(m[0], m[1], m[2])).join('')}</div>`
+    box.append(el); callEls.push({ el, d, p: null })
+  })
+  leaders.innerHTML = defs.map(() => '<line stroke="rgba(255,255,255,.55)" stroke-width="1"/><circle r="3.5" fill="#fff"/><circle r="9" fill="none" stroke="rgba(var(--acc-rgb),.8)" stroke-width="1.2"/>').join('')
+}
+let netScene = null
+function updateCallouts() {
+  const rect = $('#slot').getBoundingClientRect(); slotRect = { left: rect.left, top: rect.top }
+  let netA = null
+  if (S.view === 'optimize' && S.optTab === 'net' && netScene) { const a = netScene.projectAnchors(); netA = {}; for (const k in a) netA[k] = { x: a[k].x + $('#netslot').getBoundingClientRect().left, y: a[k].y } }
+  callEls.forEach((c, i) => {
+    const a = c.d.net ? (netA && netA[c.d.net]) : aRig(c.d.id)
+    const ln = leaders.children[i * 3], dot = leaders.children[i * 3 + 1], ring = leaders.children[i * 3 + 2]
+    const hide = !a || S.gameLive || S.view === 'palette'
+    c.el.classList.toggle('hide', hide); ln.style.display = dot.style.display = ring.style.display = hide ? 'none' : ''
+    if (hide) return
+    let tx = a.x + c.d.dx, ty = a.y + c.d.dy
+    const w = c.el.offsetWidth, h = c.el.offsetHeight
+    tx = clamp(tx - (c.d.net ? w / 2 : 0), 96, innerWidth - plate.offsetWidth - 40 - w); ty = clamp(ty, 64, innerHeight - 140 - h)
+    if (!c.p) c.p = { x: tx, y: ty }
+    c.p.x = lerp(c.p.x, tx, S.motion === 'full' ? .2 : 1); c.p.y = lerp(c.p.y, ty, S.motion === 'full' ? .2 : 1)
+    c.el.style.transform = `translate(${c.p.x}px,${c.p.y}px)`
+    const left = a.x < c.p.x + w / 2
+    const ex = c.p.x + (a.x < c.p.x ? 0 : a.x > c.p.x + w ? w : w / 2), ey = a.x < c.p.x || a.x > c.p.x + w ? c.p.y + h / 2 : (a.y > c.p.y + h ? c.p.y + h : c.p.y)
+    ln.setAttribute('x1', ex); ln.setAttribute('y1', ey); ln.setAttribute('x2', a.x); ln.setAttribute('y2', a.y)
+    dot.setAttribute('cx', a.x); dot.setAttribute('cy', a.y); ring.setAttribute('cx', a.x); ring.setAttribute('cy', a.y)
+    ring.setAttribute('r', 9 + Math.sin(performance.now() / 500 + i) * 1.5)
+  })
+}
+
+/* ───────── shared light: one light, projected to every glass edge ───────── */
+let ptr = null
+addEventListener('pointermove', e => { ptr = { x: e.clientX, y: e.clientY } })
+function updateLight(now) {
+  const t = now / 1000
+  const lx = ptr ? lerp(innerWidth * (.5 + Math.sin(t * .11) * .3), ptr.x, .55) : innerWidth * (.5 + Math.sin(t * .11) * .35)
+  const ly = ptr ? lerp(innerHeight * .2, ptr.y, .5) : innerHeight * (.15 + Math.cos(t * .09) * .1)
+  $$('.glass').forEach(el => { const r = el.getBoundingClientRect(); el.style.setProperty('--mx', (lx - r.left) + 'px'); el.style.setProperty('--my', (ly - r.top) + 'px') })
+}
+
+/* ───────── views (docked plate) ───────── */
+const REASONS = () => [
+  ['ok', 'Sensors', 'All 6 sensor sources reporting'],
+  [S.applied.profile ? 'ok' : 'warn', 'Power profile', S.applied.profile ? 'Game-ready profile active' : 'Balanced plan limits boost clocks'],
+  [S.applied.clean ? 'ok' : 'warn', 'Disk space', S.applied.clean ? 'No removable junk' : `${S.junk.toFixed(1)} GB of removable files`],
+  [S.applied.ram ? 'ok' : 'warn', 'Memory', S.applied.ram ? 'Standby list cleared' : '4 background apps hold 2.1 GB'],
+]
+const replayBadge = () => `<div class="replaybadge"><span>●</span><span>Recorded ${S.replay != null ? timeLabel(S.replay) : ''} · replaying from your history</span></div>`
+const VIEWS = {
+  home: () => `<div class="crumb">Home</div><h1>${S.applied.profile ? 'Your PC is tuned' : 'Your PC is ready'}</h1><p class="sub">${S.applied.profile ? 'Everything matches the profile. Nothing needs attention.' : 'Everything reads normally. One change would make it better.'}</p>${replayBadge()}
+    <div class="ring-wrap"><div class="score"><svg viewBox="0 0 104 104"><circle class="tr" cx="52" cy="52" r="46"/><circle class="fg" id="ring" cx="52" cy="52" r="46" stroke-dasharray="289" stroke-dashoffset="60"/></svg><span class="odo" data-k="score" data-d="0" data-src="Health score|Computed from 11 checks"></span></div>
+    <div><b style="font-size:15px">Health score</b><div class="muted">11 checks, each with a source.<br>Hover any number to see it.</div></div></div>
+    <div>${REASONS().map(r => `<div class="row"><span class="dot ${r[0]}"></span><div class="grow"><b style="font-weight:500">${r[1]}</b><div class="muted">${r[2]}</div></div></div>`).join('')}</div>
+    <div style="margin-top:18px">${S.applied.profile ? '<button class="hold" disabled><span>Game-ready profile applied</span></button>' : HOLD('Hold to apply the Game-ready profile', 'apply-profile')}<div class="muted" style="margin-top:8px;text-align:center">Changes 3 settings · every one is journaled and undoable</div></div>`,
+  optimize: () => {
+    const tabs = [['win', 'Windows'], ['cpu', 'CPU'], ['gpu', 'GPU'], ['ram', 'Memory'], ['net', 'Network']]
+    return `<div class="crumb">Optimize</div><div class="tabs" role="tablist">${tabs.map(t => `<button role="tab" data-tab="${t[0]}" class="${S.optTab === t[0] ? 'on' : ''}">${t[1]}</button>`).join('')}</div>${replayBadge()}${OPT[S.optTab]()}`
+  },
+  clean: () => `<div class="crumb">Clean</div><h1>Storage</h1><p class="sub">Samsung 990 PRO 2 TB · NVMe</p>${replayBadge()}
+    <div class="hero">${N_('disk.free', 0, 'GB free').replace('class="odo"', 'class="odo"')}</div>
+    <div class="lbl">Removable files <span style="float:right">${N_('disk.junk', 1, 'GB')}</span></div>
+    ${[['Windows temp files', 2.1], ['Browser caches', 1.4], ['Update leftovers', 3.2], ['Shader caches', .8]].map(c => `<div class="row"><div class="grow">${c[0]}<div class="bar" style="margin-top:6px"><i style="width:${S.applied.clean ? 0 : c[1] / 3.2 * 100}%"></i></div></div><span class="muted">${S.applied.clean ? '0.0' : c[1].toFixed(1)} GB</span></div>`).join('')}
+    <div style="margin-top:18px">${S.applied.clean ? '<button class="hold" disabled><span>Cleaned · nothing left to remove</span></button>' : HOLD('Hold to clean 7.5 GB', 'apply-clean')}</div>
+    <div class="lbl">Startup apps</div>${['Discord', 'Steam', 'Spotify'].map((a, i) => `<div class="row"><span class="dot ${i === 2 ? 'off' : ''}"></span><div class="grow">${a}</div><span class="muted">${i === 2 ? 'disabled' : 'starts with Windows'}</span></div>`).join('')}`,
+  gaming: () => `<div class="crumb">Gaming</div><h1>${S.gameLive ? 'Cyberpunk 2077 is running' : 'Game mode'}</h1><p class="sub">${S.gameLive ? 'Jylli is invisible right now: no rendering, no animation, no polling beyond 1 Hz.' : 'When a game comes to the front, the whole stage stops. This is a promise, measured below.'}</p>
+    <div class="grid"><div class="cell"><label>GPU used by Jylli</label><span class="stat"><span class="odo" data-k="__gpu" data-d="1" data-src="GPU used by Jylli|Windows GPU engine counters, last game session"></span><small>%</small></span></div><div class="cell"><label>Last session</label><span class="stat"><b style="font-size:16px">Forza Horizon 5</b></span></div></div>
+    <div style="display:flex;gap:8px"><button class="btn" id="g-launch" style="flex:1">${S.gameLive ? 'Close the game (simulate)' : 'Launch a game (simulate)'}</button></div>
+    <div class="lbl">Session recap · Forza Horizon 5 · 3 h 08 min</div>
+    <canvas id="sharecard" width="1200" height="630"></canvas>
+    <div style="display:flex;gap:8px;margin-top:10px"><button class="btn sm" id="g-dl">Save share card (PNG)</button><span class="muted" style="align-self:center">Rendered from this session's real numbers</span></div>`,
+  system: () => `<div class="crumb">System</div><h1>Diagnostics</h1><p class="sub">${S.scanned ? 'Scan finished ' + S.scanned : 'A light passes through the case and checks each part.'}</p>
+    ${['Processor', 'Cooler', 'Memory', 'Graphics card', 'Storage', 'Motherboard & fans'].map((c, i) => `<div class="row" id="chk${i}"><span class="dot ${S.scanned ? '' : 'off'}"></span><div class="grow">${c}</div><span class="muted">${S.scanned ? 'OK' : 'waiting'}</span></div>`).join('')}
+    <div style="margin-top:18px"><button class="btn" id="scan" style="width:100%;height:44px">${S.scanned ? 'Scan again' : 'Run diagnostics'}</button></div>`,
+  settings: () => `<div class="crumb">Settings</div><h1>Experience</h1><p class="sub">Beauty is a setting. The cost is measured.</p>
+    <div class="lbl">Visual quality</div><div class="seg" id="s-q">${['cinematic', 'balanced', 'light', 'classic'].map(q => `<button data-q="${q}" class="${S.quality === q ? 'on' : ''}">${q[0].toUpperCase() + q.slice(1)}</button>`).join('')}</div>
+    <p class="muted">Cinematic: deep glass. Balanced: default. Light: flat glass, no blur. Classic: no 3D stage at all.</p>
+    <div class="lbl">Motion</div><div class="seg" id="s-m">${['full', 'reduced'].map(q => `<button data-m="${q}" class="${S.motion === q ? 'on' : ''}">${q[0].toUpperCase() + q.slice(1)}</button>`).join('')}</div>
+    <div class="lbl">Sound</div><div class="seg" id="s-s"><button data-s="1" class="${S.sound ? 'on' : ''}">On</button><button data-s="0" class="${S.sound ? '' : 'on'}">Off</button></div>
+    <div class="lbl">Intro</div><button class="btn" id="s-asm">Replay the assembly</button>`,
+}
+const OPT = {
+  cpu: () => `<h1>Processor</h1><p class="sub">AMD Ryzen 7 7800X3D · 8 cores</p>${replayBadge()}<div class="hero" data-heat="cpu.temp">${N_('cpu.temp', 0, '°C')}</div>
+    <div class="grid"><div class="cell"><label>Load</label>${N_('cpu.load', 0, '%')}</div><div class="cell"><label>Clock</label>${N_('cpu.clock', 2, 'GHz')}</div><div class="cell"><label>Package power</label>${N_('cpu.power', 0, 'W')}</div><div class="cell"><label>Power plan</label><b>${S.applied.cpuPlan ? 'Game-ready' : 'Balanced'}</b></div></div>
+    ${S.applied.cpuPlan ? '<button class="hold" disabled><span>Game-ready plan active</span></button>' : HOLD('Hold to switch to the Game-ready plan', 'apply-cpu')}`,
+  gpu: () => `<h1>Graphics card</h1><p class="sub">NVIDIA GeForce RTX 5070 · 12 GB</p>${replayBadge()}<div class="hero">${N_('gpu.temp', 0, '°C')}</div>
+    <div class="grid"><div class="cell"><label>Load</label>${N_('gpu.load', 0, '%')}</div><div class="cell"><label>Board power</label>${N_('gpu.power', 0, 'W')}</div><div class="cell"><label>Fan</label>${N_('gpu.fan', 0, '%')}</div><div class="cell"><label>Clock</label>${N_('gpu.clock', 2, 'GHz')}</div></div>
+    <div class="lbl">Power limit <span style="float:right"><b id="lim">${S.gpuLimitPending}</b> W · now ${N_('gpu.limit', 0, 'W')}</span></div>
+    <input type="range" id="gl" min="150" max="285" step="5" value="${S.gpuLimitPending}" aria-label="GPU power limit">
+    <div class="muted" style="margin:6px 0 14px">Lower limit, lower temperature and noise. Set and read back from the driver.</div>
+    ${HOLD('Hold to apply the power limit', 'apply-gpu')}`,
+  ram: () => `<h1>Memory</h1><p class="sub">32 GB DDR5-6000 · 2 modules</p>${replayBadge()}<div class="hero">${N_('ram.used', 1, 'GB')}</div><div class="bar" style="margin:10px 0 14px"><i id="rambar" style="width:${V['ram.pct'] || 36}%"></i></div>
+    ${[['Chrome', 3.2], ['Discord', 1.1], ['Steam', .6], ['Windows', 4.1]].map(a => `<div class="row"><div class="grow">${a[0]}</div><span class="muted">${a[1]} GB</span></div>`).join('')}
+    <div style="margin-top:16px">${S.applied.ram ? '<button class="hold" disabled><span>Standby memory cleared</span></button>' : HOLD('Hold to free 2.1 GB of standby memory', 'apply-ram')}</div>`,
+  net: () => `<h1>Network</h1><p class="sub">Ethernet 2.5 GbE · gateway 192.168.1.1</p><div class="grid"><div class="cell"><label>Download</label>${N_('net.down', 0, 'Mbps')}</div><div class="cell"><label>Upload</label>${N_('net.up', 0, 'Mbps')}</div><div class="cell"><label>Latency</label>${N_('net.ping', 0, 'ms')}</div><div class="cell"><label>Jitter</label><b>${S.speed ? '1 ms' : 'Run a test'}</b></div></div>
+    <button class="btn" id="speed" style="width:100%;height:44px">${S.speed ? 'Run again' : 'Run speed test'}</button>
+    <p class="muted" style="margin-top:10px">The test is a flight: data races from your PC to the server and back, and the numbers settle when it lands.</p>`,
+}
+V.__gpu = 0
+const plate = $('#plate')
+
+/* ───────── Windows tweaks: real ids, labels and registry/service changes from lib/tweak-manifest.json ───────── */
+const TWEAKS = [{"id":"game-dvr","g":"latency","p":["gpu"],"rec":1,"adv":0,"t":"Disable Game DVR / Xbox Game Bar","d":"Removes recording overhead","c":[["reg","HKCU:\\System\\GameConfigStore\\GameDVR_Enabled","0"],["reg","HKCU:\\System\\GameConfigStore\\GameDVR_FSEBehaviorMode","2"],["reg","HKLM\\…\\Policies\\Microsoft\\Windows\\GameDVR\\AllowGameDVR","0"],["reg","HKCU\\…\\Microsoft\\GameBar\\UseNexusForGameBarEnabled","0"]]},{"id":"disable-fso","g":"latency","p":["gpu"],"rec":1,"adv":0,"t":"Disable Fullscreen Optimizations","d":"Reduce input latency in exclusive fullscreen","c":[["reg","HKCU:\\System\\GameConfigStore\\GameDVR_DXGIHonorFSEWindowsCompatible","1"],["reg","HKCU:\\System\\GameConfigStore\\GameDVR_FSEBehaviorMode","2"]]},{"id":"mmcss","g":"latency","p":["cpu"],"rec":1,"adv":0,"t":"MMCSS Game Scheduling (GPU Priority=8)","d":"CPU slice priority for games","c":[["reg","${base}\\SystemResponsiveness","10"],["reg","${base}\\Tasks\\Games\\GPU Priority","8"],["reg","${base}\\Tasks\\Games\\Priority","6"],["reg","${base}\\Tasks\\Games\\Clock Rate","10000"]]},{"id":"priority-sep","g":"latency","p":["cpu"],"rec":1,"adv":0,"t":"Foreground Process Priority Boost","d":"Active window gets more CPU time","c":[["reg","HKLM:\\SYSTEM\\CurrentControlSet\\Control\\PriorityControl\\Win32PrioritySeparation","38"],["reg","HKLM\\…\\Microsoft\\Windows NT\\CurrentVersion\\Multimedia\\SystemProfile\\SystemResponsiveness","10"]]},{"id":"global-timer-resolution","g":"latency","p":["cpu","board"],"rec":1,"adv":0,"t":"Global Timer Resolution (Win11)","d":"Restore 0.5ms system-wide timer precision","c":[["reg","HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Session Manager\\kernel\\GlobalTimerResolutionRequests","1"]]},{"id":"power-throttling","g":"latency","p":["cpu"],"rec":0,"adv":0,"t":"Disable Power Throttling","d":"Prevent clock reduction for background apps","c":[["reg","HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Power\\PowerThrottling\\PowerThrottlingOff","1"]]},{"id":"hpet","g":"latency","p":["board"],"rec":0,"adv":0,"t":"Disable HPET","d":"Timer resolution via bcdedit","c":[["bcd","disabledynamictick","yes"],["bcd","useplatformtick","yes"]]},{"id":"msi-mode","g":"latency","p":["gpu","board"],"rec":0,"adv":0,"t":"Enable MSI Interrupt Mode (PCI)","d":"Reduce interrupt latency","c":[]},{"id":"gpu-hwsch","g":"gpu","p":["gpu"],"rec":1,"adv":0,"t":"GPU Hardware Scheduling (WDDM 2.7)","d":"Offload GPU scheduling from CPU","c":[["reg","HKLM:\\SYSTEM\\CurrentControlSet\\Control\\GraphicsDrivers\\HwSchMode","2"]]},{"id":"tdr-delay","g":"gpu","p":["gpu"],"rec":0,"adv":0,"t":"Extend GPU TDR Timeout","d":"Prevent GPU driver timeout crashes","c":[["reg","HKLM:\\SYSTEM\\CurrentControlSet\\Control\\GraphicsDrivers\\TdrLevel","3"],["reg","HKLM:\\SYSTEM\\CurrentControlSet\\Control\\GraphicsDrivers\\TdrDelay","10"]]},{"id":"disable-hdcp","g":"gpu","p":["gpu"],"rec":0,"adv":0,"t":"Disable HDCP (DRM overhead)","d":"Remove HDCP overhead on GPU","c":[["reg","HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Class\\{4d36e968-e325-11ce-bfc1-08002be10318}\\${idx}\\RMHdcpKeyglobZero","1"]]},{"id":"disable-mouse-accel","g":"input","p":["board"],"rec":1,"adv":0,"t":"Disable Mouse Acceleration","d":"1:1 raw input, no Windows curve","c":[]},{"id":"telemetry","g":"privacy","p":["board"],"rec":1,"adv":0,"t":"Disable Windows Telemetry","d":"Privacy + CPU reduction","c":[["reg","HKLM\\…\\Policies\\Microsoft\\Windows\\DataCollection\\AllowTelemetry","0"],["service","DiagTrack","disabled"],["service","dmwappushservice","disabled"]]},{"id":"cortana","g":"privacy","p":["board"],"rec":0,"adv":0,"t":"Disable Cortana + WSearch Indexer","d":"Search indexer overhead","c":[["reg","HKLM\\…\\Policies\\Microsoft\\Windows\\Windows Search\\AllowCortana","0"],["service","WSearch","disabled"]]},{"id":"win-tips","g":"privacy","p":["board"],"rec":0,"adv":0,"t":"Disable Windows Tips & Suggestions","d":"Remove suggestion overlays","c":[]},{"id":"disable-delivery-opt","g":"privacy","p":["board"],"rec":0,"adv":0,"t":"Disable Windows Update P2P Sharing","d":"Stop uploading updates to others","c":[["reg","HKLM\\…\\Policies\\Microsoft\\Windows\\DeliveryOptimization\\DODownloadMode","0"]]},{"id":"disable-background-apps","g":"privacy","p":["cpu","ram0"],"rec":1,"adv":0,"t":"Disable UWP Background Apps","d":"Stop apps running silently","c":[["reg","HKCU\\…\\Microsoft\\Windows\\CurrentVersion\\BackgroundAccessApplications\\GlobalUserDisabled","1"]]},{"id":"sysmain","g":"storage","p":["drive0"],"rec":0,"adv":0,"t":"Disable SysMain (SuperFetch)","d":"Background disk preloading","c":[["service","SysMain","disabled"]]},{"id":"hibernate","g":"storage","p":["drive0"],"rec":0,"adv":0,"t":"Disable Hibernate","d":"Reclaim hiberfil.sys space","c":[]},{"id":"ntfs","g":"storage","p":["drive0"],"rec":0,"adv":0,"t":"NTFS: Disable 8.3 Names + Timestamps","d":"Reduce file metadata overhead","c":[]},{"id":"disable-auto-maintenance","g":"storage","p":["drive0"],"rec":0,"adv":0,"t":"Disable Automatic Maintenance","d":"Prevent mid-session disk scans","c":[["reg","HKLM\\…\\Microsoft\\Windows NT\\CurrentVersion\\Schedule\\Maintenance\\MaintenanceDisabled","1"]]},{"id":"memory-compression","g":"advanced","p":["ram0"],"rec":0,"adv":1,"t":"Disable Memory Compression","d":"Reduce CPU overhead on RAM","c":[]},{"id":"spectre-meltdown","g":"advanced","p":["cpu"],"rec":0,"adv":1,"t":"Disable Spectre/Meltdown Mitigations","d":"CPU security mitigations off","c":[["reg","HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Memory Management\\FeatureSettingsOverride","3"],["reg","HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Memory Management\\FeatureSettingsOverrideMask","3"]]},{"id":"bcd-tweaks","g":"advanced","p":["board"],"rec":0,"adv":1,"t":"BCDEdit Boot Tweaks","d":"Faster POST, no boot log","c":[["bcd","bootlog","no"]]}]
+const TOTAL_TWEAKS = 121
+const GROUPS = { latency: 'Latency and scheduling', gpu: 'Graphics', input: 'Input', privacy: 'Privacy and background', storage: 'Storage and maintenance', advanced: 'Advanced · read the notes first' }
+S.tw = { active: new Set(['telemetry', 'win-tips', 'sysmain', 'hibernate', 'disable-delivery-opt']), staged: new Map(), q: '', f: 'all', open: new Set() }
+const twWant = t => S.tw.staged.has(t.id) ? S.tw.staged.get(t.id) : S.tw.active.has(t.id)
+const twMatch = t => (S.tw.f === 'all' || (S.tw.f === 'rec' ? t.rec : t.g === S.tw.f)) && (!S.tw.q || (t.t + ' ' + t.d + ' ' + t.id).toLowerCase().includes(S.tw.q.toLowerCase()))
+function twRow(t) {
+  const on = twWant(t), dirty = S.tw.staged.has(t.id), open = S.tw.open.has(t.id)
+  return `<div class="tw ${dirty ? 'staged' : ''}" data-id="${t.id}"><button class="sw" role="switch" aria-checked="${on}" aria-label="${t.t}"></button>
+    <div class="tw-b"><div class="tw-t">${t.t}${t.rec ? '<span class="badge">recommended</span>' : ''}${t.adv ? '<span class="badge adv">advanced</span>' : ''}${dirty ? '<span class="badge st">staged</span>' : ''}</div><div class="muted">${t.d}</div>
+    ${open ? `<div class="tw-c">${t.c.map(c => `<div class="tc"><i>${c[0]}</i><code>${c[1]}</code><b>→ ${c[2]}</b></div>`).join('')}<div class="tw-note">${t.c.length ? `Original values are saved before applying, so Undo restores exactly these ${t.c.length} settings.` : 'The exact devices are found when you apply. Each one is journaled with its original value, so Undo still restores it.'}</div></div>` : ''}</div>
+    <button class="tw-x" aria-label="Show what it changes" aria-expanded="${open}">›</button></div>`
+}
+function twList() {
+  const rows = TWEAKS.filter(twMatch)
+  if (!rows.length) return '<p class="muted" style="padding:20px 4px">No tweak matches. In the app this searches all ' + TOTAL_TWEAKS + '.</p>'
+  return Object.keys(GROUPS).map(g => { const r = rows.filter(t => t.g === g); return r.length ? `<div class="tw-g">${GROUPS[g]}<span>${r.length}</span></div>${r.map(twRow).join('')}` : '' }).join('')
+}
+function twDock() {
+  const n = S.tw.staged.size, d = $('#tw-dock'); if (!d) return
+  d.classList.toggle('show', n > 0)
+  d.innerHTML = `<span class="grow">${n} change${n === 1 ? '' : 's'} staged</span><button class="btn sm" id="tw-discard">Discard</button><button class="btn sm pri" id="tw-review">Review and apply</button>`
+  $('#tw-discard').onclick = () => { S.tw.staged.clear(); twRefresh() }
+  $('#tw-review').onclick = twSheet
+}
+function twRefresh() {
+  const l = $('#tw-list'); if (!l) return
+  l.innerHTML = twList(); twDock()
+  $$('.tw', l).forEach(row => {
+    const t = TWEAKS.find(x => x.id === row.dataset.id)
+    row.onpointerenter = () => t.p.forEach(p => JylliTwin.pulse(p))
+    $('.sw', row).onclick = () => { const want = !twWant(t); if (want === S.tw.active.has(t.id)) S.tw.staged.delete(t.id); else S.tw.staged.set(t.id, want); beep(want ? 700 : 480, .04, 'triangle', .03); twRefresh() }
+    $('.tw-x', row).onclick = () => { S.tw.open.has(t.id) ? S.tw.open.delete(t.id) : S.tw.open.add(t.id); twRefresh() }
+  })
+  $$('.tw-chips button').forEach(b => b.classList.toggle('on', b.dataset.f === S.tw.f))
+  const a = $('#tw-active'); if (a) a.textContent = S.tw.active.size
+}
+function twSheet() {
+  const items = [...S.tw.staged].map(([id, want]) => ({ t: TWEAKS.find(x => x.id === id), want }))
+  const n = items.reduce((s, i) => s + i.t.c.length, 0), parts = [...new Set(items.flatMap(i => i.t.p))]
+  const box = $('#sheet-box')
+  box.innerHTML = `<h1 style="font-size:20px">Review ${items.length} change${items.length === 1 ? '' : 's'}</h1><p class="sub">${n} settings will change. Each original value is saved first, so one click undoes everything.</p>
+    ${items.map(i => `<div class="rv"><div class="grow"><b style="font-weight:500">${i.t.t}</b><div class="muted">${i.t.c.length ? `${i.t.c.length} setting${i.t.c.length === 1 ? '' : 's'} · ${i.t.c[0][1].split('\\').pop()}${i.t.c.length > 1 ? ' +' + (i.t.c.length - 1) : ''}` : 'Decided per device when applied, recorded in the journal'}</div></div><span class="tr ${i.want ? 'to-on' : 'to-off'}">${i.want ? 'Off → On' : 'On → Off'}</span></div>`).join('')}
+    <div class="muted" style="margin:12px 0 4px">Touches: ${parts.map(p => ({ cpu: 'processor', gpu: 'graphics card', board: 'system', ram0: 'memory', drive0: 'storage' }[p] || p)).join(', ')}. Some changes need a restart.</div>
+    <div style="display:flex;gap:10px;margin-top:14px"><button class="btn" id="sh-x" style="height:48px">Cancel</button><div style="flex:1">${HOLD('Hold to apply ' + items.length + ' change' + (items.length === 1 ? '' : 's'), 'apply-tw')}</div></div>`
+  $('#sheet').classList.add('show')
+  $('#sh-x').onclick = () => $('#sheet').classList.remove('show')
+  hold($('#apply-tw'), 700, () => {
+    const was = items.map(i => ({ id: i.t.id, want: i.want }))
+    applyChange({ label: items.length === 1 ? items[0].t.t : items.length + ' Windows tweaks', parts, from: '', to: '', btn: $('#apply-tw'),
+      set: () => { was.forEach(w => w.want ? S.tw.active.add(w.id) : S.tw.active.delete(w.id)); S.tw.staged.clear() },
+      unset: () => was.forEach(w => w.want ? S.tw.active.delete(w.id) : S.tw.active.add(w.id)) })
+    setTimeout(() => $('#sheet').classList.remove('show'), 30)
+  })
+}
+$('#sheet').onclick = e => { if (e.target.id === 'sheet') $('#sheet').classList.remove('show') }
+OPT.win = () => `<h1>Windows tweaks</h1><p class="sub"><b id="tw-active">${S.tw.active.size}</b> active · showing ${TWEAKS.length} of the ${TOTAL_TWEAKS} tweaks in this prototype. Toggle to stage, review, then hold to apply.</p>
+  <div class="tw-tools"><input id="tw-q" placeholder="Search tweaks…" value="${S.tw.q}" aria-label="Search tweaks"><button class="btn" id="tw-rec">Stage all recommended</button></div>
+  <div class="tw-chips">${[['all', 'All'], ['rec', 'Recommended'], ...Object.entries(GROUPS).map(([k, v]) => [k, v.split(' ')[0].replace('Latency', 'Latency')])].map(([k, v]) => `<button data-f="${k}">${v}<b>${TWEAKS.filter(t => k === 'all' || (k === 'rec' ? t.rec : t.g === k)).length}</b></button>`).join('')}</div>
+  <div id="tw-list"></div><div id="tw-dock"></div>`
+function twBind() {
+  if (!$('#tw-list')) return
+  $('#tw-q').oninput = e => { S.tw.q = e.target.value; twRefresh() }
+  $$('.tw-chips button').forEach(b => b.onclick = () => { S.tw.f = b.dataset.f; twRefresh() })
+  $('#tw-rec').onclick = () => { TWEAKS.filter(t => t.rec && !S.tw.active.has(t.id)).forEach(t => S.tw.staged.set(t.id, true)); beep(620, .08, 'triangle', .04); twRefresh() }
+  twRefresh()
+}
+
+/* ───────── navigation ───────── */
+const SHOT = { home: null, gaming: null, system: null, settings: null, clean: 'drive0' }
+const OPTSHOT = { win: 'board', cpu: 'cpu', gpu: 'gpu', ram: 'ram0', net: null }
+let prog = 0
+function shot(id) { prog++; if (id) JylliTwin.select(id); else JylliTwin.back(); prog-- }
+function go(view, opt, quiet) {
+  if (opt) S.optTab = opt
+  const same = S.view === view
+  $('#intro').style.opacity = 0
+  S.view = view
+  document.body.classList.toggle('net', view === 'optimize' && S.optTab === 'net')
+  if (view === 'optimize' && S.optTab === 'net') ensureNet()
+  shot(view === 'optimize' ? OPTSHOT[S.optTab] : SHOT[view])
+  $$('#rail button[data-v]').forEach(b => b.classList.toggle('on', b.dataset.v === view))
+  plate.classList.add('out')
+  setTimeout(() => { renderPlate(); plate.classList.remove('out'); plate.classList.add('in'); setTimeout(() => plate.classList.remove('in'), 560) }, quiet ? 0 : 200)
+  buildCallouts(); beep(660, .04, 'sine', .03)
+  if (view === 'system' && !same) setTimeout(() => $('#scan') && 0, 0)
+}
+function renderPlate() {
+  plate.innerHTML = VIEWS[S.view]()
+  plate.dataset.view = S.view
+  const wide = S.view === 'optimize' && S.optTab === 'win'
+  plate.classList.toggle('wide', wide); document.body.classList.toggle('wide', wide)
+  refreshNumbers(); twBind()
+  if (S.view === 'home') { const f = $('#ring'); if (f) f.style.strokeDashoffset = 289 * (1 - V.score / 100) }
+  bind()
+}
+function bind() {
+  $$('[data-tab]', plate).forEach(b => b.onclick = () => go('optimize', b.dataset.tab))
+  hold($('#apply-profile'), 700, () => applyChange({ label: 'Game-ready profile', parts: ['cpu', 'gpu', 'board'], from: 'Balanced', to: 'Game-ready', set: () => S.applied.profile = true, unset: () => S.applied.profile = false, btn: $('#apply-profile') }))
+  hold($('#apply-cpu'), 600, () => applyChange({ label: 'Power plan: Game-ready', parts: ['cpu'], from: 'Balanced', to: 'Game-ready', set: () => S.applied.cpuPlan = true, unset: () => S.applied.cpuPlan = false, btn: $('#apply-cpu') }))
+  hold($('#apply-ram'), 600, () => applyChange({ label: 'Freed 2.1 GB standby memory', parts: ['ram0'], from: '', to: '', set: () => S.applied.ram = true, unset: () => S.applied.ram = false, btn: $('#apply-ram') }))
+  hold($('#apply-clean'), 700, () => applyChange({ label: 'Cleaned 7.5 GB', parts: ['drive0'], from: '', to: '', set: () => S.applied.clean = true, unset: () => S.applied.clean = false, btn: $('#apply-clean') }))
+  const gl = $('#gl')
+  if (gl) { gl.oninput = () => { S.gpuLimitPending = +gl.value; $('#lim').textContent = gl.value }; const prev = S.gpuLimit
+    hold($('#apply-gpu'), 700, () => { const from = S.gpuLimit, to = S.gpuLimitPending; if (from === to) return toast('Already at ' + to + ' W'); applyChange({ label: 'GPU power limit', parts: ['gpu'], from: from + ' W', to: to + ' W', set: () => S.gpuLimit = to, unset: () => { S.gpuLimit = from; S.gpuLimitPending = from }, btn: $('#apply-gpu') }) }) }
+  const sp = $('#speed'); if (sp) sp.onclick = runSpeed
+  const L = $('#g-launch'); if (L) L.onclick = toggleGame
+  const dl = $('#g-dl'); if (dl) dl.onclick = () => { const c = $('#sharecard'); const a = document.createElement('a'); a.download = 'jylli-session.png'; a.href = c.toDataURL('image/png'); a.click() }
+  if ($('#sharecard')) drawShare()
+  const sc = $('#scan'); if (sc) sc.onclick = runScan
+  $$('#s-q button').forEach(b => b.onclick = () => { S.quality = b.dataset.q; document.body.className = document.body.className.replace(/q-\w+/, 'q-' + S.quality); renderPlate(); toast('Quality: ' + S.quality) })
+  $$('#s-m button').forEach(b => b.onclick = () => { S.motion = b.dataset.m; document.body.classList.toggle('mr', S.motion === 'reduced'); document.body.classList.toggle('motion-reduced', S.motion === 'reduced'); renderPlate() })
+  $$('#s-s button').forEach(b => b.onclick = () => { S.sound = b.dataset.s === '1'; renderPlate(); beep(880, .12, 'sine', .06) })
+  const as = $('#s-asm'); if (as) as.onclick = () => { go('home'); runAssembly() }
+}
+
+/* ───────── apply as a physical event ───────── */
+let undoFn = null, toastT
+function toast(msg, undo) {
+  $('#toast-t').textContent = msg; const b = $('#toast-b'); b.style.display = undo ? '' : 'none'; undoFn = undo || null
+  $('#toast').classList.add('show'); clearTimeout(toastT); toastT = setTimeout(() => $('#toast').classList.remove('show'), 6000)
+}
+$('#toast-b').onclick = () => { if (undoFn) undoFn(); $('#toast').classList.remove('show') }
+const marks = []
+function addMark(ch) {
+  const m = document.createElement('button'); m.className = 'ch-mark new'; m.setAttribute('aria-label', ch.label)
+  const x = ch.i != null ? ch.i / (N - 1) * 100 : 99.2 - marks.filter(k => !k.hist).length * 1.4
+  m.style.left = x + '%'; $('#ch-track').append(m); ch.el = m; marks.push(ch)
+  m.onpointerdown = e => e.stopPropagation()
+  m.onclick = e => { e.stopPropagation(); openPop(ch) }
+  return m
+}
+function openPop(ch) {
+  const p = $('#ch-pop'), r = ch.el.getBoundingClientRect()
+  JylliTwin.pulse(ch.part); (ch.parts || [ch.part]).forEach(x => JylliTwin.pulse(x))
+  p.innerHTML = `<b>${ch.label}</b><div class="muted">${ch.i != null ? timeLabel(ch.i) : 'Just now'}</div>${ch.from ? `<div class="row" style="margin-top:8px"><span class="muted">Before</span><span class="grow" style="text-align:right">${ch.from}</span></div><div class="row"><span class="muted">After</span><span class="grow" style="text-align:right">${ch.to}</span></div>` : ''}<div style="display:flex;gap:8px;margin-top:10px"><button class="btn sm" id="pop-undo">Undo</button><button class="btn sm" id="pop-x">Close</button></div>`
+  p.style.left = clamp(r.left - 125, 8, innerWidth - 262) + 'px'; p.style.top = (r.top - p.offsetHeight - 14) + 'px'; p.classList.add('show')
+  p.style.top = (r.top - p.offsetHeight - 14) + 'px'
+  $('#pop-x').onclick = () => p.classList.remove('show')
+  $('#pop-undo').onclick = () => { p.classList.remove('show'); undoMark(ch) }
+}
+function undoMark(ch) {
+  const from = aRig((ch.parts || [ch.part])[0]) || { x: innerWidth / 3, y: innerHeight / 2 }, to = centerOf(ch.el)
+  travel(from, to, 700, () => {}, true)
+  JylliTwin.pulse((ch.parts || [ch.part])[0])
+  ch.el.classList.add('gone'); setTimeout(() => ch.el.remove(), 520); marks.splice(marks.indexOf(ch), 1)
+  if (ch.unset) ch.unset()
+  beep(420, .09, 'triangle', .05)
+  setTimeout(() => { renderPlate(); toast('Undone: ' + ch.label) }, 500)
+}
+function applyChange(c) {
+  const parts = c.parts, btn = c.btn
+  const target = aRig(parts[0]) || { x: innerWidth / 3, y: innerHeight / 2 }
+  const origin = btn ? centerOf(btn) : { x: innerWidth - 220, y: innerHeight - 200 }
+  beep(520, .05, 'triangle', .05)
+  travel(origin, target, 820, () => {
+    parts.forEach(p => JylliTwin.pulse(p))
+    $$('.odo').forEach(e => e.classList.add('pending'))
+    setTimeout(() => {
+      c.set(); $$('.odo').forEach(e => e.classList.remove('pending')); renderPlate()
+      const ch = { label: c.label, part: parts[0], parts, from: c.from, to: c.to, unset: c.unset }
+      const m = addMark(ch)
+      travel(target, centerOf(m), 700)
+      beep(220, .18, 'sine', .08); setTimeout(() => beep(330, .2, 'sine', .06), 90)
+      toast('Applied and verified by read-back · ' + c.label, () => undoMark(ch))
+    }, 900)
+  })
+}
+
+/* ───────── speed-test flight ───────── */
+function runSpeed() {
+  const b = $('#speed'); if (!b || b.disabled) return; b.disabled = true; b.textContent = 'Testing…'
+  S.speed = null; let t0 = performance.now()
+  const rate = (rx, tx) => netScene && netScene.setTraffic([{ rx: rx * 125000, tx: tx * 125000 }])
+  const iv = setInterval(() => {
+    const p = clamp((performance.now() - t0) / 3200, 0, 1)
+    S.speed = { down: 482 * Math.pow(p, .6) + Math.random() * 6, up: 94 * Math.pow(p, .7) + Math.random() * 2, ping: 38 - p * 25 + Math.random() }
+    rate(S.speed.down, S.speed.up); beep(300 + p * 600, .03, 'sine', .015)
+    if (p >= 1) { clearInterval(iv); S.speed = { down: 482, up: 94, ping: 11 }; rate(40, 8); renderPlate(); toast('Speed test finished · 482 Mbps down, 11 ms') }
+  }, 90)
+}
+
+/* ───────── system scan sweep ───────── */
+function runScan() {
+  const b = $('#scan'); b.disabled = true; b.textContent = 'Scanning…'
+  $$('#plate .row').forEach(r => { r.querySelector('.dot').className = 'dot off'; r.querySelector('.muted').textContent = 'waiting' })
+  const sw = $('#sweep'); sw.classList.remove('go'); void sw.offsetWidth; sw.classList.add('go')
+  const ids = ['cpu', 'cooler', 'ram0', 'gpu', 'drive0', 'board']
+  ids.forEach((id, i) => setTimeout(() => {
+    JylliTwin.pulse(id); const r = $('#chk' + i); if (r) { r.querySelector('.dot').className = 'dot'; r.querySelector('.muted').textContent = 'OK' }; beep(500 + i * 90, .05, 'sine', .04)
+    if (i === 5) { S.scanned = new Date().toLocaleTimeString('en', { hour: '2-digit', minute: '2-digit' }); setTimeout(() => { if (S.view === 'system') renderPlate(); toast('Diagnostics finished · all 6 parts OK') }, 500) }
+  }, 450 + i * 320))
+}
+
+/* ───────── game mode ───────── */
+function toggleGame() {
+  S.gameLive = !S.gameLive
+  window._systemContext = { gameRunning: S.gameLive }
+  document.body.classList.toggle('gaming-live', S.gameLive)
+  if (S.gameLive) { $$('#stage').forEach(s => s.style.transition = 'opacity 900ms'); $('#stage').style.opacity = .08 } else $('#stage').style.opacity = 1
+  renderPlate(); toast(S.gameLive ? 'Game detected · stage stopped' : 'Game closed · stage resumed')
+}
+function drawShare() {
+  const c = $('#sharecard'), x = c.getContext('2d'), W = 1200, H = 630
+  const g = x.createLinearGradient(0, 0, W, H); g.addColorStop(0, '#1b1230'); g.addColorStop(.55, '#0d0d16'); g.addColorStop(1, '#2a1410'); x.fillStyle = g; x.fillRect(0, 0, W, H)
+  const r = x.createRadialGradient(920, 120, 10, 920, 120, 520); r.addColorStop(0, 'rgba(245,140,60,.45)'); r.addColorStop(1, 'transparent'); x.fillStyle = r; x.fillRect(0, 0, W, H)
+  x.fillStyle = '#fff'; x.font = '600 56px Geist, sans-serif'; x.fillText('Forza Horizon 5', 64, 120)
+  x.fillStyle = 'rgba(255,255,255,.6)'; x.font = '26px Geist, sans-serif'; x.fillText('3 h 08 min · RTX 5070 · Ryzen 7 7800X3D', 64, 166)
+  const stats = [['142', 'avg FPS'], ['96', '1% low FPS'], ['71°', 'GPU peak °C']]
+  stats.forEach((s, i) => { x.fillStyle = '#fff'; x.font = '600 96px "Geist Mono", monospace'; x.fillText(s[0], 64 + i * 340, 330); x.fillStyle = 'rgba(255,255,255,.55)'; x.font = '24px Geist, sans-serif'; x.fillText(s[1], 66 + i * 340, 372) })
+  x.beginPath(); const r2 = rng(3); x.moveTo(64, 540)
+  for (let i = 0; i <= 80; i++) x.lineTo(64 + i * 14.2, 520 - Math.abs(Math.sin(i * .21)) * 24 - r2() * 18 - (i % 23 === 0 ? 40 : 0))
+  x.strokeStyle = '#8B7CF6'; x.lineWidth = 4; x.stroke()
+  x.fillStyle = 'rgba(255,255,255,.4)'; x.font = '20px Geist, sans-serif'; x.fillText('frame time · prototype data · every number in the real app shows its source', 64, 596)
+}
+
+/* ───────── chronoline ───────── */
+function buildChrono() {
+  const tr = $('#ch-track'); tr.innerHTML = ''
+  const pts = hist.map((h, i) => `${(i / (N - 1) * 1000).toFixed(1)},${(46 - (h.gpuT - 30) / 60 * 40).toFixed(1)}`).join(' ')
+  tr.insertAdjacentHTML('beforeend', `<svg viewBox="0 0 1000 50" preserveAspectRatio="none"><defs><linearGradient id="cg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#4C9EFF" stop-opacity=".35"/><stop offset="1" stop-color="#4C9EFF" stop-opacity="0"/></linearGradient></defs><polyline points="0,50 ${pts} 1000,50" fill="url(#cg)" stroke="none"/><polyline points="${pts}" fill="none" stroke="#4C9EFF" stroke-width="1.5" vector-effect="non-scaling-stroke" stroke-linejoin="round"/></svg>`)
+  SESSIONS.forEach(s => { const d = document.createElement('div'); d.className = 'ch-sess'; d.style.left = s[0] / (N - 1) * 100 + '%'; d.style.width = (s[1] - s[0]) / (N - 1) * 100 + '%'; d.title = s[2]; d.dataset.src = s[2] + '|Session recorder'; d.onpointerdown = e => e.stopPropagation(); d.onclick = e => { e.stopPropagation(); toast(s[2] + ' · opens its Replay') }; tr.append(d) })
+  for (let d = 0; d < 7; d++) { const i = N - 1 - d * 24 - (new Date().getHours()); const el = document.createElement('div'); el.className = 'ch-day'; const dt = new Date(NOW - d * 864e5); el.textContent = d === 0 ? 'Today' : dt.toLocaleDateString('en', { weekday: 'short' }); el.style.left = (i - 12 + 24 * 0) / (N - 1) * 100 + '%'; if (i > 6) tr.append(el) }
+  CHANGES.forEach(addMark)
+  const head = document.createElement('div'); head.id = 'ch-head'; head.dataset.t = 'Now'; head.style.left = '100%'; tr.append(head)
+}
+function setReplay(i) {
+  S.replay = i
+  document.body.classList.toggle('replay', i != null)
+  const head = $('#ch-head'); head.style.left = (i == null ? 100 : i / (N - 1) * 100) + '%'; head.dataset.t = i == null ? 'Now' : timeLabel(i)
+  $('#ch-state').textContent = i == null ? 'Live · drag to rewind your PC' : 'Replaying recorded history · numbers are from the past'
+  if (S.view === 'home' || S.view === 'optimize') { const b = $('.replaybadge', plate); if (b) b.lastElementChild.textContent = 'Recorded ' + (i != null ? timeLabel(i) : '') + ' · replaying from your history' }
+}
+{
+  const tr = $('#ch-track'); let dragging = false
+  const at = e => { const r = tr.getBoundingClientRect(), f = clamp((e.clientX - r.left) / r.width, 0, 1); setReplay(f > .985 ? null : Math.round(f * (N - 1))) }
+  tr.addEventListener('pointerdown', e => { dragging = true; tr.setPointerCapture(e.pointerId); $('#ch-pop').classList.remove('show'); at(e) })
+  tr.addEventListener('pointermove', e => { if (dragging) at(e) })
+  tr.addEventListener('pointerup', () => dragging = false)
+  $('#ch-live').onclick = () => setReplay(null)
+}
+
+/* ───────── rail ───────── */
+const ICON = { home: 'M3 11l9-8 9 8v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z', optimize: 'M12 14l4-4M3.34 19a10 10 0 1 1 17.32 0', gaming: 'M6 11h4M8 9v4M15 12h.01M18 10h.01M17.32 5H6.68a4 4 0 0 0-3.98 3.59L2 18a2 2 0 0 0 3.5 1.5L8 17h8l2.5 2.5A2 2 0 0 0 22 18l-.7-9.4A4 4 0 0 0 17.32 5z', clean: 'M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14', system: 'M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6', settings: 'M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1' }
+const NAV = [['home', 'Home'], ['optimize', 'Optimize'], ['gaming', 'Gaming'], ['clean', 'Clean'], ['system', 'System'], ['gap'], ['settings', 'Settings']]
+$('#rail').innerHTML = NAV.map((n, i) => n[0] === 'gap' ? '<span class="gap"></span>' : `<button data-v="${n[0]}" aria-label="${n[1]}"><svg viewBox="0 0 24 24"><path d="${ICON[n[0]]}"/></svg><span>${n[1]}</span><kbd>${n[0] === 'settings' ? '' : i + 1}</kbd></button>`).join('')
+$$('#rail button').forEach(b => b.onclick = () => go(b.dataset.v))
+
+/* ───────── command palette (symptoms, not just pages) ───────── */
+const CMDS = [
+  ['Home', 'Overview', () => go('home'), 'home overview health score', ''],
+  ['Windows tweaks', 'Optimize', () => go('optimize', 'win'), 'windows tweaks game dvr telemetry latency mmcss privacy hibernate sysmain input mouse', ''],
+  ['Graphics card', 'Optimize',() => go('optimize', 'gpu'), 'gpu graphics card temperature power limit fps', 'gpu'],
+  ['Processor', 'Optimize', () => go('optimize', 'cpu'), 'cpu processor power plan clock', 'cpu'],
+  ['Memory', 'Optimize', () => go('optimize', 'ram'), 'ram memory standby free', 'ram'],
+  ['Network and speed test', 'Optimize', () => go('optimize', 'net'), 'network ping internet speed lag latency', 'net'],
+  ['Free disk space', 'Clean', () => go('clean'), 'clean disk space storage junk temp cache', 'drive'],
+  ['Game mode and Replay', 'Gaming', () => go('gaming'), 'game gaming replay session recap share', ''],
+  ['Run diagnostics', 'System', () => { go('system'); setTimeout(runScan, 700) }, 'scan diagnostics check health test', ''],
+  ['Settings: visual quality and sound', 'Settings', () => go('settings'), 'settings quality motion sound theme', ''],
+  ['Symptom: stutter or frame drops', 'Suggests GPU power limit', () => go('optimize', 'gpu'), 'stutter stuttering frame drops fps lag hitch', 'gpu'],
+  ['Symptom: high ping', 'Suggests network speed test', () => go('optimize', 'net'), 'high ping lag online packet', 'net'],
+  ['Symptom: fans loud or PC hot', 'Suggests GPU power limit', () => go('optimize', 'gpu'), 'fans loud noise noisy hot temperature heat', 'gpu'],
+  ['Symptom: slow startup', 'Suggests startup apps', () => go('clean'), 'slow boot startup', 'drive'],
+]
+let pi = 0, pres = []
+const pal = $('#palette'), pq = $('#pq'), pl = $('#pl')
+function openPal() { pal.classList.add('show'); pq.value = ''; pq.focus(); fillPal() }
+function closePal() { pal.classList.remove('show') }
+function fillPal() {
+  const q = pq.value.trim().toLowerCase().split(/\s+/).filter(Boolean)
+  pres = CMDS.filter(c => q.every(w => (c[0] + ' ' + c[3]).toLowerCase().includes(w))).slice(0, 8); pi = 0
+  pl.innerHTML = pres.map((c, i) => `<li class="${i ? '' : 'on'}" data-i="${i}"><span class="chip"></span>${c[0]}<em>${c[1]}</em></li>`).join('') || '<li>No match. In the app this searches every tweak.</li>'
+  $$('li[data-i]', pl).forEach(li => li.onclick = () => run(+li.dataset.i))
+}
+function run(i) { const c = pres[i]; if (!c) return; closePal(); c[2]() }
+pq.oninput = fillPal
+pq.onkeydown = e => {
+  if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); pi = clamp(pi + (e.key === 'ArrowDown' ? 1 : -1), 0, pres.length - 1); $$('li', pl).forEach((l, i) => l.classList.toggle('on', i === pi)) }
+  else if (e.key === 'Enter') run(pi); else if (e.key === 'Escape') closePal()
+}
+pal.onclick = e => { if (e.target === pal) closePal() }
+$('#search').onclick = openPal
+addEventListener('keydown', e => {
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); openPal(); return }
+  if (/INPUT|TEXTAREA/.test(document.activeElement.tagName)) return
+  const k = '123456'.indexOf(e.key); if (k >= 0 && !e.ctrlKey) { const n = NAV.filter(x => x[0] !== 'gap')[k]; if (n) go(n[0]) }
+  if (e.key === 'Escape') go('home')
+})
+
+/* ───────── world: engine, network scene, assembly ───────── */
+async function ensureNet() {
+  if (netScene || ensureNet.p) return
+  ensureNet.p = true
+  try {
+    netScene = await JylliTwinNet.create($('#netslot'), { accent: [0.55, 0.49, 0.96] })
+    if (netScene) { $('#netslot').classList.add('j-twin-live'); const rs = () => { const r = $('#netslot').getBoundingClientRect(); netScene.resize(Math.round(r.width), Math.round(r.height), devicePixelRatio || 1) }; rs(); addEventListener('resize', rs); netScene.setTraffic([{ rx: 40e3, tx: 10e3 }]) }
+  } catch (e) { console.warn('net scene', e) }
+}
+function runAssembly() {
+  const intro = $('#intro'); intro.style.opacity = 1
+  document.body.style.setProperty('--pl', 0)
+  JylliTwin.assemble({ reduced: S.motion === 'reduced' }).then(() => { intro.style.opacity = 0 })
+  setTimeout(() => { intro.style.opacity = 0 }, 3200)
+}
+JylliTwin.on('select', id => {
+  if (prog || !id) return
+  const map = { cpu: ['optimize', 'cpu'], cooler: ['optimize', 'cpu'], gpu: ['optimize', 'gpu'], ram0: ['optimize', 'ram'], ram1: ['optimize', 'ram'], drive0: ['clean'], board: ['system'] }
+  const m = map[id] || null
+  if (m) go(m[0], m[1])
+})
+JylliTwin.attach($('#slot'))
+
+/* ───────── main loop ───────── */
+let last = performance.now(), acc = 0
+function frame(now) {
+  requestAnimationFrame(frame)
+  const dt = Math.min((now - last) / 1000, .1); last = now
+  if (S.gameLive) { return }
+  acc += dt
+  if (acc > .25) { acc = 0; simulate(.25); pushTelemetry(); refreshNumbers(); if (S.view === 'optimize' && S.optTab === 'ram') { const b = $('#rambar'); if (b) b.style.width = V['ram.pct'] + '%' } }
+  updateCallouts(); updateLight(now)
+  if (S.view === 'home') { const f = $('#ring'); if (f) f.style.strokeDashoffset = 289 * (1 - V.score / 100) }
+}
+simulate(0); pushTelemetry(); buildChrono(); buildCallouts(); $('#rail button[data-v=home]').classList.add('on'); renderPlate()
+document.body.classList.add('mr-off')
+// the plates arrive after the rig has assembled
+plate.style.opacity = 0; $('#chrono').style.opacity = 0; $('#rail').style.opacity = 0
+const showUI = () => { for (const el of [plate, $('#chrono'), $('#rail')]) { el.style.transition = 'opacity 900ms'; el.style.opacity = 1 } setTimeout(() => { for (const el of [plate, $('#chrono'), $('#rail')]) el.style.transition = '' }, 1000) }
+const wait = setInterval(() => { if (JylliTwin.state === 'live' || JylliTwin.state === 'static') { clearInterval(wait); if (JylliTwin.state === 'live') { runAssembly(); setTimeout(showUI, 2600) } else { showUI(); $('#intro').style.opacity = 0 } } }, 150)
+setTimeout(() => { if (!plate.style.opacity || plate.style.opacity === '0') showUI() }, 9000)
+requestAnimationFrame(frame)
+window.__p = { S, V, go, JylliTwin }
+</script>
+</body>
+</html>

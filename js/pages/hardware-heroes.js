@@ -5,7 +5,7 @@
 async function heroRig() {
   try { const r = await api.getHardwareInventory(); return r && r.ok ? r.rig : null } catch { return null }
 }
-const metricCell = (key, label) => `<div class="j-gpu-cell"><div class="j-stat-label">${escHtml(tUI(label))}</div><div class="j-gpu-val j-num" data-metric="${escAttr(key)}">—</div></div>`
+const metricCell = (key, label) => `<div class="j-gpu-cell"><div class="j-stat-label">${escHtml(tUI(label))}</div><div class="j-gpu-val j-num" data-odo data-metric="${escAttr(key)}">—</div></div>`
 
 async function buildCpuMemHero(c) {
   const rig = await heroRig()
@@ -19,7 +19,7 @@ async function buildCpuMemHero(c) {
     return ui.row({ title: `${s.channel ? tUI('twinFactSlot') + ' ' + s.channel + ' · ' : ''}${s.sizeGB || '?'} GB ${s.type || ''}`, sub: [s.part, s.ratedMT ? tUI('twinFactRated') + ' ' + s.ratedMT + ' MT/s' : '', s.speedMT ? tUI('twinFactRunning') + ' ' + s.speedMT + ' MT/s' : ''].filter(Boolean).join(' · '), control: ui.raw(tip) })
   }).join('')
   el.innerHTML = String(ui.html`
-    <div class="j-twin-stage j-gpu-stage"><div class="j-twin-slot" id="cpumem-twin-slot" data-twin-view="rig:home"></div></div>
+    <div class="j-twin-stage j-gpu-stage"><div class="j-twin-slot" id="cpumem-twin-slot" data-twin-view="rig:home" data-twin-focus="cpu"></div></div>
     <div class="j-gpu-side">
       <div class="j-gpu-strip">${[['cpu.load', 'sensorKey_cpu.load'], ['cpu.temp.package', 'sensorKey_cpu.temp.package'], ['cpu.power', 'sensorKey_cpu.power'], ['ram.used', 'sensorKey_ram.used'], ['ram.load', 'sensorKey_ram.load']].map(([k, l]) => ui.raw(metricCell(k, l)))}</div>
       ${cpu ? ui.group('', [ui.row({ title: tUI('twinFactModel'), control: ui.html`<span class="j-num">${cpu.name}</span>` }), ui.row({ title: tUI('twinFactCores'), control: ui.html`<span class="j-num">${cpu.cores || '?'} / ${cpu.threads || '?'}</span>` })]) : ui.callout(tUI('hwNotDetected'), 'info')}
@@ -39,7 +39,7 @@ async function buildStorageHero(c) {
   const el = document.createElement('section')
   el.id = 'storage-hero'; el.className = 'j-card j-gpu-hero'
   el.innerHTML = String(ui.html`
-    <div class="j-twin-stage j-gpu-stage"><div class="j-twin-slot" id="storage-twin-slot" data-twin-view="rig:home"></div></div>
+    <div class="j-twin-stage j-gpu-stage"><div class="j-twin-slot" id="storage-twin-slot" data-twin-view="rig:home" data-twin-focus="drive0"></div></div>
     <div class="j-gpu-side">
       <div class="j-gpu-strip">${ui.raw(metricCell('disk.c.pct', 'sensorKey_disk.c.pct'))}${ui.raw(metricCell('disk0.temp', 'sensorKey_disk0.temp'))}</div>
       <div class="j-stat-label">${tUI('twinPartStorage')}</div>

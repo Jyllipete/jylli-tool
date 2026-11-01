@@ -11,6 +11,7 @@
 <title>Jylli Tool</title>
 <link rel="stylesheet" href="css/style.css">
 <link rel="stylesheet" href="css/pro.css">
+<link rel="stylesheet" href="css/glass.css">
 </head>
 <body>
 
@@ -454,6 +455,8 @@
   </div>
 </div>
 
+<!-- 4.0 world: the persistent 3D stage behind everything (css/glass.css, js/world.js); outside #app because its entrance animation would turn fixed into relative -->
+<div id="world" aria-hidden="true"><div class="j-twin-slot" id="world-slot" data-twin-view="rig:home"></div><div id="world-vignette"></div></div>
 <div id="app" class="hidden">
   <!-- Title bar -->
   <div class="j-titlebar">
@@ -523,6 +526,14 @@
 <script src="js/stage.js"></script>
 <script src="js/journal-view.js"></script>
 <script src="js/sound.js"></script>
+<script src="js/ui4/odometer.js"></script>
+<script src="js/ui4/provenance.js"></script>
+<script src="js/ui4/hold.js"></script>
+<script src="js/world.js"></script>
+<script src="js/symptoms.js"></script>
+<script src="js/chronoline.js"></script>
+<script src="js/callouts.js"></script>
+<script src="js/sharecard.js"></script>
 <script src="js/regions.js"></script>
 <script src="js/telemetry.js"></script>
 <script src="js/twin/layout.js"></script>
@@ -1577,15 +1588,23 @@ function cmdRender(q) {
   q = (q || '').toLowerCase().trim()
   const pages = cmdPages().filter(p => !q || p.name.toLowerCase().includes(q) || p.sub.toLowerCase().includes(q))
   const actions = cmdActions().filter(a => !q || a.name.toLowerCase().includes(q) || a.sub.toLowerCase().includes(q))
+  const symptoms = window.JylliSymptoms ? JylliSymptoms.match(q).map(s => ({ ...s, name: tUI('symp_' + s.id), sub: tUI('sympSub_' + s.id) })) : []
   cmdFilteredItems = []
 
-  if (!pages.length && !actions.length) {
+  if (!pages.length && !actions.length && !symptoms.length) {
     container.innerHTML = `<div id="cmd-empty"><i class="fa fa-magnifying-glass jx-200"></i>${tUI('cmdNoResults')} "${escHtml(q)}"</div>`
     cmdFocusIdx = -1
     return
   }
 
   let html = ''
+  if (symptoms.length) {
+    html += `<div class="cmd-group-label">${tUI('cmdGroupSymptoms')}</div>`
+    symptoms.forEach(s => {
+      cmdFilteredItems.push({ type: 'symptom', data: s })
+      html += `<div class="cmd-item" data-idx="${cmdFilteredItems.length-1}" onclick="cmdSelectIdx(${cmdFilteredItems.length-1})"><div class="cmd-item-icon"><i class="fa ${s.icon}"></i></div><div class="cmd-item-text"><div class="cmd-item-name">${s.name}</div><div class="cmd-item-sub">${s.sub}</div></div><span class="cmd-item-shortcut">↵</span></div>`
+    })
+  }
   if (pages.length) {
     html += `<div class="cmd-group-label">${tUI('cmdGroupPages')}</div>`
     pages.forEach((p, i) => {
@@ -1628,7 +1647,8 @@ function cmdSelectIdx(idx) {
   const item = cmdFilteredItems[idx]
   if (!item) return
   closeCmdPalette()
-  if (item.type === 'page') showPage(item.data.page)
+  if (item.type === 'symptom') showPage(item.data.page, item.data.tab)
+  else if (item.type === 'page') showPage(item.data.page)
   else if (item.type === 'action') item.data.action()
 }
 
@@ -1732,6 +1752,7 @@ function showPage(page, tabId) {
   if (route) page = route.page
   currentPage = page
   if (route) Shell.render(route)
+  if (route) { try { JylliWorld.route(route) } catch {} }
 
   if (metricsInterval && page !== 'dashboard' && page !== 'process-manager') { clearInterval(metricsInterval); metricsInterval = null }
   if (page === 'dashboard' || page === 'process-manager') startMetrics()
@@ -1851,6 +1872,7 @@ function initPersonalization() {
   JylliTheme.applyScheme(settings.colorScheme)
   applyTheme(settings.theme || 'jylli')
   applyMotionMode(settings.motionMode || 'default')
+  try { JylliWorld.apply() } catch {}
   if (settings.accentColor) applyAccentColor(settings.accentColor)
   initAdvancedMode()
   initLanguage()

@@ -9,7 +9,7 @@ const GPU_STRIP = [
 
 function buildGpuHero(c, { readOnly = false } = {}) {
   const { html } = ui
-  const strip = GPU_STRIP.map(([key, label]) => html`<div class="j-gpu-cell"><div class="j-stat-label">${tUI(label)}</div><div class="j-gpu-val j-num" data-metric="${key}">—</div></div>`)
+  const strip = GPU_STRIP.map(([key, label]) => html`<div class="j-gpu-cell"><div class="j-stat-label">${tUI(label)}</div><div class="j-gpu-val j-num" data-odo data-metric="${key}">—</div></div>`)
   const el = document.createElement('section')
   el.id = 'gpu-hero'
   el.className = 'j-card j-gpu-hero'
