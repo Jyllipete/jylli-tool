@@ -1,5 +1,9 @@
 # Handoff — Jylli Tool 1.6.0 rework (resume from here after /clear)
 
+## Boot "Genesis" (2026-11-01, uncommitted)
+
+The loading screen now builds the user's rig in 3D as each detection result arrives (`js/boot-stage.js`, boot API in `js/twin/host.js`: `bootBegin/bootStage/bootPower/bootEnd`; engine: `boot` view, install vectors, `pulse`, `setPowered`, `screenPos`, `revealTo`). Leader lines run from ledger rows to parts; at the end the same canvas travels into Home's slot (`attach` is held while `H.boot` owns the canvas; `bootEnd` hands it over). Static SVG fallback gets the same beats (`data-in` per stage). Home's first-run assembly is skipped when `JylliTwin.bootAssembled`. Verified: `npm test` (138), `npm run check`, browser-pane demo `tools/ui-preview/boot-demo.html` (3D, `?q=off`, handoff leaves one canvas, no console errors). NOT verified: real Electron run (startupTrace timing of "hiding loading screen"), cold-cache inventory (PowerShell runs during the scan), reduced-motion visual, fi screenshot, `--disable-gpu`.
+
 ## 3.0 "Living hardware" status (2026-10-31)
 
 Plan: `C:\Users\Pete\.claude\plans\the-app-looks-corrently-whimsical-stream.md`. Everything is committed locally on `main`, nothing pushed, version still 1.6.0 (bumps and release are the user's call). Release notes are drafted in `CHANGELOG.md` ("Julkaisematon (3.0)"); the in-app `WHATS_NEW` list in main.js was NOT touched (it would show a 3.0 teaser on a 1.6.0 build).

@@ -129,6 +129,10 @@
     </div>
   </div>
 
+  <!-- Stage: the rig assembles here as each detection result arrives (js/boot-stage.js); leader lines run from the rows to the parts -->
+  <div class="boot-stage j-twin-slot" id="boot-twin-slot" role="img" aria-label="Your PC being identified"></div>
+  <svg class="boot-leaders" id="boot-leaders" aria-hidden="true"></svg>
+
   <!-- Center column: tagline + detection rows -->
   <div class="boot-center">
     <div class="boot-tagline">Scanning your system<span class="boot-ellipsis"></span></div>
@@ -194,6 +198,7 @@
         </div>
       </div>
     </div>
+    <button class="j-link boot-skip" id="boot-skip" type="button" data-i18n="bootSkip">Skip</button>
   </div>
 
   <!-- Footer: fluid progress bar + step counter -->
@@ -528,6 +533,7 @@
 <script src="js/twin/engine.js"></script>
 <script src="js/twin/netscene.js"></script>
 <script src="js/twin/host.js"></script>
+<script src="js/boot-stage.js"></script>
 <script src="js/shell.js"></script>
 <script src="js/pages/home.js"></script>
 <script src="js/pages/settings.js"></script>
@@ -764,11 +770,18 @@ async function init(isPremium = false) {
   function finishLoading() {
     var el = document.getElementById('loading')
     if (!el) return
-    el.classList.add('complete')
-    setTimeout(function() {
+    var hide = function() {
       el.style.display = 'none'
-      el.classList.remove('complete')
-    }, 1050)
+      el.classList.remove('complete', 'handoff', 'handoff-done')
+    }
+    // With the boot stage running, the rig's canvas travels to Home first (js/boot-stage.js); otherwise the old slide-out.
+    if (window.JylliBootStage && JylliBootStage.active) {
+      JylliBootStage.finish().then(hide, hide)
+      setTimeout(hide, 3000)   // never leave the overlay up if the handoff stalls
+      return
+    }
+    el.classList.add('complete')
+    setTimeout(hide, 1050)
   }
 
   const _activatedSteps = new Set()
@@ -776,6 +789,7 @@ async function init(isPremium = false) {
   function markStepDone(id, detail, subDetail) {
     const el = document.getElementById('lstep-' + id)
     if (!el) return
+    try { window.JylliBootStage && JylliBootStage.onStepDone(id) } catch {}
     el.classList.remove('active')
     el.classList.add('done')
     el.style.animation = ''
@@ -812,6 +826,7 @@ async function init(isPremium = false) {
     const el = document.getElementById('lstep-' + id)
     if (!el) return
     _stepStartTimes[id] = Date.now()
+    try { window.JylliBootStage && JylliBootStage.onStepActive(id) } catch {}
     el.classList.add('active')
     if (!_activatedSteps.has(id)) {
       _activatedSteps.add(id)
@@ -888,6 +903,7 @@ async function init(isPremium = false) {
     }
     loadAnimDone = true
   }
+  try { window.JylliBootStage && JylliBootStage.start() } catch (e) { api.startupTrace?.(`boot stage failed to start: ${e?.message}`) }
   runLoadAnim()
   api.offAutoOptiProgress()
   api.onAutoOptiProgress(({ step, total, label, id, status }) => {

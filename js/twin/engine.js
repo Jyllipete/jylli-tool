@@ -15,7 +15,11 @@
     home: { look: [0.1, -0.3, -0.5], dist: 23.5, yaw: 0.4, pitch: 0.12 },
     gpu: { look: [-0.3, -1.4, -0.7], dist: 10, yaw: 0.5, pitch: 0.14 },
     laptop: { look: [0, 0, 0.1], dist: 12.5, yaw: 0.45, pitch: 0.72 },
+    boot: { look: [0.1, -0.3, -0.5], dist: 26, yaw: 0.34, pitch: 0.1 },   // the boot stage: a little wider, drifts slowly (see stepCamera)
   }
+  // Boot assembly: each part slides in along the way it is installed in a real case (case units, relative to its seat).
+  const ENTER = { gpu: [0, 0, 2.6], cpu: [0, 0.8, 0], cooler: [0, 0.8, 0], aio: [0, 0.8, 0], 'cooler-unknown': [0, 0.8, 0], nvme: [1.6, 0, 0], sata: [1.6, 0, 0], 'ram-slot': [0, 0.9, 0], board: [0, 0, -0.6] }
+  const ENTER_DEFAULT = [0, 0.9, 0]
   // A close-up looks in through the glass at a moderate angle (the intake fans and radiator sit on the +x wall, so a steep side
   // view would look through them). Distances clear the glass (case half-depth ~2.3).
   const FOCUS_DIST = { gpu: 10, cpu: 9, cooler: 9.5, ram0: 9, board: 13, storage: 9 }
@@ -116,6 +120,7 @@
     const pickables = []
     let layout = null, hoverId = null, focusId = null, decorFans = [], gpuFans = []
     let reveal = null      // null = everything shown; else Map(partId -> target 0|1), eased below
+    let boot = false, bootT = 0, power = 1   // boot-stage mode (install vectors, camera drift) and the power-on ramp for the lights
 
     function disposeWorld() {
       world.traverse(o => {
@@ -254,7 +259,7 @@
             else if (st.load != null) level = 0.7 + st.load * 0.8
             else if (st.fill != null) level = 0.7 + st.fill * 0.6
           }
-          g.target = level * AMB * g.strength
+          g.target = level * AMB * g.strength * (1 + (e.pulse || 0) * 2.5)
           g.color.setRGB(...col)
         }
       }
@@ -271,27 +276,44 @@
       let sum = 0
       for (const g of glowMats) {
         g.level += (g.target - g.level) * k
-        g.mat.emissive.copy(g.color); g.mat.emissiveIntensity = g.level * (quality === 'full' ? 1 : 0.85)
+        g.mat.emissive.copy(g.color); g.mat.emissiveIntensity = g.level * (quality === 'full' ? 1 : 0.85) * power
         sum += g.level / Math.max(g.strength, 0.01)
       }
       // spill light follows the average glow, so a hot or busy rig lights its interior harder
       const avg = glowMats.length ? sum / glowMats.length / AMB : 1
       const heatCol = state && state.gpu && state.gpu.heat != null ? M.heatColor(state.gpu.heat, accent) : accent
-      spills.forEach((s, i) => { s.light.intensity = s.i * Math.min(1.8, avg); if (i === 1) s.light.color.setRGB(...heatCol) })
+      spills.forEach((s, i) => { s.light.intensity = s.i * Math.min(1.8, avg) * power; if (i === 1) s.light.color.setRGB(...heatCol) })
       if (state && state.pump) { /* the pump has no moving part to show; its RPM only appears in the inspector */ }
     }
 
     function setReveal(map) { reveal = map; if (!map) for (const e of parts.values()) { e.r = 1; e.group.visible = true; e.group.scale.setScalar(1); e.group.position.set(...e.base) } else for (const e of parts.values()) e.r = 0 }
+    /** Boot assembly: swap the reveal targets without resetting parts that are already in (setReveal restarts every part). */
+    function revealTo(map) { if (!reveal) { setReveal(new Map()) } reveal = map }
     function stepReveal(dt) {
       if (!reveal) return
-      const k = 1 - Math.exp(-dt / 0.22)
+      const k = 1 - Math.exp(-dt / (boot ? 0.38 : 0.22))
       for (const [id, e] of parts) {
         const target = reveal.get(id) ? 1 : 0
         e.r += (target - e.r) * k
         e.group.visible = e.r > 0.02
-        e.group.position.set(e.base[0], e.base[1] + (1 - e.r) * 0.9, e.base[2])
+        const d = boot ? (ENTER[e.p.kind] || ENTER_DEFAULT) : ENTER_DEFAULT, o = reducedMotion() ? 0 : 1 - e.r
+        e.group.position.set(e.base[0] + d[0] * o, e.base[1] + d[1] * o, e.base[2] + d[2] * o)
         e.group.scale.setScalar(0.94 + 0.06 * e.r)
       }
+    }
+    // Boot-stage hooks: a part "seating" flashes its own glow once; the power-on ramps every light from dark to its steady level.
+    function pulse(id) { const e = parts.get(id); if (e) e.pulse = 1 }
+    function setPowered(t) { power = Math.max(0, Math.min(1, t)) }
+    function setBoot(on) { boot = !!on; if (!on) bootT = 0 }
+    function stepPulse(dt) { for (const e of parts.values()) if (e.pulse) e.pulse = Math.max(0, e.pulse - dt / 0.9) }
+    /** Anchor of a part in CSS px relative to the canvas (null when it is behind the camera or unknown). */
+    function screenPos(id) {
+      const e = parts.get(id); if (!e) return null
+      const box = new T.Box3().setFromCenterAndSize(new T.Vector3(...e.base), new T.Vector3(...e.p.size))
+      const c = box.getCenter(new T.Vector3()).project(camera)
+      if (c.z > 1) return null
+      const r = dom.getBoundingClientRect()
+      return { x: (c.x * 0.5 + 0.5) * r.width, y: (-c.y * 0.5 + 0.5) * r.height }
     }
 
     // ── camera ────────────────────────────────────────────────────────────────────────────────────────────────────────
@@ -314,7 +336,10 @@
     }
     const reducedMotion = () => document.body.classList.contains('motion-reduced') || (root.matchMedia && root.matchMedia('(prefers-reduced-motion: reduce)').matches)
     function stepCamera(dt) {
-      Mo().springStep(cam, [camTarget[0], camTarget[1], camTarget[2], camTarget[3], camTarget[4] + user.yaw, camTarget[5] + user.pitch], dt, reducedMotion() ? 80 : 9)
+      // the boot view drifts slowly so the half-built rig never sits still (not under reduced motion)
+      let drift = 0
+      if (boot && viewName === 'boot' && !reducedMotion()) { bootT += dt; drift = Math.sin(bootT * 0.45) * 0.14 }
+      Mo().springStep(cam, [camTarget[0], camTarget[1], camTarget[2], camTarget[3], camTarget[4] + user.yaw + drift, camTarget[5] + user.pitch], dt, reducedMotion() ? 80 : 9)
       const [lx, ly, lz, dist, yaw, pitch] = cam.x
       camera.position.set(lx + Math.sin(yaw) * Math.cos(pitch) * dist, ly + Math.sin(pitch) * dist, lz + Math.cos(yaw) * Math.cos(pitch) * dist)
       camera.lookAt(lx, ly, lz)
@@ -352,7 +377,7 @@
       }
     }
     function render(dt) {
-      stepCamera(dt); stepReveal(dt); applyState(dt)
+      stepCamera(dt); stepReveal(dt); stepPulse(dt); applyState(dt)
       if (composer) composer.render(dt); else renderer.render(scene, camera)
     }
     function setAccent(rgb) {
@@ -363,7 +388,7 @@
     function dispose() { disposeWorld(); try { composer && composer.dispose?.() } catch {} pmrem.dispose(); envTex.dispose(); renderer.dispose(); renderer.forceContextLoss?.() }
 
     setupComposer()
-    return { domElement: dom, rendererName, build, setReveal, partIds: () => [...parts.keys()], setState, setView, focus, pick, setHover, resize, render, setAccent, dispose, settled,
+    return { domElement: dom, rendererName, build, setReveal, revealTo, pulse, setPowered, setBoot, screenPos, partIds: () => [...parts.keys()], setState, setView, focus, pick, setHover, resize, render, setAccent, dispose, settled,
       nudge(dyaw, dpitch) { user.yaw = Math.max(-0.5, Math.min(0.5, user.yaw + dyaw)); user.pitch = Math.max(-0.25, Math.min(0.25, user.pitch + dpitch)) },
       release() { user.yaw = user.pitch = 0 }, get focusId() { return focusId }, parts: () => [...parts.keys()] }
   }

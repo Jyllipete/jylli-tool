@@ -318,16 +318,20 @@ async function twinDeclare(kind) {
 function twinFirstRun(slot) {
   let tries = 0
   const wait = setInterval(async () => {
+    if (JylliTwin.bootActive) return           // the boot stage still owns the canvas; wait for the handoff
     if (JylliTwin.state === 'live') {
       clearInterval(wait)
       const stage = document.getElementById('home-twin-stage')
       if (!stage) return
       const bar = document.createElement('div')
       bar.className = 'j-twin-assembly'
-      bar.innerHTML = `<span>${escHtml(tUI('twinAssembling'))}</span><button type="button" class="j-btn j-btn-ghost j-btn-sm" id="twin-skip">${escHtml(tUI('twinSkip'))}</button>`
-      stage.appendChild(bar)
-      const skip = bar.querySelector('#twin-skip'); if (skip) skip.onclick = () => JylliTwin.skipAssembly()
-      await JylliTwin.assemble({ reduced: document.body.classList.contains('motion-reduced') || matchMedia('(prefers-reduced-motion: reduce)').matches })
+      // the loading screen already built the rig from the detection results: no second assembly, only the Auto-Optimize offer below
+      if (!JylliTwin.bootAssembled) {
+        bar.innerHTML = `<span>${escHtml(tUI('twinAssembling'))}</span><button type="button" class="j-btn j-btn-ghost j-btn-sm" id="twin-skip">${escHtml(tUI('twinSkip'))}</button>`
+        stage.appendChild(bar)
+        const skip = bar.querySelector('#twin-skip'); if (skip) skip.onclick = () => JylliTwin.skipAssembly()
+        await JylliTwin.assemble({ reduced: document.body.classList.contains('motion-reduced') || matchMedia('(prefers-reduced-motion: reduce)').matches })
+      } else stage.appendChild(bar)
       settings.assemblyDone = true; api.saveSettings(settings)
       if (!bar.isConnected) return          // the user left Home during the animation
       bar.innerHTML = `<span>${escHtml(tUI('twinAssembled'))}</span><button type="button" class="j-btn j-btn-primary j-btn-sm" onclick="runAutoOpti()">${escHtml(tUI('dashAutoOptimize'))}</button><button type="button" class="j-btn j-btn-ghost j-btn-sm" id="twin-assembly-close">${escHtml(tUI('close'))}</button>`

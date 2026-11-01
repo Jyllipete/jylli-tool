@@ -1726,6 +1726,8 @@ LANG.en = {
       // Loading screen
       loadDetecting:'Detecting system specs…',
       loadScanning:'Scanning your system',
+      bootSkip:'Skip',
+      bootStageAria:'Your PC being identified',
       loadWaiting:'Waiting…',
       loadStepStorage:'Storage',
       loadStepOs:'OS & Admin',

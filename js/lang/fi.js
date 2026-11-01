@@ -1766,6 +1766,8 @@ LANG.fi = {
       // Loading screen
       loadDetecting:'Tunnistetaan järjestelmän tietoja…',
       loadScanning:'Järjestelmää skannataan',
+      bootSkip:'Ohita',
+      bootStageAria:'Tietokonettasi tunnistetaan',
       loadWaiting:'Odottaa…',
       loadStepStorage:'Tallennus',
       loadStepOs:'Käyttöjärjestelmä & Ylläpitäjä',

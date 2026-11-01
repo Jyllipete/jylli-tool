@@ -510,6 +510,32 @@
 #loading .boot-step-counter { font: 500 var(--fs-1)/1 var(--font-mono); }
 #loading.complete .boot-logo-icon { border-color: var(--c-accent-ring); color: var(--c-accent); animation: none; }
 
+/* ═══ Boot stage: the rig assembles beside the ledger (js/boot-stage.js) ═══ */
+html #loading { flex-direction: row; justify-content: flex-start; padding-left: clamp(24px, 6vw, 96px); gap: clamp(24px, 4vw, 64px); }
+#loading .boot-center { width: min(420px, 38vw); flex: none; position: relative; z-index: 2; }
+#loading .boot-stage { position: absolute; right: clamp(24px, 5vw, 80px); top: 14vh; bottom: 14vh; left: auto; width: min(52vw, 900px); border-radius: var(--r-lg); overflow: hidden; border: 1px solid var(--hairline); background: #07070c; animation: fadeIn 0.6s var(--ease-default) 0.2s both; }
+.boot-skip { position: absolute; right: 0; bottom: -34px; font: 500 var(--fs-1)/1 var(--font); color: var(--c-text-tertiary); text-decoration: none; }
+.boot-skip:hover { color: var(--c-text-primary); }
+.boot-leaders { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 3; overflow: visible; }
+.boot-leader { fill: none; stroke: var(--c-accent); stroke-opacity: .5; stroke-width: 1; stroke-linejoin: round; transition: stroke-opacity var(--dur-short) var(--ease-out), opacity var(--dur-medium) var(--ease-out); }
+.boot-leader.is-hot { stroke-opacity: 1; stroke-width: 1.5; }
+.boot-leader-dot { fill: var(--c-accent); transition: opacity var(--dur-medium) var(--ease-out); }
+/* static silhouette: a stage's rects fade in when that stage lands */
+#loading .boot-stage .j-twin-part { transition: opacity calc(420ms * var(--motion-scale)) var(--ease-out); }
+#loading .boot-stage .j-twin-part:not([data-in]) { opacity: 0; }
+/* handoff: ledger, header, leaders and backdrop let go while the stage travels to Home */
+#loading.handoff { background: transparent; pointer-events: none; transition: background calc(260ms * var(--motion-scale)) var(--ease-out); }
+#loading.handoff .boot-center, #loading.handoff .boot-header, #loading.handoff .boot-footer, #loading.handoff .boot-leaders { opacity: 0; transition: opacity calc(240ms * var(--motion-scale)) var(--ease-out); }
+#loading.handoff .boot-stage { border-color: transparent; z-index: 4; }
+#loading.handoff-done { opacity: 0; transition: opacity calc(220ms * var(--motion-scale)) var(--ease-out); }
+@media (max-width: 900px) {
+  html #loading { flex-direction: column; justify-content: flex-end; align-items: flex-start; padding: 0 24px 56px; }
+  #loading .boot-center { width: min(420px, 100%); }
+  #loading .boot-stage { left: 24px; right: 24px; top: 80px; bottom: auto; width: auto; height: 36vh; }
+  .boot-skip { position: static; margin-top: 12px; }
+  .boot-leaders { display: none; }
+}
+
 /* ═══ Dialogs and first run (quiet): one modal look, no blur-glass, no spring ═══ */
 .modal-overlay { background: var(--c-overlay); -webkit-backdrop-filter: none; backdrop-filter: none; }
 .modal { background: var(--c-bg-elevated); border: 1px solid var(--c-border-default); border-radius: var(--r-lg); box-shadow: var(--shadow-modal); -webkit-backdrop-filter: none; backdrop-filter: none; animation: j-modal-in .16s var(--ease-snap) both; }

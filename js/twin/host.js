@@ -78,6 +78,8 @@
 
   async function attach(slot) {
     if (!slot) return
+    // While the boot stage owns the canvas, a page that wants it waits: bootEnd() hands it over after the transition.
+    if (H.boot && H.boot.slot && slot !== H.boot.slot) { H.boot.pending = slot; return }
     H.slot = slot
     slot.classList.add('j-twin-slot-ready')
     await ensureRig()
@@ -125,7 +127,7 @@
     })
     bindInput(eng.domElement)
     mount(slot)
-    H.probe = { frames: [], start: performance.now(), last: 0 }
+    H.probe = H.boot ? null : { frames: [], start: performance.now(), last: 0 }   // boot is PowerShell-heavy: frame times are noisy, so probing waits for bootEnd
     H.state = 'live'
     startLoop()
   }
@@ -135,6 +137,8 @@
     if (!H.engine || !slot) return
     const v = (slot.dataset.twinView || 'rig:home').split(':')[1] || 'home'
     H.view = v
+    if (v === 'boot') { H.engine.setBoot(true); H.engine.setPowered(H.boot && H.boot.powered ? 1 : 0); H.engine.setReveal(new Map()); H.engine.setView('boot', { snap: true }); applyBoot(); return }
+    H.engine.setBoot(false); H.engine.setPowered(1)
     if (v === 'gpu') { H.engine.setView('gpu', { snap: false }); H.engine.setReveal(new Map([['gpu', 1], ['board', 1]])) }
     else { H.engine.setReveal(null); H.engine.setView('home', { snap: false }) }
   }
@@ -182,7 +186,7 @@
     const fps = H.probe ? 60 : Mo().targetFps({
       visible: document.visibilityState === 'visible' && H.visible,
       gameForeground: !!(root._systemContext && root._systemContext.gameRunning),
-      msSinceInput: Date.now() - H.lastInput, interacting: H.interacting || !H.engine.settled(),
+      msSinceInput: Date.now() - H.lastInput, interacting: H.interacting || !!H.boot || !H.engine.settled(),
     })
     if (fps === 0) return
     const dt = (now - H.lastFrame) / 1000
@@ -257,6 +261,48 @@
     })
   }
 
+  // ── boot stage: the loading screen assembles the rig as detection results arrive (js/boot-stage.js drives it) ──
+  // Stages: 'shell' (case, PSU, fans: decor), then board/cpu/ram/gpu/disk. Reveal follows what boot-stage reports, never a timer.
+  const bootStageOf = p => p.decor ? 'shell' : STAGE_OF(p.id)
+  function applyBoot() {
+    const eng = H.engine, b = H.boot
+    if (!eng || !b || !H.layout) return
+    const m = new Map()
+    for (const p of H.layout.parts) if (b.all || b.stages.has(bootStageOf(p))) m.set(p.id, true)
+    eng.revealTo(m)
+  }
+  /** Start the boot stage in `slot` (a .j-twin-slot inside the loading screen). Resolves once the slot has its fallback/engine path. */
+  function bootBegin(slot) {
+    H.boot = { slot, stages: new Set(), all: false, powered: false, pending: null }
+    H.bootActive = true
+    slot.dataset.twinView = 'rig:boot'
+    return attach(slot)
+  }
+  function bootStage(stage) {
+    const b = H.boot; if (!b || b.stages.has(stage)) return
+    b.stages.add(stage)
+    applyBoot()
+    if (H.engine && H.layout) for (const p of H.layout.parts) if (!p.decor && bootStageOf(p) === stage) H.engine.pulse(p.id)
+    emit('assemble', stage)
+  }
+  function bootPower(t) { if (H.boot) { H.boot.powered = t >= 1 }; if (H.engine && H.boot) H.engine.setPowered(t) }
+  function bootRevealAll() { if (H.boot) { H.boot.all = true; applyBoot() } }
+  /** Anchor of a part (by stage-level id) in CSS px inside the boot slot, or null. Used for the leader lines. */
+  function bootAnchor(id) { return H.engine && H.boot ? H.engine.screenPos(id) : null }
+  function bootPulse(id) { if (H.engine && H.boot) H.engine.pulse(id) }
+  /** Handoff starts: stop the drift and let the camera spring to the Home framing while the stage travels to its slot. */
+  function bootSettle() { if (H.engine && H.boot) { H.engine.setBoot(false); H.engine.setView('home', { snap: false }) } }
+  /** Boot is over: give the canvas to the page that asked for it while boot held it. */
+  function bootEnd() {
+    const b = H.boot; if (!b) return
+    const pending = b.pending
+    H.assembledByBoot = !!(H.engine && H.state === 'live')
+    H.boot = null; H.bootActive = false
+    park()
+    if (H.engine) { H.engine.setBoot(false); H.engine.setPowered(1); H.engine.setReveal(null); H.probe = { frames: [], start: performance.now(), last: 0 } }
+    if (pending) attach(pending)
+  }
+
   function select(id) { if (H.engine) H.engine.focus(id); emit('select', id) }
   function back() { if (H.engine) H.engine.focus(null); emit('select', null) }
 
@@ -271,6 +317,9 @@
 
   root.JylliTwin = {
     attach, park, select, back, on, partInfo, setRigDeclared, assemble, skipAssembly() { H.skipAssembly && H.skipAssembly() },
+    bootBegin, bootStage, bootPower, bootRevealAll, bootAnchor, bootPulse, bootSettle, bootEnd, bootStageOf,
+    get bootPending() { return (H.boot && H.boot.pending) || null },
+    get bootActive() { return !!H.bootActive }, get bootAssembled() { return !!H.assembledByBoot },
     get state() { return H.state }, get reason() { return H.reason }, get quality() { return H.quality }, get rendererName() { return H.rendererName },
     get layout() { return H.layout }, get rig() { return H.rig },
     applySetting() { if (H.slot) { const s = H.slot; park(); teardownEngine(); attach(s) } },
