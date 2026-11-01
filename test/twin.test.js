@@ -25,7 +25,10 @@ test('layout of the real desktop: GPU drawn, unknown cooler is a ghost, RAM stic
 test('showcase case fans: decor-only on a tower, excluded from ghosts, none on a laptop', () => {
   const lay = L.layoutRig(buildRigSpec(raw))
   const fans = lay.parts.filter(p => p.kind === 'case-fan')
-  assert.strictEqual(fans.length, 4)                                    // 3 front + 1 rear
+  assert.strictEqual(fans.length, 4)                                    // 3 intake behind the front glass + 1 rear exhaust (no AIO in this rig)
+  const aio = L.layoutRig(buildRigSpec(raw, { cooler: 'aio' })).parts.filter(p => p.kind === 'case-fan')
+  assert.strictEqual(aio.length, 6)                                     // an AIO adds two radiator fans
+  assert.ok(L.layoutRig(buildRigSpec(raw)).parts.filter(p => p.kind === 'ram-slot' && p.ghost).every(p => L.layoutRig(buildRigSpec(raw)).ghosts.includes(p.id)))   // empty slots stay in the ghost list
   assert.ok(fans.every(p => p.decor === true && p.ghost === false))     // cosmetic: never implies a detected fan
   assert.ok(fans.every(p => !lay.ghosts.includes(p.id)))                // decor parts never appear as "not detected"
   const lap = L.layoutRig({ formFactor: 'laptop', gpus: [], ram: { sticks: [] }, drives: [] })

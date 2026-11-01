@@ -32,10 +32,11 @@
     if (!webglAvailable()) return null
     if (!(await loadBundle())) return null
     const T = root.THREE, A = T.Addons
-    const kit = Kit(); kit.init(T)
+    const kit = Kit()
     const renderer = new T.WebGLRenderer({ antialias: false, alpha: true, powerPreference: 'low-power' })
-    renderer.toneMapping = T.ACESFilmicToneMapping
-    renderer.toneMappingExposure = 1.7
+    kit.init(T, { anisotropy: Math.min(8, renderer.capabilities.getMaxAnisotropy()) })
+    renderer.toneMapping = T.NeutralToneMapping
+    renderer.toneMappingExposure = 1.2
     renderer.setClearColor(0x000000, 0)
     const dom = renderer.domElement
     dom.className = 'j-twin-canvas'
@@ -133,8 +134,9 @@
     }
     let raf = 0, last = 0
     function render(now) {
+      if (!dom.isConnected) { raf = 0; return }   // the page was replaced: stop the loop instead of idling at 60 Hz forever
       raf = requestAnimationFrame(render)
-      if (document.visibilityState !== 'visible' || !document.body.contains(dom)) return
+      if (document.visibilityState !== 'visible') return
       const dt = Math.min(0.1, (now - last) / 1000 || 0.016); last = now
       stepLinks(dt, state.linkLevels)
       renderer.render(scene, camera)

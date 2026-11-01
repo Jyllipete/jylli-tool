@@ -117,6 +117,7 @@
     eng.setView('home', { snap: true })
     eng.domElement.addEventListener('webglcontextlost', e => {
       e.preventDefault()
+      if (H.engine !== eng) return   // a disposed engine's forced context loss must not tear down its replacement
       const slot2 = H.slot
       teardown('context-lost')
       // one retry with a fresh renderer; a second loss stays on the static silhouette

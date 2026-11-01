@@ -34,25 +34,25 @@
   function towerLayout(rig) {
     const parts = []
     parts.push(part('case', 'case', [0, 0, 0], [8.4, 10.4, 4.6], { decor: true }))
-    parts.push(part('board', 'board', [0, 0.35, -1.7], [6.6, 8.4, 0.16], { label: 'board', info: rig.board || {} }))
+    parts.push(part('board', 'board', [0, 0.2, -1.7], [6.6, 8.0, 0.16], { label: 'board', info: rig.board || {} }))
     // CPU + cooler
-    parts.push(part('cpu', 'cpu', [-0.5, 2.1, -1.55], [1.1, 1.1, 0.12], { ghost: !rig.cpu, label: 'cpu', info: rig.cpu || {}, metrics: ['cpu.load', 'cpu.temp.package', 'cpu.power'] }))
+    parts.push(part('cpu', 'cpu', [-0.5, 1.9, -1.55], [1.1, 1.1, 0.12], { ghost: !rig.cpu, label: 'cpu', info: rig.cpu || {}, metrics: ['cpu.load', 'cpu.temp.package', 'cpu.power'] }))
     const c = rig.cooler || { type: 'unknown' }
     if (c.type === 'aio') {
-      parts.push(part('cooler', 'aio', [-0.5, 2.1, -1.0], [1.7, 1.7, 1.0], { label: 'cooler', info: c, rad: { pos: [0, 4.55, -0.9], size: [5.8, 0.9, 0.7] }, metrics: ['cooler.pump.rpm'] }))
+      parts.push(part('cooler', 'aio', [-0.5, 1.9, -1.0], [1.7, 1.7, 1.0], { label: 'cooler', info: c, rad: { pos: [0, 4.78, -0.55], size: [5.6, 0.55, 2.6] }, metrics: ['cooler.pump.rpm'] }))
     } else if (c.type === 'air') {
-      parts.push(part('cooler', 'air', [-0.5, 2.0, -0.7], [2.2, 2.6, 1.6], { label: 'cooler', info: c, metrics: [] }))
+      parts.push(part('cooler', 'air', [-0.5, 1.95, -0.65], [2.2, 2.6, 1.6], { label: 'cooler', info: c, metrics: [] }))
     } else {
-      parts.push(part('cooler', 'cooler-unknown', [-0.5, 2.1, -1.0], [1.7, 1.7, 0.9], { ghost: true, label: 'cooler', info: c }))
+      parts.push(part('cooler', 'cooler-unknown', [-0.5, 1.9, -1.0], [1.7, 1.7, 1.0], { ghost: true, label: 'cooler', info: c }))
     }
     // RAM
     const slots = ramSlots(rig)
     slots.forEach((s, i) => {
-      parts.push(part('ram' + i, 'ram-slot', [1.9 + i * 0.3, 2.2, -1.5], [0.2, 3.1, 0.1], { slot: s, ghost: !s.stick, label: 'ram', info: s.stick || { slot: s.name }, metrics: s.stick ? ['ram.used', 'ram.load'] : [] }))
+      parts.push(part('ram' + i, 'ram-slot', [1.45 + i * 0.42, 2.0, -1.2], [0.34, 3.4, 0.8], { slot: s, ghost: !s.stick, label: 'ram', info: s.stick || { slot: s.name }, metrics: s.stick ? ['ram.used', 'ram.load'] : [] }))
     })
     // GPU: only a detected, non-integrated adapter is drawn as a card; the fan count is never guessed
     const dgpu = (rig.gpus || []).find(g => !g.integrated)
-    parts.push(part('gpu', 'gpu', [-0.3, -1.45, -0.7], [5.8, 1.5, 1.05], {
+    parts.push(part('gpu', 'gpu', [-0.3, -1.6, -0.7], [5.8, 1.8, 1.1], {
       ghost: !dgpu, label: 'gpu', info: dgpu || {}, fans: null,
       note: !dgpu && (rig.gpus || []).length ? 'integrated-only' : null,
       metrics: ['gpu0.load', 'gpu0.temp.core', 'gpu0.temp.hotspot', 'gpu0.power', 'gpu0.clock.core', 'gpu0.vram.used', 'gpu0.fan.rpm', 'gpu0.fan.pct'],
@@ -60,15 +60,17 @@
     // Drives
     let nv = 0, sata = 0
     ;(rig.drives || []).slice(0, 6).forEach((d, i) => {
-      if (/nvme/i.test(d.bus || '')) { parts.push(part('drive' + i, 'nvme', [-2.0, 0.5 - nv * 0.7, -1.55], [1.7, 0.34, 0.06], { label: 'storage', info: d, metrics: ['disk.c.pct'] })); nv++ }
+      if (/nvme/i.test(d.bus || '')) { parts.push(part('drive' + i, 'nvme', [-1.9, 0.45 - nv * 0.7, -1.54], [1.9, 0.5, 0.14], { label: 'storage', info: d, metrics: ['disk.c.pct'] })); nv++ }
       else { parts.push(part('drive' + i, 'sata', [3.5, 1.4 - sata * 1.0, -0.9], [0.18, 0.9, 1.5], { label: 'storage', info: d, metrics: ['disk.c.pct'] })); sata++ }
     })
-    if (!(rig.drives || []).length) parts.push(part('drive0', 'nvme', [-2.0, 0.5, -1.55], [1.7, 0.34, 0.06], { ghost: true, label: 'storage', info: {} }))
-    parts.push(part('psu', 'psu', [0, -4.4, -0.4], [7.2, 1.2, 3.4], { decor: true }))
-    // Showcase case fans: a tower always has intake and exhaust fans, but spin is driven only by real sensor readings (see
-    // js/twin/mapping.js state.caseFans and js/twin/engine.js). Purely cosmetic, never implies a part/fan count was detected.
-    ;[-3.1, 0, 3.1].forEach((y, i) => parts.push(part('fanFront' + i, 'case-fan', [0, y, 2.15], [2.6, 2.6, 0.25], { decor: true })))
-    parts.push(part('fanRear', 'case-fan', [0, 2.9, -2.2], [1.6, 1.6, 0.25], { decor: true, rot: [0, Math.PI, 0] }))
+    if (!(rig.drives || []).length) parts.push(part('drive0', 'nvme', [-1.9, 0.45, -1.54], [1.9, 0.5, 0.14], { ghost: true, label: 'storage', info: {} }))
+    parts.push(part('psu', 'psu', [0, -4.45, -0.4], [7.2, 1.3, 3.4], { decor: true }))
+    // Showcase fans: three intake fans behind the front glass (+x wall) and one exhaust fan on the rear (-x) wall. Cosmetic decor: a
+    // tower always has them, but glow level and spin come only from real sensor readings (js/twin/mapping.js state.caseFans, engine.js).
+    // They never imply a part or fan count was detected. An AIO adds two decor radiator fans under its top-mounted radiator.
+    ;[3.45, 0.55, -2.35].forEach((y, i) => parts.push(part('fanFront' + i, 'case-fan', [3.74, y, 0.45], [2.4, 2.4, 0.12], { decor: true, rot: [0, Math.PI / 2, 0] })))
+    parts.push(part('fanRear', 'case-fan', [-3.95, 2.8, -0.6], [2.4, 2.4, 0.12], { decor: true, rot: [0, Math.PI / 2, 0] }))
+    if (c.type === 'aio') [-1.4, 1.4].forEach((x, i) => parts.push(part('fanRad' + i, 'case-fan', [x, 4.4, -0.55], [2.4, 2.4, 0.12], { decor: true, rot: [Math.PI / 2, 0, 0] })))
     return parts
   }
 

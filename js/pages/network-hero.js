@@ -35,7 +35,15 @@ function buildNetworkHero(c) {
 
 const NET_FLOW = { particles: [], raf: 0, adapters: [], t: 0, scene: null, scene3d: null }
 
+/** Frees the network page's WebGL scene and observers; each visit would otherwise leave a live GPU context and render loop behind. */
+function netSceneDispose() {
+  if (NET_FLOW.ro) { NET_FLOW.ro.disconnect(); NET_FLOW.ro = null }
+  if (NET_FLOW.scene3d) { try { NET_FLOW.scene3d.dispose() } catch {} NET_FLOW.scene3d = null }
+  cancelAnimationFrame(NET_FLOW.raf)
+}
+
 async function netHeroInit(el) {
+  if (typeof registerPageCleanup === 'function') registerPageCleanup('network', netSceneDispose)
   const { html } = ui
   let topo = null
   try { topo = await api.netTopology() } catch {}
@@ -58,12 +66,15 @@ async function netHeroInit(el) {
   try {
     const stage = el.querySelector('#net-stage'), slot = el.querySelector('#net-3d-slot')
     const readAccentRGB = () => { try { const i = document.createElement('i'); i.style.color = 'var(--c-accent)'; i.style.display = 'none'; document.body.appendChild(i); const m = getComputedStyle(i).color.match(/[\d.]+/g); i.remove(); if (m && m.length >= 3) return [m[0] / 255, m[1] / 255, m[2] / 255] } catch {} return [0.55, 0.49, 0.96] }
+    netSceneDispose()
     const scene3d = window.JylliTwinNet && await JylliTwinNet.create(slot, { accent: readAccentRGB() })
+    if (scene3d && !document.body.contains(slot)) { scene3d.dispose(); return }   // the user left while the scene was loading
     if (scene3d) {
       NET_FLOW.scene3d = scene3d
       stage.classList.add('j-twin-live')
       const ro = new ResizeObserver(() => { const r = stage.getBoundingClientRect(); if (r.width > 4 && r.height > 4) scene3d.resize(Math.round(r.width), Math.round(r.height), devicePixelRatio || 1) })
       ro.observe(stage)
+      NET_FLOW.ro = ro
       netLiveLoop3d(el)
     } else {
       netDrawStart(el)   // no WebGL: the 2D canvas is the whole picture

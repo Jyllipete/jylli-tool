@@ -1,0 +1,286 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Twin look-dev</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 16px; background: #09090b; color: #c9c9d4; font: 13px/1.4 system-ui, sans-serif; }
+  h1 { margin: 0 0 4px; font-size: 15px; font-weight: 600; letter-spacing: .02em; }
+  .sub { margin: 0 0 12px; color: #7d7d8c; }
+  .row { display: flex; gap: 16px; flex-wrap: wrap; align-items: flex-start; }
+  .pane { flex: 1 1 440px; max-width: 760px; }
+  .tag { margin: 0 0 6px; font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: #8b7cf6; }
+  .frame { position: relative; aspect-ratio: 497 / 444; width: 100%; border-radius: 12px; overflow: hidden; background: #07070c; border: 1px solid #1d1d28; }
+  .frame canvas, .frame img { position: absolute; inset: 0; width: 100%; height: 100%; display: block; object-fit: cover; }
+  .frame canvas { cursor: grab; touch-action: none; }
+  .hint { position: absolute; left: 12px; bottom: 10px; font-size: 11px; color: #6a6a78; pointer-events: none; }
+  .stats { position: absolute; right: 10px; bottom: 10px; font: 11px ui-monospace, monospace; color: #6a6a78; pointer-events: none; }
+  .ctl { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 10px 18px; margin-top: 14px; max-width: 1540px; }
+  .ctl label { display: grid; gap: 4px; color: #8f8f9e; }
+  .ctl select, .ctl input[type=range], .ctl input[type=color], .ctl button { width: 100%; }
+  .ctl select, .ctl button { background: #14141b; color: #d6d6e2; border: 1px solid #262633; border-radius: 6px; padding: 6px 8px; font: inherit; }
+  .ctl button { cursor: pointer; }
+  .ctl button:hover { border-color: #8b7cf6; }
+  .ctl input[type=color] { height: 30px; padding: 0; background: none; border: 1px solid #262633; border-radius: 6px; }
+  .err { color: #f87171; margin-top: 10px; white-space: pre-wrap; }
+</style>
+</head>
+<body>
+<h1>Rig twin look-dev</h1>
+<p class="sub">Left: our procedural twin (nothing here ships until you approve the look). Right: the reference. Drag to orbit, wheel to zoom.</p>
+<div class="row">
+  <div class="pane"><div class="tag">Ours</div><div class="frame" id="stage"><div class="hint">Drag to rotate, scroll to zoom</div><div class="stats" id="stats"></div></div></div>
+  <div class="pane"><div class="tag">Reference</div><div class="frame"><img src="reference.png" alt="reference"></div></div>
+</div>
+<div class="ctl">
+  <label>Cooler<select id="cooler"><option value="aio">Liquid (AIO)</option><option value="air">Air tower</option><option value="unknown">Not detected (x-ray ghost)</option></select></label>
+  <label>RAM sticks<select id="ram"><option value="2">2 sticks</option><option value="4">4 sticks</option><option value="1">1 stick</option><option value="0">None detected</option></select></label>
+  <label>View<select id="view"><option value="home">Home (reference angle)</option><option value="front">Front-on</option><option value="gpu">GPU close-up</option><option value="pump">Pump close-up</option><option value="top">Above</option></select></label>
+  <label>Accent<input type="color" id="accent" value="#8b7cf6"></label>
+  <label>GPU load / heat <span id="loadv">idle</span><input type="range" id="load" min="0" max="100" value="0"></label>
+  <label>Ambient RGB level <span id="ambv">1.0</span><input type="range" id="amb" min="0" max="2" step="0.05" value="1"></label>
+  <label>Exposure <span id="expv">1.0</span><input type="range" id="exp" min="0.4" max="2.4" step="0.05" value="1.1"></label>
+  <label>Bloom <span id="bloomv">0.4</span><input type="range" id="bloom" min="0" max="1.6" step="0.05" value="0.4"></label>
+  <label>Spill light <span id="spillv">1.0</span><input type="range" id="spill" min="0" max="3" step="0.1" value="1"></label>
+  <label>Tone mapping<select id="tone"><option value="neutral">Neutral</option><option value="agx">AgX</option><option value="aces">ACES filmic</option></select></label>
+  <label>Quality<select id="quality"><option value="full">Full (MSAA + bloom + vignette)</option><option value="reduced">Reduced (bloom + SMAA)</option></select></label>
+  <label>Fans spin<select id="spin"><option value="1">Demo spin</option><option value="0">Still</option></select></label>
+  <label>&nbsp;<button id="shot">Save a PNG of the left pane</button></label>
+</div>
+<div class="err" id="err"></div>
+
+<script src="../../js/vendor/three.bundle.js"></script>
+<script src="lookdev-kit.js"></script>
+<script>
+;(function () {
+  const $ = id => document.getElementById(id)
+  const errBox = $('err')
+  window.addEventListener('error', e => { errBox.textContent += (e.message || e.error) + '\n' })
+  const T = THREE, A = T.Addons, kit = JylliTwinKit
+  const q = new URLSearchParams(location.search)
+  if (q.get('solo')) { const s = document.createElement('style'); s.textContent = '.pane:nth-child(2),.ctl,.sub,h1{display:none} .pane{max-width:none}'; document.head.appendChild(s) }
+  for (const k of ['cooler', 'ram', 'view', 'quality', 'tone', 'spin', 'load']) if (q.get(k) != null && $(k)) $(k).value = q.get(k)
+
+  // ── renderer / scene ───────────────────────────────────────────────────────────────────────────────
+  const stage = $('stage')
+  const renderer = new T.WebGLRenderer({ antialias: false, preserveDrawingBuffer: true, powerPreference: 'high-performance' })
+  kit.init(T, { anisotropy: Math.min(8, renderer.capabilities.getMaxAnisotropy()) })
+  renderer.shadowMap.enabled = true; renderer.shadowMap.type = T.PCFSoftShadowMap
+  renderer.info.autoReset = false
+  stage.insertBefore(renderer.domElement, stage.firstChild)
+  const scene = new T.Scene()
+  scene.background = new T.Color(0x07070c)
+  const camera = new T.PerspectiveCamera(30, 497 / 444, 0.1, 100)
+  let accent = new T.Color('#8b7cf6')
+  let accentArr = [accent.r, accent.g, accent.b]
+  const mats = kit.materials(accent)
+  const pmrem = new T.PMREMGenerator(renderer)
+  scene.environment = pmrem.fromScene(kit.studioScene(), 0.02).texture
+  scene.environmentIntensity = 1.2
+
+  const key = new T.DirectionalLight(0xffffff, 8); key.position.set(6, 10, 9); key.castShadow = true
+  key.shadow.mapSize.set(2048, 2048); key.shadow.camera.near = 1; key.shadow.camera.far = 40
+  Object.assign(key.shadow.camera, { left: -9, right: 9, top: 9, bottom: -9 }); key.shadow.bias = -0.0008; key.shadow.normalBias = 0.02
+  scene.add(key)
+  const rimL = new T.DirectionalLight(0x9aa6ff, 3); rimL.position.set(-8, 5, -7); scene.add(rimL)
+  scene.add(new T.AmbientLight(0x8a8a9c, 1.5))
+
+  // spill lights: the accent light that makes the interior glow (positions refreshed per build)
+  const spills = [
+    { pos: [2.6, 0.5, 1.8], i: 10, d: 13 },     // intake column
+    { pos: [-0.3, -1.2, 1.9], i: 11, d: 11 },    // GPU
+    { pos: [-0.5, 1.9, 0.4], i: 3, d: 7 },     // pump / socket
+    { pos: [-3.3, 2.8, 0.2], i: 3, d: 7 },     // rear exhaust fan
+  ].map(s => { const l = new T.PointLight(accent, s.i, s.d, 2); l.position.set(...s.pos); scene.add(l); s.light = l; return s })
+
+  let composer, bloom
+  function setupComposer() {
+    const full = $('quality').value === 'full'
+    composer = new A.EffectComposer(renderer, new T.WebGLRenderTarget(8, 8, full ? { type: T.HalfFloatType, samples: 4 } : { type: T.HalfFloatType }))
+    composer.addPass(new A.RenderPass(scene, camera))
+    bloom = new A.UnrealBloomPass(new T.Vector2(512, 512), +$('bloom').value, 0.55, 0.62)
+    composer.addPass(bloom)
+    if (!full) composer.addPass(new A.SMAAPass(8, 8))
+    else composer.addPass(new A.ShaderPass({
+      uniforms: { tDiffuse: { value: null }, amount: { value: 0.3 } },
+      vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }',
+      fragmentShader: 'uniform sampler2D tDiffuse; uniform float amount; varying vec2 vUv; void main(){ vec4 c = texture2D(tDiffuse, vUv); vec2 d = vUv - 0.5; float v = 1.0 - amount * dot(d,d) * 2.2; gl_FragColor = vec4(c.rgb * v, c.a); }',
+    }))
+    composer.addPass(new A.OutputPass())
+    lastSize = ''
+    fit()
+  }
+  function applyTone() {
+    renderer.toneMapping = { agx: T.AgXToneMapping, neutral: T.NeutralToneMapping, aces: T.ACESFilmicToneMapping }[$('tone').value]
+    renderer.toneMappingExposure = +$('exp').value
+  }
+
+  // ── glow handles (the engine's glowMat, in miniature): emissive level = ambient * strength * heat ──────────────────────────
+  const world = new T.Group(); scene.add(world)
+  const glows = [], fans = []
+  function glow(strength = 1, k = 1) {
+    const m = new T.MeshStandardMaterial({ color: 0x020203, roughness: 0.95, metalness: 0, emissive: accent.clone(), emissiveIntensity: 1 })
+    const g = { mat: m, strength, k, heat: false }; glows.push(g); return g
+  }
+  const heatColor = t => { // accent -> amber -> red, as js/twin/mapping.js heatColor
+    const warn = [0.96, 0.65, 0.14], danger = [0.95, 0.33, 0.35], a = accentArr, mix = (p, r, u) => p.map((v, i) => v + (r[i] - v) * u)
+    return t <= 0 ? a : t <= 1 ? mix(a, warn, t) : mix(warn, danger, t - 1)
+  }
+  function ghostify(o) { o.traverse(m => { if (m.isMesh) { m.material = mats.ghost; m.castShadow = false; m.receiveShadow = false } }); return o }
+  function place(o, x, y, z) { o.position.set(x, y, z); world.add(o); return o }
+
+  let sideRings = [], gpuRing = null
+  function build() {
+    world.traverse(o => { if (o.geometry) o.geometry.dispose() })
+    world.clear(); glows.length = 0; fans.length = 0
+    const cooler = $('cooler').value, nRam = +$('ram').value
+
+    // case + PSU + board
+    const REAR = { y: 2.8, z: -0.6, r: 1.2 }
+    const strip = glow(0.22)
+    world.add(kit.caseTower(mats, [8.4, 10.4, 4.6], { accentMat: strip.mat, rearFan: REAR }))
+    place(kit.psuShroud(mats, [7.2, 1.3, 3.4]), 0, -4.45, -0.4)
+    place(kit.board(mats, [6.6, 8.0, 0.16]), 0, 0.2, -1.7)
+    place(kit.nvmeStick(mats, [1.9, 0.5, 0.14]), -1.9, 0.45, -1.54)
+
+    // CPU + cooler
+    const cpu = [-0.5, 1.9, -1.55]
+    const addFan = (r, ringStrength, { frame = true, face = [0, 0, 0], pos, ring = glow(ringStrength) } = {}) => {
+      const f = kit.fan(mats, r, { frame, ringMat: ring.mat })
+      f.group.rotation.set(...face); f.group.position.set(...pos); world.add(f.group); fans.push(f); return f
+    }
+    if (cooler === 'aio') {
+      place(kit.cpuSocket(mats, [1.1, 1.1, 0.12]), ...cpu)
+      const pump = place(kit.aioPump(mats, [1.7, 1.7, 1.0]), -0.5, 1.9, -1.0)
+      const ring = glow(1); const rg = new T.Mesh(new T.TorusGeometry(0.83, 0.05, 10, 64), ring.mat); rg.position.z = pump.userData.topZ + 0.005; pump.add(rg)
+      const rad = place(kit.radiatorFins(mats, [0.55, 5.6, 2.6]), 0, 4.78, -0.55); rad.rotation.z = Math.PI / 2
+      for (const x of [-1.4, 1.4]) addFan(1.2, 0.6, { face: [Math.PI / 2, 0, 0], pos: [x, 4.4, -0.55] })
+      world.add(kit.aioTubes(mats, [-0.5, 1.9, -1.0], [-2.9, 4.45, -0.55]))
+    } else if (cooler === 'air') {
+      place(kit.cpuSocket(mats, [1.1, 1.1, 0.12]), ...cpu)
+      place(kit.airCoolerStack(mats, [2.2, 2.6, 1.6]), -0.5, 1.95, -0.65)
+      addFan(0.95, 0.5, { frame: false, pos: [-0.5, 1.95, 0.22] })
+    } else {
+      place(kit.cpuSocket(mats, [1.1, 1.1, 0.12]), ...cpu)
+      place(ghostify(kit.aioPump(mats, [1.7, 1.7, 1.0])), -0.5, 1.9, -1.0)
+    }
+
+    // RAM: four physical slots; sticks only where "detected"
+    const filled = { 0: [], 1: [1], 2: [1, 3], 4: [0, 1, 2, 3] }[nRam]
+    for (let i = 0; i < 4; i++) {
+      const x = 1.45 + i * 0.42
+      if (filled.includes(i)) {
+        const led = glow(0.8)
+        place(kit.ramStick(mats, [0.34, 3.4, 0.8], accentArr, { ledMat: led.mat }), x, 2.0, -1.2)
+      } else place(kit.dimmSlot(mats, 0.34, 3.3), x, 2.0, -1.5)
+    }
+
+    // GPU: shroud, three fans in the openings, one ring handle for all three, accent edge strip
+    const gs = [5.8, 1.8, 1.1], L = kit.gpuFanLayout(gs)
+    const gpu = place(kit.gpuShroud(mats, gs), -0.3, -1.6, -0.7)
+    gpuRing = glow(1); gpuRing.heat = true
+    for (const x of L.xs) { const f = kit.fan(mats, L.r * 0.99, { frame: false, ringMat: gpuRing.mat }); f.group.position.set(x, 0, L.z); gpu.add(f.group); fans.push(f) }
+    const edge = glow(1); edge.heat = true
+    const es = new T.Mesh(new T.BoxGeometry(gs[0] * 0.5, 0.035, 0.03), edge.mat); es.position.set(0, gs[1] / 2 - 0.12, gs[2] / 2 + 0.02); gpu.add(es)
+
+    // showcase case fans: 3 intake behind the front glass (+x), 1 exhaust at the rear (-x)
+    sideRings = []
+    for (const y of [3.45, 0.55, -2.35]) { const ring = glow(0.6); sideRings.push(ring); addFan(1.2, 0.6, { face: [0, Math.PI / 2, 0], pos: [3.74, y, 0.45], ring }) }
+    addFan(1.2, 0.6, { face: [0, Math.PI / 2, 0], pos: [-3.95, REAR.y, REAR.z] })
+
+    // cables
+    world.add(kit.sleeve(mats, [[3.08, 2.4, -1.22], [3.1, 1.4, -1.12], [3.16, 0, -1.1], [3.12, -1.8, -1.1], [3.0, -3.6, -1.1], [2.95, -3.9, -1.1]], 0.14))
+    world.add(kit.sleeve(mats, [[1.8, -0.5, -0.86], [2.05, -0.1, -1.0], [2.5, -0.25, -1.4], [2.62, -1.5, -1.45], [2.3, -3.3, -1.4], [2.2, -3.9, -1.4]], 0.1))
+
+    world.add(kit.groundPlane(mats, 14, 10, accent).translateY(-5.4))
+    // spill lights follow the detected layout (the pump light only when a pump is drawn)
+    spills[2].light.visible = cooler === 'aio'
+    applyAccent()
+  }
+
+  // ── per-frame ───────────────────────────────────────────────────────────────────────────────────────────────────
+  function applyAccent() {
+    accent.set($('accent').value); accentArr = [accent.r, accent.g, accent.b]
+    for (const s of spills) s.light.color.copy(accent)
+  }
+  function updateGlow(dt) {
+    const amb = +$('amb').value, load = +$('load').value / 100, spill = +$('spill').value
+    for (const g of glows) {
+      let col = accentArr, level = 2.5 * amb * g.strength
+      if (g.heat && load > 0) { col = heatColor(load * 1.6); level = (1.2 + load * 1.4) * g.strength * Math.max(0.6, amb) }
+      g.mat.emissive.setRGB(...col); g.mat.emissiveIntensity = level
+    }
+    spills.forEach((s, i) => { s.light.intensity = s.i * spill * Math.max(0.0, amb) * (i === 1 && load > 0 ? 1 + load * 0.6 : 1) })
+    if ($('spin').value === '1') for (const f of fans) f.spin.rotation.z -= dt * (1.8 + load * 12)
+  }
+
+  // ── camera ────────────────────────────────────────────────────────────────────────────────────────────────────────
+  const VIEWS = {
+    home: { look: [0.1, -0.3, -0.5], dist: 23.5, yaw: 0.4, pitch: 0.12 },
+    front: { look: [0, -0.2, -0.5], dist: 26, yaw: 0.0, pitch: 0.06 },
+    gpu: { look: [-0.3, -1.4, -0.7], dist: 10, yaw: 0.5, pitch: 0.14 },
+    pump: { look: [-0.5, 1.9, -0.9], dist: 8.5, yaw: 0.32, pitch: 0.1 },
+    top: { look: [0, 0, -0.5], dist: 26, yaw: 0.5, pitch: 0.75 },
+  }
+  const cam = { look: [0, 0, 0], dist: 25, yaw: 0.6, pitch: 0.13 }, goal = { ...cam }
+  function setView(n) { const v = VIEWS[n]; Object.assign(goal, { look: v.look.slice(), dist: v.dist, yaw: v.yaw, pitch: v.pitch }) }
+  setView($('view').value); Object.assign(cam, { look: goal.look.slice(), dist: goal.dist, yaw: goal.yaw, pitch: goal.pitch })
+  function stepCam(dt) {
+    const k = 1 - Math.exp(-dt * 9)
+    for (let i = 0; i < 3; i++) cam.look[i] += (goal.look[i] - cam.look[i]) * k
+    for (const p of ['dist', 'yaw', 'pitch']) cam[p] += (goal[p] - cam[p]) * k
+    const [lx, ly, lz] = cam.look
+    camera.position.set(lx + Math.sin(cam.yaw) * Math.cos(cam.pitch) * cam.dist, ly + Math.sin(cam.pitch) * cam.dist, lz + Math.cos(cam.yaw) * Math.cos(cam.pitch) * cam.dist)
+    camera.lookAt(lx, ly, lz)
+  }
+  let drag = null
+  const dom = renderer.domElement
+  dom.addEventListener('pointerdown', e => { drag = { x: e.clientX, y: e.clientY }; dom.setPointerCapture(e.pointerId); dom.style.cursor = 'grabbing' })
+  dom.addEventListener('pointermove', e => { if (!drag) return; goal.yaw -= (e.clientX - drag.x) * 0.006; goal.pitch = Math.max(-0.2, Math.min(1.2, goal.pitch + (e.clientY - drag.y) * 0.004)); drag = { x: e.clientX, y: e.clientY } })
+  dom.addEventListener('pointerup', () => { drag = null; dom.style.cursor = 'grab' })
+  dom.addEventListener('wheel', e => { e.preventDefault(); goal.dist = Math.max(6, Math.min(40, goal.dist * (1 + Math.sign(e.deltaY) * 0.08))) }, { passive: false })
+
+  // ── size / loop ───────────────────────────────────────────────────────────────────────────────────────────────────
+  let lastSize = ''
+  function fit() {
+    const w = Math.max(2, stage.clientWidth), h = Math.max(2, stage.clientHeight), pr = Math.min(window.devicePixelRatio || 1, 2), k = w + 'x' + h + '@' + pr
+    if (k === lastSize) return
+    lastSize = k
+    renderer.setPixelRatio(pr); renderer.setSize(w, h, false)
+    camera.aspect = w / h; camera.updateProjectionMatrix()
+    composer.setPixelRatio(pr); composer.setSize(w, h); bloom.resolution.set(w, h)
+  }
+  new ResizeObserver(fit).observe(stage)
+  let last = performance.now(), frames = 0, acc = 0
+  function frame(now) {
+    requestAnimationFrame(frame)
+    const dt = Math.min(0.1, (now - last) / 1000); last = now
+    stepCam(dt); updateGlow(dt)
+    renderer.info.reset(); composer.render(dt)
+    frames++; acc += dt
+    if (acc > 0.5) { const i = renderer.info.render; $('stats').textContent = i.calls + ' calls · ' + Math.round(i.triangles / 1000) + 'k tris · ' + Math.round(frames / acc) + ' fps'; frames = 0; acc = 0 }
+  }
+
+  for (const id of ['cooler', 'ram']) $(id).onchange = build
+  $('view').onchange = () => setView($('view').value)
+  $('accent').oninput = () => { applyAccent(); for (const g of glows) g.mat.emissive.copy(accent) }
+  $('tone').onchange = applyTone
+  $('quality').onchange = () => { composer.dispose?.(); setupComposer() }
+  $('exp').oninput = () => { $('expv').textContent = (+$('exp').value).toFixed(1); applyTone() }
+  $('bloom').oninput = () => { $('bloomv').textContent = (+$('bloom').value).toFixed(2); bloom.strength = +$('bloom').value }
+  $('amb').oninput = () => { $('ambv').textContent = (+$('amb').value).toFixed(2) }
+  $('spill').oninput = () => { $('spillv').textContent = (+$('spill').value).toFixed(1) }
+  $('load').oninput = () => { $('loadv').textContent = +$('load').value ? $('load').value + '%' : 'idle' }
+  $('shot').onclick = () => { const a = document.createElement('a'); composer.render(0); a.href = dom.toDataURL('image/png'); a.download = 'twin-lookdev.png'; a.click() }
+
+  applyTone(); setupComposer(); build()
+  $('load').oninput(); $('exp').oninput(); $('bloom').oninput()
+  window.__lookdev = { renderer, scene, camera, goal, cam, build, glows, spills, key }
+  requestAnimationFrame(frame)
+})()
+</script>
+</body>
+</html>
