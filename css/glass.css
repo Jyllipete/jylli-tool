@@ -193,3 +193,23 @@ body.jx-chrono-open #toast-container { bottom: 124px; }
 body.world-on.q-light .toast, body.world-on.q-light #jx-chrono, body.world-on.q-light .j-twin-stage .j-twin-inspector, body.world-on.q-light .j-twin-stage .j-twin-hint,
 body.world-on.q-light #cmd-palette-overlay, body.world-on.q-light .modal-overlay { backdrop-filter: none; -webkit-backdrop-filter: none; }
 .jx-ch-mark.gone { transition: opacity 500ms, transform 500ms; }
+
+/* ── pulses on the compositor: the ring is a static pseudo-element whose opacity fades, instead of animating box-shadow (a repaint every frame) ── */
+@keyframes jxRing { 0%, 100% { opacity: 0; } 45% { opacity: 1; } }
+#badge-boost, .aria-pulse, .gp-ready-dot.gp-dot-active, .gp-watcher-dot.running, .btn-urgent-admin, .btn-urgent-warn, [style*="xmp-pulse"] { position: relative; }
+#badge-boost::after, .aria-pulse::after, .gp-ready-dot.gp-dot-active::after, .gp-watcher-dot.running::after, .btn-urgent-admin::after, .btn-urgent-warn::after, [style*="xmp-pulse"]::after {
+  content: ''; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; opacity: 0; animation: jxRing 2s ease-in-out infinite; }
+#badge-boost { animation: none; }
+#badge-boost::after { box-shadow: 0 0 0 4px var(--cyan-glow); }
+.aria-pulse { animation: none; }
+.aria-pulse::after { box-shadow: 0 0 0 4px rgba(var(--c-accent-rgb), .35); animation-duration: 1.8s; }
+.gp-ready-dot.gp-dot-active, .gp-watcher-dot.running { animation: none; }
+.gp-ready-dot.gp-dot-active::after, .gp-watcher-dot.running::after { box-shadow: 0 0 0 5px rgba(var(--c-success-rgb), .3); animation-duration: var(--dur-long, 2s); }
+.btn-urgent-admin, .btn-urgent-warn { animation: none; }
+.btn-urgent-admin::after { box-shadow: 0 0 0 1px rgba(var(--c-danger-rgb), .35); }
+.btn-urgent-warn::after { box-shadow: 0 0 0 1px rgba(var(--c-warning-rgb), .35); animation-duration: 2.5s; }
+[style*="xmp-pulse"] { animation: none !important; }
+[style*="xmp-pulse"]::after { box-shadow: 0 0 0 4px rgba(184,120,0,.3); }
+/* the over-budget bar flashes by opacity rather than a brightness/saturate filter */
+@keyframes bbFlash { 0%, 100% { opacity: 1; } 50% { opacity: .6; } }
+@media (prefers-reduced-motion: reduce) { #badge-boost::after, .aria-pulse::after, .gp-ready-dot::after, .gp-watcher-dot::after, .btn-urgent-admin::after, .btn-urgent-warn::after, [style*="xmp-pulse"]::after { animation: none; } }
