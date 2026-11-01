@@ -11,6 +11,7 @@ body.world-on #world { display: block; }
 /* no hero window on this page: the rig stays as ambient depth, dimmed so text on the glass stays readable */
 #world:not(.has-window) .j-twin-canvas { opacity: .42; filter: blur(2.5px) saturate(.9); }
 /* a game is in front: the stage renders nothing (host fps 0), and nothing of ours animates or glows */
+#world.away .j-twin-canvas { opacity: 0; }
 body.game-live #world, body.game-live #jx-callouts, body.game-live #jx-chrono, body.game-live #jx-chrono-tab { display: none !important; }
 
 /* the shell becomes transparent so the world shows through; the glass lives on the surfaces themselves */

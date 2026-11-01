@@ -44,6 +44,10 @@
   /** A page was opened. Pages with a hero slot take their own view when they attach; the rest get a shot of the part they are about. */
   function route(r) {
     if (!enabled() || !root.JylliTwin) return
+    // the Network tab brings its own 3D scene: the rig steps aside (faded and not rendered) instead of two scenes competing
+    const away = !!(r && r.tab === 'network'), el = document.getElementById('world')
+    if (el) el.classList.toggle('away', away)
+    try { JylliTwin.pause(away) } catch {}
     try { JylliTwin.shot(shotFor(r && r.tab)) } catch {}
   }
 

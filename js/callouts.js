@@ -58,6 +58,7 @@
   function teardown() { if (box) box.remove(); box = svg = null; items = [] }
 
   function frame() {
+    if (document.visibilityState !== 'visible') return   // nothing to draw (and nothing to project) while the window is hidden
     const win = root.JylliTwin && JylliTwin.win
     const on = !!(win && win.id === 'home-twin-slot' && document.body.classList.contains('world-on') && document.body.classList.contains('world-live') && !document.body.classList.contains('game-live'))
     if (!on) { if (box) teardown(); lastWin = null; return }

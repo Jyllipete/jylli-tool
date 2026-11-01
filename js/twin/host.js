@@ -225,7 +225,7 @@
   function stopLoop() { if (H.loopId) cancelAnimationFrame(H.loopId); H.loopId = 0 }
   function tick(now) {
     H.loopId = requestAnimationFrame(tick)
-    if (!H.engine || !H.slot) return
+    if (!H.engine || !H.slot || H.paused) return
     const fps = H.probe ? 60 : Mo().targetFps({
       visible: document.visibilityState === 'visible' && H.visible,
       gameForeground: !!(root._gameRunning || (root._systemContext && root._systemContext.gameRunning)),
@@ -362,7 +362,7 @@
   async function setRigDeclared() { H.rig = null; H.layout = null; await ensureRig(); if (H.engine) H.engine.build(H.layout); if (H.slot) renderFallback(H.slot) }
 
   root.JylliTwin = {
-    attach, park, shot, exitWorld, select, back, on, partInfo,
+    attach, park, shot, pause(on) { H.paused = !!on; if (!on) H.lastFrame = performance.now() }, exitWorld, select, back, on, partInfo,
     get win() { return H.win },
     anchor(id) { return H.engine && H.slot ? H.engine.screenPos(id) : null },   // CSS px relative to the canvas, null when unknown or behind the camera
     pulse(id) { if (H.engine) H.engine.pulse(id) },
