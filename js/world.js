@@ -110,7 +110,8 @@
   }
 
   // scheme switch: the world only exists in the dark scheme
-  if (typeof window !== 'undefined') window.addEventListener('jylli-scheme', () => { const was = document.body.classList.contains('world-on'); apply(); if (was !== enabled() && typeof showPage === 'function' && typeof currentPage !== 'undefined') { try { showPage(currentPage) } catch {} } })
+  if (typeof window !== 'undefined') window.addEventListener('jylli-scheme', () => { const was = document.body.classList.contains('world-on'); apply(); const app = document.getElementById('app'), ready = app && !app.classList.contains('hidden') && !(root.JylliBootStage && JylliBootStage.active)   // never during start-up: a page rebuild would take the canvas from the boot stage
+    if (ready && was !== enabled() && typeof showPage === 'function' && typeof currentPage !== 'undefined') { try { showPage(currentPage) } catch {} } })
 
   /** A single tweak was applied: the light leaves the button for the part it changed. */
   function pulseTweak(id, from) { return pulseTo(from || null, [partFor(id)]) }

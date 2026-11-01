@@ -203,6 +203,7 @@
   }
 
   function park() {
+    if (H.boot && H.boot.slot) return   // the boot stage owns the canvas until bootEnd(); a page being built behind it must not take it
     if (H.worldSlot && H.slot === H.worldSlot) { H.win = null; worldClass(); if (H.engine) H.engine.setCenter(null); return }   // the world canvas never leaves its slot
     if (H.ro) { H.ro.disconnect(); H.ro = null }
     if (H.io) { H.io.disconnect(); H.io = null }

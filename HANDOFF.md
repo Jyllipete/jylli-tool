@@ -8,7 +8,9 @@ Plan `UI_4_0_PLAN.md`, prototype `design-4-preview.html`, design notes in `DESIG
 
 **Verified:** `npm run check`, `npm test`, and the real pages in the browser pane via `node tools/ui-preview/serve.js` then `/app` (fixture-backed; clear localStorage `jt_twin_q` if the pane's slow frames stepped the twin down to static).
 
-**Not verified (be honest):** no real Electron run (framing at real window sizes, real-GPU cost, hold feel, the first-run boot handoff into the world, a game actually stopping the stage), no soak, no DPI matrix, no Finnish length review of the new strings. The world exists only in the dark scheme. Glass fills had to go to ~0.9 alpha to pass the worst-case contrast check, so cards show the world mostly at their edges and in hero windows.
+**Real Electron run (2026-11-01, done):** boot assembles the 3D rig again, Home shows the rig in its window with compact live callouts, Timeline opens with real journal/CPU history and scrubs (gaps read "Nothing was recorded"), no console errors. Bugs it found and fixed: activity drawer lost its positioning (blank band under the status bar); a scheme-change listener rebuilt the page during boot and park() stole the canvas from the boot stage (boot showed the 2D silhouette) — `park()` now ignores calls while boot owns the canvas, and the listener waits until the app is ready.
+
+**Still not verified:** hold-to-apply feel, a game actually stopping the stage, real-GPU cost numbers, no soak, no DPI matrix, no Finnish length review of the new strings. The world exists only in the dark scheme. Glass fills had to go to ~0.9 alpha to pass the worst-case contrast check, so cards show the world mostly at their edges and in hero windows.
 
 **Gotchas:** `#world` must stay outside `#app` (its entrance animation would turn fixed into relative). Hero cards `:has(> .j-twin-stage)` are made clear and pointer-transparent so the canvas stays interactive. `JylliOdo` is opt-in via `data-odo`. Write patch scripts with the Write tool (Bash strips backslashes).
 
