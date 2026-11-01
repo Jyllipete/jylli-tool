@@ -309,6 +309,14 @@
   function board(mats, size) {
     const [w, h, d = 0.16] = size, g = new T.Group(), z = d / 2, top = h / 2
     g.add(new T.Mesh(new T.BoxGeometry(w, h, d), mats.pcb))
+    if (h < d) {   // a laptop board lies flat: the upright-tower details below would stand up as pillars
+      addAll(g, [
+        { geo: at(rbox(w * 0.32, h * 1.6, d * 0.2, 0.03), -w * 0.3, h, -d * 0.3), mat: mats.gunmetal },
+        { geo: at(rbox(w * 0.2, h * 1.4, d * 0.16, 0.03), w * 0.3, h * 0.9, d * 0.32), mat: mats.anodised },
+        { geo: at(rbox(w * 0.1, h * 1.3, d * 0.5, 0.03), -w * 0.46, h * 0.8, 0), mat: mats.frame },
+      ])
+      return shade(g)
+    }
     const E = []
     // rear I/O shroud (top-left) with a thin accent line down its edge
     const sw = 0.95, sh = 3.3
@@ -460,8 +468,15 @@
 
   // ── laptop ───────────────────────────────────────────────────────────────────────────────────────────────────────────────
   function laptopBody(mats, size) {
-    const g = new T.Group()
-    g.add(new T.Mesh(rbox(...size, 0.1), mats.anodised))
+    // an open tray (base plate and a low rim) so the internals are visible from above
+    const [w, h, d] = size, g = new T.Group(), rim = 0.14
+    addAll(g, [
+      { geo: at(rbox(w, 0.12, d, 0.06), 0, -h / 2 + 0.06, 0), mat: mats.anodised },
+      { geo: at(rbox(w, h * 0.7, rim, 0.04), 0, -h * 0.15, -d / 2 + rim / 2), mat: mats.frame },
+      { geo: at(rbox(w, h * 0.7, rim, 0.04), 0, -h * 0.15, d / 2 - rim / 2), mat: mats.frame },
+      { geo: at(rbox(rim, h * 0.7, d, 0.04), -w / 2 + rim / 2, -h * 0.15, 0), mat: mats.frame },
+      { geo: at(rbox(rim, h * 0.7, d, 0.04), w / 2 - rim / 2, -h * 0.15, 0), mat: mats.frame },
+    ])
     return shade(g)
   }
 

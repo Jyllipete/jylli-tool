@@ -14,7 +14,7 @@
     // camera target [x, y, z] and distance for each framing
     home: { look: [0.1, -0.3, -0.5], dist: 23.5, yaw: 0.4, pitch: 0.12 },
     gpu: { look: [-0.3, -1.4, -0.7], dist: 10, yaw: 0.5, pitch: 0.14 },
-    laptop: { look: [0, 0, 0], dist: 10.5, yaw: 0.5, pitch: 0.75 },
+    laptop: { look: [0, 0, 0.1], dist: 12.5, yaw: 0.45, pitch: 0.72 },
   }
   // A close-up looks in through the glass at a moderate angle (the intake fans and radiator sit on the +x wall, so a steep side
   // view would look through them). Distances clear the glass (case half-depth ~2.3).
@@ -82,12 +82,11 @@
       composer = null; bloom = null
       if (quality === 'static') return
       const full = quality === 'full'
-      const rt = new T.WebGLRenderTarget(8, 8, full ? { type: T.HalfFloatType, samples: 4 } : { type: T.HalfFloatType })
+      const rt = new T.WebGLRenderTarget(8, 8, { type: T.HalfFloatType, samples: full ? 4 : 2 })
       composer = new A.EffectComposer(renderer, rt)
       composer.addPass(new A.RenderPass(scene, camera))
       bloom = new A.UnrealBloomPass(new T.Vector2(512, 512), 0.4, 0.55, 0.62)   // threshold keeps it to emissive rings and strips
       composer.addPass(bloom)
-      if (!full) { try { composer.addPass(new A.SMAAPass(8, 8)) } catch {} }
       if (full) {
         try {
           const vign = new A.ShaderPass({
@@ -182,8 +181,14 @@
       switch (p.kind) {
         case 'board': g.add(kit.board(mats, p.size)); break
         case 'cpu': {
-          g.add(kit.cpuSocket(mats, p.size))
-          const glow = glowMat(0.45); const under = new T.Mesh(new T.PlaneGeometry(p.size[0] * 1.6, p.size[1] * 1.6), glow.mat); under.position.z = -0.06; g.add(under); entry.glow.push(glow)
+          const glow = glowMat(0.45); entry.glow.push(glow)
+          if (p.size[1] < p.size[2]) {   // laptop: the package lies flat, with a halo on the board
+            g.add(kit.shade(new T.Mesh(kit.rbox(...p.size, 0.03), mats.nickel)))
+            const halo = new T.Mesh(new T.PlaneGeometry(p.size[0] * 1.5, p.size[2] * 1.5), glow.mat); halo.rotation.x = -Math.PI / 2; halo.position.y = -p.size[1] / 2 + 0.01; g.add(halo)
+          } else {
+            g.add(kit.cpuSocket(mats, p.size))
+            const under = new T.Mesh(new T.PlaneGeometry(p.size[0] * 1.6, p.size[1] * 1.6), glow.mat); under.position.z = -0.06; g.add(under)
+          }
           break
         }
         case 'aio': {
