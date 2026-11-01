@@ -54,7 +54,7 @@
   // ── shared light ───────────────────────────────────────────────────────────────────────────
   // One light for every glass edge: its viewport position drifts slowly and leans toward the pointer. Written at ~15 Hz and only
   // while the world is visible, because changing a root variable restyles the page.
-  let lightT = 0, ptr = null
+  let lightT = 0, ptr = null, lastLx = -999, lastLy = -999
   if (typeof document !== 'undefined') document.addEventListener('pointermove', e => { ptr = { x: e.clientX, y: e.clientY } }, { passive: true })
   function startLight(on) {
     clearInterval(lightT); lightT = 0
@@ -66,6 +66,9 @@
       const t = performance.now() / 1000
       const bx = innerWidth * (0.5 + Math.sin(t * 0.11) * 0.32), by = innerHeight * (0.12 + Math.cos(t * 0.09) * 0.08)
       const x = ptr ? bx + (ptr.x - bx) * 0.5 : bx, y = ptr ? by + (ptr.y - by) * 0.45 : by
+      // every write restyles and repaints each card edge, so only move the light when it has travelled far enough to be seen
+      if (Math.abs(x - lastLx) < 28 && Math.abs(y - lastLy) < 28) return
+      lastLx = x; lastLy = y
       const s = document.documentElement.style
       s.setProperty('--lx', x.toFixed(0) + 'px'); s.setProperty('--ly', y.toFixed(0) + 'px')
     }, 66)
@@ -123,7 +126,40 @@
     await travel(a, b)
   }
 
-  const api = { pulseTweak, undoPulse, MODES, shotFor, partFor, partsFor, mode, enabled, rolling, holdToApply, apply, route, travel, pulseTo, anchor, centerOf, reduced }
+  // ── scan sweep: a light plane crosses the screen while Diagnostics runs and each part flashes as the sweep passes its stage ──
+  const SCAN_PARTS = [[12, 'board'], [32, 'cpu'], [52, 'ram0'], [72, 'gpu'], [90, 'drive0']]
+  let scanOn = false, scanPct = 0, scanTimer = 0
+  function scanStart() {
+    if (!enabled()) return
+    scanOn = true; scanPct = 0; clearTimeout(scanTimer); scanTimer = setTimeout(scanEnd, 90000)
+    try { JylliTwin.shot(null) } catch {}
+    let el = document.getElementById('jx-sweep'); if (!el) { el = document.createElement('div'); el.id = 'jx-sweep'; el.setAttribute('aria-hidden', 'true'); document.body.appendChild(el) }
+    el.classList.toggle('still', reduced()); el.style.left = '-200px'; el.style.opacity = '1'
+  }
+  function scanProgress(pct) {
+    if (!scanOn) return
+    const el = document.getElementById('jx-sweep'); if (el) el.style.left = (Math.max(0, Math.min(100, pct)) / 100 * innerWidth - 80) + 'px'
+    for (const [at, part] of SCAN_PARTS) if (scanPct < at && pct >= at) { try { JylliTwin.pulse(part) } catch {} }
+    scanPct = Math.max(scanPct, pct)
+  }
+  function scanEnd() {
+    if (!scanOn) return
+    scanOn = false; clearTimeout(scanTimer)
+    const el = document.getElementById('jx-sweep'); if (el) { el.style.opacity = '0'; el.style.left = innerWidth + 'px' }
+  }
+
+  // ── Clean: the bytes just freed rise out of the drive ──
+  function fmtBytes(b) { return b >= 1073741824 ? (b / 1073741824).toFixed(1) + ' GB' : b >= 1048576 ? Math.round(b / 1048576) + ' MB' : Math.round(b / 1024) + ' KB' }
+  function freedBurst(bytes) {
+    if (!enabled() || !(bytes > 0)) return
+    try { JylliTwin.pulse('drive0') } catch {}
+    const p = anchor('drive0') || { x: innerWidth / 2, y: innerHeight / 2 }
+    const el = document.createElement('div'); el.className = 'jx-burst'; el.textContent = '+' + fmtBytes(bytes)
+    el.style.left = p.x + 'px'; el.style.top = p.y + 'px'; document.body.appendChild(el)
+    setTimeout(() => el.remove(), 2600)
+  }
+
+  const api = { fmtBytes, scanStart, scanProgress, scanEnd, freedBurst, pulseTweak, undoPulse, MODES, shotFor, partFor, partsFor, mode, enabled, rolling, holdToApply, apply, route, travel, pulseTo, anchor, centerOf, reduced }
   root.JylliWorld = api
   if (typeof module !== 'undefined' && module.exports) module.exports = api
 })(typeof window !== 'undefined' ? window : globalThis)

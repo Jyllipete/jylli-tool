@@ -51,7 +51,7 @@ Plan: `UI_4_0_PLAN.md`; visual reference: `design-4-preview.html`. Code: `js/wor
 - **Numbers.** Live values roll digit by digit (`JylliOdo`, `data-odo`); hover or focus shows where a number came from and its age (`JylliProv`, `data-prov`). Text without digits ("Not available") is never rolled.
 - **Apply.** Anything that applies a batch (stage dock, review sheet) is *hold to apply* (`JylliHold`, 650 ms, pointer, Space or Enter; Ctrl+Enter and Classic stay immediate). A light travels from the control into the part the change touches (`JylliWorld.pulseTo`, part from `partFor(tweakId)`); single tweaks in "Immediately" mode pulse too but never need a hold. Undo plays it backwards (`undoPulse`).
 - **Chronoline.** Bottom glass timeline of what was really recorded: journal batches, game sessions, CPU load (metrics history). Dragging it replays the recorded load only (no temperatures were recorded, so none are shown); gaps stay gaps.
-- **Callouts.** On Home, glass plates with live numbers join the parts by lines that follow the camera; only when the hero window is at least 560x250.
+- **Callouts.** On Home and the GPU, CPU & Memory and storage heroes, glass plates (with a heat tint from the real temperature, only when a reading exists) with live numbers join the parts by lines that follow the camera; only when the hero window is at least 560x250.
 - **Motion rules.** Reduced motion: no rolling digits, no pulse, camera cuts, light stays still. No glow on text, cards or badges. Nothing animates while a game runs.
 
 ## Components

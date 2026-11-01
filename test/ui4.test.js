@@ -108,3 +108,19 @@ test('share card: only recorded values are printed', () => {
   assert.strictEqual(C.minutes({ durationSec: 3 * 3600 + 8 * 60 }), '3 h 08 min')
   assert.strictEqual(C.minutes({ durationSec: 1500 }), '25 min')
 })
+
+test('callouts: heat tint appears only with a reading above 40 C', () => {
+  const C = require('../js/callouts')
+  assert.strictEqual(C.heatColor(null), ''); assert.strictEqual(C.heatColor(35), ''); assert.strictEqual(C.heatColor(undefined), '')
+  assert.ok(C.heatColor(70).startsWith('hsl('))
+  assert.notStrictEqual(C.heatColor(50), C.heatColor(85))
+})
+
+test('chronoline: restore points from WMI or /Date()/ times', () => {
+  assert.strictEqual(Chrono.parseRestoreTime('/Date(1761340800000)/'), 1761340800000)
+  assert.strictEqual(Chrono.parseRestoreTime('20261024210000.000000-000'), new Date(2026, 9, 24, 21, 0, 0).getTime())
+  assert.strictEqual(Chrono.parseRestoreTime('nonsense'), null)
+  const m = Chrono.restoreMarks([{ SequenceNumber: 2, Description: 'b', CreationTime: '20261024210000.000000-000' }, { SequenceNumber: 1, Description: 'a', CreationTime: '20260930191500.000000-000' }, { SequenceNumber: 3, CreationTime: 'x' }])
+  assert.deepStrictEqual(m.map(x => x.seq), [1, 2])   // ascending, unreadable times dropped
+  assert.deepStrictEqual(Chrono.restoreMarks({ error: 'x' }), [])
+})

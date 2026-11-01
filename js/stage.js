@@ -115,9 +115,11 @@
     // the light leaves the button for the part each change touches while the batch runs
     lastParts = root.JylliWorld ? JylliWorld.partsFor(items.map(i => i.tweakId)) : []
     const lit = root.JylliWorld ? JylliWorld.pulseTo(btn, JylliWorld.partsFor(items.map(i => i.tweakId))) : Promise.resolve()
+    try { root.api.setProgress && root.api.setProgress(2) } catch {}   // taskbar: indeterminate while the batch runs
     let res = null
     try { res = await root.api.applyBatch({ items, via: 'stage', restorePoint: 'auto', label: 'staged' }) } catch (e) { res = { ok: false, error: String(e && e.message || e) } }
     applying = false
+    try { root.api.setProgress && root.api.setProgress(-1) } catch {}
     if (res && res.aborted) { toast(tUI('stageAborted'), '', 'err'); render(); return }
     const okIds = new Set(((res && res.items) || []).filter(i => i.status === 'ok').map(i => i.id))
     const failed = ((res && res.items) || []).filter(i => i.status === 'failed')

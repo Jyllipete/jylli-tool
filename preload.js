@@ -17,6 +17,7 @@ contextBridge.exposeInMainWorld('api', {
   relaunchAdmin:      ()           => ipcRenderer.invoke('relaunch-admin'),
   getMetrics:         ()           => ipcRenderer.invoke('get-metrics'),
   minimize:           ()           => ipcRenderer.invoke('window-minimize'),
+  setProgress:        (v)          => ipcRenderer.invoke('window-progress', v),
   maximize:           ()           => ipcRenderer.invoke('window-maximize'),
   close:              ()           => ipcRenderer.invoke('window-close'),
   loadSettings:       ()           => ipcRenderer.invoke('load-settings'),

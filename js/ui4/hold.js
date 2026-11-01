@@ -19,7 +19,7 @@
       if (ok) { fired = true; set(1); setTimeout(() => set(0), 400); try { root.JylliSound && JylliSound.play('apply') } catch {} done(btn) } else set(0)
     }
     const tick = () => { const p = progress(performance.now() - t0, ms); set(p); if (p >= 1) end(true); else raf = requestAnimationFrame(tick) }
-    const start = () => { if (on || btn.disabled || !needHold()) return; on = true; fired = false; t0 = performance.now(); btn.classList.add('jx-holding'); tick() }
+    const start = () => { if (on || btn.disabled || !needHold()) return; on = true; fired = false; t0 = performance.now(); btn.classList.add('jx-holding'); try { root.JylliSound && JylliSound.play('click') } catch {} tick() }
     btn.addEventListener('pointerdown', e => { if (e.button) return; try { btn.setPointerCapture(e.pointerId) } catch {} start() })
     btn.addEventListener('pointerup', () => end(false)); btn.addEventListener('pointercancel', () => end(false)); btn.addEventListener('lostpointercapture', () => end(false))
     btn.addEventListener('keydown', e => { if ((e.key === ' ' || e.key === 'Enter') && !e.repeat && needHold()) { e.preventDefault(); start() } })

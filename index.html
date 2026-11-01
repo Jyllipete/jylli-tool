@@ -1908,6 +1908,7 @@ async function setLanguage(lang) {
   await api.saveSettings(settings).catch(() => {})
   invalidatePageCache()
   applyI18n()
+  try { window.JylliChrono && JylliChrono.labels() } catch {}   // the Timeline is built once, so it relabels itself on a language switch
   document.querySelectorAll('.cleanup-impact-hint').forEach(el => {
     const span = el.querySelector('span')
     const text = el.getAttribute(`data-${lang}`) || el.getAttribute('data-en')
@@ -4363,6 +4364,7 @@ async function runPreflightScan(btn) {
   document.getElementById('pf-results').innerHTML = ''
   const scanBar = document.getElementById('pf-scan-bar')
   if (scanBar) scanBar.style.width = '0%'
+  try { JylliWorld.scanStart() } catch {}
 
   // Capture previous states for diff view
   const prevStates = getPreflightStates()
@@ -4380,6 +4382,7 @@ async function runPreflightScan(btn) {
   const onProgress = ({ msg, pct }) => {
     if (statusEl) statusEl.textContent = _pfStepLabels[msg] || msg
     if (scanBar) scanBar.style.width = `${pct}%`
+    try { JylliWorld.scanProgress(pct) } catch {}
   }
   api.offPreflightProgress?.()
   api.onPreflightProgress(onProgress)
@@ -4394,6 +4397,7 @@ async function runPreflightScan(btn) {
       localStorage.setItem('pf_scan_ts', Date.now())
     }
     if (scanBar) { scanBar.style.width = '100%'; setTimeout(() => { if (scanBar) scanBar.style.width = '0%' }, 800) }
+    try { JylliWorld.scanProgress(100); setTimeout(() => JylliWorld.scanEnd(), 700) } catch {}
     renderPreflightResults(result)
     if (prevTs > 0) renderPreflightDiff(prevStates, result.tweakStates, prevTs)
     statusEl.textContent = `${tUI('pfScanComplete')} ${result.safetyScore}/100`
@@ -15325,6 +15329,7 @@ async function doQuickClean() {
       freedBytes = Object.values(window._cleanupSizes || {}).reduce((s, b) => s + (b || 0), 0)
     }
     api.addCleanupHistoryEntry({ ts: Date.now(), freedBytes, itemCount: done, failedCount: failed, diskFreeBytes: _diskAfter || 0 }).catch(() => {})
+    try { JylliWorld.freedBurst(freedBytes) } catch {}
   } catch {
     freedBytes = Object.values(window._cleanupSizes || {}).reduce((s, b) => s + (b || 0), 0)
     api.addCleanupHistoryEntry({ ts: Date.now(), freedBytes, itemCount: done, failedCount: failed }).catch(() => {})

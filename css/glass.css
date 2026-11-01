@@ -9,7 +9,7 @@ body.world-on #world { display: block; }
 #world-vignette { position: absolute; inset: 0; pointer-events: none; background: radial-gradient(ellipse at 50% 50%, transparent 52%, rgba(0,0,0,.6)); }
 #world .j-twin-fallback { display: none; }
 /* no hero window on this page: the rig stays as ambient depth, dimmed so text on the glass stays readable */
-#world:not(.has-window) .j-twin-canvas { opacity: .42; filter: blur(2.5px) saturate(.9); }
+#world:not(.has-window) .j-twin-canvas { opacity: .36; }   /* no filter: a blur on a live canvas is re-run every frame */
 /* a game is in front: the stage renders nothing (host fps 0), and nothing of ours animates or glows */
 #world.away .j-twin-canvas { opacity: 0; }
 body.game-live #world, body.game-live #jx-callouts, body.game-live #jx-chrono, body.game-live #jx-chrono-tab { display: none !important; }
@@ -74,17 +74,25 @@ body.world-live .j-twin-slot:not(#world-slot) .j-twin-fallback { display: none; 
 /* light pulse that travels from a button into a part, and back on undo */
 #jx-fx { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 8000; }
 
+/* Diagnostics sweep and the Clean burst */
+#jx-sweep { position: fixed; top: 0; bottom: 0; left: -200px; width: 160px; z-index: 5; pointer-events: none; background: linear-gradient(90deg, transparent, rgba(var(--c-accent-rgb), .18), rgba(255,255,255,.22) 50%, rgba(var(--c-accent-rgb), .18), transparent); transition: left 500ms linear, opacity 600ms; }
+#jx-sweep.still { display: none; }
+.jx-burst { position: fixed; z-index: 10001; pointer-events: none; transform: translate(-50%, 0); font: 600 22px var(--font-mono); color: #fff; text-shadow: 0 0 18px var(--c-accent); animation: jx-rise 2.4s var(--ease-out, ease) forwards; }
+@keyframes jx-rise { from { opacity: 0; transform: translate(-50%, 10px); } 15% { opacity: 1; } to { opacity: 0; transform: translate(-50%, -90px); } }
+@media (prefers-reduced-motion: reduce) { .jx-burst { animation-duration: 1ms; } }
+
 /* callouts on the rig (js/callouts.js) */
 #jx-callouts { position: fixed; inset: 0; z-index: 20; pointer-events: none; }
 .jx-co-lines { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
 .jx-co-lines line { stroke: rgba(255,255,255,.5); stroke-width: 1; }
 .jx-co-lines circle { fill: #fff; filter: drop-shadow(0 0 4px var(--c-accent)); }
-.jx-co { position: absolute; left: 0; top: 0; width: 176px; height: 58px; padding: 8px 12px; text-align: left; border-radius: 12px; pointer-events: auto; cursor: pointer; color: inherit; font: inherit; background: linear-gradient(180deg, rgba(28,28,38,.94), rgba(12,12,18,.96)); border: 1px solid rgba(255,255,255,.1); box-shadow: 0 12px 34px -10px rgba(0,0,0,.65), inset 0 1px 0 rgba(255,255,255,.07); will-change: transform; display: flex; flex-direction: column; justify-content: center; gap: 3px; }
+.jx-co { position: absolute; left: 0; top: 0; width: 176px; height: 58px; padding: 8px 12px; text-align: left; border-radius: 12px; pointer-events: auto; cursor: pointer; color: inherit; font: inherit; background: linear-gradient(180deg, rgba(28,28,38,.94), rgba(12,12,18,.96)); border: 1px solid rgba(255,255,255,.1); box-shadow: 0 12px 34px -10px rgba(0,0,0,.65), inset 0 1px 0 rgba(255,255,255,.07), inset 0 0 26px var(--heat, transparent); will-change: transform; display: flex; flex-direction: column; justify-content: center; gap: 3px; }
 .jx-co-compact { padding: 6px 10px; }
 .jx-co-compact .jx-co-n:nth-child(n+2) { display: none; }
 .jx-co-compact .jx-co-n { font-size: 14px; }
+.jx-co-compact .jx-co-n.j-metric-na { font-size: 10.5px; }
 .jx-co:hover { border-color: rgba(var(--c-accent-rgb), .6); }
-.jx-co-t { font-size: 11.5px; color: var(--c-text-secondary); }
+.jx-co-t { font-size: 11.5px; color: var(--c-text-secondary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .jx-co-m { display: flex; gap: 14px; }
 .jx-co-n { font: 600 15px/1 var(--font-mono); }
 .jx-co-n.j-metric-na { font: 400 11.5px/1.2 var(--font); color: var(--c-text-tertiary); white-space: nowrap; }
@@ -104,6 +112,8 @@ body.world-on #jx-chrono.open ~ #jx-chrono-tab { display: none; }
 #jx-ch-track svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
 .jx-ch-sess { position: absolute; bottom: 0; height: 6px; border-radius: 4px; background: rgba(61,214,140,.6); }
 .jx-ch-mark { position: absolute; top: 2px; width: 11px; height: 11px; margin-left: -5px; padding: 0; border: 0; border-radius: 3px; background: var(--c-accent); transform: rotate(45deg); box-shadow: 0 0 12px rgba(var(--c-accent-rgb), .9); cursor: pointer; }
+.jx-ch-rp { position: absolute; top: 3px; width: 11px; height: 11px; margin-left: -5px; padding: 0; border: 2px solid #4C9EFF; border-radius: 50%; background: rgba(12,12,18,.9); cursor: pointer; }
+.jx-ch-rp:hover { background: #4C9EFF; }
 .jx-ch-mark.new { animation: jx-mark 700ms var(--ease-out, ease); }
 @keyframes jx-mark { from { transform: rotate(45deg) scale(0); } }
 .jx-ch-mark.gone { transition: all 500ms; opacity: 0; transform: rotate(45deg) scale(0); }

@@ -10,6 +10,7 @@
     reason: null,           // why 3D is not running (shown in Settings)
     rig: null, layout: null, quality: 'full', slot: null, engine: null, rendererName: null,
     lastSeq: -1, visual: null, listeners: {}, loopId: 0, lastFrame: 0, lastInput: Date.now(), interacting: false, visible: true,
+    stats: { gameRendered: 0, gameSkipped: 0 },   // measured by the host itself: frames the stage drew / skipped while a game was in front
     probe: null, bundlePromise: null, io: null, ro: null, hoverT: 0, drag: null, retries: 0,
   }
 
@@ -232,13 +233,17 @@
       gameForeground: !!(root._gameRunning || (root._systemContext && root._systemContext.gameRunning)),
       msSinceInput: Date.now() - H.lastInput, interacting: H.interacting || !!H.boot || !H.engine.settled(),
     })
-    if (fps === 0) return
+    const game = !!(root._gameRunning || (root._systemContext && root._systemContext.gameRunning))
+    if (fps === 0) { if (game) H.stats.gameSkipped++; return }
     const dt = (now - H.lastFrame) / 1000
-    if (!H.probe && dt < 1 / fps - 0.002) return   // uncapped while probing so the intervals show what the GPU can do
+    // a page without a hero window shows the rig only as dimmed depth: 10 fps is plenty (measured: full rate there cost more than Home)
+    const cap = H.worldSlot && !H.win && !H.boot && !H.interacting ? 10 : 1000
+    if (!H.probe && dt < 1 / Math.min(fps, cap) - 0.002) return   // uncapped while probing so the intervals show what the GPU can do
     H.lastFrame = now
     const snap = root.JylliTelemetry && (root.JylliTelemetry.state.override || root.JylliTelemetry.state.snap)
     if (H.worldSlot) { syncCenter(); const live = H.state === 'live'; if (live !== H.wl) { H.wl = live; document.body.classList.toggle('world-live', live) } }
     if (snap && snap.seq !== H.lastSeq) { H.lastSeq = snap.seq; H.visual = Map_().visualState(snap); H.engine.setState(H.visual) }
+    if (game) H.stats.gameRendered++
     H.engine.render(Math.min(dt, 0.1))
     if (H.probe) {
       if (document.visibilityState === 'visible' && dt > 0 && dt < 0.25) H.probe.frames.push(dt * 1000)
@@ -365,6 +370,7 @@
   root.JylliTwin = {
     attach, park, shot, pause(on) { H.paused = !!on; if (!on) H.lastFrame = performance.now() }, exitWorld, select, back, on, partInfo,
     get win() { return H.win },
+    get stats() { return { ...H.stats } },
     anchor(id) { return H.engine && H.slot ? H.engine.screenPos(id) : null },   // CSS px relative to the canvas, null when unknown or behind the camera
     pulse(id) { if (H.engine) H.engine.pulse(id) },
     partIds() { return H.engine ? H.engine.partIds() : [] }, setRigDeclared, assemble, skipAssembly() { H.skipAssembly && H.skipAssembly() },

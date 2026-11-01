@@ -39,7 +39,18 @@
     return [...m.values()].sort((a, b) => a.ts - b.ts)
   }
 
-  const api = { span, pct, sampleAt, snapshotFor, marks, GAP_MS }
+  /** Windows reports CreationTime as WMI (20261024210000.000000-000) or as /Date(ms)/ depending on the PowerShell version. */
+  function parseRestoreTime(v) {
+    const w = String(v == null ? '' : v)
+    let m = w.match(/^(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})/)
+    if (m) return new Date(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +m[6]).getTime()
+    m = w.match(/Date\((-?\d+)/)
+    return m ? +m[1] : null
+  }
+  /** list from list-restore-points -> [{ seq, ts, name }] ascending; anything without a readable time is left out */
+  const restoreMarks = list => (Array.isArray(list) ? list : []).map(r => ({ seq: r.SequenceNumber, ts: parseRestoreTime(r.CreationTime), name: r.Description || '' })).filter(r => Number.isFinite(r.ts)).sort((a, b) => a.ts - b.ts)
+
+  const api = { span, pct, sampleAt, snapshotFor, marks, parseRestoreTime, restoreMarks, GAP_MS }
   root.JylliChronoPure = api
   if (typeof module !== 'undefined' && module.exports) module.exports = api
   if (typeof document === 'undefined') return
@@ -48,7 +59,7 @@
   const esc = s => (typeof escHtml === 'function' ? escHtml(s) : String(s))
   const T = (k, v) => (typeof tUIf === 'function' && v ? tUIf(k, v) : tUI(k))
   const fmtTime = ts => new Date(ts).toLocaleString(undefined, { weekday: 'short', day: 'numeric', month: 'numeric', hour: '2-digit', minute: '2-digit' })
-  let box, track, data = { marks: [], sessions: [], samples: [], from: 0, to: 0 }, replayTs = null, seq = 0, touched = false, closeT = 0, newKey = null
+  let rpCache = [], rpAt = 0, lastTick = 0, box, track, data = { marks: [], sessions: [], samples: [], from: 0, to: 0 }, replayTs = null, seq = 0, touched = false, closeT = 0, newKey = null
 
   function build() {
     if (box) return
@@ -71,19 +82,22 @@
     document.querySelectorAll('#jx-chrono [data-t], #jx-chrono-tab [data-t]').forEach(el => { el.textContent = tUI(el.dataset.t) })
     box.querySelector('#jx-ch-now').textContent = tUI('chronoNow')
     box.querySelector('#jx-ch-close').setAttribute('aria-label', tUI('close'))
-    box.querySelector('#jx-ch-legend').textContent = `${tUI('chronoChanges')} · ${tUI('chronoSessions')} · ${tUI('chronoLoad')}`
+    box.querySelector('#jx-ch-legend').textContent = `${tUI('chronoChanges')} · ${tUI('chronoRestore')} · ${tUI('chronoSessions')} · ${tUI('chronoLoad')}`
     track.setAttribute('aria-label', tUI('chronoAria'))
   }
 
   async function load() {
-    const [entries, sessions, samples] = await Promise.all([
+    const rpFresh = Date.now() - rpAt < 60000
+    const [entries, sessions, samples, rps] = await Promise.all([
       root.api.journalList({ limit: 400 }).catch(() => []), root.api.listSessions().catch(() => []), root.api.getMetricsHistory({ hours: 168 }).catch(() => []),
+      rpFresh ? rpCache : Promise.race([root.api.listRestorePoints().catch(() => []), new Promise(r => setTimeout(() => r([]), 5000))]),   // PowerShell: cached for a minute, never blocks the timeline for long
     ])
+    if (!rpFresh) { rpCache = rps; rpAt = Date.now() }
     const now = Date.now()
     const ms = marks(entries || []), ss = (sessions || []).filter(s => s && s.startedAt)
     const times = [...ms.map(m => m.ts), ...ss.map(s => +new Date(s.startedAt)), ...(samples || []).slice(0, 1).map(s => s.ts)].filter(Number.isFinite)
     const oldest = times.length ? Math.min(...times) : null
-    data = { marks: ms, sessions: ss, samples: samples || [], from: now - span(now, oldest), to: now }
+    data = { rps: restoreMarks(rps), marks: ms, sessions: ss, samples: samples || [], from: now - span(now, oldest), to: now }
   }
 
   function draw() {
@@ -97,10 +111,12 @@
     track.innerHTML = `<svg viewBox="0 0 1000 50" preserveAspectRatio="none" aria-hidden="true">${pts ? `<defs><linearGradient id="jx-cg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#4C9EFF" stop-opacity=".32"/><stop offset="1" stop-color="#4C9EFF" stop-opacity="0"/></linearGradient></defs><polyline points="${pts.split(' ')[0].split(',')[0]},50 ${pts} ${pts.split(' ').pop().split(',')[0]},50" fill="url(#jx-cg)"/><polyline points="${pts}" fill="none" stroke="#4C9EFF" stroke-width="1.4" vector-effect="non-scaling-stroke" stroke-linejoin="round"/>` : ''}</svg>`
       + data.sessions.map(s => { const a = +new Date(s.startedAt), b = a + (s.durationSec || 60) * 1000; return b >= from ? `<button type="button" class="jx-ch-sess" data-sess="${esc(s.id)}" style="left:${pct(a, from, to)}%;width:${Math.max(0.5, pct(b, from, to) - pct(a, from, to))}%" aria-label="${esc(s.game || '')}" title="${esc((s.game || '') + ' · ' + fmtTime(a))}"></button>` : '' }).join('')
       + data.marks.map(m => `<button type="button" class="jx-ch-mark${m.key === newKey ? ' new' : ''}" data-mark="${esc(m.key)}" style="left:${pct(m.ts, from, to)}%" aria-label="${esc(markLabel(m))}" title="${esc(markLabel(m) + ' · ' + fmtTime(m.ts))}"></button>`).join('')
+      + (data.rps || []).filter(r => r.ts >= from).map(r => `<button type="button" class="jx-ch-rp" data-rp="${r.seq}" style="left:${pct(r.ts, from, to)}%" aria-label="${esc(tUI('chronoRestore') + ': ' + r.name)}" title="${esc(tUI('chronoRestore') + ' · ' + r.name + ' · ' + fmtTime(r.ts))}"></button>`).join('')
       + days.map(t => `<span class="jx-ch-day" style="left:${pct(t, from, to)}%">${new Date(t).toLocaleDateString(undefined, { weekday: 'short' })}</span>`).join('')
       + (empty ? `<div class="j-muted" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center">${esc(tUI('chronoEmpty'))}</div>` : '')
       + `<div id="jx-ch-head" style="left:${replayTs == null ? 100 : pct(replayTs, from, to)}%" data-t="${esc(replayTs == null ? tUI('chronoNow') : fmtTime(replayTs))}"></div>`
     track.querySelectorAll('[data-mark]').forEach(b => { b.onpointerdown = e => e.stopPropagation(); b.onclick = e => { e.stopPropagation(); popMark(data.marks.find(m => m.key === b.dataset.mark), b) } })
+    track.querySelectorAll('[data-rp]').forEach(b => { b.onpointerdown = e => e.stopPropagation(); b.onclick = e => { e.stopPropagation(); close(); if (typeof showPage === 'function') showPage('restore-points') } })
     track.querySelectorAll('[data-sess]').forEach(b => { b.onpointerdown = e => e.stopPropagation(); b.onclick = e => { e.stopPropagation(); close(); if (typeof showPage === 'function') showPage('replay') } })
     newKey = null
   }
@@ -113,6 +129,7 @@
     pop.innerHTML = `<b>${esc(markLabel(m))}</b><div class="j-muted">${esc(fmtTime(m.ts))} · ${esc(via)}</div>
       <div class="j-hstack" style="margin-top:10px"><button type="button" class="j-btn j-btn-sm" id="jx-pop-hist">${esc(tUI('chronoOpenHistory'))}</button>${m.batchId || m.entryId ? `<button type="button" class="j-btn j-btn-sm" id="jx-pop-undo">${esc(tUI('chronoUndo'))}</button>` : ''}</div>`
     pop.classList.add('show')
+    try { root.JylliSound && JylliSound.play('click') } catch {}
     pop.style.left = Math.max(8, Math.min(innerWidth - 262, r.left - 125)) + 'px'; pop.style.top = (r.top - pop.offsetHeight - 14) + 'px'
     if (root.JylliWorld) { const parts = JylliWorld.partsFor(m.ids); JylliWorld.pulseTo(anchor, parts) }
     pop.querySelector('#jx-pop-hist').onclick = () => { pop.classList.remove('show'); close(); if (typeof showPage === 'function') showPage('changelog', 'history') }
@@ -129,6 +146,7 @@
 
   function setReplay(ts) {
     replayTs = ts
+    if (ts != null && (replayTs == null || Math.abs(ts - lastTick) > (data.to - data.from) / 60)) { lastTick = ts; try { root.JylliSound && JylliSound.play('click') } catch {} }
     const snap = ts == null ? null : snapshotFor(sampleAt(data.samples, ts), ++seq)
     try { JylliTelemetry.setOverride(ts != null && !snap ? { v: 1, seq: ++seq, t: ts, s: {} } : snap) } catch {}   // a gap shows "not available", never a made-up value
     document.body.classList.toggle('jx-replay', ts != null)

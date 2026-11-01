@@ -10,6 +10,7 @@
 - **Aikajana**: tallennetut muutokset, pelisessiot ja suorittimen kuorma; liu'uttamalla näet koneen kuorman siitä hetkestä (lämpötiloja ei ole tallennettu, joten niitä ei näytetä)
 - Kotisivun osat saavat reaaliaikaiset kuplat ja viivat; Ctrl K ymmärtää oireita ("nykii", "korkea ping", "kuuma kone")
 - Toisto: tallenna jakokortti PNG-kuvana (vain tallennetut arvot)
+- Diagnostiikan aikana valotaso pyyhkäisee koneen läpi ja osat välähtävät; siivouksen jälkeen vapautuneet tavut nousevat asemasta; tehtäväpalkki näyttää etenemisen muutoksia otettaessa käyttöön; palautuspisteet näkyvät aikajanalla
 - Peli päällä 3D-maailma pysähtyy kokonaan; Verkko-välilehdellä malli väistyy verkon oman 3D-näkymän tieltä
 
 ## Julkaisematon (3.0 "Living hardware")

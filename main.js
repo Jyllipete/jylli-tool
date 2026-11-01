@@ -1963,6 +1963,14 @@ ipcMain.handle('relaunch-admin', () => {
   return { ok: true }
 })
 
+// Taskbar progress while a batch applies: -1 clears it, 2 = indeterminate (green marquee), 0..1 = a bar. Only the sender's own window is touched.
+ipcMain.handle('window-progress', (e, v) => {
+  const win = BrowserWindow.fromWebContents(e.sender)
+  if (!win || win.isDestroyed()) return false
+  const n = Number(v)
+  try { win.setProgressBar(n === 2 ? 2 : Number.isFinite(n) && n >= 0 ? Math.min(1, n) : -1, { mode: n === 2 ? 'indeterminate' : n >= 0 ? 'normal' : 'none' }) } catch { return false }
+  return true
+})
 ipcMain.handle('window-minimize', (e) => {
   const win = BrowserWindow.fromWebContents(e.sender)
   if (win) { win.minimize() }  // triggers the 'minimize' event which hides to tray
