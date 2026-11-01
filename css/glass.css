@@ -110,6 +110,25 @@ body:has(#jx-chrono.open) #toast-container { bottom: 124px; }
 @media (prefers-reduced-motion: reduce) { .toast, .toast.out { animation-duration: 1ms; } .toast .toast-bar { animation: none; } }
 body.game-live #toast-container { bottom: 44px; }
 
+/* Ctrl K palette and dialogs: a dimmed, softly blurred world behind a glass sheet, same edge light as the cards */
+#cmd-palette-overlay, .modal-overlay { backdrop-filter: blur(6px) saturate(1.2); -webkit-backdrop-filter: blur(6px) saturate(1.2); }
+#cmd-palette {
+  background: linear-gradient(180deg, rgba(30,30,40,.95), rgba(14,14,20,.97)); border: 1px solid rgba(255,255,255,.1);
+  box-shadow: 0 30px 80px -20px rgba(0,0,0,.75), inset 0 1px 0 rgba(255,255,255,.08), 0 0 0 1px rgba(var(--c-accent-rgb), .08);
+}
+#cmd-palette .cmd-item.cmd-focused { background: rgba(var(--c-accent-rgb), .2); }
+#cmd-palette .cmd-item.cmd-focused .cmd-item-icon { background: rgba(var(--c-accent-rgb), .3); border-color: rgba(var(--c-accent-rgb), .5); color: #fff; }
+#cmd-palette .cmd-group-label { color: var(--c-text-secondary); }
+
+/* Clean: the drive bar */
+.jx-drive { margin: 10px 0 14px; }
+.jx-drive-bar { display: flex; height: 10px; border-radius: 6px; background: rgba(255,255,255,.07); overflow: hidden; }
+.jx-drive-bar i { display: block; height: 100%; transition: width 1100ms var(--ease-out, ease); }
+.jx-drive-used { background: linear-gradient(90deg, rgba(var(--c-accent-rgb), .7), var(--c-accent)); }
+.jx-drive-junk { background: var(--c-warning); box-shadow: 0 0 12px rgba(245,165,36,.55); }
+.jx-drive-line { margin-top: 6px; font-size: 12px; }
+@media (prefers-reduced-motion: reduce) { .jx-drive-bar i { transition-duration: 1ms; } }
+
 /* Diagnostics sweep and the Clean burst */
 #jx-sweep { position: fixed; top: 0; bottom: 0; left: -200px; width: 160px; z-index: 5; pointer-events: none; background: linear-gradient(90deg, transparent, rgba(var(--c-accent-rgb), .18), rgba(255,255,255,.22) 50%, rgba(var(--c-accent-rgb), .18), transparent); transition: left 500ms linear, opacity 600ms; }
 #jx-sweep.still { display: none; }

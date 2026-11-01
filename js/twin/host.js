@@ -369,6 +369,19 @@
 
   root.JylliTwin = {
     attach, park, shot, pause(on) { H.paused = !!on; if (!on) H.lastFrame = performance.now() }, exitWorld, select, back, on, partInfo,
+    /** A 2D canvas with the rig exactly as the current hero window shows it, or null when 3D is not running. */
+    snapshot() {
+      const eng = H.engine, cv = eng && eng.domElement
+      if (!eng || H.state !== 'live' || !cv || !H.slot) return null
+      try {
+        eng.render(0.0001)
+        const w = H.slot.getBoundingClientRect(), r = H.win ? H.win.getBoundingClientRect() : w
+        const k = cv.width / Math.max(1, w.width)
+        const out = document.createElement('canvas'); out.width = Math.max(1, Math.round(r.width * k)); out.height = Math.max(1, Math.round(r.height * k))
+        out.getContext('2d').drawImage(cv, (r.left - w.left) * k, (r.top - w.top) * k, out.width, out.height, 0, 0, out.width, out.height)
+        return out
+      } catch { return null }
+    },
     get win() { return H.win },
     get stats() { return { ...H.stats } },
     anchor(id) { return H.engine && H.slot ? H.engine.screenPos(id) : null },   // CSS px relative to the canvas, null when unknown or behind the camera

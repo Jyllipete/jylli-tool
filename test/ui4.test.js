@@ -137,3 +137,22 @@ test('toast: long names are shortened in the middle, games silence only confirma
   assert.deepStrictEqual(T.visibleSplit(2), { shown: 2, hidden: 0 })
   assert.deepStrictEqual(T.visibleSplit(5), { shown: 3, hidden: 2 })
 })
+
+test('replay recap: lowest second and steadiness come from recorded bins only', () => {
+  const C = require('../js/sharecard')
+  const bins = [90, 80, 25, 70, null, 65].map(fps => ({ fps }))
+  const r = C.recap({ bins })
+  assert.deepStrictEqual(r.dip, { fps: 25, at: 2 })
+  assert.strictEqual(r.steadyPct, 80)                       // 4 of the 5 recorded seconds were >= 60
+  assert.strictEqual(C.recap({ bins: [{ fps: 60 }] }), null)   // too short to say anything
+  assert.strictEqual(C.recap({}), null)
+  assert.strictEqual(C.clock(83), '1:23')
+})
+
+test('drive bar: fractions stay inside the drive and a missing value is zero', () => {
+  const W = require('../js/world')
+  assert.deepStrictEqual(W.driveFractions(500, 1000, 100), { used: 40, junk: 10, free: 50 })
+  assert.deepStrictEqual(W.driveFractions(500, 1000, 900), { used: 0, junk: 50, free: 50 })   // junk cannot exceed what is used
+  assert.deepStrictEqual(W.driveFractions(2000, 1000, 0), { used: 100, junk: 0, free: 0 })
+  assert.deepStrictEqual(W.driveFractions(undefined, 0, undefined), { used: 0, junk: 0, free: 100 })
+})

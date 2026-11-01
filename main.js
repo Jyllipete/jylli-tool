@@ -1964,6 +1964,16 @@ ipcMain.handle('relaunch-admin', () => {
 })
 
 // Taskbar progress while a batch applies: -1 clears it, 2 = indeterminate (green marquee), 0..1 = a bar. Only the sender's own window is touched.
+ipcMain.handle('window-overlay', (e, dataUrl, description) => {
+  const win = BrowserWindow.fromWebContents(e.sender)
+  if (!win || win.isDestroyed()) return false
+  try {
+    if (!dataUrl) { win.setOverlayIcon(null, ''); return true }
+    if (typeof dataUrl !== 'string' || dataUrl.length > 20000 || !/^data:image\/png;base64,[A-Za-z0-9+/=]+$/.test(dataUrl)) return false
+    win.setOverlayIcon(nativeImage.createFromDataURL(dataUrl), String(description || '').slice(0, 80))
+    return true
+  } catch { return false }
+})
 ipcMain.handle('window-progress', (e, v) => {
   const win = BrowserWindow.fromWebContents(e.sender)
   if (!win || win.isDestroyed()) return false

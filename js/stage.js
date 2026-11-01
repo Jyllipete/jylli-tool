@@ -84,6 +84,7 @@
   function discard() { const ids = [...staged.keys()]; staged.clear(); ids.forEach(mark); render() }
 
   let meta = {}
+  async function loadMetaFor(ids) { try { const l = await root.api.getTweakMeta(ids); meta = Object.fromEntries((l || []).map(m => [m.id, m])) } catch {} }
   async function loadMeta() { try { const l = await root.api.getTweakMeta([...staged.keys()]); meta = Object.fromEntries((l || []).map(m => [m.id, m])) } catch {} }
 
   async function review() {
@@ -106,6 +107,15 @@
   }
 
   let applying = false, lastParts = []
+  /** Taskbar overlay "restart needed": an amber dot with a "!", drawn here so no image asset is shipped. It lasts until the app is restarted. */
+  function markRebootNeeded() {
+    try {
+      const c = document.createElement('canvas'); c.width = c.height = 32
+      const x = c.getContext('2d'); x.fillStyle = '#F5A524'; x.beginPath(); x.arc(16, 16, 15, 0, Math.PI * 2); x.fill()
+      x.fillStyle = '#111'; x.font = '700 22px Segoe UI, sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText('!', 16, 17)
+      root.api.setOverlay && root.api.setOverlay(c.toDataURL('image/png'), tUI('stageRebootNeeded'))
+    } catch {}
+  }
   async function apply() {
     if (applying || !staged.size) return
     applying = true
@@ -121,12 +131,14 @@
     applying = false
     try { root.api.setProgress && root.api.setProgress(-1) } catch {}
     if (res && res.aborted) { toast(tUI('stageAborted'), '', 'err'); render(); return }
+    if (!items.every(i => meta[i.tweakId])) await loadMetaFor(items.map(i => i.tweakId))
     const okIds = new Set(((res && res.items) || []).filter(i => i.status === 'ok').map(i => i.id))
     const failed = ((res && res.items) || []).filter(i => i.status === 'failed')
     for (const id of okIds) staged.delete(id)
     const touched = (res && res.items || []).map(i => i.id)
     if (res && res.settingsPatch) Object.assign(root.settings, res.settingsPatch)
     touched.forEach(mark); render()
+    if ([...okIds].some(id => meta[id] && meta[id].reboot)) markRebootNeeded()
     try { invalidatePageCache(currentPage) } catch {}
     try { root.JylliSound && JylliSound.play(okIds.size ? 'apply' : 'warning') } catch {}
     if (okIds.size && root.JylliChrono) { await lit; try { JylliChrono.noteApplied({ batchId: res.batchId, n: okIds.size, parts: JylliWorld.partsFor([...okIds]) }) } catch {} }

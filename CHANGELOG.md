@@ -11,6 +11,7 @@
 - Kotisivun osat saavat reaaliaikaiset kuplat ja viivat; Ctrl K ymmärtää oireita ("nykii", "korkea ping", "kuuma kone")
 - Toisto: tallenna jakokortti PNG-kuvana (vain tallennetut arvot)
 - Diagnostiikan aikana valotaso pyyhkäisee koneen läpi ja osat välähtävät; siivouksen jälkeen vapautuneet tavut nousevat asemasta; tehtäväpalkki näyttää etenemisen muutoksia otettaessa käyttöön; palautuspisteet näkyvät aikajanalla
+- Verkko: nopeustestin lento (kirkas pallo linkkejä pitkin testin alussa ja lopussa); Siivous: levyn täyttöpalkki, josta poistettava osa tyhjenee; Toisto: heikoin sekunti ja tasaisuus, jakokortissa kuva oikeasta 3D-koneesta; tehtäväpalkin kuvake kertoo kun uudelleenkäynnistys tarvitaan; Ctrl K ja valintaikkunat lasia
 - Uudet ilmoitukset: lasia, alareunassa keskellä, uusin päällä; Kumoa on ilmoituksen sisällä (erillinen kumoa-palkki poistui); pitkät nimet lyhennetään keskeltä; ilmoitus pysähtyy kun osoitin on sen päällä
 - Peli päällä 3D-maailma pysähtyy kokonaan; Verkko-välilehdellä malli väistyy verkon oman 3D-näkymän tieltä
 

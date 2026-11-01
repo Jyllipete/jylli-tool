@@ -159,7 +159,37 @@
     setTimeout(() => el.remove(), 2600)
   }
 
-  const api = { fmtBytes, scanStart, scanProgress, scanEnd, freedBurst, pulseTweak, undoPulse, MODES, shotFor, partFor, partsFor, mode, enabled, rolling, holdToApply, apply, route, travel, pulseTo, anchor, centerOf, reduced }
+  /** used/total/junk bytes -> the three widths (percent of the drive); junk can never push past the drive and a missing value is 0 */
+  function driveFractions(used, total, junk) {
+    const t = Math.max(1, +total || 0), u = Math.max(0, Math.min(t, +used || 0)), j = Math.max(0, Math.min(u, +junk || 0))
+    return { used: +(((u - j) / t) * 100).toFixed(2), junk: +((j / t) * 100).toFixed(2), free: +(((t - u) / t) * 100).toFixed(2) }
+  }
+  // ── Clean: the drive as a bar, with what can be removed marked inside it; cleaning empties that segment ──
+  const drive = { used: 0, total: 0, junk: 0, el: null }
+  function driveDraw() {
+    if (!drive.el || !drive.el.isConnected) return
+    const f = driveFractions(drive.used, drive.total, drive.junk)
+    drive.el.querySelector('.jx-drive-used').style.width = f.used + '%'
+    drive.el.querySelector('.jx-drive-junk').style.width = f.junk + '%'
+    drive.el.querySelector('.jx-drive-line').textContent = drive.total ? (typeof tUIf === 'function' ? tUIf(drive.junk > 0 ? 'cleanupDriveLineJunk' : 'cleanupDriveLine', { used: fmtBytes(drive.used), total: fmtBytes(drive.total), junk: fmtBytes(drive.junk) }) : '') : ''
+  }
+  async function driveBar(hero) {
+    if (!enabled() || !hero || !root.api || !root.api.getDiskProjection) return
+    const d = await root.api.getDiskProjection().catch(() => null)
+    if (!d || !d.totalBytes) return   // no number, no bar
+    const el = document.createElement('div'); el.className = 'jx-drive'
+    el.innerHTML = '<div class="jx-drive-bar" role="img"><i class="jx-drive-used"></i><i class="jx-drive-junk"></i></div><div class="jx-drive-line j-muted"></div>'
+    el.querySelector('.jx-drive-bar').setAttribute('aria-label', 'C:')
+    hero.after(el)
+    drive.el = el; drive.total = d.totalBytes; drive.used = d.usedBytes != null ? d.usedBytes : d.totalBytes - (d.freeBytes || 0); drive.junk = 0
+    const sum = () => Object.values(root._cleanupSizes || {}).reduce((s, b) => s + (b || 0), 0)
+    drive.junk = sum(); driveDraw()
+    const est = document.getElementById('cleanup-size-est')
+    if (est) new MutationObserver(() => { drive.junk = sum(); driveDraw() }).observe(est, { childList: true, characterData: true, subtree: true })
+  }
+  function driveFreed(bytes) { drive.used = Math.max(0, drive.used - (bytes || 0)); drive.junk = 0; driveDraw() }
+
+  const api = { driveFractions, driveBar, driveFreed, fmtBytes, scanStart, scanProgress, scanEnd, freedBurst, pulseTweak, undoPulse, MODES, shotFor, partFor, partsFor, mode, enabled, rolling, holdToApply, apply, route, travel, pulseTo, anchor, centerOf, reduced }
   root.JylliWorld = api
   if (typeof module !== 'undefined' && module.exports) module.exports = api
 })(typeof window !== 'undefined' ? window : globalThis)

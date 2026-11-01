@@ -14,12 +14,23 @@
   }
   const minutes = s => { const m = Math.round((s.durationSec || 0) / 60); return m >= 60 ? `${Math.floor(m / 60)} h ${String(m % 60).padStart(2, '0')} min` : `${m} min` }
 
-  const api = { stats, minutes }
+  /** The story of a session in two facts, from the recorded one-second bins only: its lowest second and how steady it was. */
+  function recap(s) {
+    const bins = (s && s.bins) || [], fps = bins.map(b => b && b.fps)
+    const vals = fps.filter(Number.isFinite)
+    if (vals.length < 5) return null
+    let lowI = -1, low = Infinity
+    fps.forEach((v, i) => { if (Number.isFinite(v) && v < low) { low = v; lowI = i } })
+    return { dip: { fps: Math.round(low), at: lowI }, steadyPct: Math.round(vals.filter(v => v >= 60).length / vals.length * 100), seconds: vals.length }
+  }
+  const clock = sec => Math.floor(sec / 60) + ':' + String(Math.round(sec) % 60).padStart(2, '0')
+
+  const api = { stats, minutes, recap, clock }
   root.JylliShareCard = api
   if (typeof module !== 'undefined' && module.exports) module.exports = api
   if (typeof document === 'undefined') return
 
-  function draw(cv, s, rig) {
+  function draw(cv, s, rig, rigImg) {
     const x = cv.getContext('2d'), W = cv.width = 1200, H = cv.height = 630
     const accent = (root.cssVar && cssVar('--c-accent', '#8B7CF6')) || '#8B7CF6'
     const g = x.createLinearGradient(0, 0, W, H); g.addColorStop(0, '#171126'); g.addColorStop(0.6, '#0b0b11'); g.addColorStop(1, '#101018'); x.fillStyle = g; x.fillRect(0, 0, W, H)
@@ -27,9 +38,14 @@
     x.fillStyle = '#fff'; x.font = '600 58px Geist, "Segoe UI", sans-serif'; x.fillText((s.game && s.game.name) || '', 64, 124)
     x.fillStyle = 'rgba(255,255,255,.62)'; x.font = '26px Geist, "Segoe UI", sans-serif'
     x.fillText([minutes(s), rig && rig.gpu, rig && rig.cpu].filter(Boolean).join(' · '), 64, 170)
-    stats(s).forEach((st, i) => {
-      x.fillStyle = '#fff'; x.font = '600 100px "Geist Mono", Consolas, monospace'; x.fillText(st.value, 64 + i * 360, 340)
-      x.fillStyle = 'rgba(255,255,255,.55)'; x.font = '24px Geist, "Segoe UI", sans-serif'; x.fillText(st.label, 68 + i * 360, 382)
+    if (rigImg) {   // the real 3D rig, as the hero window showed it, fading into the card on the right
+      const bw = 470, bh = 330, sc = Math.min(bw / rigImg.width, bh / rigImg.height), dw = rigImg.width * sc, dh = rigImg.height * sc
+      x.save(); x.globalAlpha = 0.95; x.drawImage(rigImg, W - 64 - dw, 90, dw, dh); x.restore()
+      const fade = x.createLinearGradient(W - 64 - dw, 0, W - 64 - dw + 120, 0); fade.addColorStop(0, '#0b0b11'); fade.addColorStop(1, 'rgba(11,11,17,0)'); x.fillStyle = fade; x.fillRect(W - 64 - dw, 90, 120, dh)
+    }
+    stats(s).slice(0, rigImg ? 2 : 3).forEach((st, i) => {
+      x.fillStyle = '#fff'; x.font = '600 100px "Geist Mono", Consolas, monospace'; x.fillText(st.value, 64 + i * 300, 340)
+      x.fillStyle = 'rgba(255,255,255,.55)'; x.font = '24px Geist, "Segoe UI", sans-serif'; x.fillText(st.label, 68 + i * 300, 382)
     })
     const fps = (s.bins || []).map(b => b.fps), vals = fps.filter(Number.isFinite)
     if (vals.length > 1) {
@@ -42,7 +58,8 @@
   }
 
   function save(s, rig) {
-    const cv = draw(document.createElement('canvas'), s, rig)
+    let img = null; try { img = root.JylliTwin && JylliTwin.snapshot && JylliTwin.snapshot() } catch {}
+    const cv = draw(document.createElement('canvas'), s, rig, img)
     cv.toBlob(b => {
       if (!b) return
       const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = `jylli-${String((s.game && s.game.name) || 'session').replace(/[^\w-]+/g, '_')}.png`

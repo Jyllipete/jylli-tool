@@ -18,6 +18,7 @@ contextBridge.exposeInMainWorld('api', {
   getMetrics:         ()           => ipcRenderer.invoke('get-metrics'),
   minimize:           ()           => ipcRenderer.invoke('window-minimize'),
   setProgress:        (v)          => ipcRenderer.invoke('window-progress', v),
+  setOverlay:         (url, text)  => ipcRenderer.invoke('window-overlay', url, text),
   maximize:           ()           => ipcRenderer.invoke('window-maximize'),
   close:              ()           => ipcRenderer.invoke('window-close'),
   loadSettings:       ()           => ipcRenderer.invoke('load-settings'),

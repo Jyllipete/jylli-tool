@@ -15025,6 +15025,7 @@ function buildCleanup(c) {
     </div>
   `
   c.appendChild(hero)
+  try { JylliWorld.driveBar(hero) } catch {}
 
   // ── Two-column grid layout ─────────────────────────────────────────────────
   const layout = document.createElement('div')
@@ -15329,7 +15330,7 @@ async function doQuickClean() {
       freedBytes = Object.values(window._cleanupSizes || {}).reduce((s, b) => s + (b || 0), 0)
     }
     api.addCleanupHistoryEntry({ ts: Date.now(), freedBytes, itemCount: done, failedCount: failed, diskFreeBytes: _diskAfter || 0 }).catch(() => {})
-    try { JylliWorld.freedBurst(freedBytes) } catch {}
+    try { JylliWorld.freedBurst(freedBytes); JylliWorld.driveFreed(freedBytes) } catch {}
   } catch {
     freedBytes = Object.values(window._cleanupSizes || {}).reduce((s, b) => s + (b || 0), 0)
     api.addCleanupHistoryEntry({ ts: Date.now(), freedBytes, itemCount: done, failedCount: failed }).catch(() => {})

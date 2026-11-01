@@ -45,6 +45,7 @@ async function replayOpen(id) {
         ${html`<span class="j-badge" title="${tUI('fpsLowTip')}">${tUI('replayLow01')} ${sm.low01Fps ?? '—'} FPS</span>`}
         ${ui.badge(Math.round(s.durationSec / 60) + ' min')}
       </div>
+      ${(() => { const r = window.JylliShareCard && JylliShareCard.recap(s); return r ? html`<p class="j-muted" id="replay-recap">${tUIf('replayRecapDip', { fps: r.dip.fps, t: JylliShareCard.clock(r.dip.at) })} · ${tUIf('replayRecapSteady', { pct: r.steadyPct })}</p>` : '' })()}
       ${have.length ? html`<div class="j-twin-stage j-replay-stage"><div class="j-twin-slot" id="replay-twin-slot" data-twin-view="rig:home"></div></div>` : ''}
       <canvas id="replay-canvas" class="j-replay-canvas" width="900" height="200" role="img" aria-label="${tUI('replayChartAria')}"></canvas>
       <input type="range" id="replay-scrub" min="0" max="${Math.max(0, s.bins.length - 1)}" value="0" step="1" aria-label="${tUI('replayScrub')}" class="j-replay-scrub">

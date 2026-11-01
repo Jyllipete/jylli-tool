@@ -131,6 +131,7 @@ function netLiveLoop3d(el) {
     if (!document.body.contains(el)) return
     const ads = NET_FLOW.adapters.length ? NET_FLOW.adapters : []
     const snap = window.JylliTelemetry && JylliTelemetry.state.snap
+    if (NET_FLOW.test) { scene3d.setTraffic([{ rx: NET_FLOW.test.rx, tx: NET_FLOW.test.tx }]); setTimeout(step, 400); return }
     const levels = ads.length ? ads.map(a => {
       const rx = snap && a.name ? snap.s['net.' + a.name + '.rx'] : null, tx = snap && a.name ? snap.s['net.' + a.name + '.tx'] : null
       return { rx: rx && rx[0] != null ? rx[0] : null, tx: tx && tx[0] != null ? tx[0] : null }
@@ -216,13 +217,19 @@ async function netSpeedRun() {
   if (!btn || btn.disabled) return
   try { await showConfirm({ title: tUI('netSpeedConfirmTitle'), body: escHtml(tUI('netSpeedConfirmBody')), okText: tUI('netSpeedRun'), okStyle: 'info', icon: 'fa-gauge-high' }) } catch { return }
   btn.disabled = true
+  try { NET_FLOW.scene3d && NET_FLOW.scene3d.flight(1) } catch {}   // the test starts as a flight out to the internet
   const grid = document.getElementById('net-strip'), meta = document.getElementById('net-speed-meta')
   const set = (k, v) => { const e = grid.querySelector(`[data-nsv="${k}"]`); if (e) e.textContent = v }
   set('netDown', '…'); set('netUp', '…'); set('netLatency', '…'); set('netJitter', '…'); meta.textContent = tUI('netSpeedRunning')
-  const off = api.onSpeedTestProgress ? api.onSpeedTestProgress(p => { set(p.phase === 'down' ? 'netDown' : 'netUp', p.mbps ? p.mbps.toFixed(0) + ' Mbit/s' : '…') }) : null
+  const off = api.onSpeedTestProgress ? api.onSpeedTestProgress(p => {
+    set(p.phase === 'down' ? 'netDown' : 'netUp', p.mbps ? p.mbps.toFixed(0) + ' Mbit/s' : '…')
+    if (p.mbps) NET_FLOW.test = p.phase === 'down' ? { rx: p.mbps * 125000, tx: null } : { rx: null, tx: p.mbps * 125000 }   // Mbit/s -> bytes/s
+  }) : null
   let r = null
   try { r = await api.runSpeedTest() } catch {}
   try { off && off() } catch {}
+  NET_FLOW.test = null
+  try { NET_FLOW.scene3d && NET_FLOW.scene3d.flight(-1) } catch {}   // and lands back as a flight from the internet
   btn.disabled = false
   if (!r || !r.ok) { meta.textContent = tUI(r && r.reason === 'already-running' ? 'netSpeedBusy' : 'netSpeedFailed'); set('netDown', '—'); set('netUp', '—'); set('netLatency', '—'); set('netJitter', '—'); return }
   set('netDown', r.downMbps != null ? r.downMbps.toFixed(0) + ' Mbit/s' : '—'); set('netUp', r.upMbps != null ? r.upMbps.toFixed(0) + ' Mbit/s' : '—')

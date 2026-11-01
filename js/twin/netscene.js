@@ -115,11 +115,12 @@
           if (Math.random() < rate * dt && l.particles.length < MAX_PARTICLES) l.particles.push({ dir, t: dir > 0 ? 0 : 1, speed: 0.3 + Math.random() * 0.2 })
         }
         l.particles = l.particles.filter(p => { p.t += p.dir * p.speed * dt; return p.t >= -0.02 && p.t <= 1.02 })
+        if (l.particles.length > MAX_PARTICLES) l.particles.length = MAX_PARTICLES
         let idx = 0
         for (const p of l.particles) {
           const t = Math.min(1, Math.max(0, p.t))
           const pos = t < 0.5 ? l.curveA.getPoint(Math.min(1, t * 2)) : l.curveB.getPoint(Math.min(1, (t - 0.5) * 2))
-          dummy.position.copy(pos); dummy.updateMatrix()
+          dummy.position.copy(pos); dummy.scale.setScalar(p.big ? 2.8 : 1); dummy.updateMatrix()
           l.mesh.setMatrixAt(idx++, dummy.matrix)
         }
         l.mesh.count = idx
@@ -142,6 +143,10 @@
       renderer.render(scene, camera)
     }
     const state = { linkLevels: [] }
+    /** One bright comet along every link: out to the internet (dir 1) or back from it (dir -1). Used by the speed test as its start and landing. */
+    function flight(dir = 1) {
+      for (const l of links) l.particles.push({ dir, t: dir > 0 ? 0 : 1, speed: 0.55, big: true })
+    }
     function setTraffic(levels) {
       if (levels.length !== links.length) buildLinks(levels.length)
       state.linkLevels = levels
@@ -157,7 +162,7 @@
       if (dom.parentElement) dom.parentElement.removeChild(dom)
     }
     raf = requestAnimationFrame(render)
-    return { domElement: dom, resize, setTraffic, projectAnchors, dispose }
+    return { domElement: dom, resize, setTraffic, flight, projectAnchors, dispose }
   }
 
   root.JylliTwinNet = { create }
