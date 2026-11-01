@@ -87,7 +87,7 @@
       composer = null; bloom = null
       if (quality === 'static') return
       const full = quality === 'full'
-      const rt = new T.WebGLRenderTarget(8, 8, { type: T.HalfFloatType, samples: full ? 4 : 2 })
+      const rt = new T.WebGLRenderTarget(8, 8, { type: T.HalfFloatType, samples: 2 })
       composer = new A.EffectComposer(renderer, rt)
       composer.addPass(new A.RenderPass(scene, camera))
       bloom = new A.UnrealBloomPass(new T.Vector2(512, 512), 0.4, 0.55, 0.62)   // threshold keeps it to emissive rings and strips
@@ -308,13 +308,13 @@
     function setBoot(on) { boot = !!on; if (!on) bootT = 0 }
     function stepPulse(dt) { for (const e of parts.values()) if (e.pulse) e.pulse = Math.max(0, e.pulse - dt / 0.9) }
     /** Anchor of a part in CSS px relative to the canvas (null when it is behind the camera or unknown). */
+    const spV = new T.Vector3()
     function screenPos(id) {
       const e = parts.get(id); if (!e) return null
-      const box = new T.Box3().setFromCenterAndSize(new T.Vector3(...e.base), new T.Vector3(...e.p.size))
-      const c = box.getCenter(new T.Vector3()).project(camera)
-      if (c.z > 1) return null
-      const r = dom.getBoundingClientRect()
-      return { x: (c.x * 0.5 + 0.5) * r.width, y: (-c.y * 0.5 + 0.5) * r.height }
+      // the centre of a box built from base + size is just base; no per-call allocations
+      spV.set(e.base[0], e.base[1], e.base[2]).project(camera)
+      if (spV.z > 1) return null
+      return { x: (spV.x * 0.5 + 0.5) * cw, y: (-spV.y * 0.5 + 0.5) * ch }
     }
 
     // ── camera ────────────────────────────────────────────────────────────────────────────────────────────────────────
@@ -383,7 +383,7 @@
     }
     const centerSettled = () => !ctrT || (Math.abs(ctrT.x - ctrC.x) < 0.5 && Math.abs(ctrT.y - ctrC.y) < 0.5 && Math.abs(ctrT.z - ctrC.z) < 0.002)
     function resize(w, h, dpr) {
-      const pr = quality === 'full' ? Math.min(dpr || 1, 1.5) : 1, key = w + 'x' + h + '@' + pr
+      const pr = quality === 'full' ? Math.min(dpr || 1, 1.25) : 1, key = w + 'x' + h + '@' + pr
       if (key === lastSize) return   // re-attaching to a same-sized slot must not rebuild the MSAA/bloom targets
       lastSize = key; cw = w; ch = h
       renderer.setPixelRatio(pr)
@@ -391,11 +391,14 @@
       camera.aspect = w / Math.max(h, 1); camera.updateProjectionMatrix()
       if (composer) {
         composer.setPixelRatio(renderer.getPixelRatio()); composer.setSize(w, h)
-        if (bloom) bloom.resolution.set(w, h)
+        if (bloom) bloom.resolution.set(w >> 1, h >> 1)   // the glow is soft anyway: half resolution costs nothing visible
       }
     }
+    let shadowTick = 0
+    renderer.shadowMap.autoUpdate = false   // only the case fans move, so the shadow map is redrawn every third frame instead of every frame
     function render(dt) {
       stepCamera(dt); stepCenter(dt); stepReveal(dt); stepPulse(dt); applyState(dt)
+      if (shadowTick++ % 3 === 0) renderer.shadowMap.needsUpdate = true
       if (composer) composer.render(dt); else renderer.render(scene, camera)
     }
     function setAccent(rgb) {

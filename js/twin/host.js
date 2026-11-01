@@ -223,6 +223,14 @@
   }
 
   // ── frame loop ────────────────────────────────────────────────────────────────────
+  if (root.addEventListener && !H.inputBound) {
+    // any UI input counts as activity (the idle fps drop used to look only at the canvas), and scroll/resize move the hero window
+    H.inputBound = true
+    const act = () => { H.lastInput = Date.now() }
+    root.addEventListener('pointerdown', act, true); root.addEventListener('keydown', act, true); root.addEventListener('wheel', act, { capture: true, passive: true })
+    const dirty = () => { H.centerDirty = true }
+    root.addEventListener('scroll', dirty, { capture: true, passive: true }); root.addEventListener('resize', dirty)
+  }
   function startLoop() { if (H.loopId) return; H.lastFrame = performance.now(); H.loopId = requestAnimationFrame(tick) }
   function stopLoop() { if (H.loopId) cancelAnimationFrame(H.loopId); H.loopId = 0 }
   function tick(now) {
@@ -237,14 +245,16 @@
     if (fps === 0) { if (game) H.stats.gameSkipped++; return }
     const dt = (now - H.lastFrame) / 1000
     // a page without a hero window shows the rig only as dimmed depth: 10 fps is plenty (measured: full rate there cost more than Home)
-    const cap = H.worldSlot && !H.win && !H.boot && !H.interacting ? 10 : 1000
+    const cap = H.worldSlot && !H.win && !H.boot && !H.interacting ? 5 : 1000
     if (!H.probe && dt < 1 / Math.min(fps, cap) - 0.002) return   // uncapped while probing so the intervals show what the GPU can do
     H.lastFrame = now
     const snap = root.JylliTelemetry && (root.JylliTelemetry.state.override || root.JylliTelemetry.state.snap)
-    if (H.worldSlot) { syncCenter(); const live = H.state === 'live'; if (live !== H.wl) { H.wl = live; document.body.classList.toggle('world-live', live) } }
+    // rect reads are layout work: only on scroll/resize, while easing, or 4x/s
+    if (H.worldSlot) { if (H.centerDirty || now - (H.lastSync || 0) > 250 || !H.engine.settled()) { H.centerDirty = false; H.lastSync = now; syncCenter() } const live = H.state === 'live'; if (live !== H.wl) { H.wl = live; document.body.classList.toggle('world-live', live) } }
     if (snap && snap.seq !== H.lastSeq) { H.lastSeq = snap.seq; H.visual = Map_().visualState(snap); H.engine.setState(H.visual) }
     if (game) H.stats.gameRendered++
     H.engine.render(Math.min(dt, 0.1))
+    if (root.JylliCalloutsRT && root.JylliCalloutsRT.frame) root.JylliCalloutsRT.frame()   // leader lines move in the same frame as the rig
     if (H.probe) {
       if (document.visibilityState === 'visible' && dt > 0 && dt < 0.25) H.probe.frames.push(dt * 1000)
       if (performance.now() - H.probe.start > 2500 && H.probe.frames.length >= 30) {

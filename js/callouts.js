@@ -64,8 +64,13 @@
   }
   function teardown() { if (box) box.remove(); box = svg = null; items = [] }
 
+  // writes are diffed: setting an unchanged style or attribute still invalidates, so only real changes reach the DOM
+  const setA = (el, k, v) => { const s = typeof v === 'number' ? v.toFixed(1) : v; if (el._a === undefined) el._a = {}; if (el._a[k] !== s) { el._a[k] = s; el.setAttribute(k, s) } }
+  let lastT = 0
   function frame() {
     if (document.visibilityState !== 'visible') return   // nothing to draw (and nothing to project) while the window is hidden
+    const nowT = performance.now(); if (nowT - lastT < 8) return   // the host calls this after each render; the timer below is only the fallback
+    const dtMs = lastT ? Math.min(nowT - lastT, 200) : 50; lastT = nowT
     const win = root.JylliTwin && JylliTwin.win
     const on = !!(win && WINDOWS[win.id] && document.body.classList.contains('world-on') && document.body.classList.contains('world-live') && !document.body.classList.contains('game-live'))
     if (!on) { if (box) teardown(); lastWin = null; return }
@@ -75,22 +80,24 @@
     const anchors = items.map(i => { const a = JylliTwin.anchor(i.id); return a && { id: i.id, x: a.x, y: a.y } }).filter(Boolean)
     const size = sizeFor(rect)
     const pos = new Map(layout(anchors, rect, size).map(p => [p.id, p]))
+    // the same easing as before (a quarter of the gap per 50 ms), but independent of how often frames arrive
+    const k = root.JylliWorld && JylliWorld.reduced() ? 1 : 1 - Math.pow(0.75, dtMs / 50)
     for (const it of items) {
       const p = pos.get(it.id), a = anchors.find(x => x.id === it.id)
-      it.el.hidden = it.dot.style.display = it.line.style.display = !p ? 'none' : ''
-      if (!p) { it.el.hidden = true; continue }
-      it.el.hidden = false
+      const hide = !p
+      if (it.hid !== hide) { it.hid = hide; it.el.hidden = hide; it.dot.style.display = it.line.style.display = hide ? 'none' : '' }
+      if (hide) continue
       const heat = HEAT_KEY[it.id] && root.JylliTelemetry ? heatColor(JylliTelemetry.value(HEAT_KEY[it.id])) : ''
       if (heat !== it.heat) { it.heat = heat; it.el.style.setProperty('--heat', heat || 'transparent') }
-      it.el.classList.toggle('jx-co-compact', size.compact); it.el.style.width = size.w + 'px'; it.el.style.height = size.h + 'px'
-      const k = root.JylliWorld && JylliWorld.reduced() ? 1 : 0.25
+      if (it.sz !== size.w) { it.sz = size.w; it.el.classList.toggle('jx-co-compact', size.compact); it.el.style.width = size.w + 'px'; it.el.style.height = size.h + 'px' }
       it.p = it.p ? { x: it.p.x + (p.x - it.p.x) * k, y: it.p.y + (p.y - it.p.y) * k } : { x: p.x, y: p.y }
-      it.el.style.transform = `translate(${it.p.x.toFixed(1)}px,${it.p.y.toFixed(1)}px)`
+      const tr = `translate(${it.p.x.toFixed(1)}px,${it.p.y.toFixed(1)}px)`
+      if (it.tr !== tr) it.el.style.transform = it.tr = tr
       const ex = p.side === 'left' ? it.p.x + size.w : it.p.x, ey = it.p.y + size.h / 2
-      it.line.setAttribute('x1', ex); it.line.setAttribute('y1', ey); it.line.setAttribute('x2', a.x); it.line.setAttribute('y2', a.y)
-      it.dot.setAttribute('cx', a.x); it.dot.setAttribute('cy', a.y)
+      setA(it.line, 'x1', ex); setA(it.line, 'y1', ey); setA(it.line, 'x2', a.x); setA(it.line, 'y2', a.y)
+      setA(it.dot, 'cx', a.x); setA(it.dot, 'cy', a.y)
     }
   }
-  function start() { if (!tick) tick = setInterval(frame, 50) }
-  root.JylliCalloutsRT = { start, stop() { clearInterval(tick); tick = 0; teardown() } }
+  function start() { if (!tick) tick = setInterval(frame, 250) }
+  root.JylliCalloutsRT = { start, frame, stop() { clearInterval(tick); tick = 0; teardown() } }
 })(typeof window !== 'undefined' ? window : globalThis)

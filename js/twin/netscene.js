@@ -138,6 +138,7 @@
       if (!dom.isConnected) { raf = 0; return }   // the page was replaced: stop the loop instead of idling at 60 Hz forever
       raf = requestAnimationFrame(render)
       if (document.visibilityState !== 'visible') return
+      if (now - last < 15) return   // capped near 60 fps: a 144 Hz monitor gains nothing from more
       const dt = Math.min(0.1, (now - last) / 1000 || 0.016); last = now
       stepLinks(dt, state.linkLevels)
       renderer.render(scene, camera)

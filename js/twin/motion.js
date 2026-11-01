@@ -29,9 +29,9 @@
     if (setting === 'full' || setting === 'reduced') return setting
     return stored && LEVELS.includes(stored) ? stored : 'full'
   }
-  /** Probe result: p90 frame time in ms at the current level. Steps down one level when above 20 ms. */
+  /** Probe result: p90 frame time in ms at the current level. Steps down one level when above 18 ms. */
   function nextQuality(current, p90ms) {
-    if (!(p90ms > 20)) return current
+    if (!(p90ms > 18)) return current
     const i = LEVELS.indexOf(current)
     return LEVELS[Math.min(LEVELS.length - 1, i + 1)]
   }
