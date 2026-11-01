@@ -71,8 +71,8 @@
       const x = ptr ? bx + (ptr.x - bx) * 0.5 : bx, y = ptr ? by + (ptr.y - by) * 0.45 : by
       // every write restyles and repaints each card edge, so only move the light when it has travelled far enough to be seen
       if (scrollingUntil > performance.now()) return   // edges repaint on every scroll frame already; hold the light until the scroll settles
-      // only the cards read the variable, so it is set on the content area rather than the root (a root write restyles the whole app)
-      const host = document.querySelector('.j-main') || document.documentElement
+      // only the cards read the variable, so it is set on the page content rather than the root (a root write restyles the whole app)
+      const host = document.getElementById('page-content') || document.documentElement
       if (host === lightHost && Math.abs(x - lastLx) < 28 && Math.abs(y - lastLy) < 28) return
       lightHost = host; lastLx = x; lastLy = y
       const s = host.style
