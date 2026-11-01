@@ -95,3 +95,22 @@ test('tweakMeta reports main\'s tier', () => {
   const m = t.svc.tweakMeta(['a', 'danger', 'zzz'])
   assert.deepStrictEqual(m.map(x => [x.id, x.safetyTier]), [['a', 1], ['danger', 3]])
 })
+
+test('a rejected write marks the tweak partial, not applied', async () => {
+  const t = setup()
+  const origCmd = t.svc // eslint-disable-line no-unused-vars
+  const tweaks = { w: { name: 'W', safetyTier: 1, apply: async (s, ps, cmd, regAdd) => { await regAdd('HKLM', 'S', 'W', 'REG_DWORD', '1') } } }
+  const svc = createJournalService({
+    file: path.join(fsx.mkdtempSync(path.join(os.tmpdir(), 'js-')), 'j.jsonl'),
+    runPS: async () => ({ ok: true, out: '' }),
+    runCmd: async c => /^reg add/.test(c) ? { ok: false, out: '', err: 'ERROR: Access is denied.', code: 1 } : { ok: true, out: '' },
+    tweaks, hasTweak: id => !!tweaks[id], isPlanExcluded: () => false, requiresPremium: () => true,
+    createRestorePoint: async () => ({ ok: true }), emit: () => {}, loadSettings: () => ({}), saveSettings: () => {},
+  })
+  let failed = null
+  await svc.invokeTweak('w', 'apply', () => {}, { onFailures: f => { failed = f } })
+  assert.strictEqual(failed.length, 1)
+  const r = await svc.applyBatch({ items: [{ tweakId: 'w', action: 'apply' }], restorePoint: 'never' })
+  assert.strictEqual(r.items[0].status, 'partial')
+  assert.deepStrictEqual(r.settingsPatch, {})
+})

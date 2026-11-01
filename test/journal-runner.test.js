@@ -45,3 +45,25 @@ test('ps wrapper falls back when a proxy cannot bind parameters', async () => {
   assert.strictEqual(r.out, 'done')
   assert.ok(rec.finish().changes.some(c => c.kind === 'unresolved'))
 })
+
+test('outcome separates hard failures from benign non-zero exits', async () => {
+  const runCmd = async (c) => {
+    if (/^reg add/.test(c)) return { ok: false, out: '', err: 'ERROR: Access is denied.', code: 1 }
+    if (/^reg delete/.test(c)) return { ok: false, out: '', err: 'ERROR: The system was unable to find the specified registry key or value.', code: 1 }
+    return { ok: true, out: '' }
+  }
+  const rec = createRecorder({ runPS: async () => ({ ok: false, out: '', err: 'Cannot find any service with service name Foo', code: 1 }), runCmd })
+  await rec.regAdd('HKLM', 'SK', 'V', 'REG_DWORD', '1')
+  await rec.regDelete('HKLM', 'SK', 'Gone')
+  await rec.ps('Stop-Service Foo')
+  const { failures, warnings } = rec.outcome()
+  assert.strictEqual(failures.length, 1)
+  assert.match(failures[0].err, /Access is denied/)
+  assert.strictEqual(warnings.length, 2)
+})
+
+test('a rejected reg add is a hard failure even without an error text', async () => {
+  const rec = createRecorder({ runPS: async () => ({ ok: true, out: '' }), runCmd: async (c) => /^reg add/.test(c) ? { ok: false, out: '', err: '', code: 1 } : { ok: true, out: '' } })
+  await rec.regAdd('HKLM', 'SK', 'V', 'REG_DWORD', '1')
+  assert.strictEqual(rec.outcome().failures.length, 1)
+})

@@ -529,23 +529,6 @@ function toggleFivemSection(idx) {
   }
 }
 
-function copyFivemReport() {
-  const allIds = [
-    'fivem-priority','fivem-io-priority','fivem-mmcss','fivem-fso','fivem-gamebar',
-    'fivem-gpu','fivem-network','fivem-vm','fivem-streaming-mem','fivem-commandline',
-    'fivem-worker-threads','fivem-disable-crash-reporter','fivem-disable-anticheat-upload',
-    'fivem-disable-update-checks','fivem-preload-ipl','fivem-reduce-draw-distance',
-    'fivem-defender','fivem-hang-fix','fivem-mouse-accel','fivem-power-plan',
-  ]
-  const s = settings || {}
-  const applied = allIds.filter(id => s[`tweak_${id}`] === 'applied')
-  const score = calcOptScore(s)
-  const text = `${tUI('fivemReportHeader')}\n${tUI('fivemReportApplied')}: ${applied.join(', ') || 'none'}\n${tUI('fivemReportScore')}: ${score}\n${tUI('fivemReportGenerated')}: ${new Date().toLocaleString()}`
-  navigator.clipboard.writeText(text)
-    .then(() => toast('', tUI('fivemReportCopied'), 'success', 2500))
-    .catch(() => toast('', tUI('fivemReportCopied').replace('✓', '✗'), 'error', 2500))
-}
-
 let _fivemLogLines = []
 async function loadFivemLog() {
   const box = document.getElementById('fivem-log-box')

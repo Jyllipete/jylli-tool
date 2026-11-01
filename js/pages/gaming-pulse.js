@@ -75,7 +75,7 @@ async function buildPulse(c) {
         <div class="j-muted">${tUI('pulseSubtitle')}</div>
       </div>
       <span id="pulse-status-badge" class="pulse-status-badge j-badge j-badge-ok" style="display:none">${tUI('pulseActive')}</span>
-      ${ui.button({ label: tUI('pulseLiveMonitor'), icon: 'arrow-up-right-from-square', variant: 'ghost', size: 'sm', onclick: 'api.openPulseWindow()' })}
+      ${ui.button({ label: tUI('pulseLiveMonitor'), icon: 'arrow-up-right-from-square', variant: 'ghost', size: 'sm', onclick: 'openPulseLive()' })}
     </div>
 
     <div id="pulse-score-row" class="j-pu-score" style="display:none">

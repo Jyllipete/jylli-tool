@@ -128,12 +128,6 @@ function _promptModalResolve() {
   document.getElementById('confirm-modal-ok').onclick = _confirmModalResolve
   if (_promptResolve) { _promptResolve(val); _promptResolve = null }
 }
-function _promptModalCancel() {
-  _closeModal('confirm-modal')
-  document.getElementById('confirm-modal-ok').onclick = _confirmModalResolve
-  if (_promptResolve) { _promptResolve(null); _promptResolve = null }
-}
-
 // ─── What's New ───────────────────────────────────────────────────────────────
 let _wnData = null
 
@@ -335,10 +329,19 @@ function shakeInput(el) {
 
 // ─── Theme color helpers ──────────────────────────────────────────────────────
 function pinkRgb() { return getComputedStyle(document.documentElement).getPropertyValue('--pink-rgb').trim() || '124,110,248' }
-function pinkHex() { return getComputedStyle(document.documentElement).getPropertyValue('--pink').trim() || '#7C6EF8' }
 function pinkA(a) { return `rgba(${pinkRgb()},${a})` }
 
 // ─── Toast Notification System ────────────────────────────────────────────────
+// A rejected promise nobody caught means an action probably did not finish: log it, and tell the user at most once every 10s.
+let _lastRejectToast = 0
+window.addEventListener('unhandledrejection', e => {
+  try { console.error('[unhandledrejection]', e.reason) } catch {}
+  const now = Date.now()
+  if (now - _lastRejectToast < 10000) return
+  _lastRejectToast = now
+  try { toast(tUI('unexpectedErrorTitle'), String((e.reason && e.reason.message) || e.reason || '').slice(0, 200), 'err', 6000) } catch {}
+})
+
 function toast(title, msg = '', type = 'ok', duration = 3500, opts) {
   if (window.JylliToast) return JylliToast.show(title, msg, type, duration, opts || {})   // 4.0 toast (js/ui4/toast.js); everything below is the fallback
   const typeMap = { success: 'ok', error: 'err' }

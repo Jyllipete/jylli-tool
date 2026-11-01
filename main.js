@@ -41,6 +41,8 @@ let LOG_PATH = null
 
 let mainWindow = null
 let pulseWindow = null
+// pulse.html listens to a few live events that are produced for the main window; mirror them to it while it is open.
+const sendToPulse = (ch, payload) => { try { if (pulseWindow && !pulseWindow.isDestroyed()) pulseWindow.webContents.send(ch, payload) } catch {} }
 let fivemSettingsWindow = null
 let fivemHudWindow = null
 let tray = null
@@ -492,6 +494,7 @@ app.on('web-contents-created', (_, contents) => {
 const { createAuth } = require('./lib/auth')
 const { createSnapshotStore } = require('./lib/snapshot')
 const { createJournalService } = require('./lib/journal-service')
+const { createRestorePointService } = require('./lib/restore-point')
 const JylliScore = require('./js/score')
 const { createHub } = require('./lib/telemetry-hub')
 const { createTelemetryService } = require('./lib/telemetry-service')
@@ -683,6 +686,19 @@ function webhookBugReport({ title, description, steps, page }) {
       hasFiveM:       hasFiveM,
     }, { force: true })
   } catch {}
+}
+
+// Every handler runs inside this guard: a throw (bad argument, unexpected null) becomes { ok:false, error } instead of a rejected
+// invoke() that the renderer may not catch. Handlers keep their own { ok, error } results; this only covers what they did not foresee.
+{
+  const rawHandle = ipcMain.handle.bind(ipcMain)
+  ipcMain.handle = (channel, fn) => rawHandle(channel, async (event, ...args) => {
+    try { return await fn(event, ...args) } catch (e) {
+      debugLog('[ipc] ' + channel + ' threw: ' + (e && e.stack || e))
+      try { startupTrace('ipc ' + channel + ' threw: ' + (e && e.message || e)) } catch {}
+      return { ok: false, error: String((e && e.message) || e).slice(0, 300), threw: true }
+    }
+  })
 }
 
 ipcMain.handle('submit-bug-report', (_, data) => {
@@ -1024,6 +1040,14 @@ function createWindow() {
   })
 }
 
+// Applies one tweak of a game bundle and records why it did not apply, so the bundle is only reported as active when it really is.
+async function bundleApply(id, fails) {
+  let failed = null
+  try { await invokeTweak(id, 'apply', () => {}, { via: 'game-watcher', onFailures: f => { failed = f } }) }
+  catch (e) { fails.push({ id, error: String((e && e.message) || e).slice(0, 200) }); return }
+  if (failed) fails.push({ id, error: failed.map(f => f.err).join('; ').slice(0, 200) })
+}
+
 function updateTrayMenu() {
   if (!tray) return
   const pulseOn = !!pulseActivePreset
@@ -1037,6 +1061,7 @@ function updateTrayMenu() {
     click: async () => {
       const send = (msg, level) => mainWindow?.webContents.send('log', { msg, level, ts: new Date().toLocaleTimeString() })
       send(`◆ Loading bundle: ${b.name}…`, 'head')
+      const bundleFails = []
       // Apply tweak profile
       if (b.tweakProfileName) {
         const profiles = loadProfiles()
@@ -1045,7 +1070,7 @@ function updateTrayMenu() {
           for (const [k, v] of Object.entries(profile.tweaks)) {
             if (v === 'applied') {
               const tweakId = k.replace(/^tweak_/, '')
-              if (hasTweak(tweakId) && !isPlanExcluded(tweakId)) await invokeTweak(tweakId, 'apply', () => {}, { via: 'game-watcher' }).catch(() => {})
+              if (hasTweak(tweakId) && !isPlanExcluded(tweakId)) await bundleApply(tweakId, bundleFails)
             }
           }
         }
@@ -1055,7 +1080,8 @@ function updateTrayMenu() {
         await activatePulse(b.pulsePreset, false, send).catch(() => {})
         mainWindow?.webContents.send('tray-pulse-changed', { active: true, presetId: b.pulsePreset })
       }
-      send(`✓ Bundle "${b.name}" activated.`, 'ok')
+      if (bundleFails.length) send(`⚠ Bundle "${b.name}" activated, but ${bundleFails.length} tweak(s) did not apply: ${bundleFails.map(f => f.id).join(', ')}`, 'warn')
+      else send(`✓ Bundle "${b.name}" activated.`, 'ok')
       mainWindow?.webContents.send('game-bundle-activated', { name: b.name })
       updateTrayMenu()
     },
@@ -1380,15 +1406,18 @@ function regDelete(hive, path_, name) {
 
 const STARTUP_TASK_NAME = 'Jylli Tool Startup'
 async function setStartupTask(enabled) {
-  if (!IS_WIN) return
+  if (!IS_WIN) return { ok: true, skipped: true }
   if (enabled) {
-    if (!app.isPackaged) return
+    if (!app.isPackaged) return { ok: true, skipped: true }
     const exe = process.execPath.replace(/"/g, '\\"')
-    await runCmd(`schtasks /create /tn "${STARTUP_TASK_NAME}" /tr "\\"${exe}\\"" /sc ONLOGON /rl HIGHEST /f`)
+    const cr = await runCmd(`schtasks /create /tn "${STARTUP_TASK_NAME}" /tr "\\"${exe}\\"" /sc ONLOGON /rl HIGHEST /f`)
+    if (!cr.ok) { startupTrace(`setStartupTask(true) err: ${cr.err}`); return { ok: false, error: cr.err || 'schtasks failed' } }
+    return { ok: true }
   } else {
     const r = await runCmd(`schtasks /delete /tn "${STARTUP_TASK_NAME}" /f`)
     if (!r.ok && !r.out.includes('cannot find') && !r.err.includes('cannot find'))
       startupTrace(`setStartupTask(false) err: ${r.err}`)
+    return { ok: r.ok || /cannot find/i.test(r.out + r.err), error: r.ok ? undefined : r.err }
   }
 }
 
@@ -1481,16 +1510,25 @@ function loadSettings() {
     return {}
   }
 }
-let _settingsBakAt = 0
+let _settingsBakAt = 0, _settingsFailAt = 0
+/** Returns true when the file was written. A failed write is told to the user (at most once a minute) instead of only going to the debug log. */
 function saveSettings(data) {
   try {
-    if (!data || typeof data !== 'object' || Array.isArray(data)) return
+    if (!data || typeof data !== 'object' || Array.isArray(data)) return false
     // keep the previous good file as .bak (at most once a minute — a copy per save would double the writes)
     if (Date.now() - _settingsBakAt > 60000 && fs.existsSync(SETTINGS_PATH)) { try { fs.copyFileSync(SETTINGS_PATH, SETTINGS_PATH + '.bak'); _settingsBakAt = Date.now() } catch {} }
     const tmp = SETTINGS_PATH + '.tmp'
     fs.writeFileSync(tmp, JSON.stringify(data, null, 2))
     fs.renameSync(tmp, SETTINGS_PATH)
-  } catch (e) { debugLog(`[Settings] Save failed: ${e.message}`) }
+    return true
+  } catch (e) {
+    debugLog(`[Settings] Save failed: ${e.message}`)
+    if (Date.now() - _settingsFailAt > 60000) {
+      _settingsFailAt = Date.now()
+      try { mainWindow?.webContents.send('log', { msg: 'Settings could not be saved (' + String(e.message).slice(0, 120) + '). Your last change may be lost after a restart.', level: 'err', ts: new Date().toLocaleTimeString() }) } catch {}
+    }
+    return false
+  }
 }
 
 // ─── System Info Detection ────────────────────────────────────────────────────
@@ -2065,8 +2103,8 @@ ipcMain.handle('save-settings', (_, data) => {
   clean = mergeIncoming(clean, _settingsWriteLog.recent())
   const current = loadSettings()
   for (const k of MAIN_OWNED_SETTINGS) { if (k in current) clean[k] = current[k]; else delete clean[k] }
-  saveSettings(clean)
-  return true
+  return saveSettings(clean)
+
 })
 // IRQ affinity is not implemented in main. These answer "unsupported" so the renderer hides the panel instead of failing silently.
 ipcMain.handle('irq-get-status', () => ({ unsupported: true, active: false }))
@@ -2082,8 +2120,14 @@ let PROFILES_PATH = null
 function loadProfiles() {
   try { return JSON.parse(fs.readFileSync(PROFILES_PATH, 'utf8')) } catch { return {} }
 }
+/** Atomic write (temp file + rename). Returns false when the profiles file could not be written, so callers can say so. */
 function saveProfiles(data) {
-  try { fs.writeFileSync(PROFILES_PATH, JSON.stringify(data, null, 2), 'utf8') } catch (_) {}
+  try {
+    const tmp = PROFILES_PATH + '.tmp'
+    fs.writeFileSync(tmp, JSON.stringify(data, null, 2), 'utf8')
+    fs.renameSync(tmp, PROFILES_PATH)
+    return true
+  } catch (e) { debugLog('[profiles] save failed: ' + e.message); return false }
 }
 ipcMain.handle('list-profiles', () => {
   if (!requiresPremium('list-profiles')) return {}
@@ -2093,7 +2137,7 @@ ipcMain.handle('save-profile', (_, { name, tweaks }) => {
   if (!requiresPremium('save-profile')) return { ok: false, reason: 'premium_required' }
   const profiles = loadProfiles()
   profiles[name] = { version: 1, name, tweaks, rollbackData: {}, savedAt: Date.now() }
-  saveProfiles(profiles)
+  if (!saveProfiles(profiles)) return { ok: false, error: 'profiles_write_failed' }
   return { ok: true }
 })
 ipcMain.handle('load-profile', (_, name) => {
@@ -2112,7 +2156,7 @@ ipcMain.handle('delete-profile', (_, name) => {
     ? Object.values(profile.tweaks || {}).some(v => v === 'applied')
     : false
   delete profiles[name]
-  saveProfiles(profiles)
+  if (!saveProfiles(profiles)) return { ok: false, error: 'profiles_write_failed' }
   return { ok: true, hadAppliedTweaks }
 })
 
@@ -2122,17 +2166,18 @@ ipcMain.handle('clone-profile', (_, { name, newName }) => {
   if (!profiles[name]) return { ok: false, error: 'Source profile not found' }
   if (profiles[newName]) return { ok: false, error: 'Name already exists' }
   profiles[newName] = { ...profiles[name], name: newName, savedAt: Date.now() }
-  saveProfiles(profiles)
+  if (!saveProfiles(profiles)) return { ok: false, error: 'profiles_write_failed' }
   return { ok: true }
 })
 
 ipcMain.handle('rename-profile', (_, { name, newName }) => {
+  if (!requiresPremium('rename-profile')) return { ok: false, reason: 'premium_required' }
   const profiles = loadProfiles()
   if (!profiles[name]) return { ok: false, error: 'Profile not found' }
   if (profiles[newName]) return { ok: false, error: 'Name already exists' }
   profiles[newName] = { ...profiles[name], name: newName }
   delete profiles[name]
-  saveProfiles(profiles)
+  if (!saveProfiles(profiles)) return { ok: false, error: 'profiles_write_failed' }
   return { ok: true }
 })
 
@@ -2167,7 +2212,7 @@ ipcMain.handle('import-profile', async () => {
     const profiles = loadProfiles()
     const targetName = profiles[data.name] ? `${data.name} (imported)` : data.name
     profiles[targetName] = { ...data, name: targetName, savedAt: Date.now() }
-    saveProfiles(profiles)
+    if (!saveProfiles(profiles)) return { ok: false, error: 'profiles_write_failed' }
     return { ok: true, name: targetName }
   } catch (e) {
     return { ok: false, error: e.message }
@@ -2190,7 +2235,7 @@ ipcMain.handle('save-game-bundle', (_, bundle) => {
   if (!bundle || !bundle.name) return { ok: false, error: 'Bundle must have a name' }
   const profiles = loadProfiles()
   profiles[bundle.name] = { ...bundle, type: 'gameBundle', savedAt: Date.now() }
-  saveProfiles(profiles)
+  if (!saveProfiles(profiles)) return { ok: false, error: 'profiles_write_failed' }
   return { ok: true }
 })
 
@@ -2198,7 +2243,7 @@ ipcMain.handle('delete-game-bundle', (_, name) => {
   const profiles = loadProfiles()
   if (!profiles[name] || profiles[name].type !== 'gameBundle') return { ok: false, error: 'Bundle not found' }
   delete profiles[name]
-  saveProfiles(profiles)
+  if (!saveProfiles(profiles)) return { ok: false, error: 'profiles_write_failed' }
   return { ok: true }
 })
 
@@ -2208,6 +2253,7 @@ ipcMain.handle('load-game-bundle', async (_, name) => {
   if (!bundle || bundle.type !== 'gameBundle') return { ok: false, error: 'Bundle not found' }
 
   const results = {}
+  const bundleFails = []
 
   // Apply tweak profile if assigned
   if (bundle.tweakProfileName) {
@@ -2217,11 +2263,11 @@ ipcMain.handle('load-game-bundle', async (_, name) => {
         if (v === 'applied') {
           const tweakId = k.replace(/^tweak_/, '')
           if (hasTweak(tweakId) && !isPlanExcluded(tweakId)) {
-            await invokeTweak(tweakId, 'apply', () => {}, { via: 'game-watcher' }).catch(() => {})
+            await bundleApply(tweakId, bundleFails)
           }
         }
       }
-      results.tweakProfile = { ok: true, name: bundle.tweakProfileName }
+      results.tweakProfile = { ok: bundleFails.length === 0, name: bundle.tweakProfileName, failed: bundleFails }
     }
   }
 
@@ -2326,8 +2372,10 @@ ipcMain.handle('run-tweak', async (_, req) => {
 
   if (!hasTweak(id, action)) return { ok: false, error: 'unknown_tweak_or_action' }
   try {
-    let entry = null
-    const result = await invokeTweak(id, action, send, { onEntry: e => { entry = e } })
+    if (action === 'apply') { const blocked = await guardRestorePoint(id, send); if (blocked) return blocked }
+    let entry = null, failed = null
+    const result = await invokeTweak(id, action, send, { onEntry: e => { entry = e }, onFailures: f => { failed = f } })
+    if (failed) return { ok: false, partial: true, error: failed.map(f => f.err).join('; ').slice(0, 300), failures: failed, journalId: entry ? entry.id : null, fidelity: entry ? entry.fidelity : 'intent' }
     return { ok: true, result, journalId: entry ? entry.id : null, fidelity: entry ? entry.fidelity : 'intent' }
   } catch (e) {
     send(`Error in ${id}: ${e.message}`, 'err')
@@ -2550,45 +2598,34 @@ ipcMain.handle('set-low-resource-mode', () => {})
 
 // ─── Restore Points ───────────────────────────────────────────────────────────
 
-// Shared helper: clear policy blocks, enable SR on C:\, and reset creation frequency.
-// Used by both manual and auto-snapshot creation paths so they are equally robust.
-async function ensureSREnabled(send) {
-  send('Enabling System Restore on C:\\…', 'info')
-  await runPS(`
-    Remove-ItemProperty -Path 'HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows NT\\SystemRestore' -Name 'DisableSR' -ErrorAction SilentlyContinue
-    Remove-ItemProperty -Path 'HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows NT\\SystemRestore' -Name 'DisableConfig' -ErrorAction SilentlyContinue
-    Set-ItemProperty -Path 'HKLM:\\SYSTEM\\CurrentControlSet\\Services\\VSS' -Name 'Start' -Value 2 -Type DWord -ErrorAction SilentlyContinue
-    Enable-ComputerRestore -Drive 'C:\\' -ErrorAction SilentlyContinue
-  `)
-  await regAdd('HKLM', 'SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\SystemRestore', 'SystemRestorePointCreationFrequency', 'REG_DWORD', '0')
+// One restore point implementation (lib/restore-point.js): admin check, confirms a new sequence number really appeared, restores
+// the throttle and VSS settings it touched. Used by the manual button, auto-snapshot, Auto-Optimize and the batch pipeline.
+const _restorePointSvc = createRestorePointService({ runPS })
+async function createRestorePointInternal(send, desc = 'JylliTool_AutoOpti') {
+  const r = await _restorePointSvc.create(desc, send)
+  if (r.ok) { const s = loadSettings(); s.lastRestorePointAt = Date.now(); saveSettings(s) }
+  return r.ok ? r : { ...r, error: r.reason }
+}
+
+// Risky single actions (tier 2+) need a restore point no older than RP_FRESH_MS. No restore point, no change: the caller
+// gets { ok:false, restorePointRequired:true, reason, guidance } and the tweak is never run.
+const RP_FRESH_MS = 6 * 3600 * 1000
+async function guardRestorePoint(id, send) {
+  const tier = TWEAKS[id]?.safetyTier ?? 3
+  if (tier < 2) return null
+  const last = loadSettings().lastRestorePointAt
+  if (last && Date.now() - last < RP_FRESH_MS) return null
+  send('This change is not trivial to undo: creating a restore point first…', 'info')
+  const rp = await createRestorePointInternal(send, 'JylliTool_Before_' + id)
+  if (rp.ok) return null
+  send('Nothing was changed because the restore point could not be created.', 'err')
+  return { ok: false, restorePointRequired: true, error: rp.reason, reason: rp.reason, code: rp.code, guidance: rp.guidance }
 }
 
 ipcMain.handle('create-restore-point', async (_, desc) => {
   const send = (msg, level) => mainWindow?.webContents.send('log', { msg, level, ts: new Date().toLocaleTimeString() })
   send('Creating System Restore Point…', 'head')
-
-  // Sanitize description for safe embedding in PS single-quoted strings.
-  // Strip chars that have no business in a restore point label, cap length.
-  const safeDesc = escapePSSingleQuote(
-    (desc || 'JylliTool_Restore').replace(/[^\w\s.\-_]/g, '').slice(0, 80) || 'JylliTool_Restore'
-  )
-
-  await ensureSREnabled(send)
-  try {
-    const r = await runPS(`Checkpoint-Computer -Description '${safeDesc}' -RestorePointType MODIFY_SETTINGS -ErrorAction Stop`)
-    if (r.ok) { send('✓ Restore Point created!', 'ok'); return { ok: true } }
-
-    // WMI fallback
-    const r2 = await runPS(`(Get-WmiObject -Class SystemRestore -Namespace root\\default).CreateRestorePoint('${safeDesc}',12,100)`)
-    if (r2.ok) { send('✓ Restore Point created (WMI)!', 'ok'); return { ok: true } }
-
-    send(`Restore Point failed: ${r.err}`, 'err')
-    send('Tip: Run as Admin and ensure C:\\ drive protection is ON.', 'info')
-    return { ok: false, error: r.err }
-  } finally {
-    // ensureSREnabled lifts Windows' "one restore point per 24h" limit only for the duration of this request
-    await regDelete('HKLM', 'SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\SystemRestore', 'SystemRestorePointCreationFrequency').catch(() => {})
-  }
+  return createRestorePointInternal(send, desc || 'JylliTool_Restore')
 })
 
 ipcMain.handle('list-restore-points', async () => {
@@ -2597,7 +2634,7 @@ ipcMain.handle('list-restore-points', async () => {
   try {
     const data = JSON.parse(r.out)
     return Array.isArray(data) ? data : [data]
-  } catch (e) { return { error: e.message } }
+  } catch (e) { return [] }
 })
 
 ipcMain.handle('restore-to-point', async (_, seq) => {
@@ -3313,7 +3350,10 @@ ipcMain.handle('fivem-write-settings', async (_, changes, manualPath) => {
   try {
     fs.writeFileSync(settingsPath + '.bak.tmp', content, 'utf8')
     fs.renameSync(settingsPath + '.bak.tmp', settingsPath + '.bak')
-  } catch (_) {}
+  } catch (e) {
+    // No backup, no write: the auto-restore below would otherwise copy back a stale .bak from an earlier session.
+    return { ok: false, reason: 'Could not back up gta5_settings.xml first (' + String(e.message).slice(0, 100) + '). Nothing was changed.' }
+  }
 
   if (!changes || typeof changes !== 'object' || Array.isArray(changes)) return { ok: false, reason: 'invalid_request' }
   let changedCount = 0
@@ -3396,7 +3436,9 @@ ipcMain.handle('fivem-ini-batch', async (_, changes) => {
   if (content === null) return { ok: false, reason: 'Could not read CitizenFX.ini' }
   // Atomic backup before writing — matches the safety pattern used by fivem-write-settings
   const bakPath = p + '.bak'
-  try { fs.writeFileSync(bakPath + '.tmp', content, 'utf8'); fs.renameSync(bakPath + '.tmp', bakPath) } catch {}
+  try { fs.writeFileSync(bakPath + '.tmp', content, 'utf8'); fs.renameSync(bakPath + '.tmp', bakPath) } catch (e) {
+    return { ok: false, reason: 'Could not back up CitizenFX.ini first (' + String(e.message).slice(0, 100) + '). Nothing was changed.' }
+  }
   const updated = applyIniChanges(content, changes, { restrict: true })
   return writeCitizenFXIni(updated) ? { ok: true } : { ok: false, reason: 'Could not write CitizenFX.ini' }
 })
@@ -3998,6 +4040,7 @@ function journalSvc() {
 }
 // Every tweak run is recorded in the change journal (real before/after values). meta: { via, batchId } for non-manual callers.
 async function invokeTweak(id, action = 'apply', send, meta) {
+  retireTweaks()
   if (!hasTweak(id, action)) throw new Error(`Unknown tweak or action: ${String(id).slice(0, 60)}/${String(action).slice(0, 12)}`)
   const log = send || ((msg, level = 'info') => mainWindow?.webContents.send('log', { msg, level, ts: new Date().toLocaleTimeString(), source: id }))
   return journalSvc().invokeTweak(id, action, log, meta)
@@ -4255,7 +4298,7 @@ async function restoreMaxPerfPlan({ s, cmd }) {
 
 /** Class sub-keys (0000, 0001 …) of display adapters whose driver is from the given vendor — vendor tweaks used to be written blindly to 0000/0001. */
 async function gpuClassIndexes(ps, vendor) {
-  const rx = vendor === 'nvidia' ? 'NVIDIA' : 'AMD|Advanced Micro Devices|ATI|Radeon'
+  const rx = require('./lib/gpu-vendor').vendorPattern(vendor)
   const r = await ps(`
     Get-ChildItem 'HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Class\\{4d36e968-e325-11ce-bfc1-08002be10318}' -EA SilentlyContinue | ForEach-Object {
       if ($_.PSChildName -notmatch '^\\d{4}$') { return }
@@ -4268,7 +4311,31 @@ async function gpuClassIndexes(ps, vendor) {
 
 // Actions rather than persistent tweaks, or choices that belong to the user (which DNS provider, wiping logs/history,
 // deleting Windows.old, resetting the network stack, rebooting). They are NEVER part of an automatic plan, in any mode.
-const PLAN_EXCLUDED_IDS = new Set(['reboot-now', 'winsock-reset', 'disable-ipv6', 'clean-browser-history', 'clean-eventlogs', 'clean-old-windows', 'clean-winsxs'])
+// Tweaks that do nothing measurable on Windows 10/11 (or only matter on servers / 32-bit / Windows 7). Their Apply now refuses with the reason, so nobody
+// pays a restore point, a reboot or a risk for a placebo; Restore still works, so anyone who applied them earlier can put the original back.
+const RETIRED_TWEAKS = {
+  'large-system-cache':        'LargeSystemCache only changes behaviour on Windows Server; client Windows ignores it.',
+  'disable-paging-executive':  'DisablePagingExecutive has no measurable effect on modern Windows with plenty of RAM.',
+  'pool-usage-max':            'PoolUsageMaximum is ignored by 64-bit Windows.',
+  'net-max-ports':             'A larger dynamic port range does not help games and can collide with services on ports 10000-49151.',
+  'tcp-timedwait':             'TcpTimedWaitDelay only shortens TIME_WAIT; it does not reduce game latency or frame drops.',
+  'tcp-task-offload':          'Writes the value Windows already uses by default.',
+  'tsc-sync':                  'tscsyncpolicy has no measurable effect on modern CPUs.',
+  'hpet':                      'Forcing platform tick / disabling dynamic tick raises power use and can add timer jitter; modern Windows picks the right timer itself.',
+}
+let _retiredApplied = false
+function retireTweaks() {
+  if (_retiredApplied) return
+  _retiredApplied = true
+  for (const [id, why] of Object.entries(RETIRED_TWEAKS)) {
+    const t = TWEAKS[id]; if (!t || t.retired) continue
+    t.retired = why
+    t.safetyTier = 1   // applying it changes nothing, so it must not demand a restore point
+    // Refusing (instead of pretending to succeed) keeps the UI from marking a no-op as APPLIED.
+    t.apply = async () => { throw new Error(`Retired: ${why} Nothing was changed.`) }
+  }
+}
+const PLAN_EXCLUDED_IDS = new Set([...Object.keys(RETIRED_TWEAKS), 'reboot-now', 'winsock-reset', 'disable-ipv6', 'clean-browser-history', 'clean-eventlogs', 'clean-old-windows', 'clean-winsxs'])
 const isPlanExcluded = id => PLAN_EXCLUDED_IDS.has(id) || id.startsWith('fix-') || id.startsWith('dns-')
 
 function buildRunPlan(runMode, ctx, sysInfo, appliedIds = new Set()) {
@@ -4479,37 +4546,6 @@ async function runAutoOptiInner(sysInfo, batchId = null) {
   const includedFiveM  = (selected || []).some(id => id.startsWith('fivem-'))
   sessionTweaksCount  += tweakCount
   return { ok: true, failedTasks, failed: failedTasks, appliedIds, alreadyIds, skippedIds, restorePointName: 'JylliTool_AutoOpti', batchId }
-}
-
-async function createRestorePointInternal(send) {
-  await ensureSREnabled(send)
-
-  // Attempt to create the restore point with WMI fallback
-  const r = await runPS(`
-    try {
-      Checkpoint-Computer -Description "JylliTool_AutoOpti" -RestorePointType MODIFY_SETTINGS -ErrorAction Stop
-      Write-Output "RP_OK"
-    } catch {
-      try {
-        $wmi = Get-WmiObject -Class SystemRestore -Namespace root\\default
-        $wmi.CreateRestorePoint("JylliTool_AutoOpti", 12, 100) | Out-Null
-        Write-Output "RP_OK"
-      } catch {
-        Write-Output "RP_FAIL:$($_.Exception.Message)"
-      }
-    }
-  `)
-  const out = r.out?.trim() || ''
-  // The script catches its own errors and exits 0, so r.ok proves nothing — only the RP_OK marker does.
-  await regDelete('HKLM', 'SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\SystemRestore', 'SystemRestorePointCreationFrequency').catch(() => {})   // back to the 24h Windows default
-  if (out.startsWith('RP_OK')) {
-    send('✓ Restore Point created — system is safe to optimise.', 'ok')
-    return { ok: true }
-  }
-  const reason = out.replace('RP_FAIL:', '') || r.err || 'Unknown error'
-  send(`✗ Restore Point failed: ${reason}`, 'err')
-  send('  To fix: open Control Panel → System → System Protection → enable protection on C:', 'info')
-  return { ok: false, reason }
 }
 
 // Curated baseline used when no explicit tweak list is passed. Ids only: every step runs through invokeTweak(), i.e. exactly the same
@@ -5848,7 +5884,7 @@ const TWEAKS = {
     gamerImpact: 'low',
     apply: async (s, ps) => {
       const paths = [
-        process.env.TEMP, 'C:\\Windows\\Temp', 'C:\\Windows\\Prefetch',
+        process.env.TEMP, 'C:\\Windows\\Temp',
         'C:\\Windows\\SoftwareDistribution\\Download'
       ]
       for (const p of paths.filter(Boolean)) {
@@ -6008,9 +6044,8 @@ const TWEAKS = {
         await ps(`Remove-Item -Path '${p}' -Force -EA SilentlyContinue`)
         s(`  ${name}: cleared`, 'ok')
       }
-      // Firefox profiles — clear places.sqlite
-      await ps(`Get-ChildItem "$env:APPDATA\\Mozilla\\Firefox\\Profiles" -Filter "places.sqlite" -Recurse -EA SilentlyContinue | Remove-Item -Force -EA SilentlyContinue`)
-      s('Browser history and cookies cleared.', 'ok')
+      // Firefox keeps bookmarks in places.sqlite together with history, so it is left alone (clearing it would delete the user's bookmarks).
+      s('Chrome/Edge/Brave history cleared. Firefox is left untouched because its history and bookmarks share one file.', 'ok')
     },
     restore: async (s) => s('Browser history cannot be restored.', 'info')
   },
@@ -6591,10 +6626,8 @@ const TWEAKS = {
     safetyTier: 1,
     gamerImpact: 'low',
     apply: async (s) => {
-      const content = readCitizenFXIni()
-      if (content === null) { s('CitizenFX.ini not found.', 'warn'); return }
-      if (!writeCitizenFXIni(applyIniChanges(content, { UpdateChannel: 'canary' }))) { s('Could not write CitizenFX.ini.', 'err'); return }
-      s('Update channel set to canary — suppresses automatic update nags on launch.', 'ok')
+      // Retired: 'canary' is FiveM's unstable test channel (more frequent, less tested updates), not a way to silence update prompts.
+      s('This tweak is retired: the canary channel does not suppress updates and can make FiveM less stable. Nothing was changed.', 'warn')
     },
     restore: async (s) => {
       const content = readCitizenFXIni()
@@ -6847,15 +6880,15 @@ const TWEAKS = {
   'fix-2502': {
     name: 'Fix MSI Installer Error 2502/2503',
     category: 'storage',
-    safetyTier: 1,
+    safetyTier: 2,
     gamerImpact: 'low',
     apply: async (s, ps) => {
       await ps(`
         $tmp = 'C:\\Windows\\Temp'
         if (-not (Test-Path $tmp)) { New-Item -Path $tmp -ItemType Directory -Force | Out-Null }
-        icacls 'C:\\Windows\\Temp' /grant 'Everyone:(F)' /T /Q 2>$null | Out-Null
-        icacls 'C:\\Windows\\Temp' /grant 'SYSTEM:(F)' /T /Q 2>$null | Out-Null
-        icacls "$env:TEMP" /grant 'Everyone:(F)' /T /Q 2>$null | Out-Null
+        # Well-known SIDs (SYSTEM, Administrators, Users) so it works on every Windows language. Users get Modify, not Full control, and nobody gets Everyone.
+        icacls $tmp /grant '*S-1-5-18:(OI)(CI)F' '*S-1-5-32-544:(OI)(CI)F' '*S-1-5-32-545:(OI)(CI)M' /Q 2>$null | Out-Null
+        icacls "$env:TEMP" /grant "$($env:USERNAME):(OI)(CI)F" /Q 2>$null | Out-Null
       `)
       s('Error 2502/2503 fix applied — Temp directory permissions corrected.', 'ok')
     },
@@ -8282,7 +8315,10 @@ ipcMain.handle('run-fix', async (_, fixId) => {
   send(`Running fix: ${fixId}`, 'head')
   try {
     if (!hasTweak(fixId)) return { ok: false, error: 'unknown_fix' }
-    await invokeTweak(fixId, 'apply', send)
+    const blocked = await guardRestorePoint(fixId, send); if (blocked) return blocked
+    let failed = null
+    await invokeTweak(fixId, 'apply', send, { onFailures: f => { failed = f } })
+    if (failed) return { ok: false, partial: true, error: failed.map(f => f.err).join('; ').slice(0, 300), failures: failed }
     return { ok: true }
   } catch (e) {
     send(`Fix error: ${e.message}`, 'err')
@@ -9654,18 +9690,17 @@ const TWEAK_VERIFY = {
   'mmcss':                 { hive: 'HKLM', path: 'SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Multimedia\\SystemProfile',      name: 'SystemResponsiveness',     expect: 10 },
   'net-throttling':        { hive: 'HKLM', path: 'SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Multimedia\\SystemProfile',      name: 'NetworkThrottlingIndex',   expect: 4294967295 },
   'power-throttling':      { hive: 'HKLM', path: 'SYSTEM\\CurrentControlSet\\Control\\Power\\PowerThrottling',                     name: 'PowerThrottlingOff',       expect: 1 },
-  'priority-sep':          { hive: 'HKLM', path: 'SYSTEM\\CurrentControlSet\\Control',                                             name: 'Win32PrioritySeparation',  expect: 38 },
+  'priority-sep':          { hive: 'HKLM', path: 'SYSTEM\\CurrentControlSet\\Control\\PriorityControl',                                             name: 'Win32PrioritySeparation',  expect: 38 },
   'tdr-delay':             { hive: 'HKLM', path: 'SYSTEM\\CurrentControlSet\\Control\\GraphicsDrivers',                            name: 'TdrDelay',                 expect: 10 },
   'gpu-hwsch':             { hive: 'HKLM', path: 'SYSTEM\\CurrentControlSet\\Control\\GraphicsDrivers',                            name: 'HwSchMode',                expect: 2 },
   'nvme-latency':          { hive: 'HKLM', path: 'SYSTEM\\CurrentControlSet\\Control\\StorPort',                                   name: 'TelemetryPerformanceHighResolutionTimer', expect: 0 },
-  'win-tips':              { hive: 'HKLM', path: 'SOFTWARE\\Policies\\Microsoft\\Windows\\CloudContent',                           name: 'DisableSoftLanding',       expect: 1 },
   'telemetry':             { hive: 'HKLM', path: 'SOFTWARE\\Policies\\Microsoft\\Windows\\DataCollection',                         name: 'AllowTelemetry',           expect: 0 },
   'disable-delivery-opt':  { hive: 'HKLM', path: 'SOFTWARE\\Policies\\Microsoft\\Windows\\DeliveryOptimization',                   name: 'DODownloadMode',           expect: 0 },
   'qos-reserve':           { hive: 'HKLM', path: 'SOFTWARE\\Policies\\Microsoft\\Windows\\Psched',                                 name: 'NonBestEffortLimit',       expect: 0 },
   'disable-mouse-accel':   { hive: 'HKCU', path: 'Control Panel\\Mouse',                                                          name: 'MouseSpeed',               expect: '0' },
   'disable-background-apps':{ hive: 'HKCU', path: 'Software\\Microsoft\\Windows\\CurrentVersion\\BackgroundAccessApplications',    name: 'GlobalUserDisabled',       expect: 1 },
   'cortana':               { hive: 'HKLM', path: 'SOFTWARE\\Policies\\Microsoft\\Windows\\Windows Search',                         name: 'AllowCortana',             expect: 0 },
-  'disable-hdcp':          { hive: 'HKLM', path: 'SYSTEM\\CurrentControlSet\\Control\\Class\\{4d36e968-e325-11ce-bfc1-08002be10318}\\0000', name: 'RMHdcpKeyglobZero', expect: 1 },
+  'disable-hdcp':          { hive: 'HKLM', path: 'SYSTEM\\CurrentControlSet\\Control\\Class\\{4d36e968-e325-11ce-bfc1-08002be10318}', classVendor: 'nvidia', name: 'RMHdcpKeyglobZero', expect: 1 },
   'disable-auto-maintenance': { hive: 'HKLM', path: 'SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Schedule\\Maintenance',      name: 'MaintenanceDisabled',      expect: 1 },
   'explorer-perf':         { hive: 'HKCU', path: 'Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced',               name: 'LaunchTo',                 expect: 1 },
 }
@@ -9679,13 +9714,22 @@ ipcMain.handle('run-tweak-health', async () => {
   const verifiable = appliedIds.filter(id => TWEAK_VERIFY[id])
   const reverted = []
 
+  // PowerShell returns a DWORD above 2^31 as a negative Int32 (0xFFFFFFFF reads back as -1): compare as unsigned.
+  const norm = x => { const n = Number(x); return String(x).trim() !== '' && Number.isFinite(n) ? (n < 0 ? n + 4294967296 : n) : String(x).trim() }
   for (const id of verifiable) {
     const v = TWEAK_VERIFY[id]
     try {
-      const script = `(Get-ItemProperty -Path "Registry::${v.hive}\\${v.path}" -Name "${v.name}" -ErrorAction Stop)."${v.name}"`
-      const result = await runPS(script)
-      const raw = (result.out || '').trim()
-      if (!result.ok || String(raw) !== String(v.expect)) reverted.push(id)
+      // Vendor-class tweaks (e.g. HDCP) live under one key per adapter: check every adapter of that vendor, and skip the check when there is none.
+      const subs = v.classVendor ? await gpuClassIndexes(runPS, v.classVendor) : ['']
+      if (!subs.length) continue
+      let allOk = true
+      for (const sub of subs) {
+        const p = sub ? v.path + String.fromCharCode(92) + sub : v.path
+        const script = `(Get-ItemProperty -Path "Registry::${v.hive}${String.fromCharCode(92)}${p}" -Name "${v.name}" -ErrorAction Stop)."${v.name}"`
+        const result = await runPS(script)
+        if (!result.ok || norm((result.out || '').trim()) !== norm(v.expect)) { allOk = false; break }
+      }
+      if (!allOk) reverted.push(id)
     } catch {
       reverted.push(id)
     }
@@ -10598,8 +10642,12 @@ ipcMain.handle('arma-write-settings', async (_, changes, manualDir) => {
   }
 
   // Backup both files
-  try { fs.writeFileSync(engineFile + '.bak', engineRaw, 'utf8') } catch (_) {}
-  try { fs.writeFileSync(gameFile   + '.bak', gameRaw,   'utf8') } catch (_) {}
+  try {
+    fs.writeFileSync(engineFile + '.bak', engineRaw, 'utf8')
+    fs.writeFileSync(gameFile   + '.bak', gameRaw,   'utf8')
+  } catch (e) {
+    return { ok: false, reason: 'Could not back up the Reforger config files first (' + String(e.message).slice(0, 100) + '). Nothing was changed.' }
+  }
 
   if (!changes || typeof changes !== 'object' || Array.isArray(changes)) return { ok: false, reason: 'invalid_request' }
   for (const [key, value] of Object.entries(changes)) {
@@ -10689,33 +10737,37 @@ async function pulseRestoreAll(send) {
   // Restore interrupt affinity exactly as it was before Pulse changed it
   {
     const snap = snapshots.load('pulse-affinity') || {}
+    let affinityOk = true
     for (const [devPath, v] of Object.entries(snap)) {
       if (!PCI_PATH_RX.test(devPath)) continue
       const p = V.psQuote(devPath + '\\Device Parameters\\Interrupt Management\\Affinity Policy')
       const one = (name, val) => (val === null || val === undefined)
         ? `Remove-ItemProperty -Path ${p} -Name ${name} -EA SilentlyContinue`
-        : `Set-ItemProperty -Path ${p} -Name ${name} -Value ${Number(val)} -Type DWord -Force -EA SilentlyContinue`
-      await runPS(one('DevicePolicy', v.p) + '; ' + one('AssignmentSetOverride', v.m), 8000).catch(() => {})
+        : `Set-ItemProperty -Path ${p} -Name ${name} -Value ${Number(val)} -Type DWord -Force -EA Stop`
+      const r = await runPS(one('DevicePolicy', v.p) + '; ' + one('AssignmentSetOverride', v.m), 8000).catch(() => ({ ok: false }))
+      if (!r.ok) affinityOk = false
     }
-    snapshots.remove('pulse-affinity')
+    // Keep the snapshot when a restore failed: deleting it would lose the only record of the original values.
+    if (affinityOk) { snapshots.remove('pulse-affinity'); send('  Interrupt affinity restored to Windows defaults.', 'ok') }
+    else send('  Interrupt affinity could NOT be fully restored. The original values are kept and the restore will be retried.', 'err')
   }
-  send('  Interrupt affinity restored to Windows defaults.', 'ok')
 
   // Put the power-plan values Pulse changed back to what that plan had before (absent value = the plan's own default)
   {
     const snap = snapshots.load('pulse-power')
+    let powerOk = true
     if (snap?.guid && /^[0-9a-f-]{36}$/i.test(snap.guid)) {
       for (const [key, val] of Object.entries(snap.values || {})) {
         const m = /^([0-9a-f-]{36})\|(ACSettingIndex|DCSettingIndex)$/i.exec(key)
         if (!m) continue
         const p = V.psQuote(`HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Power\\User\\PowerSchemes\\${snap.guid}\\${PULSE_SUB_PROCESSOR}\\${m[1]}`)
-        await runPS(val === null ? `Remove-ItemProperty -Path ${p} -Name ${m[2]} -EA SilentlyContinue` : `Set-ItemProperty -Path ${p} -Name ${m[2]} -Value ${Number(val)} -Type DWord -Force -EA SilentlyContinue`, 8000).catch(() => {})
+        await runPS(val === null ? `Remove-ItemProperty -Path ${p} -Name ${m[2]} -EA SilentlyContinue` : `Set-ItemProperty -Path ${p} -Name ${m[2]} -Value ${Number(val)} -Type DWord -Force -EA Stop`, 8000).then(r => { if (!r.ok) powerOk = false }).catch(() => { powerOk = false })
       }
       await runPS('powercfg /update-settings 2>$null', 8000).catch(() => {})
     }
-    snapshots.remove('pulse-power')
+    if (powerOk) { snapshots.remove('pulse-power'); send('  CPU core parking restored.', 'ok') }
+    else send('  CPU core parking could NOT be fully restored. The original values are kept and the restore will be retried.', 'err')
   }
-  send('  CPU core parking restored.', 'ok')
 
   // Restore timer resolution — just release our request; Windows reverts automatically
   await runPS(`
@@ -11104,7 +11156,8 @@ Write-Output "CORES=$coreStr"
     if (ct > 0) tempSamples.push(ct)
     if (fan > 0) fanSamples.push(fan)
     if (coreVals.length) perCoreSamples.push(coreVals)
-    mainWindow?.webContents.send('thermal-progress', { sample: i + 1, of: SAMPLES, clkNow: Math.round(cn), temp: ct > 0 ? Math.round(ct) : null })
+    const thermalProg = { sample: i + 1, of: SAMPLES, clkNow: Math.round(cn), temp: ct > 0 ? Math.round(ct) : null }
+    mainWindow?.webContents.send('thermal-progress', thermalProg); sendToPulse('thermal-progress', thermalProg)
     if (i < SAMPLES - 1) await new Promise(res => setTimeout(res, INTERVAL_MS))
   }
   if (!clkNowSamples.length || !clkMaxSamples.length) return { ok: false }
@@ -12000,7 +12053,7 @@ ipcMain.handle('start-game-watcher', async () => {
             if (v === 'applied') {
               const tweakId = k.replace(/^tweak_/, '')
               if (hasTweak(tweakId) && !isPlanExcluded(tweakId)) {
-                await invokeTweak(tweakId, 'apply', () => {}, { via: 'game-watcher' }).catch(() => {})
+                await bundleApply(tweakId, bundleFails)
               }
             }
           }
@@ -12182,12 +12235,12 @@ ipcMain.handle('add-changelog-entry', (_, entry) => {
 ipcMain.handle('clear-changelog', () => { saveChangelog([]); return { ok: true } })
 
 // ─── Tweak Scheduler ─────────────────────────────────────────────────────────
-ipcMain.handle('schedule-tweak', async (_, { taskName, schedule, action }) => {
+ipcMain.handle('schedule-tweak', async (_, { taskName, schedule, action, time, dayOfWeek }) => {
   if (!requiresPremium('schedule-tweak')) return { ok: false, reason: 'premium_required' }
   const send = (msg, level) => mainWindow?.webContents.send('log', { msg, level, ts: new Date().toLocaleTimeString() })
 
   const psCommands = {
-    'clean-temp':        'Remove-Item -Path $env:TEMP\\* -Recurse -Force -EA SilentlyContinue; Remove-Item -Path C:\\Windows\\Temp\\* -Recurse -Force -EA SilentlyContinue; Remove-Item -Path C:\\Windows\\Prefetch\\* -Force -EA SilentlyContinue',
+    'clean-temp':        'Remove-Item -Path $env:TEMP\\* -Recurse -Force -EA SilentlyContinue; Remove-Item -Path C:\\Windows\\Temp\\* -Recurse -Force -EA SilentlyContinue',
     'flush-dns':         'ipconfig /flushdns',
     'clean-nvidia':      'Remove-Item -Path "$env:LOCALAPPDATA\\NVIDIA\\DXCache\\*" -Recurse -Force -EA SilentlyContinue; Remove-Item -Path "$env:LOCALAPPDATA\\NVIDIA\\GLCache\\*" -Recurse -Force -EA SilentlyContinue; Remove-Item -Path "$env:LOCALAPPDATA\\Temp\\NVIDIA Corporation\\NV_Cache\\*" -Recurse -Force -EA SilentlyContinue',
     'defrag-c':          'Optimize-Volume -DriveLetter C -Defrag -Verbose',
@@ -12206,6 +12259,14 @@ ipcMain.handle('schedule-tweak', async (_, { taskName, schedule, action }) => {
   else if (schedule === 'daily-3am')  trigger = 'New-ScheduledTaskTrigger -Daily -At "3:00AM"'
   else if (schedule === 'weekly-sun') trigger = 'New-ScheduledTaskTrigger -Weekly -DaysOfWeek Sunday -At "3:00AM"'
   else if (schedule === 'logon')      trigger = 'New-ScheduledTaskTrigger -AtLogon'
+  else if (schedule === 'hourly')     trigger = 'New-ScheduledTaskTrigger -Once -At (Get-Date) -RepetitionInterval (New-TimeSpan -Hours 1) -RepetitionDuration (New-TimeSpan -Days 3650)'
+  else if (schedule === 'daily-custom' || schedule === 'weekly-custom') {
+    // time and day come from the form: validated against a strict pattern / whitelist before they reach the PowerShell text
+    const t = /^([01]?[0-9]|2[0-3]):[0-5][0-9]$/.test(String(time || '')) ? String(time) : null
+    const d = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].includes(dayOfWeek) ? dayOfWeek : null
+    if (!t || (schedule === 'weekly-custom' && !d)) return { ok: false, error: 'invalid_time' }
+    trigger = schedule === 'daily-custom' ? `New-ScheduledTaskTrigger -Daily -At "${t}"` : `New-ScheduledTaskTrigger -Weekly -DaysOfWeek ${d} -At "${t}"`
+  }
   if (!trigger) return { ok: false, error: 'invalid_schedule' }
 
   const r = await runPS(`
@@ -12295,7 +12356,6 @@ ipcMain.handle('get-temp-size', async () => {
   const paths = [
     process.env.TEMP,
     'C:\\Windows\\Temp',
-    'C:\\Windows\\Prefetch',
     'C:\\Windows\\SoftwareDistribution\\Download',
   ].filter(Boolean)
 
@@ -12375,7 +12435,7 @@ ipcMain.handle('get-cleanup-sizes', async () => {
 
   // Generic folder-based entries (use recursive size sum)
   const entries = [
-    { id: 'clean-temp',          paths: [tmp, 'C:\\Windows\\Temp', 'C:\\Windows\\Prefetch', 'C:\\Windows\\SoftwareDistribution\\Download'] },
+    { id: 'clean-temp',          paths: [tmp, 'C:\\Windows\\Temp', 'C:\\Windows\\SoftwareDistribution\\Download'] },
     { id: 'clean-browsers',      paths: [path.join(lad,'Microsoft','Edge','User Data','Default','Cache'), path.join(lad,'Google','Chrome','User Data','Default','Cache'), path.join(lad,'Mozilla','Firefox','Profiles')] },
     { id: 'clean-discord',       paths: [path.join(apd,'discord','Cache'), path.join(apd,'discord','Code Cache'), path.join(apd,'discord','GPUCache')] },
     { id: 'clean-nvidia',        paths: [path.join(lad,'NVIDIA','DXCache'), path.join(lad,'NVIDIA','GLCache')] },
@@ -12585,7 +12645,7 @@ ipcMain.handle('get-health-score', async (_, settings) => {
   // 1. Temp files size (0-20 points)
   const tempR = await runPS(`
     $size = 0
-    @("$env:TEMP","C:\\Windows\\Temp","C:\\Windows\\Prefetch") | ForEach-Object {
+    @("$env:TEMP","C:\\Windows\\Temp") | ForEach-Object {
       if (Test-Path $_) { $size += (Get-ChildItem $_ -Recurse -EA SilentlyContinue | Measure-Object -Property Length -Sum).Sum }
     }
     Write-Output ([math]::Round($size/1MB))
@@ -13230,11 +13290,12 @@ Write-Output "CLK_MAX=$clkMax"
     let cause = 'ok'
     if (cpuTemp > 90) cause = 'thermal'
     else if (clkMax > 0 && cpuLoad > 80 && clkNow < clkMax * 0.85) cause = 'power-limit'
-    mainWindow?.webContents.send('thermal-tick', {
+    const thermalTick = {
       cause,
       cpuTemp: cpuTemp > 0 ? Math.round(cpuTemp) : null,
       cpuLoad: cpuLoad > 0 ? cpuLoad : null,
-    })
+    }
+    mainWindow?.webContents.send('thermal-tick', thermalTick); sendToPulse('thermal-tick', thermalTick)
   }, 2000)
   return {}
 })
@@ -13621,7 +13682,7 @@ function ariaCheckAnomalies(sample) {
         ts:    now,
         game:  activeGameProfile || null,
       }
-      mainWindow?.webContents.send('aria-tick', evt)
+      mainWindow?.webContents.send('aria-tick', evt); sendToPulse('aria-tick', evt)
       // Accumulate in session anomaly list (cap at 200 to avoid unbounded growth)
       if (_ariaSessionAnomalies.length < 200) _ariaSessionAnomalies.push(evt)
     }
@@ -13663,7 +13724,7 @@ function ariaFpsTick() {
   if (!_ariaEnabled || !activeGameProfile) return
   const result = parsePresentMonBuffer(_pmFrameBuffer, ARIA_FPS_TAIL_LINES)
   if (result) {
-    mainWindow?.webContents.send('aria-fps-tick', result)
+    mainWindow?.webContents.send('aria-fps-tick', result); sendToPulse('aria-fps-tick', result)
     _fpsHudWindow?.webContents.send('aria-fps-tick', result)
   }
 }
@@ -13673,9 +13734,17 @@ function ariaFpsStart() {
 }
 function ariaFpsStop() {
   if (_ariaFpsTimer) { clearInterval(_ariaFpsTimer); _ariaFpsTimer = null }
-  mainWindow?.webContents.send('aria-fps-tick', { avgFps: null, low1Fps: null })
+  mainWindow?.webContents.send('aria-fps-tick', { avgFps: null, low1Fps: null }); sendToPulse('aria-fps-tick', { avgFps: null, low1Fps: null })
   _fpsHudWindow?.webContents.send('aria-fps-tick', { avgFps: null, low1Fps: null })
   destroyFpsHud()
+}
+
+// Top-left of an overlay of w x h in the chosen screen corner (16px margin). Used when the HUD opens and when the corner setting changes.
+function fpsHudPosition(corner, w, h) {
+  const { screen } = require('electron')
+  const wa = screen.getPrimaryDisplay().workArea
+  const right = corner === 'tr' || corner === 'br', bottom = corner === 'bl' || corner === 'br'
+  return { x: right ? wa.x + wa.width - w - 16 : wa.x + 16, y: bottom ? wa.y + wa.height - h - 16 : wa.y + 16 }
 }
 
 function createFpsHud() {
@@ -13683,10 +13752,9 @@ function createFpsHud() {
   const settings = loadSettings()
   if (!settings.ariaFpsHudEnabled) return
   const { screen } = require('electron')
-  const { width: dw, height: dh } = screen.getPrimaryDisplay().workAreaSize
   _fpsHudWindow = new BrowserWindow({
     width: 160, height: 72,
-    x: dw - 176, y: dh - 88,
+    ...fpsHudPosition(settings.ariaFpsHudCorner || 'br', 160, 72),
     frame: false, transparent: true, alwaysOnTop: true, skipTaskbar: true, resizable: false,
     show: false,
     webPreferences: { preload: path.join(__dirname, 'preload-overlay.js'), contextIsolation: true, nodeIntegration: false, sandbox: true, devTools: false },
@@ -14031,6 +14099,9 @@ ipcMain.handle('set-fps-hud-corner', (_, corner) => {
   const s = loadSettings()
   s.ariaFpsHudCorner = corner
   saveSettings(s)
+  try {
+    if (_fpsHudWindow && !_fpsHudWindow.isDestroyed()) { const b = _fpsHudWindow.getBounds(); const p = fpsHudPosition(corner, b.width, b.height); _fpsHudWindow.setPosition(p.x, p.y) }
+  } catch (e) { debugLog('[fps-hud] corner move failed: ' + e.message) }
   _fpsHudWindow?.webContents.send('fps-hud-corner-changed', corner)
   return { ok: true }
 })
@@ -14051,11 +14122,15 @@ ipcMain.handle('fivem-running-check', async () => {
 
 // ─── Game Shield / Update Guard ───────────────────────────────────────────────
 let _updateGuardTimer = null
+// -EA SilentlyContinue hides failures from the exit code, so the result is judged by reading the service's start type back.
+const wuStartType = async () => String((await runPS(`(Get-Service -Name wuauserv).StartType.ToString()`, 5000)).out || '').trim()
 async function setUpdateGuard(on) {
   if (on) {
     const cur = String((await runPS(`(Get-Service -Name wuauserv).StartType.ToString()`, 5000)).out || '').trim()
     if (!snapshots.load('update-guard')) snapshots.save('update-guard', { prev: ['Automatic', 'Manual', 'Disabled'].includes(cur) ? cur : 'Manual' })
-    const r = await runPS(`Set-Service -Name wuauserv -StartupType Disabled -EA SilentlyContinue; Stop-Service -Name wuauserv -Force -EA SilentlyContinue`)
+    await runPS(`Set-Service -Name wuauserv -StartupType Disabled -EA SilentlyContinue; Stop-Service -Name wuauserv -Force -EA SilentlyContinue`)
+    const applied = (await wuStartType()) === 'Disabled'
+    if (!applied) { await setUpdateGuard(false); return false }   // could not disable it: put everything back so no half-state is left behind
     clearTimeout(_updateGuardTimer)
     _updateGuardTimer = setTimeout(() => {
       _ugActive = false
@@ -14063,14 +14138,20 @@ async function setUpdateGuard(on) {
       mainWindow?.webContents.send('update-guard-expired')
       mainWindow?.webContents.send('update-guard-status', { blocked: false, blockCount: 0 })
     }, 8 * 3600 * 1000)   // safety net: never leave Windows Update off for more than one long session
-    return r.ok
+    return true
   }
   clearTimeout(_updateGuardTimer); _updateGuardTimer = null
   const snap = snapshots.load('update-guard')
   const prev = ['Automatic', 'Manual'].includes(snap?.prev) ? snap.prev : 'Manual'
-  const r = await runPS(`Set-Service -Name wuauserv -StartupType ${prev} -EA SilentlyContinue; Start-Service -Name wuauserv -EA SilentlyContinue`)
-  snapshots.remove('update-guard')
-  return r.ok
+  let restored = false
+  for (let attempt = 0; attempt < 2 && !restored; attempt++) {
+    await runPS(`Set-Service -Name wuauserv -StartupType ${prev} -EA SilentlyContinue; Start-Service -Name wuauserv -EA SilentlyContinue`)
+    restored = (await wuStartType()) === prev
+  }
+  // Keep the snapshot when the restore did not stick: the next start retries it (see the startup check) instead of leaving Windows Update off.
+  if (restored) snapshots.remove('update-guard')
+  else { debugLog('[update-guard] could not restore wuauserv to ' + prev); mainWindow?.webContents.send('log', { msg: 'Windows Update could not be switched back on. It will be retried when Jylli Tool starts; you can also set the Windows Update service to ' + prev + ' manually.', level: 'err', ts: new Date().toLocaleTimeString() }) }
+  return restored
 }
 // Pending-update count from the local update cache (offline search: no network scan while a game is starting). 0 on any failure.
 async function countPendingUpdates() {

@@ -130,10 +130,10 @@
     try { res = await root.api.applyBatch({ items, via: 'stage', restorePoint: 'auto', label: 'staged' }) } catch (e) { res = { ok: false, error: String(e && e.message || e) } }
     applying = false
     try { root.api.setProgress && root.api.setProgress(-1) } catch {}
-    if (res && res.aborted) { toast(tUI('stageAborted'), '', 'err'); render(); return }
+    if (res && res.aborted) { toast(tUI('stageAborted'), [res.reason, res.guidance].filter(Boolean).join(' — ').slice(0, 300), 'err', 9000); render(); return }
     if (!items.every(i => meta[i.tweakId])) await loadMetaFor(items.map(i => i.tweakId))
     const okIds = new Set(((res && res.items) || []).filter(i => i.status === 'ok').map(i => i.id))
-    const failed = ((res && res.items) || []).filter(i => i.status === 'failed')
+    const failed = ((res && res.items) || []).filter(i => i.status === 'failed' || i.status === 'partial')
     for (const id of okIds) staged.delete(id)
     const touched = (res && res.items || []).map(i => i.id)
     if (res && res.settingsPatch) Object.assign(root.settings, res.settingsPatch)

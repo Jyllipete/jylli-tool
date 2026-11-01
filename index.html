@@ -573,7 +573,6 @@ var currentLang = 'en'
 
 function tUI(key)     { return (LANG[currentLang]?.ui?.[key]        ?? LANG.en.ui[key])        ?? key }
 function tUIf(key, vars) { return String(tUI(key)).replace(/\{(\w+)\}/g, (m, k) => (vars && k in vars) ? vars[k] : m) }
-function tSub(page)   { return (LANG[currentLang]?.subtitles?.[page] ?? LANG.en.subtitles[page]) ?? '' }
 function tTitle(page) { return (LANG[currentLang]?.titles?.[page]    ?? LANG.en.titles[page])    ?? page }
 function tSection(title) { return title }
 function tDesc(id)    { return (LANG[currentLang]?.tweakDescs?.[id]  ?? LANG.en.tweakDescs?.[id]) ?? null }
@@ -1522,13 +1521,6 @@ function pcTier() {
   return { tier, ram, cores, vram, isWifi, isLaptop, nvme }
 }
 
-function pcTierBadge() {
-  const { tier, ram, cores, vram, isWifi, isLaptop } = pcTier()
-  const labels = { high: '🟢 High-end', mid: '🟡 Mid-range', low: '🔴 Low-end' }
-  const sub = `${ram}GB RAM · ${cores}C CPU · ${vram >= 1024 ? (vram/1024).toFixed(0)+'GB' : vram+'MB'} VRAM${isWifi ? ' · Wi-Fi' : ' · Ethernet'}${isLaptop ? ' · Laptop' : ''}`
-  return `<span class="jx-199">${labels[tier]} · ${sub}</span>`
-}
-
 // ─── Sidebar collapse ─────────────────────────────────────────────────────────
 let sidebarCollapsed = false
 function toggleSidebar() {
@@ -1951,28 +1943,6 @@ function fingerprintDismiss() {
 }
 
 
-function settingsToggleUpdateGuard(on) {
-  api.toggleUpdateGuard(on).catch(() => {})
-  if (on && !gameWatcherRunning) toggleGameWatcher()
-  toast(tUI(on ? 'tkUgOnLong' : 'tkUgOff'), '', on ? 'ok' : 'info')
-}
-
-function settingsToggleGameShield(on) {
-  api.toggleGameShield(on).catch(() => {})
-  if (on && !gameWatcherRunning) toggleGameWatcher()
-  toast(tUI(on ? 'tkGsOn' : 'tkGsOff'), '', on ? 'ok' : 'info')
-}
-
-function settingsToggleGameWatcher(on) {
-  if (on !== gameWatcherRunning) toggleGameWatcher()
-}
-
-
-function settingsToggleAutoPulse(on) {
-  if (on !== autoPulseEnabled) toggleAutoPulse()
-  syncLaunchRuleChecks()
-}
-
 // ─── Launch Rules (Pulse tab) ─────────────────────────────────────────────────
 
 function _syncLrCardOpacity(cardId, checked) {
@@ -1980,18 +1950,36 @@ function _syncLrCardOpacity(cardId, checked) {
   if (el) el.classList.toggle('lr-off', !checked)   // the switch carries the state; dimming the whole card made an idle Pulse look broken
 }
 
+// Update Guard / Game Shield: the switch only stays on when the main process confirmed it. A refusal (premium, a service that would not
+// change) puts the switch and the saved flag back and says why, instead of toasting "on" over a protection that is not running.
+async function launchRuleCommit(call, on, flag, cardId, okKey, offKey) {
+  let r
+  try { r = await call(on) } catch (e) { r = { ok: false, error: String((e && e.message) || e) } }
+  if (r && r.ok === false) {
+    settings[flag] = !on
+    syncLaunchRuleChecks(); _syncLrCardOpacity(cardId, !on); updateLaunchRulesArmedCount()
+    toast(tUI('launchRuleFailed'), String(r.reason === 'premium_required' ? tUI('premiumLockTitle') : (r.error || r.reason || '')).slice(0, 200), 'err', 7000)
+    return false
+  }
+  if (on && !gameWatcherRunning) toggleGameWatcher()
+  toast(tUI(on ? okKey : offKey), '', on ? 'ok' : 'info')
+  return true
+}
+
+// Opens the Pulse live window; a refusal (premium) is shown instead of silently doing nothing.
+async function openPulseLive() {
+  const r = await api.openPulseWindow().catch(() => null)
+  if (r && r.ok === false) toast(tUI('premiumLockTitle'), tUI('premiumLockDesc'), 'warn', 6000)
+}
+
 function launchRuleToggle(rule, on) {
   if (rule === 'updateGuard') {
     settings.updateGuardEnabled = on
-    api.toggleUpdateGuard(on).catch(() => {})
-    if (on && !gameWatcherRunning) toggleGameWatcher()
-    toast(tUI(on ? 'tkUgOn' : 'tkUgOff'), '', on ? 'ok' : 'info')
+    launchRuleCommit(api.toggleUpdateGuard, on, 'updateGuardEnabled', 'lr-card-ug', 'tkUgOn', 'tkUgOff')
     _syncLrCardOpacity('lr-card-ug', on)
   } else if (rule === 'gameShield') {
     settings.gameShieldEnabled = on
-    api.toggleGameShield(on).catch(() => {})
-    if (on && !gameWatcherRunning) toggleGameWatcher()
-    toast(tUI(on ? 'tkGsOn' : 'tkGsOff'), '', on ? 'ok' : 'info')
+    launchRuleCommit(api.toggleGameShield, on, 'gameShieldEnabled', 'lr-card-gs', 'tkGsOn', 'tkGsOff')
     _syncLrCardOpacity('lr-card-gs', on)
   } else if (rule === 'gameWatcher') {
     if (on !== gameWatcherRunning) toggleGameWatcher()
@@ -2165,7 +2153,7 @@ async function settingsToggleStartup(on) {
   settings.startAtLogin = on
   api.saveSettings(settings)
   try {
-    await api.setStartup(on)
+    const sr = await api.setStartup(on); if (sr && sr.ok === false) throw new Error(sr.error || "startup task failed")
     toast(on ? tUI('settingsStartup') + ' enabled' : tUI('settingsStartup') + ' disabled', '', on ? 'ok' : 'info')
   } catch {
     settings.startAtLogin = !on
@@ -2178,12 +2166,6 @@ async function settingsToggleStartup(on) {
 
 // ─── UI Sounds ────────────────────────────────────────────────────────────────
 let _uiAudioCtx = null
-function _getAudioCtx() {
-  if (!_uiAudioCtx || _uiAudioCtx.state === 'closed') {
-    try { _uiAudioCtx = new (window.AudioContext || window.webkitAudioContext)() } catch { return null }
-  }
-  return _uiAudioCtx
-}
 function _playUiTick() { try { JylliSound.play('tick') } catch {} }   // js/sound.js: -24 dBFS, one sound per 120 ms, silent when unfocused or gaming
 function initUiSounds() {
   document.addEventListener('mouseenter', function(e) {
@@ -2239,14 +2221,6 @@ function settingsToggleFpsHud(on) {
   api.toggleFpsHud(on).catch(() => {})
   toast(tUI('ariaFpsHud') + (on ? ' enabled' : ' disabled'), '', on ? 'ok' : 'info')
 }
-function settingsFpsHudSizeChange(sizeKey) {
-  settings.ariaFpsHudSize = sizeKey
-  api.saveSettings(settings)
-  api.setFpsHudSize(sizeKey).catch(() => {})
-}
-
-
-
 function dismissAvTip() {
   document.getElementById('av-tip-banner').style.display = 'none'
   settings.avTipDismissed = true
@@ -2287,12 +2261,17 @@ async function runUpdateCheck() {
 }
 
 async function reapplyReverted(ids) {
+  let done = 0, firstErr = ''
   for (const id of ids) {
-    await api.runTweak(id, 'apply').catch(() => {})
+    const r = await api.runTweak(id, 'apply').catch(e => ({ ok: false, error: String((e && e.message) || e) }))
+    if (r && r.ok) done++
+    else if (!firstErr) firstErr = [r && r.error, r && r.guidance].filter(Boolean).join(' — ')
+    if (r && r.restorePointRequired) break   // no restore point: nothing else may be applied either
   }
-  toast(tUIf('tkReapplied', { n: ids.length }), '', 'ok')
+  const failedN = ids.length - done
+  toast(failedN ? tUI('tweakFailedTitle') : tUIf('tkReapplied', { n: done }), failedN ? `${done}/${ids.length} · ${firstErr}`.slice(0, 300) : '', failedN ? 'warn' : 'ok', failedN ? 8000 : 3500)
   const healthEl = document.getElementById('settings-health-result')
-  if (healthEl) healthEl.innerHTML = `<span class="jx-96">✓ ${ids.length} tweak(s) re-applied</span>`
+  if (healthEl) healthEl.innerHTML = failedN ? `<span class="jx-96">⚠ ${done}/${ids.length} tweak(s) re-applied</span>` : `<span class="jx-96">✓ ${done} tweak(s) re-applied</span>`
 }
 
 async function doCleanPowerPlans(btn) {
@@ -2352,13 +2331,6 @@ async function autoHealthCheck() {
       api.saveSettings(settings)
     }
   } catch {}
-}
-
-function shadeColor(hex, pct) {
-  const n = parseInt(hex.replace('#',''),16)
-  const amt = Math.round(2.55 * pct)
-  const R = Math.min(255,(n>>16)+amt), G = Math.min(255,((n>>8)&0xFF)+amt), B = Math.min(255,(n&0xFF)+amt)
-  return '#' + ((1<<24)+(R<<16)+(G<<8)+B).toString(16).slice(1)
 }
 
 function resetAccentColor() {
@@ -3278,32 +3250,6 @@ async function doKillProcess(pid, name) {
   toast(r.ok ? tUI('pmKilledToast').replace('{name}', name) : tUI('pmKillFailedToast').replace('{name}', name), '', r.ok ? 'ok' : 'err')
   loadProcesses()
 }
-
-async function doGameBoost() {
-  const btn = document.getElementById('boost-btn')
-  btn.innerHTML = `<i class="fa fa-spinner fa-spin"></i> ${tUI('boostingLabel')}`; btn.disabled = true
-  try {
-    await api.gameBoostApply()
-    boostActive = true
-    btn.innerHTML = `<i class="fa fa-check"></i> ${tUI('boostActiveLabel')}`
-    document.getElementById('boost-restore-btn')?.removeAttribute('disabled')
-    { const b = document.getElementById('badge-boost'); if (b) b.style.display = '' }
-    toast(tUI('gameBoostActiveTitle'), tUI('gameBoostActiveBody'), 'ok')
-    loadProcesses()
-  } catch {
-    btn.innerHTML = `<i class="fa fa-bolt"></i> Activate Boost`; btn.disabled = false
-  }
-}
-
-async function doBoostRestore() {
-  await api.gameBoostRestore()
-  boostActive = false
-  document.getElementById('boost-btn')?.innerHTML && (document.getElementById('boost-btn').innerHTML = '<i class="fa fa-bolt"></i> Activate Boost')
-  if (document.getElementById('boost-restore-btn')) document.getElementById('boost-restore-btn').disabled = true
-  { const b = document.getElementById('badge-boost'); if (b) b.style.display = 'none' }
-  toast(tUI('gameBoostEndedTitle'), tUI('gameBoostEndedBody'), 'info')
-}
-
 
 // ─── Page: Startup Manager ────────────────────────────────────────────────────
 // Known high-impact startup names to disable with the Recommended button
@@ -5181,30 +5127,6 @@ async function doAutoPulseManualStop() {
 }
 
 const GAME_EMOJIS = { fortnite:'<i class="fa fa-wind"></i>', gtav:'<i class="fa fa-car"></i>', valorant:'<i class="fa fa-crosshairs"></i>', 'arma-reforger':'<i class="fa fa-helmet-safety"></i>', minecraft:'<i class="fa fa-cube"></i>', cs2:'<i class="fa fa-crosshairs"></i>', apex:'<i class="fa fa-dragon"></i>', warzone:'<i class="fa fa-skull"></i>', rust:'<i class="fa fa-wrench"></i>', 'the-finals':'<i class="fa fa-trophy"></i>' }
-
-async function doGameScan(btn) {
-  btn.innerHTML = `<i class="fa fa-spinner fa-spin"></i> ${tUI('pfScanning')}`; btn.disabled = true
-  document.getElementById('game-scan-status').textContent = tUI('pfScanning')
-  const games = await api.detectGames()
-  btn.innerHTML = `<i class="fa fa-magnifying-glass"></i> ${tUI('gpScanBtn')}`; btn.disabled = false
-  const installed = games.filter(g => g.installed)
-  document.getElementById('game-scan-status').textContent = tUI('gpScanStatus').replace('{inst}', installed.length).replace('{total}', games.length)
-
-  const list = document.getElementById('game-detect-list')
-  list.innerHTML = games.map(g => `
-    <div class="game-card">
-      <div class="game-emoji">${GAME_EMOJIS[g.id] || '<i class="fa fa-gamepad"></i>'}</div>
-      <div class="game-info">
-        <div class="game-name">${escHtml(g.name)}</div>
-        <div class="game-meta">${g.installed ? escHtml(g.installPath || '') : tUI('gpNotInstalled')} ${g.lastPlayed !== 'Unknown' && g.installed ? '· '+tUI('gpLastSeen').replace('{date}', g.lastPlayed) : ''}</div>
-      </div>
-      ${g.isRunning ? `<span class="game-status-badge running">● ${tUI('gpBadgeRunning')}</span>` : g.installed ? `<span class="game-status-badge installed">✓ ${tUI('gpBadgeInstalled')}</span>` : `<span class="game-status-badge not-installed">${tUI('gpBadgeNotFound')}</span>`}
-      ${g.installed ? `<button class="btn btn-primary btn-sm" onclick="applyTweak('game-${g.id}')">${tUI('gpOptimize')}</button>` : ''}
-    </div>
-  `).join('')
-
-  toast(tUI('gpScanComplete'), `${installed.length} ${tUI('gpScanFound')}`, 'ok')
-}
 
 // ─── Latency Monitor ─────────────────────────────────────────────────────────
 // ─── BIOS Tuner ───────────────────────────────────────────────────────────────
@@ -7447,32 +7369,6 @@ function drawLatencyCanvas(id, hist, lineColor) {
   ctx.shadowBlur = 0
 }
 
-async function saveCurrentProfile() {
-  const input = document.getElementById('profile-name-input')
-  const name = input?.value.trim()
-  if (!name) { toast(tUI('tkEnterProfName'), '', 'warn'); return }
-
-  // Snapshot all current tweak states
-  const tweaks = {}
-  for (const [k, v] of Object.entries(settings)) {
-    if (k.startsWith('tweak_')) tweaks[k] = v
-  }
-  if (!Object.keys(tweaks).length) { toast(tUI('tkNoTweaksYet'), tUI('tkNoTweaksYetMsg'), 'warn'); return }
-
-  // Check for existing profile with this name and warn before overwriting
-  const existing = await api.listProfiles()
-  if (existing[name]) {
-    try {
-      await showConfirm({ title: tUI('dlOverwriteT'), body: tUIf('dlOverwriteB', { name: escHtml(name) }), okText: tUI('dlOverwrite'), okStyle: 'warning', icon: 'fa-floppy-disk' })
-    } catch { return }
-  }
-
-  await api.saveProfile({ name, tweaks })
-  if (input) input.value = ''
-  toast(tUI('tkProfSaved'), name, 'ok')
-  loadProfilesList()
-}
-
 async function loadProfilesList() {
   const list = document.getElementById('profiles-list')
   if (!list) return
@@ -7816,6 +7712,7 @@ async function applyTweak(id, action = 'apply') {
     }
   } else {
     if (badge) { badge.innerHTML = '<i class="fa fa-xmark"></i> ERROR'; badge.className = 'tweak-badge' }
+    try { toast(result.restorePointRequired ? tUI('rpRequiredTitle') : tUI('tweakFailedTitle'), [result.error, result.guidance].filter(Boolean).join(' — ').slice(0, 300), 'err', 8000) } catch {}
   }
   return result
   } finally { _tweakInflight.delete(id) }
@@ -7881,16 +7778,6 @@ function getConflictInfo(id) {
   // Show Ethernet spike warning only for Ethernet users (not WiFi)
   const ethernetSpike = !!(def.ethernetSpike && !sysInfo?.isWifi)
   return { hasConflict: !!conflictWith, conflictWith, hasWarn, warnMsg, ethernetSpike }
-}
-
-function scanAllConflicts() {
-  const results = []
-  for (const [id, def] of Object.entries(TWEAK_CONFLICTS)) {
-    if (tweakState(id) !== 'applied') continue
-    const conflictWith = (def.conflictsWith || []).find(other => tweakState(other) === 'applied')
-    if (conflictWith) results.push({ id, conflictWith })
-  }
-  return results
 }
 
 // ─── Tweak Fingerprint — hardware mismatch scan ────────────────────────────
@@ -9652,50 +9539,6 @@ async function ariaRefreshInsights() {
 
 let _activeHistoryRange = '24h'
 
-async function loadHistoryChart(range) {
-  _activeHistoryRange = range
-  const hours = range === '1h' ? 1 : range === '6h' ? 6 : 24
-  // Update active button styles
-  ;['1h','6h','24h'].forEach(r => {
-    const btn = document.getElementById(`hist-btn-${r}`)
-    if (btn) {
-      btn.style.background = r === range ? 'rgba(255,46,99,0.14)' : ''
-      btn.style.borderColor = r === range ? 'rgba(255,46,99,0.45)' : ''
-      btn.style.color = r === range ? 'var(--pink)' : ''
-      btn.style.boxShadow = r === range ? '0 0 0 1px rgba(255,46,99,0.12)' : ''
-      btn.style.fontWeight = r === range ? '700' : ''
-    }
-  })
-  const body = document.getElementById('db-history-body')
-  if (!body) return
-  try {
-    const data = await api.getMetricsHistory({ hours }).catch(() => [])
-    if (!data || data.length === 0) {
-      body.innerHTML = `<div class="jx-132"><i class="fa fa-circle-info"></i> ${tUI('dashHistoryEmpty')}</div>`
-      return
-    }
-    body.innerHTML = `
-      <div class="jx-465">
-        <div>
-          <div class="jx-133">${tUI('dashHistoryCpu')}</div>
-          <canvas id="hist-canvas-cpu" width="400" height="60" class="jx-134"></canvas>
-          <div id="hist-stat-cpu" class="jx-135"></div>
-        </div>
-        <div>
-          <div class="jx-133">${tUI('dashHistoryRam')}</div>
-          <canvas id="hist-canvas-ram" width="400" height="60" class="jx-134"></canvas>
-          <div id="hist-stat-ram" class="jx-135"></div>
-        </div>
-      </div>`
-    requestAnimationFrame(() => {
-      drawHistorySparkline('hist-canvas-cpu', data.map(s => s.cpu), 'hist-stat-cpu', (getComputedStyle(document.documentElement).getPropertyValue('--c-accent').trim() || '#8B7CF6'))
-      drawHistorySparkline('hist-canvas-ram', data.map(s => s.ram), 'hist-stat-ram', jStatus('info'))
-    })
-  } catch {
-    body.innerHTML = String(ui.empty({ icon: 'clock-rotate-left', title: tUI('dashHistoryEmpty') }))
-  }
-}
-
 function drawHistorySparkline(canvasId, values, statId, color) {
   const canvas = document.getElementById(canvasId)
   if (!canvas) return
@@ -10699,69 +10542,6 @@ function aomBuildTweakList() {
     const alreadyApplied = willRun && settings[`tweak_${t.id}`] === 'applied'
     return { ...t, willRun, preApplied, alreadyApplied }
   })
-}
-
-async function aomRenderRunPlanPreview() {
-  aomSetStep(3)
-  const body = document.getElementById('aom-body')
-  const footer = document.getElementById('aom-footer')
-  document.getElementById('aom-step-label').textContent = tWizard('runPlanTitle')
-  ;[1,2,3,4,5].forEach(i => { const el = document.getElementById(`aom-ind-${i}`); if (el) { el.classList.remove('done','active'); if (i <= 3) el.classList.add('done'); else el.textContent = String(i) } })
-  const _stepper5 = document.querySelector('.aom-stepper'); if (_stepper5) _stepper5.querySelectorAll('.aom-step-line').forEach((l,idx) => l.classList.toggle('done', idx < 2))
-
-  body.innerHTML = `<div class="jx-507"><i class="fa fa-spinner fa-spin jx-19"></i>${tWizard('runPlanTitle')}…</div>`
-  footer.innerHTML = ''
-
-  let plan = []
-  try {
-    const res = await api.buildRunPlan({ runMode: _aomRunMode, sysInfo })
-    plan = res?.plan || []
-  } catch (e) { plan = [] }
-
-  const impactColor = { high: 'var(--c-success)', medium: 'var(--c-warning)', low: 'var(--c-info)' }
-  const tierLabel   = { 1: tWizard('aomRunPlanSafe'), 2: tWizard('aomRunPlanReview'), 3: tWizard('aomRunPlanAggr') }
-  const tierColor   = { 1: 'var(--c-success)', 2: 'var(--c-warning)', 3: 'var(--c-danger)' }
-  const impactLabel = { high: tWizard('aomRunPlanHigh'), medium: tWizard('aomRunPlanMed'), low: tWizard('aomRunPlanLow') }
-
-  const renderPlanRows = (p) => p.map(t => `
-    <div class="jx-139">
-      <input type="checkbox" id="rpp-${t.id}" checked style="accent-color:var(--c-success);flex-shrink:0">
-      <div class="jx-6">
-        <div class="jx-88">${t.name}</div>
-        <div class="jx-5">${t.category}</div>
-      </div>
-      <span style="font-size:11px;font-weight:700;padding:2px 6px;border-radius:4px;background:var(--c-${t.gamerImpact==='high'?'success':t.gamerImpact==='medium'?'warning':'info'}-muted);color:${impactColor[t.gamerImpact]||'var(--c-text-tertiary)'};border:1px solid var(--c-${t.gamerImpact==='high'?'success':t.gamerImpact==='medium'?'warning':'info'}-ring);flex-shrink:0">${impactLabel[t.gamerImpact]||t.gamerImpact?.toUpperCase()}</span>
-      <span style="font-size:11px;font-weight:700;padding:2px 6px;border-radius:4px;background:var(--c-bg-elevated);color:${tierColor[t.safetyTier]||'var(--c-text-tertiary)'};border:1px solid var(--c-border-subtle);flex-shrink:0">${tierLabel[t.safetyTier]||'T'+t.safetyTier}</span>
-    </div>`).join('')
-
-  const modeLabels = { smart: tWizard('aomModeSmart'), gaming: tWizard('aomModeGaming'), safe: tWizard('aomModeSafe') }
-  const modeDescs  = { smart: tWizard('aomModeSmartDesc'), gaming: tWizard('aomModeGamingDesc'), safe: tWizard('aomModeSafeDesc') }
-
-  body.innerHTML = `
-    <details id="aom-mode-details" class="jx-13">
-      <summary class="jx-508">
-        <i class="fa fa-gauge jx-12"></i>
-        <span>${tWizard('aomModeLabel')}: <strong class="jx-9">${modeLabels[_aomRunMode]}</strong></span>
-        <span class="jx-509">${tWizard('aomModeRecommended')}</span>
-        <span class="jx-510">· ${tWizard('aomModeOverride')}</span>
-      </summary>
-      <div class="jx-511">
-        ${['smart','gaming','safe'].map(m => `<button id="aom-mode-btn-${m}" onclick="aomSetMode('${m}')" class="btn btn-sm" style="font-size:11px;padding:3px 10px;${_aomRunMode===m?'background:var(--c-success);color:#000;border-color:var(--c-success)':'background:transparent;color:var(--c-text-tertiary);border:1px solid var(--c-border-default)'}">${modeLabels[m]}</button>`).join('')}
-      </div>
-      <div id="aom-mode-desc" class="jx-512">${modeDescs[_aomRunMode]}</div>
-    </details>
-    <div id="aom-plan-count" class="jx-513"><i class="fa fa-gamepad"></i> <span id="aom-plan-n">${plan.length}</span> ${tWizard('runPlanTitle')}</div>
-    <div id="run-plan-rows" class="jx-514">
-      ${renderPlanRows(plan)}
-    </div>
-    <div class="aom-restore-warn">
-      <i class="fa fa-shield-halved jx-140"></i>
-      <span class="jx-515">${tWizard('aomRestorePointWarn')}</span>
-    </div>`
-
-  footer.innerHTML = `
-    <button class="btn btn-ghost btn-sm" onclick="aomClose()">${tUI('close')}</button>
-    <button class="btn btn-success btn-sm" onclick="aomRunFromPlanPreview()"><i class="fa fa-rocket"></i> ${tWizard('runPlanBtn')}</button>`
 }
 
 async function aomSetMode(mode) {
@@ -14078,9 +13858,12 @@ async function gpActivateBundle(name) {
       toast(tUI('tkProfMissing'), tUIf('tkProfMissingMsg', { name: r.bundle.tweakProfileName }), 'warn')
     }
   }
-  toast(tUI('gpBundleActivated'), name, 'ok')
+  const tpFailed = r.results?.tweakProfile?.failed || []
+  if (tpFailed.length) toast(tUI('gpBundleActivated'), tUIf('gpBundleTweaksFailed', { n: tpFailed.length, ids: tpFailed.map(f => f.id).join(', ') }).slice(0, 300), 'warn', 8000)
+  else toast(tUI('gpBundleActivated'), name, 'ok')
   if (r.bundle?.pulsePreset && !pulseActivePreset) {
-    await api.pulseStart({ preset: r.bundle.pulsePreset }).catch(() => {})
+    const pr = await api.pulseStart({ presetId: r.bundle.pulsePreset }).catch(e => ({ ok: false, error: String((e && e.message) || e) }))   // main reads presetId, not preset
+    if (pr && pr.ok === false) toast(tUI('launchRuleFailed'), String(pr.error || pr.reason || '').slice(0, 200), 'warn')
   }
   gpRenderBundles()
   if (selectedGameId && r.bundle?.gameId === selectedGameId) {
