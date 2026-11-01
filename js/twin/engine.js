@@ -12,10 +12,13 @@
   const VIEWS = {
     // camera target [x, y, z] and distance for each framing
     home: { look: [0.2, -0.3, -0.6], dist: 25, yaw: 0.46, pitch: 0.14 },
-    gpu: { look: [-0.3, -1.4, -0.7], dist: 8.4, yaw: 0.34, pitch: 0.18 },
+    gpu: { look: [-0.3, -1.4, -0.7], dist: 9.5, yaw: 1.05, pitch: 0.16 },
     laptop: { look: [0, 0, 0], dist: 10.5, yaw: 0.5, pitch: 0.75 },
   }
-  const FOCUS_DIST = { gpu: 7.5, cpu: 6.4, cooler: 7.5, ram0: 6.5, board: 11, storage: 7 }
+  // A close-up looks in from the glass side (yaw near pi/2 ~ straight at +x), never through the opaque mesh front: the showcase
+  // case's front panel is a real, mostly-solid surface now, not a wireframe. Distances clear the glass (case half-width ~4.2).
+  const FOCUS_DIST = { gpu: 9.5, cpu: 8.8, cooler: 9.2, ram0: 8.6, board: 12.5, storage: 9 }
+  const FOCUS_YAW = 1.25, FOCUS_PITCH = 0.16
   const CASE_FAN_ORDER = ['fanFront0', 'fanFront1', 'fanFront2', 'fanRear']
 
   function create({ accent = [0.55, 0.49, 0.96], quality = 'full', preferLowPower = true } = {}) {
@@ -299,7 +302,7 @@
       if (!id) { setView(viewName); return }
       const e = parts.get(id); if (!e) return
       const wp = new T.Vector3(); e.group.getWorldPosition(wp)
-      camTarget = [wp.x, wp.y, wp.z, FOCUS_DIST[id] || FOCUS_DIST[e.p.kind] || 8, 0.3, 0.12]
+      camTarget = [wp.x, wp.y, wp.z, FOCUS_DIST[id] || FOCUS_DIST[e.p.kind] || 9, FOCUS_YAW, FOCUS_PITCH]
     }
     const reducedMotion = () => document.body.classList.contains('motion-reduced') || (root.matchMedia && root.matchMedia('(prefers-reduced-motion: reduce)').matches)
     function stepCamera(dt) {
