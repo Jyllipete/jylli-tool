@@ -130,18 +130,19 @@
     try { invalidatePageCache(currentPage) } catch {}
     try { root.JylliSound && JylliSound.play(okIds.size ? 'apply' : 'warning') } catch {}
     if (okIds.size && root.JylliChrono) { await lit; try { JylliChrono.noteApplied({ batchId: res.batchId, n: okIds.size, parts: JylliWorld.partsFor([...okIds]) }) } catch {} }
-    if (okIds.size) { toast(t('stageDone', { n: okIds.size }), failed.length ? t('stageFailedSome', { n: failed.length }) : '', failed.length ? 'warn' : 'ok'); if (res.batchId) showBatchUndo(res.batchId, okIds.size) }
+    if (okIds.size) {
+      const extra = failed.length ? t('stageFailedSome', { n: failed.length }) : '', extraType = failed.length ? 'warn' : 'ok'
+      if (res.batchId) showBatchUndo(res.batchId, okIds.size, extra, extraType)   // the Undo lives inside this one toast
+      else toast(t('stageDone', { n: okIds.size }), extra, extraType)
+    }
     else toast(tUI('stageNothing'), '', 'warn')
   }
 
-  function showBatchUndo(batchId, n) {
+  function showBatchUndo(batchId, n, extra, extraType) {
     root._journalUndoTarget = { batchId }
     root._lastUndoParts = root.JylliWorld ? lastParts : null
-    const bar = document.getElementById('undo-snackbar'), label = document.getElementById('undo-snackbar-label')
-    if (!bar) return
-    if (label) label.textContent = t('stageDone', { n })
-    bar.classList.add('visible')
-    clearTimeout(root._undoTimer2); root._undoTimer2 = setTimeout(() => bar.classList.remove('visible'), 12000)
+    if (root.JylliToast) JylliToast.dismissTag('undo')
+    toast(t('stageDone', { n }), extra || '', extraType || 'ok', 12000, { tag: 'undo', part: lastParts[0] || null, action: { label: tUI('chronoUndo'), run: () => root.undoLastTweak && root.undoLastTweak() } })
   }
 
   document.addEventListener('keydown', e => {

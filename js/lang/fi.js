@@ -942,6 +942,8 @@ LANG.fi = {
       visuals3d_reduced:'Kevennetty',
       visuals3d_off:'Pois',
       holdHint:'Pidä pohjassa ottaaksesi käyttöön',
+      toastMore:'ja {n} muuta',
+      toastShowPart:'Näytä osa, jota tämä koskee',
       stageStats:'Pelien aikana tällä istunnolla 3D-näyttämö piirsi {r} kuvaa ja ohitti {s}.',
       shareCard:'Tallenna jakokortti',
       shareCardDone:'Jakokortti tallennettu',

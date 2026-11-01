@@ -291,16 +291,11 @@ function showUndoSnackbar(id, name, journalId) {
   _lastJournalId = journalId || null
   window._journalUndoTarget = journalId ? { entryId: journalId } : null
   window._lastUndoParts = window.JylliWorld ? [JylliWorld.partFor(id)] : null
-  const bar = document.getElementById('undo-snackbar')
-  const label = document.getElementById('undo-snackbar-label')
-  if (!bar) return
-  if (label) label.textContent = `${tUI('undoApplied')}: ${name}`
-  bar.classList.add('visible')
-  clearTimeout(_undoTimer)
-  _undoTimer = setTimeout(() => bar.classList.remove('visible'), 8000)
+  if (window.JylliToast) JylliToast.dismissTag('undo')
+  toast(`${tUI('undoApplied')}: ${name}`, '', 'ok', 8000, { tag: 'undo', part: window.JylliWorld ? JylliWorld.partFor(id) : null, action: { label: tUI('chronoUndo'), run: () => undoLastTweak() } })
 }
 function hideUndoSnackbar() {
-  document.getElementById('undo-snackbar')?.classList.remove('visible')
+  if (window.JylliToast) JylliToast.dismissTag('undo')
   clearTimeout(_undoTimer)
 }
 // Undo goes through the change journal when the apply was recorded (it writes the real before-values back and asks first if
@@ -344,7 +339,8 @@ function pinkHex() { return getComputedStyle(document.documentElement).getProper
 function pinkA(a) { return `rgba(${pinkRgb()},${a})` }
 
 // ─── Toast Notification System ────────────────────────────────────────────────
-function toast(title, msg = '', type = 'ok', duration = 3500) {
+function toast(title, msg = '', type = 'ok', duration = 3500, opts) {
+  if (window.JylliToast) return JylliToast.show(title, msg, type, duration, opts || {})   // 4.0 toast (js/ui4/toast.js); everything below is the fallback
   const typeMap = { success: 'ok', error: 'err' }
   const t_type = typeMap[type] || type
   const validTypes = { ok: 1, err: 1, warn: 1, info: 1 }

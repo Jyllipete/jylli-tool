@@ -74,6 +74,42 @@ body.world-live .j-twin-slot:not(#world-slot) .j-twin-fallback { display: none; 
 /* light pulse that travels from a button into a part, and back on undo */
 #jx-fx { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 8000; }
 
+/* Toasts (js/ui4/toast.js): bottom centre, newest on top, glass without a coloured rule. Applies in every visual style, because the
+   fill is nearly opaque and passes the same worst-case contrast guard as the other glass. Warnings and errors tint the rim only. */
+#toast-container { top: auto; right: auto; left: 50%; bottom: 44px; transform: translateX(-50%); width: min(440px, calc(100vw - 32px)); display: flex; flex-direction: column; gap: 8px; align-items: stretch; pointer-events: none; }
+body:has(#jx-chrono.open) #toast-container { bottom: 124px; }
+#toast-container > * { pointer-events: auto; }
+.toast, .toast.ok, .toast.err, .toast.warn, .toast.info {
+  position: relative; display: flex; align-items: flex-start; gap: 12px; padding: 12px 10px 12px 14px; border-radius: 14px; width: 100%;
+  background: linear-gradient(180deg, rgba(30,30,40,.95), rgba(14,14,20,.97));
+  border: 1px solid rgba(255,255,255,.1); box-shadow: 0 18px 50px -12px rgba(0,0,0,.7), inset 0 1px 0 rgba(255,255,255,.07);
+  backdrop-filter: blur(18px) saturate(1.4); -webkit-backdrop-filter: blur(18px) saturate(1.4);
+  animation: jx-toast-in 360ms var(--ease-out, ease) both;
+}
+.toast::before, .toast::after { content: none; }
+.toast.warn { border-color: rgba(245,165,36,.45); box-shadow: 0 18px 50px -12px rgba(0,0,0,.7), inset 0 1px 0 rgba(255,255,255,.07), inset 0 0 28px rgba(245,165,36,.1); }
+.toast.err { border-color: rgba(242,85,90,.5); box-shadow: 0 18px 50px -12px rgba(0,0,0,.7), inset 0 1px 0 rgba(255,255,255,.07), inset 0 0 28px rgba(242,85,90,.12); }
+.toast.out { animation: jx-toast-out 180ms ease-in both; }
+.toast .toast-icon-wrap, .toast.ok .toast-icon-wrap, .toast.err .toast-icon-wrap, .toast.warn .toast-icon-wrap, .toast.info .toast-icon-wrap { width: 20px; height: 20px; margin-top: 1px; background: none; border: 0; border-radius: 0; font-size: 16px; display: flex; align-items: center; justify-content: center; flex: none; }
+.toast.ok .toast-icon-wrap { color: var(--c-success); } .toast.err .toast-icon-wrap { color: var(--c-danger); } .toast.warn .toast-icon-wrap { color: var(--c-warning); } .toast.info .toast-icon-wrap { color: var(--c-accent-fg, var(--c-accent)); }
+.toast .toast-title { font-size: 13.5px; font-weight: 600; letter-spacing: -.01em; color: var(--c-text-primary); line-height: 1.35; overflow-wrap: anywhere; }
+.toast .toast-msg { font-size: 12.5px; color: var(--c-text-secondary); margin-top: 2px; line-height: 1.4; overflow-wrap: anywhere; }
+.toast .toast-actions { display: flex; align-items: center; gap: 10px; margin-top: 8px; }
+.toast .toast-action { border: 0; background: rgba(var(--c-accent-rgb), .18); color: var(--c-text-primary); font: 600 12.5px var(--font); padding: 5px 12px; border-radius: 8px; cursor: pointer; }
+.toast .toast-action:hover { background: rgba(var(--c-accent-rgb), .34); }
+.toast .toast-part { border: 0; background: none; color: var(--c-text-secondary); width: 26px; height: 26px; border-radius: 8px; cursor: pointer; margin-left: auto; }
+.toast .toast-part:hover { background: rgba(255,255,255,.08); color: var(--c-text-primary); }
+.toast .toast-bar, .toast.ok .toast-bar, .toast.err .toast-bar, .toast.warn .toast-bar, .toast.info .toast-bar { height: 2px; border-radius: 1px; margin-top: 9px; background: rgba(255,255,255,.28); transform-origin: left; animation: jx-toast-bar linear forwards; }
+.toast .toast-close { flex: none; width: 26px; height: 26px; border: 0; border-radius: 8px; background: none; color: var(--c-text-tertiary); cursor: pointer; }
+.toast .toast-close:hover { background: rgba(255,255,255,.08); color: var(--c-text-primary); }
+.toast[hidden] { display: none !important; }
+#toast-more { align-self: center; font-size: 12px; color: var(--c-text-secondary); padding: 3px 12px; border-radius: 99px; background: rgba(20,20,28,.95); border: 1px solid rgba(255,255,255,.1); }
+@keyframes jx-toast-in { from { opacity: 0; transform: translateY(14px) scale(.98); } }
+@keyframes jx-toast-out { to { opacity: 0; transform: translateY(10px) scale(.98); } }
+@keyframes jx-toast-bar { from { transform: scaleX(1); } to { transform: scaleX(0); } }
+@media (prefers-reduced-motion: reduce) { .toast, .toast.out { animation-duration: 1ms; } .toast .toast-bar { animation: none; } }
+body.game-live #toast-container { bottom: 44px; }
+
 /* Diagnostics sweep and the Clean burst */
 #jx-sweep { position: fixed; top: 0; bottom: 0; left: -200px; width: 160px; z-index: 5; pointer-events: none; background: linear-gradient(90deg, transparent, rgba(var(--c-accent-rgb), .18), rgba(255,255,255,.22) 50%, rgba(var(--c-accent-rgb), .18), transparent); transition: left 500ms linear, opacity 600ms; }
 #jx-sweep.still { display: none; }

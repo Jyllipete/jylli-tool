@@ -77,7 +77,7 @@ const glass = fs.readFileSync(path.join(__dirname, '..', 'css', 'glass.css'), 'u
 const BRIGHT = [184, 184, 200, 1]
 const GLASS_RULES = [
   ['body.world-on .j-card', 'cards'], ['body.world-on.q-cinematic .j-card', 'cards (cinematic)'], ['body.world-on .j-sidebar', 'sidebar'],
-  ['body.world-on .j-titlebar', 'title bar'], ['.jx-co', 'callouts'], ['#jx-chrono', 'timeline'],
+  ['body.world-on .j-titlebar', 'title bar'], ['.toast, .toast.ok, .toast.err, .toast.warn, .toast.info', 'toasts'], ['.jx-co', 'callouts'], ['#jx-chrono', 'timeline'],
 ]
 for (const [sel, label] of GLASS_RULES) {
   const i = glass.indexOf('\n' + sel + ' {')

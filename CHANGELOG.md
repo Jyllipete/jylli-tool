@@ -11,6 +11,7 @@
 - Kotisivun osat saavat reaaliaikaiset kuplat ja viivat; Ctrl K ymmärtää oireita ("nykii", "korkea ping", "kuuma kone")
 - Toisto: tallenna jakokortti PNG-kuvana (vain tallennetut arvot)
 - Diagnostiikan aikana valotaso pyyhkäisee koneen läpi ja osat välähtävät; siivouksen jälkeen vapautuneet tavut nousevat asemasta; tehtäväpalkki näyttää etenemisen muutoksia otettaessa käyttöön; palautuspisteet näkyvät aikajanalla
+- Uudet ilmoitukset: lasia, alareunassa keskellä, uusin päällä; Kumoa on ilmoituksen sisällä (erillinen kumoa-palkki poistui); pitkät nimet lyhennetään keskeltä; ilmoitus pysähtyy kun osoitin on sen päällä
 - Peli päällä 3D-maailma pysähtyy kokonaan; Verkko-välilehdellä malli väistyy verkon oman 3D-näkymän tieltä
 
 ## Julkaisematon (3.0 "Living hardware")

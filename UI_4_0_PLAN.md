@@ -165,7 +165,7 @@ css/glass.css     glass material, edge light, heat rim
 
 ---
 
-## 6b. Toasts (added 2026-11-01: the current ones look dated)
+## 6b. Toasts (added 2026-11-01: the current ones looked dated; BUILT 2026-11-01, `js/ui4/toast.js`, styles in `css/glass.css`)
 
 The toast (`toast(title, msg, type, ms)` in `js/ui-helpers.js`, `.toast` in the legacy CSS) is the old flat box with a blue left rule, a round icon chip and a progress line, as in the "Restored: Disable Game DVR / Xbox Game Bar" example. It is the one 4.0 surface that still looks like 1.x. Redesign, keeping the call signature so no caller changes:
 

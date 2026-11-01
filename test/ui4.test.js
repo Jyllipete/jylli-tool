@@ -124,3 +124,16 @@ test('chronoline: restore points from WMI or /Date()/ times', () => {
   assert.deepStrictEqual(m.map(x => x.seq), [1, 2])   // ascending, unreadable times dropped
   assert.deepStrictEqual(Chrono.restoreMarks({ error: 'x' }), [])
 })
+
+test('toast: long names are shortened in the middle, games silence only confirmations, at most three show', () => {
+  const T = require('../js/ui4/toast')
+  assert.strictEqual(T.shorten('short'), 'short')
+  const s = T.shorten('Restored: Disable Game DVR / Xbox Game Bar and a very long extra explanation of everything that happened', 40)
+  assert.ok(s.length <= 40 && s.includes('…') && s.startsWith('Restored') && s.endsWith('happened'))
+  assert.strictEqual(T.shorten(null), '')
+  assert.strictEqual(T.quiet('ok', true), true)
+  assert.strictEqual(T.quiet('err', true), false); assert.strictEqual(T.quiet('warn', true), false); assert.strictEqual(T.quiet('info', true), false)
+  assert.strictEqual(T.quiet('ok', false), false)
+  assert.deepStrictEqual(T.visibleSplit(2), { shown: 2, hidden: 0 })
+  assert.deepStrictEqual(T.visibleSplit(5), { shown: 3, hidden: 2 })
+})

@@ -964,6 +964,8 @@ LANG.en = {
       visuals3d_reduced:'Reduced',
       visuals3d_off:'Off',
       holdHint:'Hold to apply',
+      toastMore:'and {n} more',
+      toastShowPart:'Show the part this is about',
       stageStats:'During games this session the 3D stage drew {r} frames and skipped {s}.',
       shareCard:'Save share card',
       shareCardDone:'Share card saved',
