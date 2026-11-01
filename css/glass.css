@@ -5,7 +5,7 @@
 #world { position: fixed; inset: 0; z-index: 0; display: none; overflow: hidden; background: radial-gradient(ellipse 70% 60% at 42% 58%, rgba(var(--c-accent-rgb), .16), transparent 70%), radial-gradient(ellipse at 50% 120%, #14141c, #08080b 62%); }
 body.world-on #world { display: block; }
 #world-slot { position: absolute; inset: 0; }
-#world .j-twin-canvas { cursor: grab; transition: opacity 600ms var(--ease-out, ease); }
+#world .j-twin-canvas { cursor: grab; transition: opacity 260ms var(--ease-out, ease); }
 #world-vignette { position: absolute; inset: 0; pointer-events: none; background: radial-gradient(ellipse at 50% 50%, transparent 52%, rgba(0,0,0,.6)); }
 #world .j-twin-fallback { display: none; }
 /* no hero window on this page: the rig stays as ambient depth, dimmed so text on the glass stays readable */

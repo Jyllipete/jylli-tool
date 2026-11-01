@@ -245,7 +245,7 @@
     if (fps === 0) { if (game) H.stats.gameSkipped++; return }
     const dt = (now - H.lastFrame) / 1000
     // a page without a hero window shows the rig only as dimmed depth: 10 fps is plenty (measured: full rate there cost more than Home)
-    const cap = H.worldSlot && !H.win && !H.boot && !H.interacting ? 5 : 1000
+    const cap = H.worldSlot && !H.win && !H.boot && !H.interacting && H.engine.settled() ? 15 : 1000   // full rate while the camera is still easing in, so the rig does not appear in slow steps
     if (!H.probe && dt < 1 / Math.min(fps, cap) - 0.002) return   // uncapped while probing so the intervals show what the GPU can do
     H.lastFrame = now
     const snap = root.JylliTelemetry && (root.JylliTelemetry.state.override || root.JylliTelemetry.state.snap)

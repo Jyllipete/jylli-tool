@@ -24,7 +24,7 @@
   // view would look through them). Distances clear the glass (case half-depth ~2.3).
   const FOCUS_DIST = { gpu: 10, cpu: 9, cooler: 9.5, ram0: 9, board: 13, storage: 9 }
   const FOCUS_YAW = 0.5, FOCUS_PITCH = 0.14
-  const IDLE_SPIN = 0.9   // rad/s: showcase case fans turn slowly without a reading; a real motherboard fan reading drives their speed
+  const IDLE_SPIN = 2.6   // rad/s: showcase case fans turn slowly without a reading; a real motherboard fan reading drives their speed
   const AMB = 2.5   // steady emissive level of decor lights; readings move a part's own glow around it
 
   function create({ accent = [0.55, 0.49, 0.96], quality = 'full', preferLowPower = true } = {}) {
