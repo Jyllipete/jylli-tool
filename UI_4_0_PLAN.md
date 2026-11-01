@@ -165,6 +165,21 @@ css/glass.css     glass material, edge light, heat rim
 
 ---
 
+## 6b. Toasts (added 2026-11-01: the current ones look dated)
+
+The toast (`toast(title, msg, type, ms)` in `js/ui-helpers.js`, `.toast` in the legacy CSS) is the old flat box with a blue left rule, a round icon chip and a progress line, as in the "Restored: Disable Game DVR / Xbox Game Bar" example. It is the one 4.0 surface that still looks like 1.x. Redesign, keeping the call signature so no caller changes:
+
+- **Material.** Smoked glass like every other 4.0 surface (same fill, same shared-light edge, same contrast guard), no coloured rule. Status shows as a small icon and, for warn/error only, a thin tint on the rim; never a coloured box.
+- **Content.** A short sentence-case title; the second line is optional detail in secondary text; long names (tweak and process names) are shortened in the middle, never wrapped into a tall block.
+- **Place and stacking.** Bottom centre above the Timeline tab, newest on top, at most three visible, older ones collapse into "+2 more". Never over the Apply controls or the hero window.
+- **Action inside the toast.** Undo, Open, Details as a text button in the toast; the existing undo snackbar is folded into it, so there is one place for "I did something, here is the way back".
+- **Tied to the rig.** Toasts about a part (a tweak, a clean, a restore) carry a tiny part glyph; hovering it pulses that part and clicking jumps there. The light pulse that already runs on apply and undo ends at the toast.
+- **Motion.** Rises and fades in on the glide spring, the lifetime is shown as a thin fill under the text (pauses on hover and focus), and it leaves downward. Reduced motion: fade only. Nothing while a game runs (stage-paused rule); only errors may queue and show afterwards.
+- **Sound.** Uses the existing palette (`apply`, `undo`, `warning`) only when UI Sounds is on.
+- **Accessibility.** One polite live region for ok/info, an assertive one for warn/error, focusable action, Esc dismisses the newest, contrast on the worst-case backdrop checked by `tools/check-contrast.js`.
+- **Language.** All titles stay `tUI` keys; Finnish lengths checked for the shortened form.
+- **Done when.** Every existing `toast(...)` call renders in the new style without edits, the undo snackbar is gone, tests cover shortening, stacking order and the quiet-during-game rule, and the real app shows it on apply, undo, restore and error.
+
 ## 7. Phases
 
 Each phase ends usable and committed, with its checks green (`npm test`, `npm run check`, jsdom smoke en+fi, browser-pane visuals, and a real Electron run for anything touching the stage).
@@ -179,7 +194,7 @@ Each phase ends usable and committed, with its checks green (`npm test`, `npm ru
 | **P5 Chronoline** | `chrono.js`, three tracks, playhead replay of recorded telemetry, History and Restore folded in. | "Rewind your PC". |
 | **P6 Network world + game mode** | Camera exit into `netscene.js` world, speed test flight; game-foreground pause; cover-art environments; Replay recap + share card export. | Zero cost in game, marketing built in. |
 | **P7 Assembly and sound** | Three-act boot, first-run onboarding (language picker as the first frame of the assembly), sound pass. | First impression. |
-| **P8 Remaining pages** | Clean, System, Settings, Gaming lists, palette with symptoms, empty-state ghosts. | Nothing feels 2.0 anymore. |
+| **P8 Remaining pages** (+ toasts, see 6b) | Clean, System, Settings, Gaming lists, palette with symptoms, empty-state ghosts. | Nothing feels 2.0 anymore. |
 | **P9 Polish and proof** | Perf budgets in real Electron on the desktop and a low-end/iGPU profile, 8 h soak, DPI matrix (100/125/150/200 %), a11y pass, FI review, reduced-motion and Classic walkthroughs. | Ships. |
 
 ---
