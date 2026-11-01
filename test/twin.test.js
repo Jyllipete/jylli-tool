@@ -22,6 +22,16 @@ test('layout of the real desktop: GPU drawn, unknown cooler is a ghost, RAM stic
   assert.ok(lay.ghosts.includes('cooler'))
 })
 
+test('showcase case fans: decor-only on a tower, excluded from ghosts, none on a laptop', () => {
+  const lay = L.layoutRig(buildRigSpec(raw))
+  const fans = lay.parts.filter(p => p.kind === 'case-fan')
+  assert.strictEqual(fans.length, 4)                                    // 3 front + 1 rear
+  assert.ok(fans.every(p => p.decor === true && p.ghost === false))     // cosmetic: never implies a detected fan
+  assert.ok(fans.every(p => !lay.ghosts.includes(p.id)))                // decor parts never appear as "not detected"
+  const lap = L.layoutRig({ formFactor: 'laptop', gpus: [], ram: { sticks: [] }, drives: [] })
+  assert.strictEqual(lap.parts.filter(p => p.kind === 'case-fan').length, 0)
+})
+
 test('declared AIO builds a radiator; a laptop is laid out as a laptop; iGPU-only machines get no card', () => {
   const rig = buildRigSpec(raw, { cooler: 'aio' })
   const lay = L.layoutRig(rig)
@@ -100,4 +110,5 @@ test('fallback SVG: ghosts by class, heat only with a temperature, no vendor nam
   const cold = F.svgFor(lay, M.visualState(snap({})))
   assert.ok(!/data-heat/.test(cold))
   assert.ok(!/nvidia|rtx|ryzen|intel|asus/i.test(svg))
+  assert.ok(!/data-part="fanFront0"|data-part="fanRear"/.test(svg))   // showcase-only decor stays out of the compact silhouette
 })

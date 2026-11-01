@@ -24,7 +24,8 @@
     <label>GPU temp <input type="range" id="gpuT" min="0" max="100" value="0"><span id="gpuTv">off</span></label>
     <label>CPU load <input type="range" id="cpuL" min="0" max="100" value="12"><span></span></label>
     <label>GPU load <input type="range" id="gpuL" min="0" max="100" value="8"><span></span></label>
-    <label>Radiator fans <input type="range" id="fans" min="0" max="3" value="0"><span id="fansv">0</span></label>
+    <label>Radiator/case fans <input type="range" id="fans" min="0" max="3" value="0"><span id="fansv">0</span></label>
+    <label>GPU fan % <input type="range" id="gpuFan" min="0" max="100" value="0"><span id="gpuFanv">off</span></label>
     <label>Cooler <select id="cooler"><option value="">unknown</option><option value="aio">AIO</option><option value="air">Air</option></select><span></span></label>
     <label>Form <select id="form"><option value="">detected</option><option value="laptop">laptop</option></select><span></span></label>
     <button id="none">No sensors at all</button>
@@ -68,12 +69,14 @@
       if (+$('cpuT').value > 0) set('cpu.temp.package', +$('cpuT').value)
       if (+$('gpuT').value > 0) set('gpu0.temp.core', +$('gpuT').value)
       for (let i = 1; i <= +$('fans').value; i++) set('mb.fan' + i + '.rpm', 900 + i * 300)
+      if (+$('gpuFan').value > 0) set('gpu0.fan.pct', +$('gpuFan').value)
     }
     JylliTelemetry.state.snap = { v: 1, seq: ++seq, t: Date.now(), s }
     $('cpuTv').textContent = +$('cpuT').value || 'off'; $('gpuTv').textContent = +$('gpuT').value || 'off'; $('fansv').textContent = $('fans').value
+    $('gpuFanv').textContent = +$('gpuFan').value ? $('gpuFan').value + '%' : 'off'
     $('info').textContent = JSON.stringify({ state: JylliTwin.state, reason: JylliTwin.reason, quality: JylliTwin.quality, renderer: JylliTwin.rendererName, ghosts: JylliTwin.layout && JylliTwin.layout.ghosts }, null, 1)
   }
-  for (const id of ['cpuT', 'gpuT', 'cpuL', 'gpuL', 'fans']) $(id).oninput = push
+  for (const id of ['cpuT', 'gpuT', 'cpuL', 'gpuL', 'fans', 'gpuFan']) $(id).oninput = push
   $('none').onclick = () => { none = !none; push() }
   $('cooler').onchange = async e => { cooler = e.target.value; await JylliTwin.setRigDeclared() }
   $('form').onchange = async e => { form = e.target.value; await JylliTwin.setRigDeclared(); if (JylliTwin.layout) { /* engine rebuilt by host */ } }
