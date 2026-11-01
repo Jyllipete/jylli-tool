@@ -105,7 +105,7 @@
     _openModal('stage-modal')
   }
 
-  let applying = false
+  let applying = false, lastParts = []
   async function apply() {
     if (applying || !staged.size) return
     applying = true
@@ -113,6 +113,7 @@
     const d = dock(); d.querySelectorAll('button').forEach(b => { b.disabled = true })
     const btn = d.querySelector('#stage-apply'); if (btn) btn.textContent = tUI('stageApplying')
     // the light leaves the button for the part each change touches while the batch runs
+    lastParts = root.JylliWorld ? JylliWorld.partsFor(items.map(i => i.tweakId)) : []
     const lit = root.JylliWorld ? JylliWorld.pulseTo(btn, JylliWorld.partsFor(items.map(i => i.tweakId))) : Promise.resolve()
     let res = null
     try { res = await root.api.applyBatch({ items, via: 'stage', restorePoint: 'auto', label: 'staged' }) } catch (e) { res = { ok: false, error: String(e && e.message || e) } }
@@ -133,6 +134,7 @@
 
   function showBatchUndo(batchId, n) {
     root._journalUndoTarget = { batchId }
+    root._lastUndoParts = root.JylliWorld ? lastParts : null
     const bar = document.getElementById('undo-snackbar'), label = document.getElementById('undo-snackbar-label')
     if (!bar) return
     if (label) label.textContent = t('stageDone', { n })

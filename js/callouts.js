@@ -29,7 +29,7 @@
   if (typeof document === 'undefined') return
 
   // ── runtime ──────────────────────────────────────────────────────────────────────
-  const PARTS = ['cpu', 'gpu', 'ram0', 'drive0']
+  const PARTS = ['cpu', 'cooler', 'gpu', 'ram0', 'drive0']
   const NS = 'http://www.w3.org/2000/svg'
   let box, svg, items = [], tick = 0, lastWin = null
   const esc = s => (typeof escHtml === 'function' ? escHtml(s) : String(s))
@@ -43,7 +43,7 @@
       const info = JylliTwin.partInfo(id)
       if (!info || info.ghost || !(info.metrics || []).length) continue
       const el = document.createElement('button'); el.type = 'button'; el.className = 'jx-co'; el.tabIndex = -1
-      const key = { cpu: 'twinPartCpu', gpu: 'twinPartGpu', ram0: 'twinPartRam', drive0: 'twinPartStorage' }[id]
+      const key = { cpu: 'twinPartCpu', cooler: 'twinPartCooler', gpu: 'twinPartGpu', ram0: 'twinPartRam', drive0: 'twinPartStorage' }[id]
       el.innerHTML = `<span class="jx-co-t">${esc(tUI(key))}</span><span class="jx-co-m">${info.metrics.slice(0, 2).map(m => `<span class="j-num jx-co-n" data-odo data-metric="${esc(m)}">—</span>`).join('')}</span>`
       el.onclick = () => JylliTwin.select(id)
       const line = document.createElementNS(NS, 'line'), dot = document.createElementNS(NS, 'circle')

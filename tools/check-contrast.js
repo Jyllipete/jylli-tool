@@ -70,5 +70,27 @@ for (const [name, vars, scheme] of [['dark', dark, 'dark'], ['light', light, 'li
     if (fgOn < 3) { fail++; console.log(`✗ ${name}: accent-fg for '${k}' on surface-1 = ${fgOn.toFixed(2)} (< 3)`) }
   }
 }
+// 4.0 glass: surfaces over the world must still clear AA for the text on them, even over the brightest thing the rig can put behind
+// them (a bloomed fan ring or the case glass catching the light, sampled at roughly #B8B8C8). Each rule's own rgba() stops are read
+// from css/glass.css, translucent ones composited over that backdrop, and the lightest result is the one tested.
+const glass = fs.readFileSync(path.join(__dirname, '..', 'css', 'glass.css'), 'utf8')
+const BRIGHT = [184, 184, 200, 1]
+const GLASS_RULES = [
+  ['body.world-on .j-card', 'cards'], ['body.world-on.q-cinematic .j-card', 'cards (cinematic)'], ['body.world-on .j-sidebar', 'sidebar'],
+  ['body.world-on .j-titlebar', 'title bar'], ['.jx-co', 'callouts'], ['#jx-chrono', 'timeline'],
+]
+for (const [sel, label] of GLASS_RULES) {
+  const i = glass.indexOf('\n' + sel + ' {')
+  if (i < 0) { fail++; console.log('✗ glass rule not found: ' + sel); continue }
+  const body = glass.slice(i, glass.indexOf('}', i)), bg = body.match(/background:[^;]*/)
+  if (!bg) { fail++; console.log('✗ glass: no background in ' + sel); continue }
+  const stops = [...bg[0].matchAll(/rgba?\(\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)\s*(?:,\s*([\d.]+))?\s*\)/g)].map(m => [+m[1], +m[2], +m[3], m[4] === undefined ? 1 : +m[4]])
+  if (!stops.length) { fail++; console.log('✗ glass: no colour stops in ' + sel); continue }
+  const worst = stops.map(c => over(c, BRIGHT)).sort((p, q) => lum(q) - lum(p))[0]
+  for (const tok of ['--c-text-primary', '--c-text-secondary', '--c-text-tertiary']) {
+    const r = ratio(over(parse(dark[tok], dark), worst), worst)
+    if (r < 4.5) { fail++; console.log('✗ glass ' + label + ': ' + tok + ' over a bright backdrop = ' + r.toFixed(2) + ' (< 4.5)') }
+  }
+}
 if (fail) { console.error(`\ncontrast: ${fail} failing pair(s)`); process.exit(1) }
 console.log('✔ contrast ok (dark + light)')

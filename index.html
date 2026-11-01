@@ -7750,6 +7750,7 @@ async function applyTweak(id, action = 'apply') {
   let result
   try { result = await api.runTweak(id, action) } catch (e) { result = { ok: false, error: String(e?.message || e) } }   // a rejected IPC call must not leave the UI stuck on "Running…"
   if (!result) result = { ok: false }
+  if (result.ok && action === 'apply' && window.JylliWorld) { try { JylliWorld.pulseTweak(id, applyBtn) } catch {} }   // 4.0: light from the button into the part
 
   // Tweak Diff: snapshot after and persist to tweak_diff_log in localStorage
   if (_diffBefore && result.ok) {

@@ -121,7 +121,8 @@
       pop.classList.remove('show')
       const target = m.batchId ? { batchId: m.batchId } : { entryId: m.entryId }
       let res = null; try { res = await root.api.journalUndo({ target }) } catch {}
-      if (typeof toast === 'function') toast(res && res.ok !== false ? tUI('chronoUndone') : tUI('chronoUndoFailed'), '', res && res.ok !== false ? 'ok' : 'warn')
+      if (res && res.ok !== false && root.JylliWorld) { try { JylliWorld.undoPulse(JylliWorld.partsFor(m.ids), anchor) } catch {} }
+      if (typeof toast === 'function') toast(res && res.ok !== false ?tUI('chronoUndone') : tUI('chronoUndoFailed'), '', res && res.ok !== false ? 'ok' : 'warn')
       await refresh()
     }
   }

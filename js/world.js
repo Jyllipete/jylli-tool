@@ -112,7 +112,17 @@
   // scheme switch: the world only exists in the dark scheme
   if (typeof window !== 'undefined') window.addEventListener('jylli-scheme', () => { const was = document.body.classList.contains('world-on'); apply(); if (was !== enabled() && typeof showPage === 'function' && typeof currentPage !== 'undefined') { try { showPage(currentPage) } catch {} } })
 
-  const api = { MODES, shotFor, partFor, partsFor, mode, enabled, rolling, holdToApply, apply, route, travel, pulseTo, anchor, centerOf, reduced }
+  /** A single tweak was applied: the light leaves the button for the part it changed. */
+  function pulseTweak(id, from) { return pulseTo(from || null, [partFor(id)]) }
+  /** Undo plays the same path backwards: from the part to the control that took the change back. */
+  async function undoPulse(parts, toEl) {
+    const list = (parts && parts.length ? parts : ['board']).filter(Boolean)
+    const a = anchor(list[0]), b = toEl && toEl.getBoundingClientRect ? centerOf(toEl) : toEl
+    list.forEach(p => { try { JylliTwin.pulse(p) } catch {} })
+    await travel(a, b)
+  }
+
+  const api = { pulseTweak, undoPulse, MODES, shotFor, partFor, partsFor, mode, enabled, rolling, holdToApply, apply, route, travel, pulseTo, anchor, centerOf, reduced }
   root.JylliWorld = api
   if (typeof module !== 'undefined' && module.exports) module.exports = api
 })(typeof window !== 'undefined' ? window : globalThis)

@@ -290,6 +290,7 @@ function showUndoSnackbar(id, name, journalId) {
   _lastAppliedTweak = id
   _lastJournalId = journalId || null
   window._journalUndoTarget = journalId ? { entryId: journalId } : null
+  window._lastUndoParts = window.JylliWorld ? [JylliWorld.partFor(id)] : null
   const bar = document.getElementById('undo-snackbar')
   const label = document.getElementById('undo-snackbar-label')
   if (!bar) return
@@ -316,6 +317,7 @@ async function undoLastTweak() {
       if (ok) res = await api.journalUndo({ target, force: true })
       else return
     }
+    if (res && res.ok && window.JylliWorld) { try { JylliWorld.undoPulse(window._lastUndoParts, document.getElementById('page-content')) } catch {} }
     if (res && res.ok) { try { JylliSound.play('undo') } catch {} toast(tUI('undoDone'), '', 'ok'); try { invalidatePageCache(currentPage); showPage(currentPage) } catch {} }
     else toast(tUI('undoFailed'), '', 'err')
     _lastAppliedTweak = null

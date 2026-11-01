@@ -1,5 +1,17 @@
 # Handoff — Jylli Tool 1.6.0 rework (resume from here after /clear)
 
+## 4.0 "Through the glass" status (2026-11-01, committed locally, nothing pushed)
+
+Plan `UI_4_0_PLAN.md`, prototype `design-4-preview.html`, design notes in `DESIGN_SYSTEM.md` (4.0 section). Backup before the work: folder `..\jylli-tool-1.5.9-backup-pre-4.0` and git tag `pre-4.0-backup`.
+
+**Done:** world stage (`js/world.js`, `css/glass.css`, host/engine world mode: `setCenter` with zoom, `attach` turns hero slots into windows, `pause`, `exitWorld`), Settings › Visual style (`uiMode`), rolling digits / provenance tags / hold-to-apply (`js/ui4/`), light pulse on apply and reverse pulse on undo, Chronoline (`js/chronoline.js`), Home callouts (`js/callouts.js`), symptom search in Ctrl K (`js/symptoms.js`), replay share card (`js/sharecard.js`), game-live pause, glass worst-case contrast check, EN/FI strings, `test/ui4.test.js`.
+
+**Verified:** `npm run check`, `npm test`, and the real pages in the browser pane via `node tools/ui-preview/serve.js` then `/app` (fixture-backed; clear localStorage `jt_twin_q` if the pane's slow frames stepped the twin down to static).
+
+**Not verified (be honest):** no real Electron run (framing at real window sizes, real-GPU cost, hold feel, the first-run boot handoff into the world, a game actually stopping the stage), no soak, no DPI matrix, no Finnish length review of the new strings. The world exists only in the dark scheme. Glass fills had to go to ~0.9 alpha to pass the worst-case contrast check, so cards show the world mostly at their edges and in hero windows.
+
+**Gotchas:** `#world` must stay outside `#app` (its entrance animation would turn fixed into relative). Hero cards `:has(> .j-twin-stage)` are made clear and pointer-transparent so the canvas stays interactive. `JylliOdo` is opt-in via `data-odo`. Write patch scripts with the Write tool (Bash strips backslashes).
+
 ## Boot "Genesis" (2026-11-01, uncommitted)
 
 The loading screen now builds the user's rig in 3D as each detection result arrives (`js/boot-stage.js`, boot API in `js/twin/host.js`: `bootBegin/bootStage/bootPower/bootEnd`; engine: `boot` view, install vectors, `pulse`, `setPowered`, `screenPos`, `revealTo`). Leader lines run from ledger rows to parts; at the end the same canvas travels into Home's slot (`attach` is held while `H.boot` owns the canvas; `bootEnd` hands it over). Static SVG fallback gets the same beats (`data-in` per stage). Home's first-run assembly is skipped when `JylliTwin.bootAssembled`. Verified: `npm test` (138), `npm run check`, browser-pane demo `tools/ui-preview/boot-demo.html` (3D, `?q=off`, handoff leaves one canvas, no console errors). NOT verified: real Electron run (startupTrace timing of "hiding loading screen"), cold-cache inventory (PowerShell runs during the scan), reduced-motion visual, fi screenshot, `--disable-gpu`.

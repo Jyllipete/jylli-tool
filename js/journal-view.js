@@ -94,6 +94,7 @@
       if (!ok) return
       res = await root.api.journalUndo({ target, force: true })
     }
+    if (res && res.ok && root.JylliWorld) { try { JylliWorld.undoPulse(null, box) } catch {} }
     if (res && res.ok) { try { root.JylliSound && JylliSound.play('undo') } catch {} toast(tUI('undoDone'), '', 'ok') } else toast(tUI('undoFailed'), '', 'err')
     try { invalidatePageCache('changelog') } catch {}
     render(box)

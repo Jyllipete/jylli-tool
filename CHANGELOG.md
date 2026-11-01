@@ -1,5 +1,17 @@
 # Changelog
 
+## Julkaisematon (4.0 "Lasin läpi")
+
+### Ulkoasu
+- **3D-maailma taustalla**: koneesi malli on koko sovelluksen takana ja jokainen sivun hero-alue on ikkuna siihen; pinnat ovat savulasia, jonka reunoja valaisee yksi yhteinen valo
+- Asetukset › Visuaalinen tyyli: Elokuvamainen, Tasapainoinen (oletus), Kevyt, Klassinen (ei 3D-taustaa); maailma on vain tummassa teemassa
+- Numerot vierivät numero kerrallaan ja niiden päälle vietäessä näkyy mistä arvo on peräisin ja kuinka vanha se on
+- Muutosten käyttöönotto pitämällä pohjassa; valo kulkee painikkeesta muutettuun osaan ja kumoaminen näyttää saman takaperin
+- **Aikajana**: tallennetut muutokset, pelisessiot ja suorittimen kuorma; liu'uttamalla näet koneen kuorman siitä hetkestä (lämpötiloja ei ole tallennettu, joten niitä ei näytetä)
+- Kotisivun osat saavat reaaliaikaiset kuplat ja viivat; Ctrl K ymmärtää oireita ("nykii", "korkea ping", "kuuma kone")
+- Toisto: tallenna jakokortti PNG-kuvana (vain tallennetut arvot)
+- Peli päällä 3D-maailma pysähtyy kokonaan; Verkko-välilehdellä malli väistyy verkon oman 3D-näkymän tieltä
+
 ## Julkaisematon (3.0 "Living hardware")
 
 ### Luotettavuus
