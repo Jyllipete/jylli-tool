@@ -407,11 +407,24 @@ document.addEventListener('keydown', e => {
 })
 document.addEventListener('DOMContentLoaded', () => {
   _labelIconButtons(document); _a11yEnhance(document)
+  // Only newly added elements are rescanned (the old version re-queried the whole document on every telemetry text write).
+  const pending = new Set()
   let queued = false
-  new MutationObserver(() => {
-    if (queued) return
+  new MutationObserver(muts => {
+    for (const m of muts) {
+      for (const n of m.addedNodes) {
+        if (n.nodeType !== 1 || n.closest('#jx-callouts, #jx-fx, [data-odo]')) continue   // live overlays and odometer digits need no labels
+        pending.add(n.parentElement || n)
+      }
+    }
+    if (queued || !pending.size) return
     queued = true
-    requestAnimationFrame(() => { queued = false; _labelIconButtons(document); _a11yEnhance(document) })
+    requestAnimationFrame(() => {
+      queued = false
+      const list = [...pending]; pending.clear()
+      // a parent that is already inside another queued parent is covered by that scan
+      for (const el of list) if (el.isConnected && !list.some(o => o !== el && o.contains(el))) { _labelIconButtons(el); _a11yEnhance(el) }
+    })
   }).observe(document.body, { childList: true, subtree: true })
 })
 

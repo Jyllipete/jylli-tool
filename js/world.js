@@ -54,8 +54,11 @@
   // ── shared light ───────────────────────────────────────────────────────────────────────────
   // One light for every glass edge: its viewport position drifts slowly and leans toward the pointer. Written at ~15 Hz and only
   // while the world is visible, because changing a root variable restyles the page.
-  let lightT = 0, ptr = null, lastLx = -999, lastLy = -999
-  if (typeof document !== 'undefined') document.addEventListener('pointermove', e => { ptr = { x: e.clientX, y: e.clientY } }, { passive: true })
+  let lightT = 0, ptr = null, lastLx = -999, lastLy = -999, scrollingUntil = 0, lightHost = null
+  if (typeof document !== 'undefined') {
+    document.addEventListener('pointermove', e => { ptr = { x: e.clientX, y: e.clientY } }, { passive: true })
+    document.addEventListener('scroll', () => { scrollingUntil = performance.now() + 150 }, { capture: true, passive: true })
+  }
   function startLight(on) {
     clearInterval(lightT); lightT = 0
     if (!on) return
@@ -67,9 +70,12 @@
       const bx = innerWidth * (0.5 + Math.sin(t * 0.11) * 0.32), by = innerHeight * (0.12 + Math.cos(t * 0.09) * 0.08)
       const x = ptr ? bx + (ptr.x - bx) * 0.5 : bx, y = ptr ? by + (ptr.y - by) * 0.45 : by
       // every write restyles and repaints each card edge, so only move the light when it has travelled far enough to be seen
-      if (Math.abs(x - lastLx) < 28 && Math.abs(y - lastLy) < 28) return
-      lastLx = x; lastLy = y
-      const s = document.documentElement.style
+      if (scrollingUntil > performance.now()) return   // edges repaint on every scroll frame already; hold the light until the scroll settles
+      // only the cards read the variable, so it is set on the content area rather than the root (a root write restyles the whole app)
+      const host = document.querySelector('.j-main') || document.documentElement
+      if (host === lightHost && Math.abs(x - lastLx) < 28 && Math.abs(y - lastLy) < 28) return
+      lightHost = host; lastLx = x; lastLy = y
+      const s = host.style
       s.setProperty('--lx', x.toFixed(0) + 'px'); s.setProperty('--ly', y.toFixed(0) + 'px')
     }, 66)
   }
@@ -134,18 +140,18 @@
     scanOn = true; scanPct = 0; clearTimeout(scanTimer); scanTimer = setTimeout(scanEnd, 90000)
     try { JylliTwin.shot(null) } catch {}
     let el = document.getElementById('jx-sweep'); if (!el) { el = document.createElement('div'); el.id = 'jx-sweep'; el.setAttribute('aria-hidden', 'true'); document.body.appendChild(el) }
-    el.classList.toggle('still', reduced()); el.style.left = '-200px'; el.style.opacity = '1'
+    el.classList.toggle('still', reduced()); el.style.transform = 'translateX(-200px)'; el.style.opacity = '1'
   }
   function scanProgress(pct) {
     if (!scanOn) return
-    const el = document.getElementById('jx-sweep'); if (el) el.style.left = (Math.max(0, Math.min(100, pct)) / 100 * innerWidth - 80) + 'px'
+    const el = document.getElementById('jx-sweep'); if (el) el.style.transform = 'translateX(' + (Math.max(0, Math.min(100, pct)) / 100 * innerWidth - 80) + 'px)'
     for (const [at, part] of SCAN_PARTS) if (scanPct < at && pct >= at) { try { JylliTwin.pulse(part) } catch {} }
     scanPct = Math.max(scanPct, pct)
   }
   function scanEnd() {
     if (!scanOn) return
     scanOn = false; clearTimeout(scanTimer)
-    const el = document.getElementById('jx-sweep'); if (el) { el.style.opacity = '0'; el.style.left = innerWidth + 'px' }
+    const el = document.getElementById('jx-sweep'); if (el) { el.style.opacity = '0'; el.style.transform = 'translateX(' + innerWidth + 'px)' }
   }
 
   // ── Clean: the bytes just freed rise out of the drive ──

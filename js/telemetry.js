@@ -74,7 +74,10 @@
     const snap = state.override || state.snap
     if (typeof document === 'undefined' || !snap) return
     const t = (typeof tUI === 'function') ? tUI : k => k
-    for (const el of document.querySelectorAll('[data-metric]')) {
+    // the element list is only re-queried after elements were added (page build, callouts); a 4 Hz full-document query was wasted work
+    if (!state.els || state.dirty) { state.els = [...document.querySelectorAll('[data-metric]')]; state.dirty = false; watchDom() }
+    for (const el of state.els) {
+      if (!el.isConnected) { state.dirty = true; continue }
       const key = el.getAttribute('data-metric')
       const r = fmt(key, snap.s[key], state.caps[key], t, state.shown[key])
       if (r.ok) state.shown[key] = Number(r.text)
@@ -82,9 +85,17 @@
       if (root.JylliOdo && el.hasAttribute('data-odo')) root.JylliOdo.set(el, text)
       else if (el.textContent !== text) el.textContent = text
       // with the provenance tag (4.0) the native tooltip is replaced; without it the title stays
-      if (root.JylliProv) { el.setAttribute('data-prov', r.title); el.removeAttribute('title') } else el.title = r.title
-      el.classList.toggle('j-metric-na', !r.ok)
+      if (root.JylliProv) { if (el._prov !== r.title) { el._prov = r.title; el.setAttribute('data-prov', r.title) } if (el.hasAttribute('title')) el.removeAttribute('title') } else if (el.title !== r.title) el.title = r.title
+      const na = !r.ok
+      if (el._na !== na) { el._na = na; el.classList.toggle('j-metric-na', na) }
     }
+  }
+  function watchDom() {
+    if (state.mo || typeof MutationObserver === 'undefined') return
+    state.mo = new MutationObserver(muts => {
+      for (const m of muts) for (const n of m.addedNodes) if (n.nodeType === 1 && !(n.parentElement && n.parentElement.hasAttribute('data-odo'))) { state.dirty = true; return }
+    })
+    state.mo.observe(document.body, { childList: true, subtree: true })
   }
 
   async function refreshCaps() {

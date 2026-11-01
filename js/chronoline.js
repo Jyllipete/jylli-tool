@@ -170,8 +170,8 @@
   }
 
   async function refresh() { if (!box) return; await load(); draw() }
-  async function open(user) { build(); touched = !!user; await refresh(); box.classList.add('open'); clearTimeout(closeT) }
-  function close() { if (!box) return; box.classList.remove('open'); document.getElementById('jx-ch-pop').classList.remove('show'); clearTimeout(closeT); if (replayTs != null) setReplay(null) }
+  async function open(user) { build(); touched = !!user; await refresh(); box.classList.add('open'); document.body.classList.add('jx-chrono-open'); clearTimeout(closeT) }
+  function close() { if (!box) return; box.classList.remove('open'); document.body.classList.remove('jx-chrono-open'); document.getElementById('jx-ch-pop').classList.remove('show'); clearTimeout(closeT); if (replayTs != null) setReplay(null) }
 
   /** A batch was just applied: the new mark lands on the timeline, shown for a few seconds if the user is not already using it. */
   async function noteApplied(info) {

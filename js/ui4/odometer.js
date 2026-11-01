@@ -29,7 +29,7 @@
       const strips = [...el.querySelectorAll('i')]
       strips.forEach(i => { i.style.transition = 'none' })
       p.cells.forEach((c, k) => { if (c.digit != null) el._jxCols[k].firstChild.style.transform = `translateY(${-c.digit * 10}%)` })
-      void el.offsetWidth
+      // no forced reflow here: freshly built columns have no previous style, so nothing can transition from 0 anyway
       requestAnimationFrame(() => strips.forEach(i => { i.style.transition = '' }))
     } else {
       p.cells.forEach((c, k) => { if (c.digit != null) el._jxCols[k].firstChild.style.transform = `translateY(${-c.digit * 10}%)` })
