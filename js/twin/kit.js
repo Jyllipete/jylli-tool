@@ -278,6 +278,13 @@
       F.push({ geo: at(new T.TorusGeometry(0.19, 0.025, 8, 20), fx, -h / 2 - 0.2, fz, Math.PI / 2), mat: mats.chrome })
     }
     addAll(g, F)
+    // cable grommets on the tray beside the board, and a perforated dust filter under the top panel (towers only: the mini tower is tiny)
+    if (w > 4) {
+      const gm = []
+      for (const gy of [h * 0.2, -h * 0.02, -h * 0.24]) gm.push({ geo: at(rbox(0.3, h * 0.1, 0.1, 0.04), w / 2 - 0.55, gy, -d / 2 + 0.12), mat: mats.rubber })
+      addAll(g, gm)
+      const filter = new T.Mesh(new T.PlaneGeometry(w * 0.7, d * 0.55), mats.meshPanel); filter.rotation.x = Math.PI / 2; filter.position.set(0, h / 2 - wall - 0.01, -d * 0.1); g.add(filter)
+    }
     shade(g, false, true)   // the shell never casts: it would put the whole interior in shadow
     // glass: viewer side (+z) and front (+x), full panoramic; additive, so it never casts or receives shadow
     const front = new T.Mesh(new T.PlaneGeometry(w - t, h - t), mats.glass); front.position.z = d / 2 - 0.01; g.add(front)
