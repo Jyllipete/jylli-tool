@@ -13859,13 +13859,13 @@ const AO_CONFLICTS = [
 const _aoico = (f) => `<img src="assets/apps/${f}" style="width:26px;height:26px;object-fit:contain" draggable="false">`
 const APP_OPTI_DEFS = [
   { id:'edge-optimize',        cat:'Browsers',      sub:'Microsoft',    icon:_aoico('microsoft.ico'),
-    bullets:['Disables startup boost (Edge launching at boot)','Disables background mode (Edge running when closed)','Disables hardware acceleration (frees GPU for games)'] },
+    bullets:['Disables startup boost (Edge launching at boot)','Disables background mode (Edge running when closed)']  },
   { id:'chrome-optimize',      cat:'Browsers',      sub:'Google',       icon:_aoico('chrome.ico'),
-    bullets:['Disables hardware acceleration (Chrome uses CPU rendering)','Disables background mode (Chrome closing fully when window closed)'] },
+    bullets:['Disables background mode (Chrome closing fully when window closed)'] },
   { id:'brave-optimize',       cat:'Browsers',      sub:'Brave',        icon:_aoico('brave.ico'),
-    bullets:['Disables hardware acceleration','Disables background mode'] },
+    bullets:['Disables background mode'] },
   { id:'opera-gx-optimize',    cat:'Browsers',      sub:'Opera',        icon:_aoico('opera.ico'),
-    bullets:['Disables hardware acceleration (frees GPU for games)'] },
+    bullets:['Retired: it only turned GPU acceleration off, which slows the browser down'] },
   { id:'firefox-optimize',     cat:'Browsers',      sub:'Mozilla',      icon:_aoico('firefox.ico'),
     bullets:['Enables WebRender GPU compositor','Tunes cache size to 512 MB','Reduces session autosave interval to 60s','Disables DNS prefetch'] },
   { id:'discord-optimize',     cat:'Communication', sub:'Discord',      icon:_aoico('discord.ico'),

@@ -9757,9 +9757,9 @@ const APP_OPTIMIZER_TWEAKS = {
     apply: async (s, ps, cmd) => {
       await ps(`New-Item -Path 'HKLM:\\SOFTWARE\\Policies\\Microsoft\\Edge' -Force -EA SilentlyContinue | Out-Null
 Set-ItemProperty -Path 'HKLM:\\SOFTWARE\\Policies\\Microsoft\\Edge' -Name 'StartupBoostEnabled' -Value 0 -Force
-Set-ItemProperty -Path 'HKLM:\\SOFTWARE\\Policies\\Microsoft\\Edge' -Name 'BackgroundModeEnabled' -Value 0 -Force
-Set-ItemProperty -Path 'HKLM:\\SOFTWARE\\Policies\\Microsoft\\Edge' -Name 'HardwareAccelerationModeEnabled' -Value 0 -Force`)
-      s('Edge: startup boost off, background mode off, HW accel disabled.', 'ok')
+Set-ItemProperty -Path 'HKLM:\\SOFTWARE\\Policies\\Microsoft\\Edge' -Name 'BackgroundModeEnabled' -Value 0 -Force`)
+      // GPU acceleration is deliberately left on: turning it off makes the browser slower, not lighter.
+      s('Edge: startup boost off, background mode off.', 'ok')
     },
     restore: async (s, ps) => {
       await ps(`Remove-ItemProperty -Path 'HKLM:\\SOFTWARE\\Policies\\Microsoft\\Edge' -Name 'StartupBoostEnabled','BackgroundModeEnabled','HardwareAccelerationModeEnabled' -EA SilentlyContinue`)
@@ -9770,9 +9770,8 @@ Set-ItemProperty -Path 'HKLM:\\SOFTWARE\\Policies\\Microsoft\\Edge' -Name 'Hardw
     safetyTier: 2,
     apply: async (s, ps) => {
       await ps(`New-Item -Path 'HKLM:\\SOFTWARE\\Policies\\Google\\Chrome' -Force -EA SilentlyContinue | Out-Null
-Set-ItemProperty -Path 'HKLM:\\SOFTWARE\\Policies\\Google\\Chrome' -Name 'HardwareAccelerationModeEnabled' -Value 0 -Force
 Set-ItemProperty -Path 'HKLM:\\SOFTWARE\\Policies\\Google\\Chrome' -Name 'BackgroundModeEnabled' -Value 0 -Force`)
-      s('Chrome: hardware acceleration off, background mode off.', 'ok')
+      s('Chrome: background mode off (GPU acceleration left on).', 'ok')
     },
     restore: async (s, ps) => {
       await ps(`Remove-ItemProperty -Path 'HKLM:\\SOFTWARE\\Policies\\Google\\Chrome' -Name 'HardwareAccelerationModeEnabled','BackgroundModeEnabled' -EA SilentlyContinue`)
@@ -9820,9 +9819,8 @@ user_pref("browser.sessionhistory.max_total_viewers", 4);`
     safetyTier: 2,
     apply: async (s, ps) => {
       await ps(`New-Item -Path 'HKLM:\\SOFTWARE\\Policies\\BraveSoftware\\Brave' -Force -EA SilentlyContinue | Out-Null
-Set-ItemProperty -Path 'HKLM:\\SOFTWARE\\Policies\\BraveSoftware\\Brave' -Name 'HardwareAccelerationModeEnabled' -Value 0 -Force
 Set-ItemProperty -Path 'HKLM:\\SOFTWARE\\Policies\\BraveSoftware\\Brave' -Name 'BackgroundModeEnabled' -Value 0 -Force`)
-      s('Brave: hardware acceleration and background mode disabled.', 'ok')
+      s('Brave: background mode disabled (GPU acceleration left on).', 'ok')
     },
     restore: async (s, ps) => {
       await ps(`Remove-ItemProperty -Path 'HKLM:\\SOFTWARE\\Policies\\BraveSoftware\\Brave' -Name 'HardwareAccelerationModeEnabled','BackgroundModeEnabled' -EA SilentlyContinue`)
@@ -9831,11 +9829,7 @@ Set-ItemProperty -Path 'HKLM:\\SOFTWARE\\Policies\\BraveSoftware\\Brave' -Name '
   },
   'opera-gx-optimize': {
     safetyTier: 2,
-    apply: async (s, ps) => {
-      await ps(`New-Item -Path 'HKLM:\\SOFTWARE\\Policies\\OperaSoftware\\OperaGX' -Force -EA SilentlyContinue | Out-Null
-Set-ItemProperty -Path 'HKLM:\\SOFTWARE\\Policies\\OperaSoftware\\OperaGX' -Name 'HardwareAccelerationModeEnabled' -Value 0 -Force`)
-      s('Opera GX: hardware acceleration disabled.', 'ok')
-    },
+    apply: async () => { throw new Error('Retired: this only switched GPU acceleration off, which makes the browser slower. Nothing was changed.') },
     restore: async (s, ps) => {
       await ps(`Remove-ItemProperty -Path 'HKLM:\\SOFTWARE\\Policies\\OperaSoftware\\OperaGX' -Name 'HardwareAccelerationModeEnabled' -EA SilentlyContinue`)
       s('Opera GX: hardware acceleration policy removed.', 'ok')
@@ -10155,9 +10149,9 @@ ipcMain.handle('health-check-app-optimizer', async () => {
   }
 
   const checks = {
-    'edge-optimize':       () => readReg('HKLM\\SOFTWARE\\Policies\\Microsoft\\Edge', 'HardwareAccelerationModeEnabled') === 0,
-    'chrome-optimize':     () => readReg('HKLM\\SOFTWARE\\Policies\\Google\\Chrome', 'HardwareAccelerationModeEnabled') === 0,
-    'brave-optimize':      () => readReg('HKLM\\SOFTWARE\\Policies\\BraveSoftware\\Brave', 'HardwareAccelerationModeEnabled') === 0,
+    'edge-optimize':       () => readReg('HKLM\\SOFTWARE\\Policies\\Microsoft\\Edge', 'BackgroundModeEnabled') === 0,
+    'chrome-optimize':     () => readReg('HKLM\\SOFTWARE\\Policies\\Google\\Chrome', 'BackgroundModeEnabled') === 0,
+    'brave-optimize':      () => readReg('HKLM\\SOFTWARE\\Policies\\BraveSoftware\\Brave', 'BackgroundModeEnabled') === 0,
     'opera-gx-optimize':   () => readReg('HKLM\\SOFTWARE\\Policies\\OperaSoftware\\OperaGX', 'HardwareAccelerationModeEnabled') === 0,
     'firefox-optimize':    () => { try { const ffp = path.join(appd.replace('Roaming',''), 'Roaming\\Mozilla\\Firefox\\Profiles'); return fs.existsSync(ffp) && fs.readdirSync(ffp).some(p => fs.existsSync(path.join(ffp, p, 'user.js'))) } catch { return false } },
     'discord-optimize':    () => { try { const cfg = path.join(appd, 'discord\\settings.json'); if (!fs.existsSync(cfg)) return false; const d = JSON.parse(fs.readFileSync(cfg,'utf8')); return d.enableHardwareAcceleration === false && d.audioSubsystem === 'legacy' } catch { return false } },
