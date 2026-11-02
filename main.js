@@ -5484,7 +5484,8 @@ const TWEAKS = {
     category: 'network',
     safetyTier: 2,
     gamerImpact: 'low',
-    apply: async (s, ps) => { await ps('Set-ItemProperty -Path "HKLM:\\SYSTEM\\CurrentControlSet\\Services\\Tcpip6\\Parameters" -Name DisabledComponents -Value 255 -Force'); s('IPv6 disabled. Reboot required.', 'ok') },
+    // 0x20 = prefer IPv4 over IPv6. 0xFF (everything off, loopback included) is not supported by Microsoft and breaks parts of Windows.
+    apply: async (s, ps) => { await ps('Set-ItemProperty -Path "HKLM:\\SYSTEM\\CurrentControlSet\\Services\\Tcpip6\\Parameters" -Name DisabledComponents -Value 32 -Type DWord -Force'); s('IPv4 is now preferred over IPv6 (IPv6 itself stays on). Reboot required.', 'ok') },
     restore: async (s, ps) => { await ps('Remove-ItemProperty -Path "HKLM:\\SYSTEM\\CurrentControlSet\\Services\\Tcpip6\\Parameters" -Name DisabledComponents -EA SilentlyContinue'); s('IPv6 restored. Reboot required.', 'ok') }
   },
   'disable-wpad': {
@@ -6126,7 +6127,7 @@ const TWEAKS = {
     apply: async (s, ps) => {
       const userProfile = process.env.USERPROFILE || ''
       const paths = [
-        path.join(userProfile, '.nuget', 'packages'),
+        // ~/.nuget/packages is the global package store, not a cache: wiping it breaks offline builds, so it is left alone.
         path.join(userProfile, 'AppData', 'Local', 'Temp', 'NuGetScratch'),
         path.join(process.env.LOCALAPPDATA || '', 'NuGet', 'Cache'),
         path.join(process.env.LOCALAPPDATA || '', 'Microsoft', 'TypeScript'),
@@ -8076,18 +8077,8 @@ if ($r.Count -eq 0) { Write-Output "NONE_FOUND" } else { foreach ($x in $r) { Wr
       const ifeo = 'HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\MsMpEng.exe\\PerfOptions'
       await ps(`New-Item -Path "${ifeo}" -Force -EA SilentlyContinue | Out-Null`)
       await ps(`Set-ItemProperty -Path "${ifeo}" -Name CpuPriorityClass -Value 5 -Force`)
-      // Add Defender scan exclusions for common competitive games
-      const games = [
-        'C:\\Program Files (x86)\\Steam\\steamapps\\common\\Counter-Strike Global Offensive\\game\\bin\\win64\\cs2.exe',
-        'C:\\Riot Games\\VALORANT\\live\\VALORANT.exe',
-        'C:\\Program Files (x86)\\Steam\\steamapps\\common\\Apex Legends\\r5apex.exe',
-        'C:\\Program Files\\Epic Games\\Fortnite\\FortniteGame\\Binaries\\Win64\\FortniteClient-Win64-Shipping.exe',
-      ]
-      await ps(`
-        $paths = @(${games.map(g => `'${g}'`).join(',')})
-        foreach ($p in $paths) { Add-MpPreference -ExclusionPath $p -EA SilentlyContinue }
-      `)
-      s('Defender set to BelowNormal CPU priority via IFEO. Game path exclusions added.', 'ok')
+      // Earlier versions also added Defender scan exclusions for four game executables. That lowers protection for little gain, so it is gone; Restore still removes them.
+      s('Defender set to BelowNormal CPU priority via IFEO.', 'ok')
     },
     restore: async (s, ps) => {
       const ifeoBase = 'HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\MsMpEng.exe'
@@ -10095,7 +10086,16 @@ ipcMain.handle('run-app-optimizer', async (_, { id, action }) => {
   const send = (msg, level) => mainWindow?.webContents.send('log', { msg, level, ts: new Date().toLocaleTimeString() })
   send(`App Optimizer: ${id} [${action}]`, 'head')
   try {
-    await APP_OPTIMIZER_TWEAKS[id]?.[action]?.(send, runPS, runCmd)
+    const t = APP_OPTIMIZER_TWEAKS[id]
+    if (!t || (action !== 'apply' && action !== 'restore') || typeof t[action] !== 'function') return { ok: false, error: 'unknown_app_optimizer_action' }
+    const control = `app-optimizer:${id}`
+    if (action === 'restore') {
+      const j = await journalSvc().restoreRecorded(control, send)
+      if (j.done) return { ok: true }
+    }
+    let failed = null
+    await journalSvc().runRecorded(control, action, { via: 'manual', onFailures: f => { failed = f } }, (ps, cmd) => t[action](send, ps, cmd))
+    if (failed) { send('App Optimizer: ' + failed.map(f => f.err).join('; ').slice(0, 200), 'err'); return { ok: false, partial: true, error: failed.map(f => f.err).join('; ').slice(0, 300) } }
     return { ok: true }
   } catch (e) {
     send(`Error: ${e.message}`, 'err')

@@ -595,7 +595,7 @@
    {
     "kind": "reg",
     "target": "HKLM:\\SYSTEM\\CurrentControlSet\\Services\\Tcpip6\\Parameters\\DisabledComponents",
-    "after": "255"
+    "after": "32"
    }
   ],
   "dynamic": false,
@@ -1838,8 +1838,8 @@
    }
   ],
   "dynamic": true,
-  "untracked": 1,
-  "fidelity": "partial"
+  "untracked": 0,
+  "fidelity": "exact"
  },
  "dpc-coalescing": {
   "touches": [

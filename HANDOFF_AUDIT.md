@@ -54,3 +54,7 @@ Step 8 partly done: 16 unreferenced functions removed from index.html (tSub, pcT
 - Tier 2 tweak without admin: `bcd-tweaks` is blocked with `restorePointRequired`. `create-restore-point` returns `not_admin` with guidance.
 - NOT verified: two restore points within 24h (needs an elevated run) and the Pulse thermal progress bar (premium window; `open-pulse-window` returned nothing without a premium session).
 - Side effect of the run on this machine: `fix-usb-ghosting` was applied once (USB selective suspend / core parking set to Windows defaults on the active scheme, no admin so the service and task parts failed) and game-dvr was applied then restored to its defaults.
+
+## Session 3 follow-up
+- clean-vs-temp no longer touches `~/.nuget/packages` (global store). disable-ipv6 writes DisabledComponents=32 (prefer IPv4; IPv6 stays on) instead of 255. defender-idle-priority only sets the IFEO priority; the game exclusions are no longer added (Restore still removes old ones). disable-ipv6 and defender-idle-priority Restore now use the journal's recorded originals.
+- run-app-optimizer runs through `journalSvc().runRecorded('app-optimizer:<id>')`: changes are journaled, hard failures return `{ok:false, partial:true}`, and Restore first tries the recorded originals (`restoreRecorded`), then the tweak's own restore. Not exercised in the real app.
