@@ -4234,7 +4234,7 @@ ipcMain.handle('get-power-plan', async () => {
   return m ? { guid: m[1], name: m[2] } : { name: null }
 })
 
-ipcMain.handle('get-tweak-meta', (_, ids) => journalSvc().tweakMeta(Array.isArray(ids) ? ids.slice(0, 400) : null))
+ipcMain.handle('get-tweak-meta', (_, ids) => retireTweaks() || journalSvc().tweakMeta(Array.isArray(ids) ? ids.slice(0, 400) : null))
 ipcMain.handle('apply-batch', (_, req) => journalSvc().applyBatch(req))
 ipcMain.handle('journal-list', (_, opts) => {
   const o = opts && typeof opts === 'object' ? opts : {}
@@ -4331,6 +4331,15 @@ const RETIRED_TWEAKS = {
   'tcp-timedwait':             'TcpTimedWaitDelay only shortens TIME_WAIT; it does not reduce game latency or frame drops.',
   'tcp-task-offload':          'Writes the value Windows already uses by default.',
   'tsc-sync':                  'tscsyncpolicy has no measurable effect on modern CPUs.',
+  'cpu-focus-bias':            'Writes the same Win32PrioritySeparation value as the Foreground Process Priority Boost tweak (and calls it hex); a duplicate.',
+  'tcp-buffers':               'Sets no buffers: TCPNoDelay is not a Windows registry setting and DefaultTTL does not affect latency; games use UDP, which ACK frequency does not touch.',
+  'net-del-ack':               'TcpDelAckTicks belongs to the old Windows stack; it affects TCP only, and games use UDP.',
+  'audio-exclusive-mode':      'DisableProtectedAudioDG only turns off the protected (DRM) audio path and can break protected playback; it does not lower game audio latency.',
+  'corsair-audio-off':         'Not a performance change: it disables Corsair audio drivers and services, which breaks the headset, for a negligible CPU saving.',
+  'mmcss-proaudio':            'The Pro Audio task only affects audio workstations, not games, and these values are already the Windows defaults.',
+  'dpc-coalescing':            'CoalescingTimerInterval under the kernel key is not a documented setting and no measurable DPC latency gain has been shown.',
+  'gpu-preemption':            'EnablePreemption is already on by default and VsyncIdleTimeout is a folk value; no measurable effect.',
+  'wasapi-min-period':         'Only matters for apps that open an exclusive-mode audio stream, and the MMDevices keys are protected, so the write usually does not stick.',
   'hpet':                      'Forcing platform tick / disabling dynamic tick raises power use and can add timer jitter; modern Windows picks the right timer itself.',
 }
 let _retiredApplied = false

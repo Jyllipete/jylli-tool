@@ -2044,6 +2044,7 @@ LANG.en = {
       // Modal buttons
       btnCancel:'Cancel', btnConfirm:'Confirm', btnOk:'OK', btnGotIt:'Got it',
       // Status badges
+      tweakRetired:'Retired', tweakRetiredTip:'Retired: no measurable benefit. You can still restore it if it was applied earlier.',
       tier3ConfirmTitle:'Lowers Windows security', tier3ConfirmBody:'<b>{name}</b> weakens a Windows protection. A fresh restore point is created first; if that fails, nothing is changed. Type <b>{word}</b> to continue.', tier3ConfirmWord:'CONFIRM', tier3ConfirmOk:'Apply', tier3ConfirmWrong:'Not applied: the confirmation word did not match.',
       unexpectedErrorTitle:'Something went wrong', rpRequiredTitle:'Restore point required', tweakFailedTitle:'Tweak failed', statusApplied:'APPLIED', statusRestored:'RESTORED', statusDefault:'DEFAULT',
       statusRunning:'RUNNING…', statusRestoring:'RESTORING…', statusPreApplied:'PRE-APPLIED',

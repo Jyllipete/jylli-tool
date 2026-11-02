@@ -7837,6 +7837,12 @@ function makeRow({ id, name, desc, danger = false, dangerLabel = 'I understand t
     </div>
     <div class="tweak-progress" id="prog-${id}"><div class="tweak-progress-bar" id="prog-bar-${id}"></div></div>
   `
+  if (window._tweakMeta?.[id]?.retired) {
+    const ab = div.querySelector('[data-tweak-apply]')
+    if (ab) { ab.disabled = true; ab.title = window._tweakMeta[id].retired }
+    const bd = div.querySelector('.tweak-badge')
+    if (bd) { bd.textContent = tUI('tweakRetired'); bd.title = tUI('tweakRetiredTip') }
+  }
   return div
 }
 
