@@ -8,13 +8,14 @@ const { staticScan } = require('../lib/journal-prelude')
 const src = fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'utf8')
 const start = src.indexOf('\nconst TWEAKS = {')
 if (start < 0) throw new Error('TWEAKS table not found')
-const lines = src.slice(start).split('\n')
+// The table ends right before the Fix IPC handler; a C# here-string inside a tweak can put a bare } in column 0.
+const endMark = src.indexOf('\n// ─── Fix IPC handler', start)
+const lines = src.slice(start, endMark > start ? endMark : undefined).split('\n')
 const entries = []
 let cur = null
 for (let i = 1; i < lines.length; i++) {
   const m = /^  '([^']+)': \{\s*$/.exec(lines[i]) || /^  ([A-Za-z0-9_]+): \{\s*$/.exec(lines[i])
   if (m) { if (cur) entries.push(cur); cur = { id: m[1], body: [] }; continue }
-  if (/^\}/.test(lines[i])) break
   if (cur) cur.body.push(lines[i])
 }
 if (cur) entries.push(cur)
@@ -30,7 +31,10 @@ for (const e of entries) {
   for (const m of apply.matchAll(/Set-Service[^\n]*?-Name\s+["']?([\w.-]+)["']?[^\n]*?-StartupType\s+["']?(\w+)/gi)) touches.push({ kind: 'service', target: m[1], after: m[2] })
   for (const m of apply.matchAll(/sc(?:\.exe)?\s+config\s+["']?([\w.-]+)["']?\s+start=\s*(\w[\w-]*)/gi)) touches.push({ kind: 'service', target: m[1], after: m[2] })
   for (const m of apply.matchAll(/bcdedit\s+\/set\s+(?:\{\w+\}\s+)?(\w+)\s+(\w+)/gi)) touches.push({ kind: 'bcd', target: m[1], after: m[2] })
-  const scan = staticScan(apply)
+  // Literal cmd('...') calls count as scripts too; DNS goes through dnsSetServers, which records its own kind.
+  const scanSrc = apply + '\n' + [...apply.matchAll(/\bcmd\(\s*'([^'\n]+)'/g)].map(m => m[1]).join('\n')
+  const scan = staticScan(scanSrc)
+  for (const m of apply.matchAll(/dnsSetServers\(note,\s*a,\s*([^,)]+)/g)) touches.push({ kind: 'dns', target: 'adapter DNS servers', after: m[1].trim() })
   const dynamic = /\$\{|\$\w+/.test(apply) && /Set-ItemProperty|reg add|Set-Service|sc config/i.test(apply)
   const hasWrites = touches.length > 0
   out[e.id] = { touches, dynamic, untracked: scan.unresolved.length, fidelity: !hasWrites && !scan.unresolved.length && !/Set-ItemProperty|reg add|Set-Service|sc config|bcdedit|powercfg/i.test(apply) ? 'none' : scan.unresolved.length ? 'partial' : 'exact' }

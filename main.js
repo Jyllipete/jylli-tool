@@ -517,6 +517,40 @@ const dnsSetDhcp   = a => runFile('netsh.exe', ['interface', 'ip', 'set', 'dns',
 const dnsSetStatic = (a, ip) => V.isIp(ip) ? runFile('netsh.exe', ['interface', 'ip', 'set', 'dns', `name=${a}`, 'static', ip, 'primary']) : Promise.resolve({ ok: false })
 const dnsAddServer = (a, ip) => V.isIp(ip) ? runFile('netsh.exe', ['interface', 'ip', 'add', 'dns', `name=${a}`, ip, 'index=2']) : Promise.resolve({ ok: false })
 const { runFile } = require('./lib/shell')
+// Current DNS servers of one adapter as a journal state: 'dhcp' (nothing set by hand) or the static list, read from the
+// adapter's Tcpip interface key so it does not depend on the Windows display language.
+async function dnsRead(a) {
+  if (!V.isAdapterName(a)) return { unknown: true }
+  const r = await runPS("$g = (Get-NetAdapter -Name '" + String(a).replace(/'/g, "''") + "' -EA SilentlyContinue).InterfaceGuid; if ($g) { $v = (Get-ItemProperty -LiteralPath ('HKLM:\\SYSTEM\\CurrentControlSet\\Services\\Tcpip\\Parameters\\Interfaces\\' + $g) -EA SilentlyContinue).NameServer; Write-Output ('JJDNS|' + $v) }", 8000)
+  const m = String(r.out || '').match(/JJDNS\|([^\r\n]*)/)
+  if (!r.ok || !m) return { unknown: true }
+  const list = m[1].split(/[ ,]+/).map(x => x.trim()).filter(x => V.isIp(x))
+  return { exists: true, value: list.length ? list.join(',') : 'dhcp' }
+}
+// Sets the primary (and optional secondary) DNS server on one adapter and records the adapter's old and new state in the journal.
+async function dnsSetServers(note, a, primary, secondary) {
+  const before = await dnsRead(a)
+  const r1 = await dnsSetStatic(a, primary)
+  const r2 = secondary ? await dnsAddServer(a, secondary) : { ok: true }
+  const after = await dnsRead(a)
+  if (note && !before.unknown && !after.unknown) note({ kind: 'dns', adapter: a, before, after })
+  return { ok: !!(r1.ok && r2.ok) }
+}
+// Undo handler for kind 'dns' (see journalSvc handlers).
+const dnsUndoHandler = {
+  async read(c) { return dnsRead(c.adapter) },
+  async restore(c) {
+    const want = String(c.before && c.before.value || 'dhcp')
+    if (want === 'dhcp') { const r = await dnsSetDhcp(c.adapter); if (!r.ok) return false }
+    else {
+      const ips = want.split(',')
+      const r1 = await dnsSetStatic(c.adapter, ips[0]); if (!r1.ok) return false
+      for (const ip of ips.slice(1)) await dnsAddServer(c.adapter, ip)
+    }
+    const now = await dnsRead(c.adapter)
+    return !now.unknown && now.value === want
+  },
+}
 let auth = null   // created once userData is known (app ready)
 let ANALYTICS_PATH = null
 let APP_VERSION    = null
@@ -4031,7 +4065,7 @@ function journalSvc() {
       emit: (ch, payload) => mainWindow?.webContents.send(ch, payload),
       loadSettings, saveSettings, writeLog: debugLog,
       noteSettingsWrites: patch => { for (const [k, v] of Object.entries(patch)) _settingsWriteLog.note(k, v) },
-      handlers: { 'gpu-power-limit': powerLimitSvc().undoHandler },
+      handlers: { 'gpu-power-limit': powerLimitSvc().undoHandler, dns: dnsUndoHandler },
       manifest: (() => { try { return require('./lib/tweak-manifest.json') } catch { return {} } })(),
     })
     try { _journalSvc.journal.rotate() } catch {}
@@ -5309,12 +5343,11 @@ const TWEAKS = {
     category: 'network',
     safetyTier: 1,
     gamerImpact: 'medium',
-    apply: async (s, ps) => {
+    apply: async (s, ps, cmd, rd, rdel, note) => {
       const adapters = await ps("Get-NetAdapter | Where-Object {$_.Status -eq 'Up'} | Select-Object -ExpandProperty Name")
       for (const a of adapters.out.split('\n').map(l => l.trim()).filter(V.isAdapterName)) {
-        const r1 = await dnsSetStatic(a, '1.1.1.1')
-        const r2 = await dnsAddServer(a, '1.0.0.1')
-        if (r1.ok && r2.ok) s(`  ${a}: Cloudflare 1.1.1.1 set`, 'ok')
+        const r = await dnsSetServers(note, a, '1.1.1.1', '1.0.0.1')
+        if (r.ok) s(`  ${a}: Cloudflare 1.1.1.1 set`, 'ok')
         else s(`  ${a}: DNS set failed`, 'warn')
       }
     },
@@ -5331,12 +5364,11 @@ const TWEAKS = {
     category: 'network',
     safetyTier: 1,
     gamerImpact: 'medium',
-    apply: async (s, ps) => {
+    apply: async (s, ps, cmd, rd, rdel, note) => {
       const adapters = await ps("Get-NetAdapter | Where-Object {$_.Status -eq 'Up'} | Select-Object -ExpandProperty Name")
       for (const a of adapters.out.split('\n').map(l => l.trim()).filter(V.isAdapterName)) {
-        await dnsSetStatic(a, '8.8.8.8')
-        await dnsAddServer(a, '8.8.4.4')
-        s(`  ${a}: Google DNS 8.8.8.8 set`, 'ok')
+        const r = await dnsSetServers(note, a, '8.8.8.8', '8.8.4.4')
+        s(`  ${a}: Google DNS 8.8.8.8 ${r.ok ? 'set' : 'could not be set'}`, r.ok ? 'ok' : 'warn')
       }
     },
     restore: async (s, ps) => {
@@ -5352,19 +5384,19 @@ const TWEAKS = {
     category: 'network',
     safetyTier: 1,
     gamerImpact: 'medium',
-    apply: async (s, ps) => {
+    apply: async (s, ps, cmd, rd, rdel, note) => {
       await ps(`Add-DnsClientDohServerAddress -ServerAddress '1.1.1.1' -DohTemplate 'https://cloudflare-dns.com/dns-query' -AllowFallbackToUdp $false -AutoUpgrade $true -ErrorAction SilentlyContinue`)
       await ps(`Add-DnsClientDohServerAddress -ServerAddress '1.0.0.1' -DohTemplate 'https://cloudflare-dns.com/dns-query' -AllowFallbackToUdp $false -AutoUpgrade $true -ErrorAction SilentlyContinue`)
       const adapters = await ps("Get-NetAdapter | Where-Object {$_.Status -eq 'Up'} | Select-Object -ExpandProperty Name")
       for (const a of adapters.out.split('\n').map(l => l.trim()).filter(V.isAdapterName)) {
-        await ps(`Set-DnsClientServerAddress -InterfaceAlias '${a}' -ServerAddresses ('1.1.1.1','1.0.0.1') -ErrorAction SilentlyContinue`)
+        await dnsSetServers(note, a, '1.1.1.1', '1.0.0.1')
       }
       s('DNS over HTTPS enabled via Cloudflare DoH.', 'ok')
     },
-    restore: async (s, ps) => {
+    restore: async (s, ps, cmd, rd, rdel, note, opts) => {
       await ps(`Remove-DnsClientDohServerAddress -ServerAddress '1.1.1.1' -ErrorAction SilentlyContinue`)
       await ps(`Remove-DnsClientDohServerAddress -ServerAddress '1.0.0.1' -ErrorAction SilentlyContinue`)
-      const adapters = await ps("Get-NetAdapter | Where-Object {$_.Status -eq 'Up'} | Select-Object -ExpandProperty Name")
+      const adapters = opts && opts.journalRestored ? { out: '' } : await ps("Get-NetAdapter | Where-Object {$_.Status -eq 'Up'} | Select-Object -ExpandProperty Name")
       for (const a of adapters.out.split('\n').map(l => l.trim()).filter(V.isAdapterName)) {
         await dnsSetDhcp(a)
       }
@@ -5376,12 +5408,11 @@ const TWEAKS = {
     category: 'network',
     safetyTier: 1,
     gamerImpact: 'medium',
-    apply: async (s, ps) => {
+    apply: async (s, ps, cmd, rd, rdel, note) => {
       const adapters = await ps("Get-NetAdapter | Where-Object {$_.Status -eq 'Up'} | Select-Object -ExpandProperty Name")
       for (const a of adapters.out.split('\n').map(l => l.trim()).filter(V.isAdapterName)) {
-        await dnsSetStatic(a, '9.9.9.9')
-        await dnsAddServer(a, '149.112.112.112')
-        s(`  ${a}: Quad9 9.9.9.9 set`, 'ok')
+        const r = await dnsSetServers(note, a, '9.9.9.9', '149.112.112.112')
+        s(`  ${a}: Quad9 9.9.9.9 ${r.ok ? 'set' : 'could not be set'}`, r.ok ? 'ok' : 'warn')
       }
     },
     restore: async (s, ps) => {
@@ -5397,12 +5428,11 @@ const TWEAKS = {
     category: 'network',
     safetyTier: 1,
     gamerImpact: 'medium',
-    apply: async (s, ps) => {
+    apply: async (s, ps, cmd, rd, rdel, note) => {
       const adapters = await ps("Get-NetAdapter | Where-Object {$_.Status -eq 'Up'} | Select-Object -ExpandProperty Name")
       for (const a of adapters.out.split('\n').map(l => l.trim()).filter(V.isAdapterName)) {
-        await dnsSetStatic(a, '94.140.14.14')
-        await dnsAddServer(a, '94.140.15.15')
-        s(`  ${a}: AdGuard DNS 94.140.14.14 set`, 'ok')
+        const r = await dnsSetServers(note, a, '94.140.14.14', '94.140.15.15')
+        s(`  ${a}: AdGuard DNS 94.140.14.14 ${r.ok ? 'set' : 'could not be set'}`, r.ok ? 'ok' : 'warn')
       }
     },
     restore: async (s, ps) => {
@@ -5418,7 +5448,7 @@ const TWEAKS = {
     category: 'network',
     safetyTier: 1,
     gamerImpact: 'medium',
-    apply: async (s, ps) => {
+    apply: async (s, ps, cmd, rd, rdel, note) => {
       const cfg = loadSettings()
       const primary = cfg?.customDnsPrimary
       const secondary = cfg?.customDnsSecondary
@@ -5426,9 +5456,8 @@ const TWEAKS = {
       if (!V.isIp(primary) || (secondary && !V.isIp(secondary))) { s('Custom DNS addresses must be valid IP addresses — nothing changed.', 'warn'); return }
       const adapters = await ps("Get-NetAdapter | Where-Object {$_.Status -eq 'Up'} | Select-Object -ExpandProperty Name")
       for (const a of adapters.out.split('\n').map(l => l.trim()).filter(V.isAdapterName)) {
-        await dnsSetStatic(a, primary)
-        if (secondary) await dnsAddServer(a, secondary)
-        s(`  ${a}: Custom DNS ${primary} set`, 'ok')
+        const r = await dnsSetServers(note, a, primary, secondary)
+        s(`  ${a}: Custom DNS ${primary} ${r.ok ? 'set' : 'could not be set'}`, r.ok ? 'ok' : 'warn')
       }
     },
     restore: async (s, ps) => {
@@ -7018,8 +7047,8 @@ const TWEAKS = {
       const usbGuid = '2a737441-1930-4402-8d77-b2bebba308a3'
       const usbSub  = '48e6b7a6-50f5-4782-a5d4-53bb8f07e226'
       for (const scheme of allSchemes) {
-        await runPS(`powercfg /setacvalueindex ${scheme} ${usbGuid} ${usbSub} 1 2>$null`).catch(() => {})
-        await runPS(`powercfg /setdcvalueindex ${scheme} ${usbGuid} ${usbSub} 1 2>$null`).catch(() => {})
+        await ps(`powercfg /setacvalueindex ${scheme} ${usbGuid} ${usbSub} 1 2>$null`).catch(() => {})
+        await ps(`powercfg /setdcvalueindex ${scheme} ${usbGuid} ${usbSub} 1 2>$null`).catch(() => {})
       }
       await ps('Remove-ItemProperty -Path "HKLM:\\SYSTEM\\CurrentControlSet\\Services\\usb" -Name DisableSelectiveSuspend -EA SilentlyContinue')
 
@@ -7160,7 +7189,7 @@ const TWEAKS = {
       await cmd('powercfg /setdcvalueindex SCHEME_CURRENT SUB_PROCESSOR CPMINCORES 0')
 
       // ── 8. Force Windows power engine to re-read — /setactive with real GUID ──
-      if (activeScheme) await runPS(`powercfg /setactive ${activeScheme} 2>$null`).catch(() => {})
+      if (activeScheme) await ps(`powercfg /setactive ${activeScheme} 2>$null`).catch(() => {})
       else await cmd('powercfg /setactive SCHEME_CURRENT')
 
       s('Done — reboot now for all changes to fully take effect.', 'ok')

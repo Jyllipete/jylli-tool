@@ -114,3 +114,29 @@ test('a rejected write marks the tweak partial, not applied', async () => {
   assert.strictEqual(r.items[0].status, 'partial')
   assert.deepStrictEqual(r.settingsPatch, {})
 })
+
+test('restore puts back the recorded original, not the hardcoded default', async () => {
+  const t = setup()
+  const tweaks = { mm: { name: 'MM', safetyTier: 1, apply: async (s, ps, cmd, regAdd) => { await regAdd('HKLM', 'S', 'M', 'REG_DWORD', '6') }, restore: async (s, ps, cmd, regAdd) => { await regAdd('HKLM', 'S', 'M', 'REG_DWORD', '2') } } }
+  const reg = {}
+  const runCmd = async c => {
+    let m = c.match(/^reg query "(.+?)" \/v "(.+?)"$/)
+    if (m) { const e = reg[m[1] + '|' + m[2]]; return { ok: !!e, out: e ? `    ${m[2]}    ${e.type}    0x${Number(e.value).toString(16)}` : '', code: e ? 0 : 1 } }
+    m = c.match(/^reg add "(.+?)" \/v "(.+?)" \/t (\S+) \/d "(.+?)" \/f$/)
+    if (m) { reg[m[1] + '|' + m[2]] = { type: m[3], value: m[4] }; return { ok: true, out: '' } }
+    return { ok: true, out: '' }
+  }
+  let settings = {}
+  const svc = createJournalService({
+    file: path.join(fsx.mkdtempSync(path.join(os.tmpdir(), 'js-')), 'j.jsonl'),
+    runPS: async () => ({ ok: true, out: '' }), runCmd, tweaks: { ...tweaks, mmcss: tweaks.mm },
+    hasTweak: (id, a = 'apply') => !!({ ...tweaks, mmcss: tweaks.mm })[id],
+    isPlanExcluded: () => false, requiresPremium: () => true, createRestorePoint: async () => ({ ok: true }),
+    emit() {}, loadSettings: () => ({ ...settings }), saveSettings: s => { settings = { ...s } },
+  })
+  reg['HKLM\\S|M'] = { type: 'REG_DWORD', value: '9' }
+  await svc.invokeTweak('mmcss', 'apply', () => {})
+  assert.strictEqual(reg['HKLM\\S|M'].value, '6')
+  await svc.invokeTweak('mmcss', 'restore', () => {})
+  assert.strictEqual(reg['HKLM\\S|M'].value, '9')   // the user's own value, not the built-in 2
+})
