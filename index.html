@@ -2425,7 +2425,6 @@ const SEARCH_INDEX = [
   { id:'diag-tasks-off',        label:'Diagnostic Tasks Off',                       page:'windows-opti', desc:'Disable DPS/WDI/PerfTrack tasks' },
   { id:'diagnostics-off',       label:'Diagnostics Services Off',                   page:'windows-opti', desc:'Stop diagnostic background services' },
   { id:'capability-ruleset',    label:'Capability Ruleset (App Permissions Lock)',  page:'windows-opti', desc:'Block background app access to camera/mic' },
-  { id:'cpu-focus-bias',        label:'CPU Focus Bias',                             page:'windows-opti', desc:'Thread DPC and MMCSS foreground bias' },
   { id:'disable-mpo',           label:'Disable Multi-Plane Overlay (MPO)',          page:'windows-opti', desc:'Eliminate GPU driver flicker and frame variance' },
   { id:'disable-paging-executive', label:'Keep Kernel + Drivers in RAM',            page:'windows-opti', desc:'DisablePagingExecutive — no kernel paging stalls' },
   { id:'large-system-cache',    label:'Large System Cache Off (Gaming Mode)',        page:'windows-opti', desc:'RAM optimised for app working sets not FS cache' },
@@ -2453,10 +2452,8 @@ const SEARCH_INDEX = [
   { id:'amd-power-hold',        label:'AMD Power Hold (max state)',                 page:'hardware',     desc:'Force AMD GPU to max clock' },
   { id:'amd-service-trim',      label:'AMD Service Trim',                           page:'hardware',     desc:'Disable non-essential AMD background services' },
   { id:'amd-ulps-disable',      label:'Disable AMD ULPS (Ultra Low Power State)',   page:'hardware',     desc:'Fix multi-GPU stutter via registry' },
-  { id:'corsair-audio-off',     label:'Corsair iCUE Audio Off',                     page:'hardware',     desc:'Disable Corsair audio routing overhead' },
   // Network
   { id:'tcp-stack',             label:'Tune TCP Stack',                             page:'network',      desc:'Autotuning, RSS, disable Chimney/ECN' },
-  { id:'tcp-buffers',           label:'TCP Buffers + Nagle off',                    page:'network',      desc:'Low latency real-time packet sending' },
   { id:'winsock-reset',         label:'Reset Winsock & IP Stack',                   page:'network',      desc:'Fix corrupted network stack' },
   { id:'qos-reserve',           label:'Remove QoS 20% Bandwidth Reservation',      page:'network',      desc:'More bandwidth for games' },
   { id:'net-throttling',        label:'Disable Network Throttling Index',           page:'network',      desc:'Remove multimedia network throttling' },
@@ -7972,7 +7969,6 @@ const GEN_TIP_DATA = {
   'sticky-keys-guard': { reg:'HKCU\\Control Panel\\Accessibility\\StickyKeys: Flags=506', impact:{ en:'Prevents StickyKeys dialog interrupting gameplay when Shift is pressed 5× in a row', fi:'Estää StickyKeys-valintaikkunan keskeyttämästä peliä kun Shift painetaan 5× peräkkäin' } },
   'nudge-blocker':    { reg:'HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\Explorer: NoDriveTypeAutoRun=255', impact:{ en:'Stops AutoPlay notifications from USB device inserts during gaming', fi:'Estää AutoPlay-ilmoitukset USB-laitteiden kytkemisestä pelin aikana' } },
   'tsc-sync':         { reg:'bcdedit /set tscsyncpolicy enhanced', impact:{ en:'Sets multi-core TSC synchronisation to Enhanced; reduces timer drift on CCX/NUMA layouts — measurable as lower DPC max in LatencyMon', fi:'Asettaa moniytimisen TSC-synkronoinnin Enhanced-tilaan; vähentää ajoitusvirhettä CCX/NUMA-asetteluilla — mitattavissa LatencyMonissa alhaisempana DPC-maksimina' } },
-  'dpc-coalescing':   { reg:'HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Multimedia\\SystemProfile: NetworkThrottlingIndex=0xffffffff + HKLM\\SYSTEM\\CurrentControlSet\\Control\\Session Manager\\kernel: CoalescingTimerInterval=0', impact:{ en:'Removing coalescing eliminates up to 15ms of intentional timer batching; measurable in LatencyMon as lower DPC maximum latency', fi:'Koalisoinnin poistaminen poistaa jopa 15 ms:n tarkoituksellisen ajastinkokoamisen; mitattavissa LatencyMonissa alhaisempana DPC-maksimiviiveenä' } },
   'explorer-perf':    { reg:'HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer: DesktopProcess=1 + HideFileExt=0 + LaunchTo=1', impact:{ en:'Removes 10s Explorer startup delay; separates shell from desktop process so an Explorer crash does not kill the desktop', fi:'Poistaa 10 s:n Explorer-käynnistysviiveen; erottaa kuoren työpöytäprosessista niin että Explorer-kaatuminen ei tapa työpöytää' } },
   'hibernate':        { reg:'powercfg /hibernate off', impact:{ en:'Deletes hiberfil.sys — frees disk space equal to installed RAM (e.g. 16 GB RAM → 16 GB freed); also removes Fast Startup dependency', fi:'Poistaa hiberfil.sys-tiedoston — vapauttaa levytilaa asennetun RAM:n verran (esim. 16 Gt RAM → 16 Gt vapautuu); poistaa myös Nopean käynnistyksen riippuvuuden' } },
   'cortana':          { reg:'HKLM\\SOFTWARE\\Policies\\Microsoft\\Windows\\Windows Search: AllowCortana=0 + WSearch service Start=4', impact:{ en:'Stops Windows Search indexer disk I/O; Explorer file searches use real-time scan instead — slightly slower for first search but no background disk activity', fi:'Pysäyttää Windows Search -indeksointipalvelun levytoiminnon; Explorer-haut käyttävät reaaliaikaista hakua — hieman hitaampi ensimmäisellä haulla mutta ei taustatoimintoa' } },
@@ -7980,13 +7976,11 @@ const GEN_TIP_DATA = {
   'disable-auto-maintenance': { reg:'HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Schedule\\Maintenance: MaintenanceDisabled=1', impact:{ en:'Prevents Windows scheduling disk defrag, security scans, and diagnostics mid-session; eliminates periodic frame-time spikes caused by maintenance tasks', fi:'Estää Windowsia ajoittamasta levyn eheytystä, tietoturvatarkistuksia ja diagnostiikkaa istunnon aikana; poistaa huoltotehtävien aiheuttamat ajoittaiset kehysaikakehykset' } },
   'defender-idle-priority': { reg:'HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\MsMpEng.exe\\PerfOptions: CpuPriorityClass=5', impact:{ en:'Sets Defender to BelowNormal CPU priority via IFEO; it yields to any game thread within one scheduler quantum — eliminates 50–200ms DPC spikes', fi:'Asettaa Defender BelowNormal-CPU-prioriteetiksi IFEO:n kautta; se väistää jokaista peli­säiettä yhden ajoituskvanttiajan sisällä — poistaa 50–200 ms:n DPC-piikit' } },
   'vrr-borderless':   { reg:'HKLM\\SYSTEM\\CurrentControlSet\\Control\\GraphicsDrivers: DxgkrnlTestParameters (MPO path enabled)', impact:{ en:'Enables the VRR/G-Sync presentation path for borderless windowed mode; without this, variable refresh rate is inactive outside exclusive fullscreen', fi:'Ottaa käyttöön VRR/G-Sync-esityspolun reunattomalle ikkunatilalle; ilman tätä muuttuva virkistystaajuus on inaktiivinen eksklusiivisen koko­ruudun ulkopuolella' } },
-  'mmcss-proaudio':   { reg:'HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Multimedia\\SystemProfile\\Tasks\\Pro Audio: GPU Priority=8, Scheduling Category=High, Priority=1', impact:{ en:'Prioritises audio engine threads (Wwise, FMOD) at the same level as game render threads; eliminates audio-induced 1–5ms frame hitches in CS2, Valorant, EFT', fi:'Asettaa äänimoottori­säikeet (Wwise, FMOD) samalle prioriteetitasolle kuin peli­renderöinti­säikeet; poistaa äänen aiheuttamat 1–5 ms:n kehyskatkokset CS2:ssa, Valorantissa ja EFT:ssä' } },
   'proximity-deny':   { reg:'HKCU\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\CDP: RomeSdkChannelUserAuthzPolicy=0 + NearShare service disabled', impact:{ en:'Kills the CDP NearShare scanner that polls for nearby Bluetooth/Wi-Fi devices every ~30s; removes background radio scanning during gameplay', fi:'Poistaa CDP NearShare -skannerin, joka kyselee läheisiä Bluetooth/Wi-Fi-laitteita noin 30 s välein; poistaa taustaradion skannauksen pelin aikana' } },
   'do-solo-mode':     { reg:'HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\DeliveryOptimization\\Config: DODownloadMode=1', impact:{ en:'Restricts Windows Update Delivery Optimisation to LAN peers only; stops Windows uploading update data to internet peers on your connection', fi:'Rajoittaa Windows Update Delivery Optimisationin vain lähiverkon vertaisiin; estää Windowsia lähettämästä päivitysdataa internet-vertaisille yhteydessäsi' } },
   'search-box-local': { reg:'HKCU\\SOFTWARE\\Policies\\Microsoft\\Windows\\Explorer: DisableSearchBoxSuggestions=1', impact:{ en:'Forces Start Menu search to local index only; eliminates Bing network query on every keystroke in the search box', fi:'Pakottaa Käynnistä-valikon haun käyttämään vain paikallista hakemistoa; poistaa Bing-verkkokyselyn jokaiselta näppäinpainallukselta hakukentässä' } },
   'search-cloud-off': { reg:'HKCU\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Search: BingSearchEnabled=0, CortanaConsent=0', impact:{ en:'Removes Bing web results and cloud suggestions from taskbar search; search results appear ~200ms faster with no outbound web requests', fi:'Poistaa Bing-verkkotulokset ja pilviehdo­tukset tehtäväpalkin hausta; hakutulokset ilmestyvät ~200 ms nopeammin ilman lähtevää web-pyyntöä' } },
   'cloud-sync-off':   { reg:'HKCU\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run: OneDrive removed + OneDrive.exe /shutdown', impact:{ en:'Stops OneDrive auto-start and background delta sync; frees CPU bursts and network bandwidth consumed during gaming sessions', fi:'Pysäyttää OneDriven automaattisen käynnistyksen ja taustan delta-synkronoinnin; vapauttaa CPU-purskeet ja kaistanleveyden, joita kuluu pelisessioiden aikana' } },
-  'cpu-focus-bias':   { reg:'HKLM\\SYSTEM\\CurrentControlSet\\Control\\Session Manager\\kernel: ThreadDpcEnable=1 + HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Multimedia\\SystemProfile\\Tasks\\Games: Affinity=0', impact:{ en:'Biases DPC delivery toward the foreground thread\'s core and removes MMCSS game thread affinity lock; tightens frame-time variance on Ryzen multi-CCX CPUs', fi:'Ohjaa DPC-toimituksen etualasäikeen ytimelle ja poistaa MMCSS-pelisäikeen affiniteetti­lukituksen; tiukentaa kehysaikavarianssipientä Ryzen multi-CCX -suorittimissa' } },
   'security-quiet':   { reg:'HKLM\\SOFTWARE\\Policies\\Microsoft\\Windows Defender Security Center\\Notifications: DisableNotifications=1, DisableEnhancedNotifications=1', impact:{ en:'Suppresses all Security Center tray icons, action center banners, and toast alerts; scanning and threat detection continue silently in the background', fi:'Tukahduttaa kaikki Security Center -ilmaisinalueen kuvakkeet, toimintakeskuksen palkit ja toast-ilmoitukset; skannaus ja uhkien havaitseminen jatkuvat äänettömästi taustalla' } },
   'diag-tasks-off':   { reg:'Task Scheduler: \\Microsoft\\Windows\\DiskDiagnostic\\*, \\Microsoft\\Windows\\PerfTrack\\*, \\Microsoft\\Windows\\WDI\\* disabled', impact:{ en:'Removes periodic disk diagnostic and performance tracking scheduled tasks that fire CPU/disk spikes every 1–3 days during gaming sessions', fi:'Poistaa ajoittaiset levydiagnostiikka- ja suorituskykynseuranta-ajastetut tehtävät, jotka aiheuttavat CPU/levypurskeen 1–3 päivän välein pelisessioiden aikana' } },
   'defender-quiet':   { reg:'HKLM\\SOFTWARE\\Policies\\Microsoft\\Windows Defender\\Reporting: DisableEnhancedNotifications=1 + UX Configuration: UILockdown=1', impact:{ en:'Silences Defender action center badges, notification toasts, and tray alerts; full scanning and threat detection continues uninterrupted in the background', fi:'Hiljentää Defender-toimintakeskuksen merkit, ilmoitustoastit ja ilmaisinalueen hälytykset; täysi skannaus ja uhkien havaitseminen jatkuu keskeytymättä taustalla' } },
@@ -10446,7 +10440,6 @@ function aomBuildTweakList() {
     { id:'ntfs',            icon:'fa-hard-drive',     cat:'Storage',    label:'NTFS: disable 8.3 names + timestamps',        safe:true },
     { id:'msi-mode',        icon:'fa-plug',           cat:'Hardware',   label:'Enable MSI Interrupt Mode (PCI devices)',     safe:true },
     { id:'tcp-stack',       icon:'fa-network-wired',  cat:'Network',    label:'Optimise TCP stack (autotuning, RSS, ECN)',    safe:true },
-    { id:'tcp-buffers',     icon:'fa-network-wired',  cat:'Network',    label:'TCP buffers + disable Nagle algorithm',        safe:true },
     { id:'qos-reserve',     icon:'fa-network-wired',  cat:'Network',    label:'Remove QoS 20% bandwidth reservation',        safe:true },
     { id:'net-throttling',  icon:'fa-gauge',          cat:'Network',    label:'Disable network throttling index',             safe:true },
     { id:'disable-netbios', icon:'fa-network-wired',  cat:'Network',    label:'Disable NetBIOS over TCP/IP',                 safe:true },
@@ -10466,7 +10459,6 @@ function aomBuildTweakList() {
     { id:'security-quiet',  icon:'fa-bell-slash',     cat:'Privacy',    label:'Security Center quiet mode',                  safe:true },
     { id:'security-toast-off',icon:'fa-comment-slash',cat:'Privacy',    label:'Disable Defender toast notifications',         safe:true },
     { id:'do-solo-mode',    icon:'fa-network-wired',  cat:'Privacy',    label:'Delivery Optimization LAN-only mode',         safe:true },
-    { id:'cpu-focus-bias',  icon:'fa-microchip',      cat:'CPU',        label:'CPU focus bias (DPC + MMCSS foreground)',      safe:true },
     { id:'tdr-delay',       icon:'fa-shield-halved',  cat:'GPU',        label:'Extend GPU TDR timeout to 10s',                safe:true },
     { id:'nudge-blocker',   icon:'fa-circle-xmark',   cat:'UI',         label:'Disable AutoPlay USB nudge notifications',    safe:true },
     // Conditional on answers
@@ -10512,9 +10504,7 @@ function aomBuildTweakList() {
   const _ucExtraIds = _aomUseCase ? (_ucExtrasMap[_aomUseCase] || []) : []
   const _existingIds = new Set(all.map(t => t.id))
   const _ucExtraDefs = [
-    { id:'dpc-coalescing',     icon:'fa-wave-square',     cat:'CPU',     label:'DPC Coalescing + Interrupt Steering Off',     safe:true },
     { id:'vrr-borderless',     icon:'fa-display',         cat:'GPU',     label:'VRR / G-Sync in Borderless Windowed mode',    safe:true },
-    { id:'wasapi-min-period',  icon:'fa-wave-square',     cat:'Audio',   label:'WASAPI Exclusive Mode 1ms Buffer',            safe:true },
     { id:'directstorage-nvme', icon:'fa-database',        cat:'Storage', label:'DirectStorage + NVMe Queue Depth',            safe: tweakCompat('directstorage-nvme'), skipReason:'Skipped — no NVMe SSD detected' },
   ]
   for (const ex of _ucExtraDefs) {
@@ -11034,7 +11024,6 @@ function buildWindowsOpti(c) {
     ]},
     { id:'registry', get title() { return tUI('genSecRegistry') }, cards:[
       { id:'mmcss',           name:'MMCSS Game Scheduling (GPU Priority=8)', desc:'Configures Windows Multimedia Class Scheduler to maximise CPU time slices for games. SystemResponsiveness is set to 10 (safe) — never 0, which would starve USB/HID drivers.', icon:'<i class="fa fa-bullseye"></i>' },
-      { id:'mmcss-proaudio',  name:'MMCSS Pro Audio Thread Scheduling', desc:'Sets GPU Priority=8, Scheduling Category=High for the Pro Audio MMCSS task class — used by game audio engines (Wwise, FMOD). Eliminates 1–5ms audio-induced micro-stutter in CS2, Valorant, and EFT.', icon:'<i class="fa fa-music"></i>' },
       { id:'global-timer-resolution', name:'Global Timer Resolution (Win11)', desc:'Restores system-wide 0.5ms timer precision on Windows 11. Fixes mysterious FPS caps in games that do not call timeBeginPeriod(). Windows 11 only — skipped automatically on Windows 10.', icon:'<i class="fa fa-clock"></i>' },
       { id:'priority-sep',    name:'Foreground Process Priority Boost', desc:'Sets Win32PrioritySeparation=38 — the active window receives 3× longer CPU time quanta than background processes. Largest impact on CPUs with 4–8 cores running multiple background apps.', icon:'<i class="fa fa-arrow-trend-up"></i>' },
       { id:'sysmain',         name:'Disable SysMain (SuperFetch)', desc:'Stops pre-loading apps into RAM. Best on 16GB+ RAM. May hurt performance with less.', icon:'<i class="fa fa-brain"></i>', warning: si.ramGB > 0 && si.ramGB < 12 ? tUI('warnLowRamSysmain').replace('{n}', si.ramGB) : '' },
@@ -11045,13 +11034,11 @@ function buildWindowsOpti(c) {
     { id:'timer', get title() { return tUI('genSecTimer') }, cards:[
       { id:'hpet',     name:'Disable HPET', desc:'Forces Windows off the HPET platform clock and back to TSC. On Intel CPUs improves frame-time consistency by 2–5%; effect on AMD Ryzen is system-dependent — test with a frame-time tool. Reboot required.', icon:'<i class="fa fa-stopwatch"></i>', danger:true, dangerLabel:'Confirm', reboot:true },
       { id:'tsc-sync', name:'BCDEdit TSC Sync → Enhanced', desc:'Sets TSC synchronisation policy to Enhanced mode across all CPU cores. Reduces timer drift on multi-socket and multi-CCX layouts — measurable in LatencyMon as a lower DPC maximum latency. Reboot required.', icon:'<i class="fa fa-arrows-rotate"></i>', reboot:true },
-      { id:'dpc-coalescing', name:'DPC Coalescing Off + Interrupt Steering Off', desc:'Disables Windows DPC timer batching (up to 15ms added latency) and interrupt steering (auto-migration of interrupts between cores). Measurably reduces DPC/ISR latency in LatencyMon. Distinct from the HPET tweak.', icon:'<i class="fa fa-wave-square"></i>', safetyTier:2 },
       { id:'msi-mode', name:'Enable MSI Interrupt Mode (PCI)', desc:'Switches GPU and NIC from legacy line-based (INTx) to Message Signaled Interrupts. Eliminates shared-IRQ contention — typically 20–50% lower interrupt latency measured in LatencyMon. Reboot required.', icon:'<i class="fa fa-plug"></i>', reboot:true },
     ]},
     { id:'gpu', get title() { return tUI('genSecGpu') }, cards:[
       { id:'gpu-hwsch', name:'GPU Hardware Scheduling (WDDM 2.7)', desc:'Offloads the DirectX command queue from the CPU to the GPU\'s own scheduler (WDDM 2.7). Most impactful when the CPU is the bottleneck — reduces frame latency 1–3ms in CPU-bound titles. Requires a DX12-capable GPU. Reboot required.', icon:'<i class="fa fa-palette"></i>', reboot:true },
       { id:'tdr-delay', name:'Extend GPU TDR Timeout (10s)', desc:'Prevents GPU driver timeout crashes under heavy DXR/modding load.', icon:'<i class="fa fa-shield-halved"></i>' },
-      { id:'gpu-preemption', name:'GPU Preemption + Scheduler Tuning', desc:'Enables fine-grained GPU command preemption and reduces DWM vsync idle timeout. Measurably reduces frame-time variance — 2–8% better 1% lows in busy scenes.', icon:'<i class="fa fa-layer-group"></i>', safetyTier:2 },
       { id:'vrr-borderless', name:'VRR / G-Sync in Borderless Windowed', desc:'Enables Variable Refresh Rate and G-Sync/FreeSync in borderless windowed mode. Most competitive games run borderless — without this, VRR is inactive and fixed vsync adds 8–16ms frame delivery variance. Requires G-Sync or FreeSync monitor. Safe to apply without one.', icon:'<i class="fa fa-display"></i>' },
       { id:'disable-mpo', name:'Disable Multi-Plane Overlay (MPO)', desc:'Sets OverlayTestMode=5 in DWM registry — forces Windows to stop using GPU overlay planes for compositing. Eliminates a class of GPU driver-level flicker, black screen, and frame-time variance bugs present on NVIDIA and AMD. Documented fix by both GPU vendors. Reboot required.', icon:'<i class="fa fa-layer-group"></i>', reboot:true },
     ]},
@@ -11097,7 +11084,6 @@ function buildWindowsOpti(c) {
       { id:'capability-ruleset',  name:'Capability Ruleset (App Permissions Lock)', desc:'Restricts background app capabilities via AppPrivacy policy — location, camera, microphone access blocked for background processes.', icon:'<i class="fa fa-lock"></i>' },
     ]},
     { id:'cpu-sched', get title() { return tUI('genSecCpuSched') }, cards:[
-      { id:'cpu-focus-bias', name:'CPU Focus Bias', desc:'Instructs the scheduler to bias DPC servicing toward the foreground thread\'s core and removes MMCSS game-thread affinity lock. Tightens frame-time consistency on multi-CCX AMD Ryzen CPUs with spread-out DPC routing.', icon:'<i class="fa fa-microchip"></i>' },
       { id:'split-large-caches', name:'Enable Split Large Caches (CPU L3 Topology)', desc:'Sets SplitLargeCaches=1 — enables the Windows scheduler to be aware of CPU L3 cache topology when placing threads. Threads are scheduled onto cores sharing the same L3 cache segment, reducing cross-CCX cache-miss latency. Most impactful on AMD Ryzen CPUs with multiple cache complexes (Zen 2/3/4).', icon:'<i class="fa fa-sitemap"></i>' },
     ]},
   ]
@@ -11111,7 +11097,6 @@ function buildWindowsOpti(c) {
     'mmcss':                  { get benefit() { return tUI('qwBenefitMmcss') } },
     'priority-sep':           { get benefit() { return tUI('qwBenefitPriority') } },
     'disable-background-apps':{ get benefit() { return tUI('qwBenefitBgApps') } },
-    'mmcss-proaudio':         { get benefit() { return tUI('qwBenefitMmcssProAudio') } },
     'defender-idle-priority': { get benefit() { return tUI('qwBenefitDefenderIdle') } },
     'vrr-borderless':         { get benefit() { return tUI('qwBenefitVrrBorderless') } },
   }
@@ -11983,9 +11968,6 @@ async function buildHardware(c) {
       { id:'amd-ulps-disable', name:'Disable AMD ULPS (Ultra Low Power State)', desc:'Disables Ultra Low Power State across all AMD video registry subkeys. Reduces stutter in multi-GPU (CrossFireX) setups. Safe on single-GPU systems.', icon:'<i class="fa fa-bolt"></i>' },
     ]}] : []),
     { secId:'hw-audio', get title() { return tUI('hwSecAudio') }, get sub() { return tUI('hwSecAudioSub') }, cards:[
-      { id:'audio-exclusive-mode', name:'Disable Audio Exclusive Mode Sharing', desc:'Sets DisableProtectedAudioDG=1. Prevents audio drivers from competing for exclusive-mode access, reducing audio processing latency.', icon:'<i class="fa fa-volume-high"></i>' },
-      { id:'wasapi-min-period',    name:'WASAPI Exclusive Mode 1ms Buffer', desc:'Sets the WASAPI minimum exclusive mode period to 1ms (from default 10ms) on all audio render devices. Games using WASAPI exclusive mode (EFT, Hunt: Showdown, DayZ) can request sub-millisecond audio buffers, reducing audio-to-engine callback latency.', icon:'<i class="fa fa-wave-square"></i>' },
-      { id:'corsair-audio-off', name:'Corsair iCUE Audio Off', desc:'Disables Corsair iCUE audio routing services that intercept Windows audio. Reduces audio latency for non-iCUE users. No effect if iCUE is not installed.', icon:'<i class="fa fa-headphones"></i>' },
     ]},
   ]
   window._hwSections = SECTIONS
@@ -12698,14 +12680,12 @@ function buildNetwork(c) {
       secId: 'net-tcp',
       rows: [
         { id:'tcp-stack',        name:'Tune TCP: Autotuning, RSS, disable Chimney/ECN/Timestamps', desc:'Full TCP stack optimisation — normal autotuning, RSS enabled, chimney/ECN/timestamps off, MaxSynRetransmissions=2.' },
-        { id:'tcp-buffers',      name:'TCP buffers + Nagle algorithm disabled (TcpAckFrequency=1, TCPNoDelay=1)', desc:'Disables Nagle\'s algorithm which batches packets for efficiency — bad for real-time games. Sends packets immediately.', warning: wifiWarn },
         { id:'tcp-keepalive',    name:'Tune TCP Keep-Alive intervals', desc:'Sets KeepAliveTime=30s (from 2h) and KeepAliveInterval=1s. Drops stale connections faster — reduces ghost connections in multiplayer games.', sinceVersion:'1.4.6' },
         { id:'winsock-reset',    name:'Reset Winsock catalog & IP stack (fix network corruption)', desc:'Fixes issues caused by VPNs, broken antivirus installs, or corrupted network stacks.', danger:true, dangerLabel:'Confirm Winsock reset', reboot:true },
         { id:'tcp-retransmit',   name:'TCP Retransmit Limit (3)', desc:'Reduces max retransmit attempts from Windows default of 5 to 3. Dropped connections fail faster — reduces stalls when packets are lost instead of waiting for 5 retry cycles.', sinceVersion:'1.5.0' },
         { id:'tcp-ctcp',         name:'Compound TCP Congestion Provider (CTCP)', desc:'Switches TCP congestion control to Compound TCP, which ramps up send rate faster on high-latency links. Better than the default for gaming networks — less aggressive than CUBIC on burst traffic.', sinceVersion:'1.5.0', warning: wifiWarn },
         { id:'tcp-task-offload', name:'Enable TCP Task Offload (NIC hardware)', desc:'Ensures TCP processing is offloaded to your NIC instead of the CPU. Some antivirus tools disable this as a security measure — re-enabling it reduces CPU overhead on network-heavy games like FiveM.', sinceVersion:'1.5.0' },
         { id:'tcp-timedwait', name:'TCP Time-Wait Delay (Port Reuse)',  desc:'Sets TcpTimedWaitDelay=30 (default: 240 s). Speeds up port reuse after connections close — critical for game servers with frequent reconnects.' },
-        { id:'net-del-ack',   name:'Disable Delayed ACK',              desc:'Sets TcpDelAckTicks=0 (default: 2). Sends ACKs immediately instead of batching them every ~200 ms. Reduces round-trip latency for real-time game protocols.' },
         { id:'net-max-ports', name:'Extend Dynamic Port Range',        desc:'Expands the ephemeral TCP port range from the Windows default of ~16,384 ports to 64,510 using netsh. Prevents port exhaustion on high-concurrency FiveM, Rust, and MMO servers.' },
       ]
     },
