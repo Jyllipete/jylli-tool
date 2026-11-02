@@ -1260,33 +1260,6 @@ async function init(isPremium = false) {
     )
   })
 
-  // Pulse cool-down countdown
-  api.onPulseCooldownTick?.(({ remaining, done }) => {
-    const strip = document.getElementById('gw-session-strip')
-    const timerEl = document.getElementById('gw-strip-timer')
-    if (done) {
-      // Cool-down complete — hide the strip if it's in cool-down mode
-      const gameEl = document.getElementById('gw-strip-game')
-      if (gameEl?.textContent?.startsWith('⏳')) _gwStripHide()
-      return
-    }
-    if (remaining > 0 && strip) {
-      if (strip.style.display === 'none') {
-        // Show cool-down strip
-        strip.style.display = 'flex'
-        strip.style.background = 'linear-gradient(135deg,rgba(var(--c-warning-rgb),0.07),rgba(var(--c-warning-rgb),0.04))'
-        strip.style.borderBottomColor = 'rgba(var(--c-warning-rgb),0.2)'
-        const dot = strip.querySelector('span')
-        if (dot) dot.style.background = 'var(--c-warning)'
-        const gameEl = document.getElementById('gw-strip-game')
-        if (gameEl) gameEl.textContent = '⏳ Cooling down'
-        const fpsEl = document.getElementById('gw-strip-fps')
-        if (fpsEl) fpsEl.style.display = 'none'
-      }
-      if (timerEl) timerEl.textContent = `${remaining}s`
-    }
-  })
-
   // Game Shield manifest — show killed/restored process pills
   api.onGameShieldEvent?.(({ action, killed, restored, processesKilled, estimatedRamFreedMB }) => {
     const manifest = document.getElementById('gs-manifest')
@@ -12052,38 +12025,6 @@ async function buildHardware(c) {
   `
   c.appendChild(toolsDivider)
 
-  // ── Interrupt Affinity Sculptor panel ─────────────────────────────────────
-  const irqSec = makeSection(tUI('hwIrqTitle'), tUI('hwIrqSub'))
-  const irqInner = document.createElement('div')
-  irqInner.className = 'hw-tool-panel'
-  irqInner.innerHTML = `
-    <p class="hw-tool-desc">${tUI('hwIrqPlainDesc')}</p>
-    <details class="jx-13">
-      <summary class="hw-tool-summary-text">
-        <i class="fa fa-chevron-right" style="font-size:11px;transition:transform .2s" id="hw-irq-chevron"></i> ${tUI('hwIrqWhatWillDo')}
-      </summary>
-      <div class="hw-tool-infobox">${tUI('hwIrqTechDetail')}</div>
-    </details>
-    <div id="hw-irq-status" class="jx-572">…</div>
-    <div id="hw-irq-devices" class="jx-148"></div>
-    <div class="jx-115">
-      <button id="hw-irq-apply-btn" class="btn btn-primary btn-sm" onclick="doIrqApply(this)">
-        <i class="fa fa-microchip"></i> ${tUI('hwIrqApply')}
-      </button>
-      <button id="hw-irq-restore-btn" class="btn btn-ghost btn-sm" onclick="doIrqRestore(this)">
-        <i class="fa fa-rotate-left"></i> ${tUI('hwIrqRestore')}
-      </button>
-      <span id="hw-irq-reboot-badge" style="display:none"><span class="reboot-badge"><i class="fa fa-rotate-right"></i> ${tUI('genRebootBadge')}</span></span>
-    </div>
-  `
-  irqSec.appendChild(irqInner)
-  c.appendChild(irqSec)
-  irqInner.querySelector('details').addEventListener('toggle', e => {
-    const ch = document.getElementById('hw-irq-chevron')
-    if (ch) ch.style.transform = e.target.open ? 'rotate(90deg)' : ''
-  })
-  hwIrqInit(irqSec)
-
   // ── CPU Topology Optimizer panel ──────────────────────────────────────────
   const topoSec = makeSection(tUI('hwCpuTopoTitle'), tUI('hwCpuTopoSub'))
   const topoInner = document.createElement('div')
@@ -12223,76 +12164,6 @@ function hwRefreshCounters() {
   if (label) label.textContent = `${totalApplied} / ${totalCards} ${tUI('hwProgLabel') || 'tweaks applied'}`
 }
 
-// ─── IRQ Affinity Sculptor UI ─────────────────────────────────────────────────
-async function hwIrqInit(sec) {
-  const statusEl  = document.getElementById('hw-irq-status')
-  const devicesEl = document.getElementById('hw-irq-devices')
-  const rebootBadge = document.getElementById('hw-irq-reboot-badge')
-  if (!statusEl) return
-  try {
-    const [status, devRes] = await Promise.all([api.irqGetStatus(), api.irqGetDevices()])
-    if (status?.unsupported) { if (sec) sec.style.display = 'none'; return }
-    const coreCount = devRes.coreCount || 8
-    statusEl.innerHTML = status.active
-      ? `<span class="jx-8"><i class="fa fa-circle-dot"></i> ${tUI('hwIrqStatusActive').replace('{n}', coreCount - 1)}</span>`
-      : `<span class="jx-3"><i class="fa fa-circle"></i> ${tUI('hwIrqStatusDefault').replace('{n}', coreCount)}</span>`
-    if (status.active && rebootBadge) rebootBadge.style.display = ''
-    if (devicesEl && devRes.devices?.length > 0) {
-      const visible = devRes.devices.slice(0, 8)
-      const extra = devRes.devices.length - 8
-      const items = visible.map(d =>
-        `<div class="hw-irq-chip">
-          <span class="hw-irq-chip-num">IRQ ${d.irq}</span>
-          <span class="hw-irq-chip-name" title="${escAttr(d.name)}">${escHtml(d.name)}</span>
-        </div>`
-      ).join('')
-      const extraChip = extra > 0
-        ? `<div class="hw-irq-chip jx-583">+${extra} ${tUI('hwIrqMoreDevices')}</div>`
-        : ''
-      devicesEl.innerHTML = `<div class="jx-152">${tUI('hwIrqDevicesMoved')}</div><div class="jx-67">${items}${extraChip}</div>`
-    } else if (devicesEl) {
-      devicesEl.innerHTML = `<span class="jx-5">Scanning devices… (may take a moment)</span>`
-    }
-  } catch {}
-}
-
-async function doIrqApply(btn) {
-  btn.disabled = true
-  btn.innerHTML = `<i class="fa fa-spinner fa-spin"></i> ${tUI('hwIrqApplying')}`
-  const statusEl    = document.getElementById('hw-irq-status')
-  const rebootBadge = document.getElementById('hw-irq-reboot-badge')
-  try {
-    const res = await api.irqApplyGameAffinity()
-    if (res.ok) {
-      const doneMsg = tUI('hwIrqDoneMsg').replace('{n}', res.coreCount - 1 || '…')
-      if (statusEl) statusEl.innerHTML = `<span class="jx-14"><i class="fa fa-check-circle"></i> ${doneMsg}</span>`
-      if (rebootBadge) rebootBadge.style.display = ''
-    } else {
-      if (statusEl) statusEl.innerHTML = `<span class="jx-21"><i class="fa fa-xmark"></i> ${res.error || 'Failed'}</span>`
-    }
-  } finally {
-    btn.disabled = false
-    btn.innerHTML = `<i class="fa fa-microchip"></i> ${tUI('hwIrqApply')}`
-  }
-}
-
-async function doIrqRestore(btn) {
-  btn.disabled = true
-  btn.innerHTML = `<i class="fa fa-spinner fa-spin"></i> ${tUI('hwIrqRestoring')}`
-  const statusEl    = document.getElementById('hw-irq-status')
-  const rebootBadge = document.getElementById('hw-irq-reboot-badge')
-  try {
-    await Promise.all([api.irqRestoreAffinity(), new Promise(r => setTimeout(r, 600))])
-    const devRes = await api.irqGetDevices().catch(() => ({ coreCount: 8 }))
-    const coreCount = devRes.coreCount || 8
-    if (statusEl) statusEl.innerHTML = `<span class="jx-3"><i class="fa fa-circle"></i> ${tUI('hwIrqStatusDefault').replace('{n}', coreCount)}</span>`
-    if (rebootBadge) rebootBadge.style.display = 'none'
-  } finally {
-    btn.disabled = false
-    btn.innerHTML = `<i class="fa fa-rotate-left"></i> ${tUI('hwIrqRestore')}`
-  }
-}
-
 // ─── CPU Topology Optimizer UI ────────────────────────────────────────────────
 async function hwTopoInit() {
   const infoEl   = document.getElementById('hw-topo-info')
@@ -12374,7 +12245,7 @@ async function doCpuTopoFindGames(btn) {
 async function doCpuTopoPin(btn) {
   const exeInput = document.getElementById('hw-topo-exe')
   const exe = (exeInput?.value || '').trim()
-  if (!exe) { alert(tUI('hwCpuTopoNoGame')); return }
+  if (!exe) { toast(tUI('hwCpuTopoTitle'), tUI('hwCpuTopoNoGame'), 'warn'); return }
   btn.disabled = true
   btn.innerHTML = `<i class="fa fa-spinner fa-spin"></i> ${tUI('hwCpuTopoPinning')}`
   const statusEl = document.getElementById('hw-topo-status')
@@ -14157,25 +14028,6 @@ async function buildAppOptimizer(c) {
     </div>`
   c.appendChild(sgmPanel)
 
-  // ── BackgroundBudget panel ────────────────────────────────────────────────
-  const bbPanel = document.createElement('div')
-  bbPanel.id = 'bb-panel'
-  bbPanel.className = 'j-note'
-  bbPanel.style.display = 'none'
-  bbPanel.innerHTML = `
-    <div class="j-note-title"><i class="fa fa-chart-bar" aria-hidden="true"></i><span>BackgroundBudget</span>
-      <span id="bb-live-badge" class="j-badge j-badge-accent">${tUI('aoBbLive')}</span>
-      <span class="j-note-aside">${tUI('aoBbCpuVsCap')}</span>
-    </div>
-    <div id="bb-bar-wrap" class="j-bb-bar"></div>
-    <div id="bb-slots" class="jx-49"></div>
-    <div id="bb-report" class="j-note-body j-bb-report" style="display:none"></div>
-  `
-  c.appendChild(bbPanel)
-  // Wire budget ticks for App Optimizer page
-  if (typeof api.onBudgetTick === 'function') api.onBudgetTick(d => _bbUpdatePanel(d))
-  if (typeof api.onBudgetSessionReport === 'function') api.onBudgetSessionReport(r => _bbShowSessionReport(r))
-
   // ── Conflict Detector banner ──────────────────────────────────────────────
   const conflictImpactMap = {
     'gpu-queue-double':      'MICROSTUTTER',
@@ -14437,65 +14289,6 @@ async function aoSetCpuCap(appId, capPercent) {
 }
 
 async function doAppOptiToggle(id, apply) { await doAppOpti(id, apply ? 'apply' : 'restore') }
-
-// ─── BackgroundBudget UI helpers ─────────────────────────────────────────────
-function _bbUpdatePanel(d) {
-  const panel = document.getElementById('bb-panel')
-  if (!panel) return
-  if (!d || !d.slots || d.slots.length === 0) { panel.style.display = 'none'; return }
-  panel.style.display = 'block'
-  const barWrap = document.getElementById('bb-bar-wrap')
-  const slotsEl = document.getElementById('bb-slots')
-  if (!barWrap || !slotsEl) return
-
-  // Only re-render structure when slot set changes; otherwise update fills in-place
-  const slotKey = d.slots.map(s => s.appId).join(',')
-  const total = d.totalCap || 100
-  if (barWrap.dataset.slotKey !== slotKey) {
-    barWrap.dataset.slotKey = slotKey
-    barWrap.innerHTML = d.slots.map(s => {
-      const w = Math.max(2, Math.round((s.cap / total) * 100))
-      const fill = Math.min(100, Math.round((s.cpuPct / s.cap) * 100))
-      const color = s.overBudget ? 'var(--c-danger)' : (fill > 80 ? 'var(--c-warning)' : 'var(--c-accent)')
-      const displayName = tAOName(s.appId) || s.appId.replace(/-optimize$|-cpu-priority$/,'').replace(/-/g,' ')
-      return `<div style="width:${w}%;background:rgba(var(--fx),0.07);border-radius:3px;overflow:hidden;position:relative;flex-shrink:0" title="${displayName}: ${s.cpuPct}% / ${s.cap}% cap">
-        <div style="height:100%;width:${fill}%;background:${color};transition:width 0.4s ease,background 0.3s ease${s.overBudget ? ';animation:bbFlash 0.8s ease-in-out infinite' : ''}"></div>
-      </div>`
-    }).join('')
-    slotsEl.innerHTML = d.slots.map(s => {
-      const pct = Math.round((s.cpuPct / s.cap) * 100)
-      const color = s.overBudget ? 'var(--c-danger)' : (pct > 80 ? 'var(--c-warning)' : 'var(--c-accent)')
-      const displayName = tAOName(s.appId) || s.appId.replace(/-optimize$|-cpu-priority$/,'').replace(/-/g,' ')
-      return `<div class="jx-638">
-        <span class="jx-639">${displayName}</span>
-        <span style="font-family:monospace;color:${color};width:70px">${s.cpuPct}% / ${s.cap}%</span>
-        ${s.overBudget ? '<span class="jx-640"><i class="fa fa-triangle-exclamation jx-641"></i>OVER</span>' : ''}
-      </div>`
-    }).join('')
-  } else {
-    // Slot set unchanged — update only fill widths and colors
-    d.slots.forEach((s, i) => {
-      const seg = barWrap.children[i]
-      if (!seg) return
-      const fill = Math.min(100, Math.round((s.cpuPct / s.cap) * 100))
-      const color = s.overBudget ? 'var(--c-danger)' : (fill > 80 ? 'var(--c-warning)' : 'var(--c-accent)')
-      const bar = seg.firstElementChild
-      if (bar) { bar.style.width = fill + '%'; bar.style.background = color }
-    })
-  }
-}
-
-function _bbShowSessionReport(report) {
-  const el = document.getElementById('bb-report')
-  if (!el) return
-  el.innerHTML = `<div class="jx-642">Session Budget Report</div>` +
-    report.map(r => {
-      const name = tAOName(r.appId) || r.displayName || r.appId
-      const stats = `avg ${r.avgCpuPct}%${r.capHitCount > 0 ? ` · hit ${r.cap}% cap ${r.capHitCount}×` : ''}`
-      return `<div class="jx-643"><span class="jx-20">${name}</span><span class="jx-10">${stats}</span></div>`
-    }).join('')
-  el.style.display = 'block'
-}
 
 async function sgmToggle(key, val) {
   // Change the system first; the saved setting and the switch follow the real result.

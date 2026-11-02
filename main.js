@@ -878,14 +878,10 @@ function stopSensorBridge() {
   try { require('child_process').execSync('taskkill /f /im JylliSensor.exe', { stdio: 'ignore' }) } catch {}
 }
 
-ipcMain.handle('sensor-get-schema',  () => _sensorSchema || [])
 ipcMain.handle('telemetry-subscribe', () => { telemetrySvc().start(); telemetrySvc().subscribe(); return { ok: true, snapshot: _hub.snapshot() } })
 ipcMain.handle('telemetry-unsubscribe', () => { telemetrySvc().unsubscribe(); return { ok: true } })
 ipcMain.handle('telemetry-capabilities', () => ({ capabilities: _hub.capabilities(TELEMETRY_EXPECTED_KEYS), context: _hub.getContext() }))
 const TELEMETRY_EXPECTED_KEYS = ['cpu.load', 'cpu.temp.package', 'cpu.power', 'ram.used', 'gpu0.load', 'gpu0.temp.core', 'gpu0.temp.hotspot', 'gpu0.power', 'gpu0.clock.core', 'gpu0.vram.used', 'gpu0.fan.rpm', 'gpu0.fan.pct', 'net.rx', 'net.tx']
-ipcMain.handle('sensor-get-rate',    () => _sensorHz)
-ipcMain.handle('sensor-bridge-status', () => ({ active: !!_sensorSocket, hz: _sensorHz, sensors: _sensorSchema?.length || 0 }))
-
 // ─── ONNX Local AI Advisor ────────────────────────────────────────────────────
 let _ort        = null
 let _ortSession = null
@@ -2140,11 +2136,6 @@ ipcMain.handle('save-settings', (_, data) => {
   return saveSettings(clean)
 
 })
-// IRQ affinity is not implemented in main. These answer "unsupported" so the renderer hides the panel instead of failing silently.
-ipcMain.handle('irq-get-status', () => ({ unsupported: true, active: false }))
-ipcMain.handle('irq-get-devices', () => ({ unsupported: true, devices: [], coreCount: 0 }))
-ipcMain.handle('irq-apply-game-affinity', () => ({ ok: false, unsupported: true }))
-ipcMain.handle('irq-restore-affinity', () => ({ ok: false, unsupported: true }))
 ipcMain.handle('set-startup', (_, enabled) => {
   return setStartupTask(!!enabled)
 })
@@ -2371,10 +2362,6 @@ ipcMain.handle('discord-set-applied-count', (_, count) => {
   discordTweaksApplied = count
   if (!discordActivityOverride) updateDiscordPresence()
 })
-ipcMain.handle('discord-set-tweaks', (_, count) => {
-  discordTweaksApplied = count
-  if (!discordActivityOverride) updateDiscordPresence()
-})
 ipcMain.handle('discord-set-fivem', (_, hasFiveM) => {
   discordHasFiveM = hasFiveM
   updateDiscordPresence()
@@ -2383,11 +2370,6 @@ ipcMain.handle('discord-set-pulse-game', (_, gameName) => {
   discordPulseGame = gameName  // null to clear
   updateDiscordPresence()
 })
-ipcMain.handle('discord-set-active-game', (_, gameName) => {
-  discordActiveGame = gameName  // null to clear
-  updateDiscordPresence()
-})
-
 // ─── Tweak execution handler ──────────────────────────────────────────────────
 ipcMain.handle('run-tweak', async (_, req) => {
   const { id, action } = req || {}
@@ -3464,22 +3446,6 @@ function applyIniChanges(content, changes, { restrict = false } = {}) {
 }
 
 // IPC: batch-apply multiple CitizenFX.ini changes in a single read→write
-ipcMain.handle('fivem-ini-batch', async (_, changes) => {
-  if (!requiresPremium('fivem-ini-batch')) return { ok: false, reason: 'premium_required' }
-  const p = CITIZENFX_INI_PATH()
-  if (!fs.existsSync(p)) return { ok: false, reason: 'CitizenFX.ini not found — is FiveM installed?' }
-  if (!changes || typeof changes !== 'object' || Array.isArray(changes)) return { ok: false, reason: 'invalid_request' }
-  const content = readCitizenFXIni()
-  if (content === null) return { ok: false, reason: 'Could not read CitizenFX.ini' }
-  // Atomic backup before writing — matches the safety pattern used by fivem-write-settings
-  const bakPath = p + '.bak'
-  try { fs.writeFileSync(bakPath + '.tmp', content, 'utf8'); fs.renameSync(bakPath + '.tmp', bakPath) } catch (e) {
-    return { ok: false, reason: 'Could not back up CitizenFX.ini first (' + String(e.message).slice(0, 100) + '). Nothing was changed.' }
-  }
-  const updated = applyIniChanges(content, changes, { restrict: true })
-  return writeCitizenFXIni(updated) ? { ok: true } : { ok: false, reason: 'Could not write CitizenFX.ini' }
-})
-
 // ─── CitizenFX.ini key definitions (full visual editor) ──────────────────────
 const CITIZENFX_INI_DEFS = [
   // Performance
@@ -10346,57 +10312,6 @@ Stop-Process -Id ${n} -Force -ErrorAction SilentlyContinue
 })
 
 let _boostDeprioritised = []
-ipcMain.handle('game-boost-apply', async () => {
-  const send = (msg, level) => mainWindow?.webContents.send('log', { msg, level, ts: new Date().toLocaleTimeString() })
-
-  // Launchers, updaters, overlays and chat clients — NOT editors/archivers (closing those loses unsaved work).
-  const BOOST_KILL = [
-    'Discord', 'DiscordPTB', 'DiscordCanary',
-    'EpicGamesLauncher', 'EpicWebHelper',
-    'steam', 'steamwebhelper', 'GameOverlayUI',
-    'OneDrive', 'OneDriveStandaloneUpdater',
-    'Teams', 'ms-teams',
-    'chrome', 'msedge', 'firefox', 'opera',
-    'MicrosoftEdgeUpdate', 'GoogleUpdate',
-    'SkypeApp', 'skype',
-    'XboxApp', 'GamingServices', 'XblGameSave',
-  ]
-  const names = BOOST_KILL.map(n => V.psQuote(n)).join(',')
-  const running = String((await runPS(`Get-Process -Name ${names} -EA SilentlyContinue | Select-Object -ExpandProperty ProcessName -Unique`)).out || '')
-    .split(/\r?\n/).map(x => x.trim()).filter(x => BOOST_KILL.includes(x))
-
-  if (running.length) {
-    const { response } = await dialog.showMessageBox(mainWindow, {
-      type: 'warning', buttons: ['Close them and boost', 'Cancel'], defaultId: 1, cancelId: 1, noLink: true,
-      title: 'Game Boost',
-      message: 'Game Boost will close these programs:',
-      detail: running.join(', ') + '\n\nUnsaved work in them (for example browser tabs or chat drafts) may be lost.',
-    })
-    if (response !== 0) return { ok: false, canceled: true }
-  }
-
-  send('◆ Game Boost — closing background programs…', 'head')
-  const killed = []
-  for (const name of running) {
-    const r = await runPS(`Stop-Process -Name ${V.psQuote(name)} -Force -ErrorAction SilentlyContinue; Write-Output 'killed'`)
-    if (r.out.trim() === 'killed') { killed.push(name); send(`  ✓ Stopped: ${name}`, 'ok') }
-  }
-
-  _boostDeprioritised = await lowerBackgroundPriorities(null)
-  send(`Game Boost complete — stopped ${killed.length} program(s), lowered ${_boostDeprioritised.length} background process(es).`, 'ok')
-  send('Click "End Boost" when done gaming to restore priorities.', 'info')
-  return { ok: true, killed }
-})
-
-ipcMain.handle('game-boost-restore', async () => {
-  const send = (msg, level) => mainWindow?.webContents.send('log', { msg, level, ts: new Date().toLocaleTimeString() })
-  send('Restoring process priorities…', 'head')
-  await restoreLoweredPriorities(_boostDeprioritised)
-  _boostDeprioritised = []
-  send('Process priorities restored. Restart closed apps manually if needed.', 'ok')
-  return { ok: true }
-})
-
 // ─── Pulse Window ─────────────────────────────────────────────────────────────
 ipcMain.handle('open-pulse-window', () => {
   if (!requiresPremium('open-pulse-window')) return { ok: false, reason: 'premium_required' }
@@ -11476,51 +11391,6 @@ ipcMain.handle('get-latency-sample', async () => {
   }
 })
 
-ipcMain.handle('run-ping-tests', async () => {
-  mainWindow?.webContents.send('log', { msg: '◆ Running ping tests…', level: 'head', ts: new Date().toLocaleTimeString() })
-
-  const targets = [
-    { name: 'Cloudflare DNS',    host: '1.1.1.1',          category: 'DNS' },
-    { name: 'Google DNS',        host: '8.8.8.8',           category: 'DNS' },
-    { name: 'Riot Games (EU)',   host: 'euc1.lol.gamesvc.net', category: 'Valorant/LoL' },
-    { name: 'Riot Games (NA)',   host: 'nac.lol.gamesvc.net',  category: 'Valorant/LoL' },
-    { name: 'Steam Content',     host: 'content1.st.dl.eccdnx.com', category: 'Steam' },
-    { name: 'EA / Origin',       host: 'ea.com',            category: 'EA/Apex' },
-    { name: 'Activision',        host: 'activision.com',    category: 'Warzone/CoD' },
-    { name: 'Epic Games',        host: 'epicgames.com',     category: 'Fortnite' },
-    { name: 'Rockstar Games',    host: 'ros.rockstargames.com', category: 'GTA/FiveM' },
-    { name: 'FiveM CFX',         host: 'runtime.fivem.net', category: 'FiveM' },
-    { name: 'Google (General)',  host: '8.8.4.4',           category: 'General' },
-    { name: 'Cloudflare (Alt)',  host: '1.0.0.1',           category: 'DNS' },
-  ]
-
-  const results = []
-  for (const t of targets) {
-    const r = await runPS(`
-      $pings = 1..4 | ForEach-Object {
-        try {
-          $p = New-Object System.Net.NetworkInformation.Ping
-          $reply = $p.Send('${t.host}', 2000)
-          if ($reply.Status -eq 'Success') { $reply.RoundtripTime } else { 9999 }
-        } catch { 9999 }
-      }
-      $valid = $pings | Where-Object {$_ -lt 9999}
-      if ($valid) {
-        $avg = [math]::Round(($valid | Measure-Object -Average).Average)
-        $min = ($valid | Measure-Object -Minimum).Minimum
-        Write-Output "$avg|$min|$($valid.Count)"
-      } else { Write-Output "timeout|timeout|0" }
-    `, 12000)
-    const parts = r.out.trim().split('|')
-    const avg = parts[0] === 'timeout' ? null : parseInt(parts[0])
-    const min = parts[1] === 'timeout' ? null : parseInt(parts[1])
-    const count = parseInt(parts[2]) || 0
-    results.push({ ...t, avg, min, packetLoss: Math.round((4 - count) / 4 * 100) })
-    mainWindow?.webContents.send('ping-result', { ...t, avg, min, packetLoss: Math.round((4 - count) / 4 * 100) })
-  }
-  return results
-})
-
 // ─── Ping Tests v2 ────────────────────────────────────────────────────────────
 // Parallel multi-metric ping: avg/min/max/p95/jitter/loss, optional bufferbloat load
 ipcMain.handle('run-ping-tests-v2', async (_, opts = {}) => {
@@ -12245,8 +12115,6 @@ ipcMain.handle('stop-game-watcher', async () => {
   return { ok: true }
 })
 
-ipcMain.handle('get-game-watcher-status', () => ({ running: !!gameWatcherInterval, activeGame: activeGameProfile }))
-
 // ─── BIOS Change Log & Profile paths ─────────────────────────────────────────
 let BIOS_CHANGE_LOG_PATH = null
 let BIOS_PROFILES_PATH   = null
@@ -12452,21 +12320,6 @@ ipcMain.handle('get-disk-usage', async () => {
       .map(e => ({ label: e.label, bytes: Number(e.bytes) || 0, path: e.p || '' }))
       .sort((a, b) => b.bytes - a.bytes)
   } catch { return [] }
-})
-
-ipcMain.handle('get-recycle-bin-size', async () => {
-  const r = await runPS(`
-    try {
-      $shell = New-Object -ComObject Shell.Application
-      $bin = $shell.Namespace(10)
-      $bytes = ($bin.Items() | Measure-Object -Property Size -Sum).Sum
-      if ($bytes) { Write-Output ([long]$bytes) } else { Write-Output 0 }
-    } catch { Write-Output 0 }
-  `, 8000)
-  const bytes = parseInt(r.out?.trim()) || 0
-  const mb = bytes / 1048576
-  const label = mb < 1024 ? `${Math.round(mb)} MB` : `${(mb / 1024).toFixed(1)} GB`
-  return { bytes, label }
 })
 
 ipcMain.handle('get-cleanup-sizes', async () => {
@@ -13843,101 +13696,7 @@ ipcMain.handle('aria-stop',  () => {
 
 // ─── ARIA: Causal attribution ─────────────────────────────────────────────────
 // Called from renderer before a tweak is applied to capture the before-fingerprint
-ipcMain.handle('aria-before-tweak', (_, { tweakId }) => {
-  if (!requiresPremium('aria-before-tweak')) return { ok: false, reason: 'premium_required' }
-  if (!_lastMetrics) return { ok: false }
-  _ariaTweakSnapshot = { tweakId, before: { ...ariaSnapshot() }, ts: Date.now() }
-
-  // PresentMon: start per-tweak frame time measurement if a game is running
-  if (activeGameProfile && presentMonAvailable()) {
-    const tmpFile = path.join(require('os').tmpdir(), `jylli_pm_tweak_${tweakId.replace(/[^a-z0-9]/gi, '_')}_${Date.now()}.csv`)
-    const gameExe = PULSE_PRESETS[activeGameProfile]?.exe?.replace(/\*$/, '')
-    stopPresentMon(_pmTweakProc)
-    _pmTweakProc = spawnPresentMon(tmpFile, null)  // capture all present calls; filter by exe name
-    if (_pmTweakProc) _pmTweakFile = tmpFile
-  }
-
-  return { ok: true }
-})
-
 // Called from renderer after a 5-second settle to capture the after-fingerprint and store the insight
-ipcMain.handle('aria-after-tweak', async (_, { tweakId, action }) => {
-  if (!requiresPremium('aria-after-tweak')) return { ok: false, reason: 'premium_required' }
-  if (!_ariaTweakSnapshot || _ariaTweakSnapshot.tweakId !== tweakId || !_lastMetrics) {
-    stopPresentMon(_pmTweakProc); _pmTweakProc = null; _pmTweakFile = null
-    return { ok: false }
-  }
-  const after = ariaSnapshot()
-  const before = _ariaTweakSnapshot.before
-  const delta = {
-    cpu:     Math.round((after.cpu     - before.cpu)     * 10) / 10,
-    gpu:     Math.round((after.gpu     - before.gpu)     * 10) / 10,
-    ram:     Math.round((after.ram     - before.ram)     * 10) / 10,
-    cpuTemp: Math.round((after.cpuTemp - before.cpuTemp) * 10) / 10,
-  }
-
-  // PresentMon: stop and parse frame time data for this tweak measurement
-  let frameTimeBefore = null
-  let frameTimeAfter  = null
-  if (_pmTweakProc && _pmTweakFile) {
-    // Capture "before" window: this measurement started at _ariaTweakSnapshot.ts
-    // We give PresentMon a moment to flush, then parse what we have as "before"
-    stopPresentMon(_pmTweakProc)
-    _pmTweakProc = null
-    await new Promise(r => setTimeout(r, 300))  // wait for file flush
-    frameTimeBefore = parsePresentMonCsv(_pmTweakFile)
-    try { fs.unlinkSync(_pmTweakFile) } catch {}
-    _pmTweakFile = null
-
-    // Restart PresentMon for the "after" window (settle period already elapsed in renderer)
-    if (presentMonAvailable() && activeGameProfile) {
-      const tmpAfter = path.join(require('os').tmpdir(), `jylli_pm_after_${tweakId.replace(/[^a-z0-9]/gi, '_')}_${Date.now()}.csv`)
-      const afterProc = spawnPresentMon(tmpAfter, null)
-      if (afterProc) {
-        await new Promise(r => setTimeout(r, 3000))  // collect 3s of frames
-        stopPresentMon(afterProc)
-        await new Promise(r => setTimeout(r, 300))
-        frameTimeAfter = parsePresentMonCsv(tmpAfter)
-        try { fs.unlinkSync(tmpAfter) } catch {}
-      }
-    }
-  }
-
-  const frameDelta = (frameTimeBefore && frameTimeAfter) ? {
-    before: frameTimeBefore,
-    after:  frameTimeAfter,
-    meanDelta:  Math.round((frameTimeAfter.mean  - frameTimeBefore.mean)  * 100) / 100,
-    p1Delta:    Math.round((frameTimeAfter.p1Low  - frameTimeBefore.p1Low)  * 100) / 100,
-    p01Delta:   Math.round((frameTimeAfter.p01Low - frameTimeBefore.p01Low) * 100) / 100,
-  } : null
-
-  const fpsDelta = (frameTimeBefore && frameTimeAfter) ? {
-    avgBefore:  Math.round(1000 / frameTimeBefore.mean),
-    avgAfter:   Math.round(1000 / frameTimeAfter.mean),
-    low1Before: Math.round(1000 / frameTimeBefore.p1Low),
-    low1After:  Math.round(1000 / frameTimeAfter.p1Low),
-  } : null
-
-  const insight = {
-    tweakId,
-    action,
-    before,
-    after,
-    delta,
-    frameTime: frameDelta,
-    fpsDelta,
-    ts:   Date.now(),
-    game: activeGameProfile || null,
-  }
-  // Keep only the latest insight per tweak (replace older entries)
-  _ariaInsights = _ariaInsights.filter(i => i.tweakId !== tweakId)
-  _ariaInsights.push(insight)
-  if (_ariaInsights.length > ARIA_MAX_INSIGHTS) _ariaInsights.shift()
-  ariaSaveInsights()
-  _ariaTweakSnapshot = null
-  return { ok: true, delta, frameTime: frameDelta }
-})
-
 // Returns the stored insights for the dashboard feed
 ipcMain.handle('get-aria-insights', () => {
   if (!requiresPremium('get-aria-insights')) return []
