@@ -786,7 +786,8 @@ async function fivemImportPack(btn) {
     return
   }
   const n = r.results?.tweaks?.length ?? 0
-  toast('', tUI('fivemShareImportOk').replace('{n}', n), 'success', 4000)
+  if (r.partial) toast('', tUI('fivemShareImportFail') + ' (' + n + ' ok, ' + ((r.results?.failedTweaks?.length || 0) + (r.results?.errors?.length || 0)) + ' failed)', 'warn', 6000)
+  else toast('', tUI('fivemShareImportOk').replace('{n}', n), 'success', 4000)
   settings = await api.loadSettings().catch(() => settings)
 }
 

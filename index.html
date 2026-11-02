@@ -3076,7 +3076,13 @@ async function doPulseStop(btn) {
 async function doPulseFixMouse(btn) {
   btn.disabled = true
   btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Fixing…'
-  await api.pulseFixMouse()
+  const r = await api.pulseFixMouse().catch(() => null)
+  if (!r || r.ok === false) {
+    toast(tUI('mouseFixTitle'), tUI('tkOpFailed'), 'err')
+    btn.disabled = false
+    btn.innerHTML = '<i class="fa fa-triangle-exclamation"></i> ' + tUI('tkFailed')
+    return
+  }
   toast(tUI('mouseFixTitle'), tUI('mouseFixBody'), 'ok')
   btn.innerHTML = '<i class="fa fa-check"></i> Done'
 }
@@ -5104,7 +5110,8 @@ async function applyAutoPulsePresetOverride(sel) {
   const gameId = badge?.querySelector('.apb-game')?.textContent
   if (!gameId) return
   const preset = sel.value || null
-  await api.setAutoPulseOverride(gameId, preset).catch(() => {})
+  const sv = await api.setAutoPulseOverride(gameId, preset).catch(() => null)
+  if (!sv || sv.ok === false) { toast(tUI('tkFailed'), tUI('tkOpFailed'), 'err'); return }
   if (preset && preset !== gameId) {
     // Hot-swap: stop current preset and start the override
     await api.pulseStop().catch(() => {})
@@ -7929,7 +7936,8 @@ async function genRebootNow() {
   try {
     await showConfirm({ title: tUI('genRebootBarBtn'), body: tUI('genRebootBarConfirm'), okText: tUI('genRebootBarBtn'), okStyle: 'warning', icon: 'fa-rotate-right' })
   } catch { return }
-  await api.reboot?.().catch(() => {})
+  const r = await api.reboot?.().catch(() => null)
+  if (!r || r.ok === false) toast(tUI('genRebootBarBtn'), tUI('tkOpFailed'), 'err')
 }
 
 function genRefreshQuickWinStrip() {
@@ -12395,7 +12403,8 @@ async function doCpuTopoUnpin(btn) {
   const statusEl = document.getElementById('hw-topo-status')
   const unpinBtn = document.getElementById('hw-topo-unpin-btn')
   try {
-    await api.cpuUnpinGame()
+    const r = await api.cpuUnpinGame().catch(() => null)
+    if (!r || r.ok === false) { toast(tUI('tkFailed'), tUI('tkOpFailed'), 'err'); return }
     if (statusEl) statusEl.innerHTML = `<span class="jx-3">${tUI('hwCpuTopoInactive')}</span>`
     if (unpinBtn) unpinBtn.style.display = 'none'
     _hwTopoPinIndicatorSet(null)
@@ -14489,19 +14498,24 @@ function _bbShowSessionReport(report) {
 }
 
 async function sgmToggle(key, val) {
+  // Change the system first; the saved setting and the switch follow the real result.
+  let r = null
+  if (key === 'updateInterceptEnabled') r = await api.setUpdateIntercept(val).catch(() => null)
+  else if (key === 'idleSuppressionEnabled') r = await api.setIdleSuppression(val).catch(() => null)
+  const featureName = key === 'updateInterceptEnabled' ? tUI('aoUpdateIntercept') : tUI('aoIdleSuppression')
+  if (!r || r.ok === false) {
+    const box = document.getElementById(key === 'updateInterceptEnabled' ? 'sgm-update-intercept' : 'sgm-idle-suppression')
+    if (box) box.checked = !val
+    toast(featureName, tUI('tkOpFailed'), 'err')
+    return
+  }
   settings[key] = val
   await api.saveSettings(settings).catch(() => {})
-  if (key === 'updateInterceptEnabled') {
-    await api.setUpdateIntercept(val).catch(() => {})
-  } else if (key === 'idleSuppressionEnabled') {
-    await api.setIdleSuppression(val).catch(() => {})
-  }
   const activeBadge = document.getElementById('sgm-active-badge')
   if (activeBadge) {
     const anyActive = settings.updateInterceptEnabled || settings.idleSuppressionEnabled
     activeBadge.style.display = anyActive ? '' : 'none'
   }
-  const featureName = key === 'updateInterceptEnabled' ? tUI('aoUpdateIntercept') : tUI('aoIdleSuppression')
   toast(featureName, tUI(val ? 'aoEnabled' : 'aoDisabled'), val ? 'ok' : 'info')
 }
 

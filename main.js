@@ -3779,11 +3779,12 @@ ipcMain.handle('fivem-clear-cache', async (_, { force = false, targets = null } 
   }
 
   const script = pathsToClean.map(([name, p]) =>
-    `try { Remove-Item -Path '${p}\\*' -Recurse -Force -EA SilentlyContinue; Write-Output "OK:${name}" } catch { Write-Output "ERR:${name}" }`
+    `try { Remove-Item -Path '${p}\\*' -Recurse -Force -EA SilentlyContinue; $left = @(Get-ChildItem -LiteralPath '${p}' -Force -EA SilentlyContinue).Count; if ($left -eq 0) { Write-Output "OK:${name}" } else { Write-Output "ERR:${name}" } } catch { Write-Output "ERR:${name}" }`
   ).join('\n')
 
   const r = await runPS(script)
   const cleared = []
+  const lockedNames = []
   for (const line of r.out.split('\n')) {
     const trimmed = line.trim()
     if (trimmed.startsWith('OK:')) {
@@ -3792,12 +3793,14 @@ ipcMain.handle('fivem-clear-cache', async (_, { force = false, targets = null } 
       cleared.push(name)
     } else if (trimmed.startsWith('ERR:')) {
       send(`  ${trimmed.slice(4)}: error clearing (files may be locked)`, 'warn')
+      lockedNames.push(trimmed.slice(4))
     }
   }
-  send(`Cache cleared — ${cleared.length} location${cleared.length !== 1 ? 's' : ''} processed.`, 'ok')
+  send(`Cache cleared — ${cleared.length} of ${pathsToClean.length} location${pathsToClean.length !== 1 ? 's' : ''}.`, lockedNames.length ? 'warn' : 'ok')
   // Invalidate mod scan cache since server-cache contents changed
   _modScanCache = null
-  return { ok: true, cleared }
+  if (!cleared.length && lockedNames.length) return { ok: false, cleared, locked: lockedNames, error: 'files_locked' }
+  return { ok: true, cleared, locked: lockedNames }
 })
 
 // IPC: get cache directory sizes + last-modified timestamps (for smart cache panel, 2c)
@@ -3890,7 +3893,7 @@ ipcMain.handle('fivem-import-pack', async () => {
     const pack = JSON.parse(fs.readFileSync(filePaths[0], 'utf8'))
     if (!pack || pack.schema !== 'jylli-fivem-pack-v1') return { ok: false, error: 'invalid_schema' }
 
-    const results = { tweaks: [], ini: false, xml: false }
+    const results = { tweaks: [], failedTweaks: [], ini: false, xml: false, errors: [] }
 
     // Apply tweaks — a shared pack file is untrusted: only FiveM tweaks, only ones that exist, bounded count
     const packIds = Array.isArray(pack.appliedTweaks) ? pack.appliedTweaks.slice(0, 100) : []
@@ -3898,10 +3901,12 @@ ipcMain.handle('fivem-import-pack', async () => {
       if (typeof id !== 'string' || !id.startsWith('fivem-') || !Object.prototype.hasOwnProperty.call(TWEAKS, id) || !TWEAKS[id].apply) continue
       try {
         const msgs = []
-        await invokeTweak(id, 'apply', m => msgs.push(m))
+        let hardFail = null
+        await invokeTweak(id, 'apply', m => msgs.push(m), { onFailures: f => { hardFail = f } })
+        if (hardFail) { results.failedTweaks.push(id); continue }
         const s = loadSettings(); s[`tweak_${id}`] = 'applied'; saveSettings(s)
         results.tweaks.push(id)
-      } catch {}
+      } catch { results.failedTweaks.push(id) }
     }
 
     // Write CitizenFX.ini
@@ -3912,7 +3917,7 @@ ipcMain.handle('fivem-import-pack', async () => {
         if (fs.existsSync(iniPath)) fs.copyFileSync(iniPath, iniPath + '.bak')   // never overwrite without a way back
         fs.writeFileSync(iniPath, pack.citizenFxIni, 'utf8')
         results.ini = true
-      } catch {}
+      } catch (e) { results.errors.push('citizenfx_ini') }
     }
 
     // Write gta5_settings.xml
@@ -3923,10 +3928,11 @@ ipcMain.handle('fivem-import-pack', async () => {
         if (fs.existsSync(xmlPath)) fs.copyFileSync(xmlPath, xmlPath + '.bak')
         fs.writeFileSync(xmlPath, pack.gta5SettingsXml, 'utf8')
         results.xml = true
-      } catch {}
+      } catch (e) { results.errors.push('gta5_settings') }
     }
 
-    return { ok: true, results }
+    const partial = results.failedTweaks.length > 0 || results.errors.length > 0
+    return { ok: !partial || results.tweaks.length > 0 || results.ini || results.xml, partial, results }
   } catch (e) {
     return { ok: false, error: e.message }
   }
@@ -11086,8 +11092,8 @@ ipcMain.handle('pulse-baseline-get', () => {
 
 ipcMain.handle('pulse-fix-mouse', async () => {
   if (!requiresPremium('pulse-fix-mouse')) return { ok: false, reason: 'premium_required' }
-  // Clear interrupt affinity overrides
-  await runPS(`
+  // Clear interrupt affinity overrides (journaled: the removed values can be put back from the History tab)
+  const fm = await journalSvc().runRecorded('pulse-fix-mouse', 'apply', { via: 'manual' }, (ps) => ps(`
     $pciBase  = 'HKLM:\\SYSTEM\\CurrentControlSet\\Enum\\PCI'
     $netGuid  = '{4d36e972-e325-11ce-bfc1-08002be10318}'
     $dispGuid = '{4d36e968-e325-11ce-bfc1-08002be10318}'
@@ -11102,7 +11108,8 @@ ipcMain.handle('pulse-fix-mouse', async () => {
         }
       }
     }
-  `, 20000).catch(() => {})
+  `, 20000)).catch(e => ({ ok: false, err: String(e && e.message || e) }))
+  if (!fm.ok) return { ok: false, error: String(fm.err || fm.out || 'powershell_failed').slice(0, 200) }
   return { ok: true }
 })
 
@@ -12135,7 +12142,7 @@ ipcMain.handle('start-game-watcher', async () => {
         const send = (msg, level) => mainWindow?.webContents.send('log', { msg, level, ts: new Date().toLocaleTimeString() })
         send(`◆ Auto-Pulse: activating for ${presetName}…`, 'head')
         mainWindow?.webContents.send('game-watcher-event', { event: 'auto-pulse-start', gameId: detectedGame, presetId: detectedGame })
-        activatePulse(detectedGame, false, send).catch(() => { autoPulseTriggeredPreset = null })
+        activatePulse(autoPulseOverrideFor(detectedGame) || detectedGame, false, send).catch(() => { autoPulseTriggeredPreset = null })
       }
 
     } else if (!detectedGame && activeGameProfile) {
@@ -12253,7 +12260,12 @@ function loadChangelog() {
   return []
 }
 function saveChangelog(log) {
-  try { fs.writeFileSync(CHANGELOG_PATH, JSON.stringify(log, null, 2)) } catch {}
+  try {
+    const tmp = CHANGELOG_PATH + '.tmp'
+    fs.writeFileSync(tmp, JSON.stringify(log, null, 2))
+    fs.renameSync(tmp, CHANGELOG_PATH)
+    return true
+  } catch (e) { debugLog('[changelog] write failed: ' + e.message); return false }
 }
 
 ipcMain.handle('get-changelog', () => loadChangelog())
@@ -12261,10 +12273,9 @@ ipcMain.handle('add-changelog-entry', (_, entry) => {
   const log = loadChangelog()
   log.unshift({ ...entry, ts: new Date().toISOString() })
   if (log.length > 200) log.splice(200)
-  saveChangelog(log)
-  return { ok: true }
+  return saveChangelog(log) ? { ok: true } : { ok: false, error: 'changelog_write_failed' }
 })
-ipcMain.handle('clear-changelog', () => { saveChangelog([]); return { ok: true } })
+ipcMain.handle('clear-changelog', () => saveChangelog([]) ? { ok: true } : { ok: false, error: 'changelog_write_failed' })
 
 // ─── Tweak Scheduler ─────────────────────────────────────────────────────────
 ipcMain.handle('schedule-tweak', async (_, { taskName, schedule, action, time, dayOfWeek }) => {
@@ -12913,6 +12924,7 @@ ipcMain.handle('bios-scewin-write', async (_, { token, value, settingName, oldVa
     return { ok: false, restored: true, error: 'SCEWIN write failed — your board may not support runtime BIOS writes. Previous dump restored.' }
   }
   // Append to BIOS change log
+  let logged = true
   if (BIOS_CHANGE_LOG_PATH && settingName) {
     try {
       let log = []
@@ -12922,9 +12934,9 @@ ipcMain.handle('bios-scewin-write', async (_, { token, value, settingName, oldVa
       log.unshift({ ts: Date.now(), settingName, token, oldValue: oldValue || '?', newValue: value })
       if (log.length > 200) log = log.slice(0, 200)
       fs.writeFileSync(BIOS_CHANGE_LOG_PATH, JSON.stringify(log), 'utf8')
-    } catch {}
+    } catch (e) { logged = false; debugLog('[bios] change log write failed: ' + e.message) }
   }
-  return { ok: true }
+  return { ok: true, logged }
 })
 
 ipcMain.handle('bios-get-change-log', async () => {
@@ -12938,7 +12950,7 @@ ipcMain.handle('bios-get-change-log', async () => {
 
 ipcMain.handle('bios-clear-change-log', async () => {
   if (!requiresPremium('bios-clear-change-log')) return { ok: false, reason: 'premium_required' }
-  if (BIOS_CHANGE_LOG_PATH) try { fs.writeFileSync(BIOS_CHANGE_LOG_PATH, '[]', 'utf8') } catch {}
+  if (BIOS_CHANGE_LOG_PATH) { try { fs.writeFileSync(BIOS_CHANGE_LOG_PATH, '[]', 'utf8') } catch (e) { return { ok: false, error: 'change_log_write_failed' } } }
   return { ok: true }
 })
 
@@ -12948,7 +12960,13 @@ function loadBiosProfiles() {
   return []
 }
 function saveBiosProfiles(profiles) {
-  try { if (BIOS_PROFILES_PATH) fs.writeFileSync(BIOS_PROFILES_PATH, JSON.stringify(profiles), 'utf8') } catch {}
+  try {
+    if (!BIOS_PROFILES_PATH) return false
+    const tmp = BIOS_PROFILES_PATH + '.tmp'
+    fs.writeFileSync(tmp, JSON.stringify(profiles), 'utf8')
+    fs.renameSync(tmp, BIOS_PROFILES_PATH)
+    return true
+  } catch (e) { debugLog('[bios] profiles write failed: ' + e.message); return false }
 }
 
 ipcMain.handle('bios-list-profiles', async () => {
@@ -12967,7 +12985,7 @@ ipcMain.handle('bios-save-profile', async (_, { name, entries }) => {
   const profiles = loadBiosProfiles().filter(p => p.name !== name)
   profiles.unshift({ name, ts: Date.now(), board, settings: entries || [] })
   if (profiles.length > 10) profiles.splice(10)
-  saveBiosProfiles(profiles)
+  if (!saveBiosProfiles(profiles)) return { ok: false, error: 'profiles_write_failed' }
   return { ok: true }
 })
 
@@ -13034,7 +13052,7 @@ ipcMain.handle('bios-import-profile', async () => {
   const profiles = loadBiosProfiles().filter(p => p.name !== profile.name)
   profiles.unshift(profile)
   if (profiles.length > 10) profiles.splice(10)
-  saveBiosProfiles(profiles)
+  if (!saveBiosProfiles(profiles)) return { ok: false, error: 'profiles_write_failed' }
   return { ok: true }
 })
 
@@ -13047,15 +13065,13 @@ ipcMain.handle('bios-hyper-v', async (_, { action }) => {
 
 ipcMain.handle('bios-cstates', async (_, { action }) => {
   if (!requiresPremium('bios-cstates')) return { ok: false, reason: 'premium_required' }
-  if (action === 'apply') {
-    await runCmd('powercfg /setacvalueindex SCHEME_CURRENT SUB_PROCESSOR IDLEDISABLE 1')
-    await runCmd('powercfg /setdcvalueindex SCHEME_CURRENT SUB_PROCESSOR IDLEDISABLE 1')
-  } else {
-    await runCmd('powercfg /setacvalueindex SCHEME_CURRENT SUB_PROCESSOR IDLEDISABLE 0')
-    await runCmd('powercfg /setdcvalueindex SCHEME_CURRENT SUB_PROCESSOR IDLEDISABLE 0')
-  }
-  await runCmd('powercfg /setactive SCHEME_CURRENT')
-  return { ok: true }
+  const v = action === 'apply' ? 1 : 0
+  const rs = []
+  rs.push(await runCmd(`powercfg /setacvalueindex SCHEME_CURRENT SUB_PROCESSOR IDLEDISABLE ${v}`))
+  rs.push(await runCmd(`powercfg /setdcvalueindex SCHEME_CURRENT SUB_PROCESSOR IDLEDISABLE ${v}`))
+  rs.push(await runCmd('powercfg /setactive SCHEME_CURRENT'))
+  const bad = rs.find(r => !r || !r.ok)
+  return bad ? { ok: false, error: String(bad.err || bad.out || 'powercfg_failed').slice(0, 200) } : { ok: true }
 })
 
 ipcMain.handle('get-ram-info', async () => {
@@ -14070,10 +14086,15 @@ ipcMain.handle('cpu-unpin-game', async () => {
   if (!requiresPremium('cpu-unpin-game')) return { ok: false, reason: 'premium_required' }
   if (_pinnedAffinity.size) {
     const payload = JSON.stringify(Array.from(_pinnedAffinity.entries()).map(([id, aff]) => ({ Id: Number(id), Aff: String(aff) })))
-    await runPS(`
+    const r = await runPS(`
 $items = ConvertFrom-Json ${V.psQuote(payload)}
-foreach ($i in $items) { $p = Get-Process -Id $i.Id -EA SilentlyContinue; if ($p) { try { $p.ProcessorAffinity = [System.IntPtr]::new([int64]$i.Aff) } catch {} } }
-    `, 8000).catch(() => {})
+foreach ($i in $items) { $p = Get-Process -Id $i.Id -EA SilentlyContinue; if ($p) { try { $p.ProcessorAffinity = [System.IntPtr]::new([int64]$i.Aff) } catch { Write-Output ('FAIL:' + $i.Id) } } }
+    `, 8000).catch(e => ({ ok: false, out: '', err: String(e && e.message || e) }))
+    const failedPins = String(r.out || '').split(/\r?\n/).filter(l => l.startsWith('FAIL:'))
+    if (!r.ok || failedPins.length) {
+      debugLog('[cpu-unpin] could not restore affinity: ' + (failedPins.join(',') || r.err))
+      return { ok: false, error: 'affinity_restore_failed', failed: failedPins.length }
+    }
   }
   _pinnedAffinity.clear()
   _cpuPinnedExe = null
@@ -14316,12 +14337,13 @@ function gameShieldShutdown() {
 ipcMain.handle('toggle-game-shield', async (_, on) => {
   if (!requiresPremium('toggle-game-shield')) return { ok: false, reason: 'premium_required' }
   on = !!on
-  saveSettings({ ...loadSettings(), gameShieldEnabled: on })
+  if (!saveSettings({ ...loadSettings(), gameShieldEnabled: on })) return { ok: false, error: 'settings_write_failed' }
   // Keeps the old behaviour: also silences the Edge/Google updater tasks while Game Shield is on.
   const tasks = ['MicrosoftEdgeUpdateTaskMachineCore', 'MicrosoftEdgeUpdateTaskMachineUA', 'GoogleUpdateTaskMachineCore', 'GoogleUpdateTaskMachineUA']
   const action = on ? 'Disable' : 'Enable'
   const ps = tasks.map(t => `schtasks /Change /TN "${t}" /${action} 2>$null`).join('; ')
-  await runPS(ps, 15000).catch(() => {})
+  const tr = await runPS(ps, 15000).catch(() => ({ ok: false }))
+  if (!tr.ok) debugLog('[game-shield] updater tasks could not all be switched (they may not be installed)')
   if (!on) await gameShieldDeactivate()
   else if (activeGameProfile) gameShieldActivate().catch(() => {})   // a game is already running
   return { ok: true, active: on }
@@ -14381,13 +14403,23 @@ ipcMain.handle('pulse-save-session', async (_, record) => {
   return { ok: true }
 })
 
+// Per-game preset chosen for Auto-Pulse (game id -> preset id). Read by the game watcher when it activates Pulse.
+function autoPulseOverrideFor(gameId) {
+  try {
+    const o = JSON.parse(fs.readFileSync(path.join(app.getPath('userData'), 'auto-pulse-overrides.json'), 'utf8'))
+    const p = o && o[gameId]
+    return typeof p === 'string' && Object.prototype.hasOwnProperty.call(PULSE_PRESETS, p) ? p : null
+  } catch { return null }
+}
 ipcMain.handle('set-auto-pulse-override', async (_, { gameId, preset } = {}) => {
-  if (!gameId) return { ok: false, error: 'no_game_id' }
+  if (!requiresPremium('set-auto-pulse-override')) return { ok: false, reason: 'premium_required' }
+  if (!gameId || typeof gameId !== 'string') return { ok: false, error: 'no_game_id' }
+  if (preset && (typeof preset !== 'string' || !Object.prototype.hasOwnProperty.call(PULSE_PRESETS, preset))) return { ok: false, error: 'unknown_preset' }
   const overridesPath = path.join(app.getPath('userData'), 'auto-pulse-overrides.json')
   let overrides = {}
   try { overrides = JSON.parse(fs.readFileSync(overridesPath, 'utf8')) } catch {}
   if (preset) { overrides[gameId] = preset } else { delete overrides[gameId] }
-  fs.writeFileSync(overridesPath, JSON.stringify(overrides, null, 2))
+  try { fs.writeFileSync(overridesPath, JSON.stringify(overrides, null, 2)) } catch (e) { debugLog('[auto-pulse] override write failed: ' + e.message); return { ok: false, error: 'write_failed' } }
   return { ok: true }
 })
 
@@ -14612,7 +14644,7 @@ ipcMain.handle('bios-capsule-snapshot', async (_, entries) => {
   if (!requiresPremium('bios-capsule-snapshot')) return { ok: false, reason: 'premium_required' }
   const snapshotPath = path.join(app.getPath('userData'), 'bios-capsule.json')
   const snapshot = { ts: Date.now(), entries: entries || [] }
-  fs.writeFileSync(snapshotPath, JSON.stringify(snapshot, null, 2))
+  try { fs.writeFileSync(snapshotPath, JSON.stringify(snapshot, null, 2)) } catch (e) { return { ok: false, error: 'snapshot_write_failed' } }
   return { ok: true }
 })
 
@@ -14732,11 +14764,9 @@ ipcMain.handle('set-self-priority', async (_, on) => {
 
 ipcMain.handle('set-update-intercept', async (_, val) => {
   if (!requiresPremium('set-update-intercept')) return { ok: false, reason: 'premium_required' }
-  const r = await runPS(val
-    ? `Set-Service wuauserv -StartupType Disabled -EA SilentlyContinue; Stop-Service wuauserv -Force -EA SilentlyContinue`
-    : `Set-Service wuauserv -StartupType Manual -EA SilentlyContinue`
-  )
-  return { ok: r.ok, active: !!val }
+  // Same path as Update Guard: the original start type is snapshotted and read back, never forced to 'Manual'.
+  const ok = await setUpdateGuard(!!val)
+  return ok ? { ok: true, active: !!val } : { ok: false, active: !val, error: 'wuauserv_not_changed' }
 })
 
 ipcMain.handle('set-idle-suppression', async (_, val) => {
