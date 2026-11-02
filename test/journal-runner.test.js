@@ -67,3 +67,15 @@ test('a rejected reg add is a hard failure even without an error text', async ()
   await rec.regAdd('HKLM', 'SK', 'V', 'REG_DWORD', '1')
   assert.strictEqual(rec.outcome().failures.length, 1)
 })
+
+test('a denied write that PowerShell reports only on stderr (exit 0) is a hard failure', async () => {
+  const rec = createRecorder({
+    runPS: async () => ({ ok: true, out: '', err: 'Set-ItemProperty : Requested registry access is not allowed.' }),
+    runCmd: async () => ({ ok: true, out: '', code: 0 }),
+  })
+  await rec.ps('Set-ItemProperty -Path "HKLM:\S" -Name N -Value 1')
+  assert.strictEqual(rec.outcome().failures.length, 1)
+  const ok = createRecorder({ runPS: async () => ({ ok: true, out: '', err: 'WARNING: something harmless' }), runCmd: async () => ({ ok: true, out: '' }) })
+  await ok.ps('Get-Date')
+  assert.strictEqual(ok.outcome().failures.length, 0)
+})

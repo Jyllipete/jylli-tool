@@ -1213,7 +1213,7 @@ let sessionTweaksCount = 0
 let _sessionTweakList  = []
 let _lastAction        = null
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
   startupTrace('whenReady#2 (main startup) entered')
   const userData = app.getPath('userData')
   SETTINGS_PATH       = path.join(userData, 'jt_settings.json')
@@ -1226,6 +1226,7 @@ app.whenReady().then(() => {
   CLEANUP_HISTORY_PATH = path.join(userData, 'jt_cleanup_history.json')
   APP_VERSION    = app.getVersion()
   auth = createAuth({ BOT_URL, userDataDir: userData, safeStorage, userAgent: 'jylli-tool/' + APP_VERSION })
+  await auth.ready   // stored session is decrypted (async safeStorage) before any window asks about premium
   snapshots = createSnapshotStore(path.join(userData, 'snapshots'))
   if (snapshots.load('update-guard')) setUpdateGuard(false).catch(() => {})   // Windows Update must never stay disabled after Jylli Tool is gone
   startupTrace('createWindow starting')
