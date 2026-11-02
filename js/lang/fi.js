@@ -2038,7 +2038,7 @@ LANG.fi = {
       clearHistoryTitle:'Tyhjennä säätöhistoria', clearHistoryBody:'Kaikki tallennettu säätöhistoria poistetaan pysyvästi.',
       diffBtn:'Diff', diffNotFound:'Ei diff-tietoja tälle merkinnälle', diffNoKeys:'Tälle säädölle ei ole rekisteriavaimia',
       deleteProfileTitle:'Poista profiili', deleteProfileBody:'Tämä profiili poistetaan pysyvästi.',
-      debloatConfirmTitle:'Poista sovellus(ia)', debloatConfirmBody:'Valitut UWP-sovellukset poistetaan tältä laitteelta.',
+      uwpKeepXboxStore:'Säilytä Xbox-kirjautuminen ja Microsoft Store (suojattuja paketteja ei poisteta)', debloatConfirmTitle:'Poista sovellus(ia)', debloatConfirmBody:'Valitut UWP-sovellukset poistetaan tältä laitteelta.',
       disableSvcTitle:'Poista palvelu(ita) käytöstä', disableSvcBody:'Valitut Windows-palvelut poistetaan käytöstä.',
       disableTaskTitle:'Poista ajastettu tehtävä(t) käytöstä', disableTaskBody:'Valitut ajastetut tehtävät poistetaan käytöstä.',
       disableDevTitle:'Poista laite(ita) käytöstä', disableDevBody:'Nämä laitteet poistetaan käytöstä Laitehallinnassa.',

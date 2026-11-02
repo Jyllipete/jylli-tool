@@ -63,7 +63,7 @@ contextBridge.exposeInMainWorld('api', {
   listRestorePoints:  ()           => ipcRenderer.invoke('list-restore-points'),
   restoreToPoint:     (seq)        => ipcRenderer.invoke('restore-to-point', seq),
   scanUwpApps:        ()           => ipcRenderer.invoke('scan-uwp-apps'),
-  removeUwpApps:      (pkgs)       => ipcRenderer.invoke('remove-uwp-apps', pkgs),
+  removeUwpApps:      (pkgs, opts) => ipcRenderer.invoke('remove-uwp-apps', pkgs, opts),
   listInstalledWin32: ()           => ipcRenderer.invoke('list-installed-win32'),
   uninstallWin32Apps: (items)      => ipcRenderer.invoke('uninstall-win32-apps', items),
   getPrefetchAges:    ()           => ipcRenderer.invoke('get-prefetch-ages'),

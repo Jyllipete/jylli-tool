@@ -15721,7 +15721,7 @@ function buildDebloater(c) {
 
   const removeBtn = document.createElement('div')
   removeBtn.style.cssText = 'padding:10px 18px 14px'
-  removeBtn.innerHTML = `<button class="btn btn-primary" onclick="doUwpRemove()"><i class="fa fa-trash"></i> ${tUI('uwpRemove')}</button>`
+  removeBtn.innerHTML = `<label style="display:flex;align-items:center;gap:8px;margin-bottom:10px;font-size:12px"><input type="checkbox" id="uwp-keep-xbox-store" checked> ${tUI('uwpKeepXboxStore')}</label><button class="btn btn-primary" onclick="doUwpRemove()"><i class="fa fa-trash"></i> ${tUI('uwpRemove')}</button>`
   uwpCard.appendChild(removeBtn)
   storeSection.appendChild(uwpCard)
 
@@ -16100,7 +16100,8 @@ async function doUwpRemove() {
   const body = `${tUI('debloatConfirmBody')}<div class="jx-682">${appList}</div><div class="jx-5">${tUI('impactRestoreHint')}</div>`
   try { await showConfirm({ title: `${tUI('debloatConfirmTitle')} (${selected.length})`, body, okText: tUI('removeOk'), okStyle: 'danger', icon: 'fa-trash' }) } catch { return }
   document.getElementById('debloat-remove-prog').classList.remove('hidden')
-  const removeResults = await api.removeUwpApps(selected)
+  const keepXboxStore = document.getElementById('uwp-keep-xbox-store')?.checked !== false
+  const removeResults = await api.removeUwpApps(selected, { keepXboxStore })
   document.getElementById('debloat-remove-prog').classList.add('hidden')
   // Log each removed UWP app to history
   selectedApps.forEach(app => addDebloatHistory({ type: 'uwp', name: app.name, pkg: app.pkg, ts: Date.now() }))

@@ -2023,7 +2023,7 @@ LANG.en = {
       clearHistoryTitle:'Clear Tweak History', clearHistoryBody:'All recorded tweak history will be permanently deleted.',
       diffBtn:'Diff', diffNotFound:'No diff data for this entry', diffNoKeys:'No registry keys captured for this tweak',
       deleteProfileTitle:'Delete Profile', deleteProfileBody:'This profile will be permanently removed.',
-      debloatConfirmTitle:'Remove App(s)', debloatConfirmBody:'The selected UWP apps will be removed from this device.',
+      uwpKeepXboxStore:'Keep Xbox sign-in & Microsoft Store (protected packages are skipped)', debloatConfirmTitle:'Remove App(s)', debloatConfirmBody:'The selected UWP apps will be removed from this device.',
       disableSvcTitle:'Disable Service(s)', disableSvcBody:'The selected Windows services will be disabled.',
       disableTaskTitle:'Disable Scheduled Task(s)', disableTaskBody:'The selected scheduled tasks will be disabled.',
       disableDevTitle:'Disable Device(s)', disableDevBody:'These devices will be disabled in Device Manager.',

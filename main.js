@@ -495,6 +495,7 @@ const { createAuth } = require('./lib/auth')
 const { createSnapshotStore } = require('./lib/snapshot')
 const { createJournalService } = require('./lib/journal-service')
 const { createRestorePointService } = require('./lib/restore-point')
+const { splitProtected } = require('./lib/uwp-protect')
 const JylliScore = require('./js/score')
 const { createHub } = require('./lib/telemetry-hub')
 const { createTelemetryService } = require('./lib/telemetry-service')
@@ -2745,8 +2746,10 @@ ipcMain.handle('scan-uwp-apps', async () => {
   try { return JSON.parse(r.out) } catch { return r.out.split('\n').map(l => l.trim()).filter(Boolean) }
 })
 
-ipcMain.handle('remove-uwp-apps', async (_, packages) => {
+ipcMain.handle('remove-uwp-apps', async (_, requested, opts) => {
   const send = (msg, level) => mainWindow?.webContents.send('log', { msg, level, ts: new Date().toLocaleTimeString() })
+  const { allowed: packages, protectedPkgs } = splitProtected(requested, opts?.keepXboxStore !== false)
+  for (const p of protectedPkgs) send(`  ${p}: kept (Xbox & Microsoft Store shield)`, 'info')
   send(`Removing ${packages.length} UWP app(s)…`, 'head')
 
   // Build one PS script that removes all packages in a single process invocation.
@@ -12504,14 +12507,13 @@ ipcMain.handle('export-report', async () => {
 })
 
 ipcMain.handle('clean-ram', async () => {
-  // Empty the standby list + trim background working sets. The foreground program (usually the game) is never trimmed —
-  // that would force it to page everything back in and cause exactly the stutter this is meant to remove.
+  // Purge the standby list. Working sets are deliberately not trimmed: that only makes background apps page
+  // everything back in on next use, so it frees memory on paper and costs responsiveness.
   const r = await runPS(`
     Add-Type @"
     using System;
     using System.Runtime.InteropServices;
     public class RamCleaner {
-      [DllImport("psapi.dll")] public static extern bool EmptyWorkingSet(IntPtr hProcess);
       [DllImport("ntdll.dll")] public static extern uint NtSetSystemInformation(int InfoClass, IntPtr Info, int Length);
       [DllImport("ntdll.dll")] public static extern uint RtlAdjustPrivilege(int Privilege, bool Enable, bool CurrentThread, out bool Previous);
       [DllImport("user32.dll")] public static extern IntPtr GetForegroundWindow();
@@ -12527,9 +12529,7 @@ ipcMain.handle('clean-ram', async () => {
       }
     }
 "@
-    $fg = [RamCleaner]::ForegroundPid()
     [RamCleaner]::ClearStandby()
-    Get-Process | Where-Object { $_.Id -ne $fg -and $_.Id -ne $PID } | ForEach-Object { try { [RamCleaner]::EmptyWorkingSet($_.Handle) | Out-Null } catch {} }
     $mem = Get-CimInstance Win32_OperatingSystem
     $freeMB = [math]::Round($mem.FreePhysicalMemory / 1024)
     Write-Output "FREE_MB=$freeMB"
