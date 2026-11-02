@@ -2059,6 +2059,7 @@ LANG.fi = {
       // Modal buttons
       btnCancel:'Peruuta', btnConfirm:'Vahvista', btnOk:'OK', btnGotIt:'Selvä',
       // Status badges
+      tier3ConfirmTitle:'Heikentää Windowsin suojausta', tier3ConfirmBody:'<b>{name}</b> heikentää Windowsin suojausta. Ensin luodaan uusi palautuspiste; jos se epäonnistuu, mitään ei muuteta. Jatka kirjoittamalla <b>{word}</b>.', tier3ConfirmWord:'VAHVISTA', tier3ConfirmOk:'Ota käyttöön', tier3ConfirmWrong:'Ei otettu käyttöön: vahvistussana ei täsmännyt.',
       unexpectedErrorTitle:'Jokin meni pieleen', rpRequiredTitle:'Palautuspiste vaaditaan', tweakFailedTitle:'Säätö epäonnistui', statusApplied:'KÄYTÖSSÄ', statusRestored:'PALAUTETTU', statusDefault:'OLETUS',
       statusRunning:'KÄYNNISSÄ…', statusRestoring:'PALAUTETAAN…', statusPreApplied:'ESIASETETTU',
       // Restore point status

@@ -2644,11 +2644,14 @@ async function createRestorePointInternal(send, desc = 'JylliTool_AutoOpti') {
 // Risky single actions (tier 2+) need a restore point no older than RP_FRESH_MS. No restore point, no change: the caller
 // gets { ok:false, restorePointRequired:true, reason, guidance } and the tweak is never run.
 const RP_FRESH_MS = 6 * 3600 * 1000
+const RP_FRESH_TIER3_MS = 30 * 60 * 1000
 async function guardRestorePoint(id, send) {
   const tier = TWEAKS[id]?.safetyTier ?? 3
   if (tier < 2) return null
   const last = loadSettings().lastRestorePointAt
-  if (last && Date.now() - last < RP_FRESH_MS) return null
+  // Tier 3 lowers a Windows protection: the safety net must be minutes old, not hours.
+  const fresh = tier >= 3 ? RP_FRESH_TIER3_MS : RP_FRESH_MS
+  if (last && Date.now() - last < fresh) return null
   send('This change is not trivial to undo: creating a restore point first…', 'info')
   const rp = await createRestorePointInternal(send, 'JylliTool_Before_' + id)
   if (rp.ok) return null

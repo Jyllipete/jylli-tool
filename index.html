@@ -7618,6 +7618,15 @@ async function applyTweak(id, action = 'apply') {
         return { ok: false, skipped: true }
       }
     }
+    // Tier 3 lowers a Windows protection: typed confirmation on top of the safety toggle (main also forces a fresh restore point).
+    if ((window._tweakMeta?.[id]?.safetyTier ?? 0) >= 3) {
+      const word = tUI('tier3ConfirmWord')
+      const typed = await showPrompt({ title: tUI('tier3ConfirmTitle'), body: tUI('tier3ConfirmBody').replace('{name}', tName(id) || id).replace('{word}', word), placeholder: '', okText: tUI('tier3ConfirmOk'), icon: 'fa-shield-halved' })
+      if (String(typed || '').trim().toUpperCase() !== word.toUpperCase()) {
+        if (typed) toast(tUI('tier3ConfirmTitle'), tUI('tier3ConfirmWrong'), 'warn')
+        return { ok: false, skipped: true }
+      }
+    }
   }
 
   if (!await _guardLghubCheck(id, action)) return { ok: false, skipped: true }
