@@ -1,6 +1,7 @@
 node_modules/
 dist/*
-!dist/Jylli-Tool-Installer.exe   # the branded installer is always committed
+# the branded installer is always committed once built
+!dist/Jylli-Tool-Installer.exe
 *.log
 .claude/
 bot.js
