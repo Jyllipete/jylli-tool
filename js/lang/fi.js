@@ -2059,6 +2059,7 @@ LANG.fi = {
       // Modal buttons
       btnCancel:'Peruuta', btnConfirm:'Vahvista', btnOk:'OK', btnGotIt:'Selvä',
       // Status badges
+      tweakVerdict_placebo:'Lume', tweakVerdictTip_placebo:'Lume: ei mitattavaa hyötyä nykyisessä Windowsissa. Auto-optimointi ei enää käytä sitä.', tweakVerdict_minor:'Vähäinen', tweakVerdictTip_minor:'Vähäinen: pieni tai pelkkä mieltymysvaikutus. Auto-optimointi ei enää käytä sitä.', tweakVerdict_risky:'Riskialtis', tweakVerdictTip_risky:'Riskialtis: voi aiheuttaa sivuvaikutuksia. Auto-optimointi ei enää käytä sitä.',
       tweakRetired:'Poistettu', tweakRetiredTip:'Poistettu: ei mitattavaa hyötyä. Voit silti palauttaa sen, jos se on otettu käyttöön aiemmin.',
       tier3ConfirmTitle:'Heikentää Windowsin suojausta', tier3ConfirmBody:'<b>{name}</b> heikentää Windowsin suojausta. Ensin luodaan uusi palautuspiste; jos se epäonnistuu, mitään ei muuteta. Jatka kirjoittamalla <b>{word}</b>.', tier3ConfirmWord:'VAHVISTA', tier3ConfirmOk:'Ota käyttöön', tier3ConfirmWrong:'Ei otettu käyttöön: vahvistussana ei täsmännyt.',
       unexpectedErrorTitle:'Jokin meni pieleen', rpRequiredTitle:'Palautuspiste vaaditaan', tweakFailedTitle:'Säätö epäonnistui', statusApplied:'KÄYTÖSSÄ', statusRestored:'PALAUTETTU', statusDefault:'OLETUS',
@@ -2687,6 +2688,7 @@ LANG.fi = {
       likely: 'Todennäköinen',
       openLink: 'Avaa lataussivu',
       notUndoable: 'Tätä ei voi perua.',
+      hvciBtn:'Tarkista Muistin eheys', hvciTitle:'Poistetaanko Muistin eheys käytöstä?', hvciBody:'Tämä heikentää Windowsin suojausta haitallisia ajureita vastaan. Jotkin huijauksenesto-ohjelmat (Vanguard, FACEIT) vaativat sen päälle. Palautuspiste luodaan ensin ja uudelleenkäynnistys vaaditaan. Tee tämä vain, jos ymmärrät kompromissin.', hvciGo:'Poista käytöstä', hvciDoneT:'Muistin eheys poistettu käytöstä', hvciDoneM:'Ota käyttöön käynnistämällä uudelleen.', hvciFailT:'Ei muutettu', hvciFailM:'Muistin eheys jätettiin ennalleen.',
       shieldTitle: 'Tietoturvakilpi',
       shieldDefender: 'Microsoft Defenderin reaaliaikainen suojaus',
       shieldAv: 'Suojana {name}',
@@ -2986,6 +2988,7 @@ LANG.fi = {
       hintTitle:'Suositeltu sinulle',
       repairTitle:'Korjaa Windows ensin', repairWhy:'Kuntotarkistus löysi ongelmia, jotka kannattaa korjata ennen säätöjä.',
       restoreTitle:'Luo palautuspiste', restoreWhy:'Turvaverkko, jotta kaiken muun voi perua.',
+      autoOptiTitle:'Suorita Auto-optimointi', autoOptiWhy:'Skannaa koneesi ja korjaa sen, mikä oikeasti hidastaa sitä, kuten 60 Hz:iin jumittunut näyttö.',
       essentialsTitle:'Ota perusasiat käyttöön', essentialsWhy:'{n} hyväksi todettua säätöä, joista useimmat koneet hyötyvät.',
       startupTitle:'Hiljennä käynnistys', startupWhy:'{n} käynnistyskohdetta, joita harvoin tarvitaan heti käynnistyksessä.',
       cleanupTitle:'Siivoa turha pois', cleanupWhy:'Väliaikaistiedostot ja välimuistit vievät tilaa ja hidastavat tarkistuksia.',

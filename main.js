@@ -4276,7 +4276,7 @@ ipcMain.handle('get-power-plan', async () => {
   return m ? { guid: m[1], name: m[2] } : { name: null }
 })
 
-ipcMain.handle('get-tweak-meta', (_, ids) => retireTweaks() || journalSvc().tweakMeta(Array.isArray(ids) ? ids.slice(0, 400) : null))
+ipcMain.handle('get-tweak-meta', (_, ids) => { retireTweaks(); return journalSvc().tweakMeta(Array.isArray(ids) ? ids.slice(0, 400) : null).map(m => AutoOpti.catalog.VERDICTS[m.id] ? { ...m, verdict: AutoOpti.catalog.VERDICTS[m.id] } : m) })
 ipcMain.handle('apply-batch', (_, req) => journalSvc().applyBatch(req))
 ipcMain.handle('journal-list', (_, opts) => {
   const o = opts && typeof opts === 'object' ? opts : {}
@@ -4534,6 +4534,7 @@ ipcMain.handle('auto-opti-scan', async (_, req) => {
   } catch (e) { return { ok: false, reason: 'scan-failed', error: String(e && e.message || e).slice(0, 200) } } finally { _aoScanning = false }
 })
 
+ipcMain.handle('auto-opti-allowed', () => [...AutoOpti.catalog.allowedTweaks()])
 ipcMain.handle('auto-opti-plan', (_, req) => {
   const sc = aoCached(aoStr(req && req.scanId, 24))
   if (!sc) return { ok: false, reason: 'scan-expired' }
@@ -4579,7 +4580,7 @@ ipcMain.handle('auto-opti-verify', async () => {
     if (e.action !== 'apply' || !e.changes.length || e.undoneBy) continue
     const v = await verifyEntry(e, { ps: runPS, cmd: runCmd, handlers: { ...autoOptiUndoHandlers } })
     drift.total += v.same.length + v.drifted.length; drift.same += v.same.length
-    if (v.drifted.length) drift.drifted.push({ tweakId: e.tweakId, control: e.control, items: v.drifted.map(d => d.name).slice(0, 6) })
+    if (v.drifted.length) drift.drifted.push({ tweakId: e.tweakId, control: e.control, label: (e.tweakId && TWEAKS[e.tweakId]?.name) || ({ 'auto-opti:startup-cleanup': 'Startup apps', 'auto-opti:display-refresh': 'Refresh rate' })[e.control] || null, items: v.drifted.map(d => d.name).slice(0, 6) })
   }
   const metricsAfter = await AoMetrics.snapshot({ runPS }, { sampleCpu: true })
   const st = AoVerify.verifyState(pv, { lastBootAt, events, drift })

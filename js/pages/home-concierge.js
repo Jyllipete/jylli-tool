@@ -81,6 +81,7 @@ async function conciergeInput() {
   const profile = (settings.arrival && settings.arrival.profile) || { useCase: settings.aom_use_case || 'mix', priorities: [], comfort: 'balanced' }
   return {
     sysInfo, profile, pfStates: pf, safetyScore: isNaN(ss) ? null : ss, osType: localStorage.getItem('pf_os_type') || '',
+    autoOptiReady: true, lastAutoOptiAt: settings.aom_last_run && settings.aom_last_run.ts,
     health: { checked: hc !== null, ok: hc === '1', restorePoint: settings.arrival && settings.arrival.restorePoint },
     games: Array.isArray(games) ? games : (games && games.games) || [], startupItems: Array.isArray(startupItems) ? startupItems : [],
     isPremium: !!settings.isPremium, settings,

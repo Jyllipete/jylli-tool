@@ -273,6 +273,7 @@
     return `<article class="ao-find" data-impact="${f.impact}"><div class="ao-find-t">${esc(g(f.titleKey, v))}</div><div>${conf} ${f.kind === 'info' ? '' : impactBadge(f)}</div>
       <div class="ao-find-w">${esc(g(f.whyKey, v))}</div>${baStrip(f)}
       ${f.link ? `<button type="button" class="j-btn j-btn-ghost j-btn-sm ao-find-link" data-link="${esc(f.link)}"><i class="fa fa-arrow-up-right-from-square"></i> ${esc(g('openLink'))}</button>` : ''}
+      ${f.optIn === 'hvci' ? `<button type="button" class="j-btn j-btn-ghost j-btn-sm ao-find-link" data-hvci="1"><i class="fa fa-shield-halved"></i> ${esc(g('hvciBtn'))}</button>` : ''}
       ${f.undoable === false ? `<div class="ao-find-w ao-muted">${esc(g('notUndoable'))}</div>` : ''}</article>`
   }
   function shieldHtml(profile) {
@@ -302,9 +303,20 @@
         <button class="j-btn j-btn-ghost" id="ao-rescan">${esc(g('rescan'))}</button>
         <button class="j-btn j-btn-primary" id="ao-next" ${gr.weFix.length ? '' : 'disabled'}>${esc(g('toPlan'))} <i class="fa fa-arrow-right"></i></button></div></div>`)
     r.querySelectorAll('[data-link]').forEach(b => { b.onclick = () => root.api.openExternal(b.dataset.link) })
+    r.querySelectorAll('[data-hvci]').forEach(b => { b.onclick = () => hvciOptIn(b) })
     r.querySelector('#ao-rescan').onclick = () => startScan(true)
     r.querySelector('#ao-next').onclick = () => showPlan()
     const nx = r.querySelector('#ao-next'); if (!nx.disabled) nx.focus()
+  }
+
+  // Memory Integrity: never part of a run. A separate, explicit choice that reuses the manual tweak (which makes its own restore point).
+  async function hvciOptIn(btn) {
+    const ok = await root.showConfirm({ title: g('hvciTitle'), body: g('hvciBody'), okText: g('hvciGo'), okStyle: 'warning', icon: 'fa-shield-halved' })
+    if (!ok) return
+    btn.disabled = true
+    const r = await root.api.runTweak('hvci-offload', 'apply').catch(() => null)
+    root.toast(g(r && r.ok !== false ? 'hvciDoneT' : 'hvciFailT'), g(r && r.ok !== false ? 'hvciDoneM' : 'hvciFailM'), r && r.ok !== false ? 'ok' : 'err')
+    btn.disabled = false
   }
 
   // ── scene 3: plan ──
@@ -616,7 +628,7 @@
       <p class="ao-lead">${esc(g('wbLead', { same: p.same, total: p.total }))}</p>
       ${bootHtml(v.boot)}
       ${(v.rows || []).length ? `<h2 class="ao-h2">${esc(g('beforeAfter'))}</h2><table class="ao-table"><thead><tr><th>${esc(g('metric'))}</th><th>${esc(g('before'))}</th><th>${esc(g('after'))}</th></tr></thead><tbody>${v.rows.map(rowHtml).join('')}</tbody></table>` : ''}
-      ${p.drifted.length ? `<h2 class="ao-h2">${esc(g('drifted'))} <b>${p.drifted.length}</b></h2>${p.drifted.map(d => `<article class="ao-find"><div class="ao-find-t">${esc(d.tweakId || d.control || '')}</div><div class="ao-find-w">${esc((d.items || []).join(', '))}</div></article>`).join('')}<div class="ao-muted">${esc(g('driftHint'))}</div>` : ''}
+      ${p.drifted.length ? `<h2 class="ao-h2">${esc(g('drifted'))} <b>${p.drifted.length}</b></h2>${p.drifted.map(d => `<article class="ao-find"><div class="ao-find-t">${esc(d.label || d.tweakId || d.control || '')}</div><div class="ao-find-w">${esc((d.items || []).join(', '))}</div></article>`).join('')}<div class="ao-muted">${esc(g('driftHint'))}</div>` : ''}
       <div class="ao-actions">${p.drifted.length ? `<button class="j-btn j-btn-ghost" id="ao-again">${esc(g('runAgain'))}</button>` : ''}<span class="ao-spacer"></span><button class="j-btn j-btn-primary" id="ao-wb-done">${esc(g('done'))}</button></div></div>`)
     r.querySelector('#ao-wb-done').onclick = async () => { await root.api.aoDismissVerify(); try { delete root.settings.aom_pending_verify } catch {} close(true) }
     const again = r.querySelector('#ao-again'); if (again) again.onclick = async () => { await root.api.aoDismissVerify(); try { delete root.settings.aom_pending_verify } catch {} close(true); setTimeout(() => open(), 300) }

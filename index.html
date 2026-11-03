@@ -681,6 +681,7 @@ async function init(isPremium = false) {
 
   // ThermalGuard: wire sidebar badge to thermal ticks
   // Main knows each tweak's real safety tier; cards use it instead of guessing in the renderer.
+  api.aoAllowed?.().then(l => { if (Array.isArray(l) && l.length) window._aoAllowed = new Set(l) }).catch(() => {})
   api.getTweakMeta?.().then(list => { window._tweakMeta = Object.fromEntries((list || []).map(m => [m.id, m])) }).catch(() => {})
   try { JylliTelemetry.start() } catch {}
   api.onSettingsPatch?.(p => { if (p && typeof p === 'object') Object.assign(settings, p) })
@@ -7535,6 +7536,11 @@ function makeRow({ id, name, desc, danger = false, dangerLabel = 'I understand t
     </div>
     <div class="tweak-progress" id="prog-${id}"><div class="tweak-progress-bar" id="prog-bar-${id}"></div></div>
   `
+  const verdict = window._tweakMeta?.[id]?.verdict
+  if (verdict && !window._tweakMeta[id].retired) {
+    const bd = div.querySelector('.tweak-badge')
+    if (bd && bd.parentElement) bd.parentElement.insertAdjacentHTML('afterbegin', `<span class="tweak-badge" title="${tUI('tweakVerdictTip_' + verdict)}">${tUI('tweakVerdict_' + verdict)}</span>`)
+  }
   if (window._tweakMeta?.[id]?.retired) {
     const ab = div.querySelector('[data-tweak-apply]')
     if (ab) { ab.disabled = true; ab.title = window._tweakMeta[id].retired }
@@ -10325,7 +10331,9 @@ function spwBuildTweakList() {
   if (useEthernet) SPW_NIC_EXTRA.forEach(id => ids.add(id))
   if (_spwBluetooth === true)  ids.delete('bluetooth-hard-off')
   if (_spwGames.has('fivem'))  SPW_FIVEM_IDS.forEach(id => ids.add(id))
-  return [...ids].filter(id => tweakCompat(id) && tweakState(id) !== 'applied')
+  // Same allowlist as Auto-Optimize (served by main): placebo, risky and security-touching tweaks never go in an automatic run
+  const allowed = window._aoAllowed
+  return [...ids].filter(id => tweakCompat(id) && tweakState(id) !== 'applied' && (!allowed || allowed.has(id)))
 }
 
 // ─── Page: Hardware ───────────────────────────────────────────────────────────

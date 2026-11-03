@@ -2044,6 +2044,7 @@ LANG.en = {
       // Modal buttons
       btnCancel:'Cancel', btnConfirm:'Confirm', btnOk:'OK', btnGotIt:'Got it',
       // Status badges
+      tweakVerdict_placebo:'Placebo', tweakVerdictTip_placebo:'Placebo: no measurable benefit on modern Windows. Auto-Optimize no longer applies it.', tweakVerdict_minor:'Minor', tweakVerdictTip_minor:'Minor: tiny or preference-only effect. Auto-Optimize no longer applies it.', tweakVerdict_risky:'Risky', tweakVerdictTip_risky:'Risky: can cause side effects. Auto-Optimize no longer applies it.',
       tweakRetired:'Retired', tweakRetiredTip:'Retired: no measurable benefit. You can still restore it if it was applied earlier.',
       tier3ConfirmTitle:'Lowers Windows security', tier3ConfirmBody:'<b>{name}</b> weakens a Windows protection. A fresh restore point is created first; if that fails, nothing is changed. Type <b>{word}</b> to continue.', tier3ConfirmWord:'CONFIRM', tier3ConfirmOk:'Apply', tier3ConfirmWrong:'Not applied: the confirmation word did not match.',
       unexpectedErrorTitle:'Something went wrong', rpRequiredTitle:'Restore point required', tweakFailedTitle:'Tweak failed', statusApplied:'APPLIED', statusRestored:'RESTORED', statusDefault:'DEFAULT',
@@ -2503,6 +2504,7 @@ LANG.en = {
       likely: 'Likely',
       openLink: 'Open download page',
       notUndoable: 'This one can\'t be undone.',
+      hvciBtn:'Review Memory Integrity', hvciTitle:'Turn off Memory Integrity?', hvciBody:'This lowers a Windows security protection against malicious drivers. Some anti-cheat systems (Vanguard, FACEIT) need it on. A restore point is made first and a restart is required. Only do this if you understand the trade-off.', hvciGo:'Turn it off', hvciDoneT:'Memory Integrity turned off', hvciDoneM:'Restart to apply.', hvciFailT:'Not changed', hvciFailM:'Memory Integrity was left as it was.',
       shieldTitle: 'Security shield',
       shieldDefender: 'Microsoft Defender real-time protection',
       shieldAv: 'Protected by {name}',
@@ -2802,6 +2804,7 @@ LANG.en = {
       hintTitle:'Recommended for you',
       repairTitle:'Repair Windows first', repairWhy:'The health check found problems worth fixing before any tweaks.',
       restoreTitle:'Create a restore point', restoreWhy:'A safety net so everything else can be rolled back.',
+      autoOptiTitle:'Run Auto-Optimize', autoOptiWhy:'Scans your PC and fixes what is really holding it back, like a monitor stuck at 60 Hz.',
       essentialsTitle:'Apply the essentials', essentialsWhy:'{n} well-proven tweaks that most PCs benefit from.',
       startupTitle:'Quiet the startup', startupWhy:'{n} startup items that rarely need to run at boot.',
       cleanupTitle:'Clear out the clutter', cleanupWhy:'Temporary files and caches take space and slow scans.',
