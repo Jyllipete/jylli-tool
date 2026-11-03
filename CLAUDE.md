@@ -16,6 +16,7 @@ Search for these section markers instead of reading the file:
 - `// ─── Onboarding Wizard ───`  `buildWizardSteps` / `startOnboarding` (being replaced by `js/arrival.js`); `js/boot-logic.js` `selectLanguage` for `#lang-picker`
 - `function showPage(page, tabId)`  tab rendering; `js/shell.js` nav and header; `js/pages/*.js` page builders
 - `js/arrival.js` first-launch flow (`JylliArrival`), `js/tour.js` + `js/tours.js` guided tours, `js/concierge.js` + `js/pages/home-concierge.js` first-move suggestions; LANG groups `arrival`, `tour`, `concierge`
+- `js/auto-opti.js` + `js/auto-opti/reactor.js` + `css/auto-opti.css`: Auto-Optimize 2.0 (scan, diagnosis, plan, run, result, welcome back); engine in `lib/auto-opti/` (catalog = the only list of tweaks it may run); LANG group `autoOpti`; `npm run preview -- --auto-opti` shoots every scene
 - `npm run preview -- --arrival` / `--tours` shoots those flows (`tools/ui-preview`)
 - `storePreflightResult(r)`  the single writer of preflight state; `window._bootFinished`  resolves when the splash is gone
 <!-- Add these marker comments to index.html once; the map is only useful if they exist. -->

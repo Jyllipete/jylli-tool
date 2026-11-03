@@ -66,3 +66,27 @@ function global:Set-Service {
     if ($PSBoundParameters.ContainsKey('StartupType')) { [Console]::Out.WriteLine('##JJ{"k":"service","p":"","n":' + (__JJ_J $Name) + ',"b":' + $b + ',"a":' + (__JJ_SvcState $Name) + '}') }
   }
 }
+
+$global:__JJ_RealDis = $ExecutionContext.InvokeCommand.GetCommand('Disable-ScheduledTask', [System.Management.Automation.CommandTypes]::Cmdlet)
+$global:__JJ_RealEna = $ExecutionContext.InvokeCommand.GetCommand('Enable-ScheduledTask', [System.Management.Automation.CommandTypes]::Cmdlet)
+function global:__JJ_TaskState($p,$n){ try { $t = Get-ScheduledTask -TaskPath $p -TaskName $n -ErrorAction Stop; return '{"e":true,"v":"' + $(if ($t.State -eq 'Disabled') { 'Disabled' } else { 'Enabled' }) + '"}' } catch { return '{"e":false}' } }
+function global:__JJ_TaskDo($real, $p, $n) {
+  $b = __JJ_TaskState $p $n
+  $r = & $real -TaskPath $p -TaskName $n -ErrorAction SilentlyContinue
+  if ($b -notmatch '"e":true') { return }
+  [Console]::Out.WriteLine('##JJ{"k":"task","p":' + (__JJ_J $p) + ',"n":' + (__JJ_J $n) + ',"b":' + $b + ',"a":' + (__JJ_TaskState $p $n) + '}')
+}
+function global:Disable-ScheduledTask {
+  [CmdletBinding()] param([Parameter(ValueFromPipeline=$true)]$InputObject, [string]$TaskName, [string]$TaskPath = '\')
+  process {
+    if ($InputObject) { __JJ_TaskDo $global:__JJ_RealDis $InputObject.TaskPath $InputObject.TaskName }
+    elseif ($TaskName) { __JJ_TaskDo $global:__JJ_RealDis $TaskPath $TaskName }
+  }
+}
+function global:Enable-ScheduledTask {
+  [CmdletBinding()] param([Parameter(ValueFromPipeline=$true)]$InputObject, [string]$TaskName, [string]$TaskPath = '\')
+  process {
+    if ($InputObject) { __JJ_TaskDo $global:__JJ_RealEna $InputObject.TaskPath $InputObject.TaskName }
+    elseif ($TaskName) { __JJ_TaskDo $global:__JJ_RealEna $TaskPath $TaskName }
+  }
+}

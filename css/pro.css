@@ -170,7 +170,7 @@ input[type="range"] { accent-color: var(--c-accent); }
 
 /* ── Dialogs ──────────────────────────────────────────────────────────────────────────────────── */
 .modal-overlay, #cmd-palette-overlay, #auto-opti-modal, #onboarding-overlay { background: var(--c-overlay); backdrop-filter: none; }
-.modal, .modal-sheet, .aom-sheet, .wizard-card, #cmd-palette {
+.modal, .modal-sheet, .wizard-card, #cmd-palette {
   background: var(--c-bg-elevated); border: 1px solid var(--c-border-default); border-radius: var(--r-lg);
   box-shadow: var(--shadow-modal);
 }

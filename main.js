@@ -500,6 +500,7 @@ const JylliScore = require('./js/score')
 const { createHub } = require('./lib/telemetry-hub')
 const { createTelemetryService } = require('./lib/telemetry-service')
 const Inventory = require('./lib/inventory')
+const dxSettings = require('./lib/auto-opti/dx-settings')
 const { createPowerLimit } = require('./lib/gpu-power-limit')
 const Smi = require('./lib/nvidia-smi')
 const SpeedTest = require('./lib/speedtest')
@@ -2034,9 +2035,12 @@ ipcMain.handle('admin-debug-append', (_, data) => {
 ipcMain.handle('relaunch-admin', () => {
   if (!IS_WIN) return { ok: false, reason: 'not_win' }
   app.releaseSingleInstanceLock()
+  // Unpackaged (npm start): electron.exe needs the app path again, and the userData flag must survive so the resumed Arrival finds its saved state
+  const relaunchArgs = app.isPackaged ? [] : [app.getAppPath(), ...process.argv.slice(2).filter(a => a.startsWith('--user-data-dir'))]
+  const argList = relaunchArgs.length ? ` -ArgumentList ${relaunchArgs.map(a => V.psQuote(a)).join(',')}` : ''
   execFile('powershell.exe', [
     '-WindowStyle', 'Hidden', '-Command',
-    `Start-Process ${V.psQuote(process.execPath)} -Verb RunAs`
+    `Start-Process ${V.psQuote(process.execPath)}${argList} -Verb RunAs`
   ], { windowsHide: true }, (err) => { if (!err) app.quit(); else app.requestSingleInstanceLock() })
   return { ok: true }
 })
@@ -4042,6 +4046,33 @@ ipcMain.handle('fivem-cfx-server-info', async (_, shortcode) => {
 function hasTweak(id, action = 'apply') {
   return typeof id === 'string' && Object.prototype.hasOwnProperty.call(TWEAKS, id) && (action === 'apply' || action === 'restore') && typeof TWEAKS[id][action] === 'function'
 }
+// Undo handlers for Auto-Optimize changes the journal cannot read from the registry: each can read the current state and put the old one back.
+const aoDisplay = require('./lib/auto-opti/display')
+const autoOptiUndoHandlers = {
+  'power-overlay': {
+    read: async () => {
+      const r = await runPS('(Get-ItemProperty -Path "HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Power\\User\\PowerSchemes" -Name ActiveOverlayAcPowerScheme -EA SilentlyContinue).ActiveOverlayAcPowerScheme', 4000)
+      return { exists: true, value: String(r.out || '').trim().toLowerCase() || '00000000-0000-0000-0000-000000000000' }
+    },
+    restore: async c => (await runCmd(`powercfg /overlaysetactive ${String(c.before.value).replace(/[^0-9a-f-]/gi, '')}`)).ok !== false,
+  },
+  hibernate: {
+    read: async () => { const r = await runPS('Test-Path "C:\\hiberfil.sys"', 4000); return { exists: true, value: /true/i.test(r.out) ? 'on' : 'off' } },
+    restore: async c => (await runCmd(`powercfg /hibernate ${c.before.value === 'on' ? 'on' : 'off'}`)).ok !== false,
+  },
+  'display-mode': {
+    read: async c => {
+      const r = await runPS(aoDisplay.listScript(), 15000)
+      const d = aoDisplay.parseList(r.out).displays.find(x => x.device === c.device)
+      return d ? { exists: true, value: d.cur.hz } : { unknown: true }
+    },
+    restore: async c => aoDisplay.setOk((await runPS(aoDisplay.setScript(c.device, { w: c.w, h: c.h, hz: Number(c.before.value) }, 'persist'), 15000)).out),
+  },
+  'file-backup': {
+    read: async c => { try { return { exists: true, value: fs.statSync(c.file).size } } catch { return { exists: false } } },
+    restore: async c => { try { fs.copyFileSync(c.backup, c.file); return true } catch { return false } },
+  },
+}
 let _journalSvc = null
 function journalSvc() {
   if (!_journalSvc) {
@@ -4052,7 +4083,7 @@ function journalSvc() {
       emit: (ch, payload) => mainWindow?.webContents.send(ch, payload),
       loadSettings, saveSettings, writeLog: debugLog,
       noteSettingsWrites: patch => { for (const [k, v] of Object.entries(patch)) _settingsWriteLog.note(k, v) },
-      handlers: { 'gpu-power-limit': powerLimitSvc().undoHandler, dns: dnsUndoHandler },
+      handlers: { 'gpu-power-limit': powerLimitSvc().undoHandler, dns: dnsUndoHandler, ...autoOptiUndoHandlers },
       manifest: (() => { try { return require('./lib/tweak-manifest.json') } catch { return {} } })(),
     })
     try { _journalSvc.journal.rotate() } catch {}
@@ -4273,7 +4304,8 @@ async function listPowerSchemes(cmd) {
   return out
 }
 // Creates (or re-uses) ONE plan per vendor — earlier versions duplicated a new plan on every apply.
-async function applyMaxPerfPlan({ vendor, label, vendorSetting, s, ps, cmd }) {
+// idle:false keeps the C-state promote/demote/time settings alone (zeroing them stops Ryzen from boosting single cores).
+async function applyMaxPerfPlan({ vendor, label, vendorSetting, s, ps, cmd, idle = true }) {
   const cpuName = String((await ps('(Get-CimInstance Win32_Processor | Select-Object -First 1).Name')).out || '').trim()
   if (!cpuName.toLowerCase().includes(vendor)) { s(`CPU detected: ${cpuName} — this plan is for ${label} CPUs.`, 'warn'); return }
   s(`${label} CPU: ${cpuName}`, 'info')
@@ -4297,8 +4329,9 @@ async function applyMaxPerfPlan({ vendor, label, vendorSetting, s, ps, cmd }) {
   const g = ours.guid
   const set = (sub, setting, v) => cmd(`powercfg /setacvalueindex ${g} ${sub} ${setting} ${v}`)
   await set('SUB_PROCESSOR', vendorSetting.name, vendorSetting.value)
+  const idleSettings = idle ? [['IDLEPROMOTE', 0], ['IDLEDEMOTE', 0], ['IDLETIME', 0]] : []
   for (const [setting, v] of [['PERFBOOSTMODE', 2], ['PERFEPP', 0], ['PERFBOOSTPOL', 100], ['SCHEDPOL', 0], ['PROCTHROTTLEMIN', 100], ['PROCTHROTTLEMAX', 100],
-                              ['IDLEPROMOTE', 0], ['IDLEDEMOTE', 0], ['IDLETIME', 0], ['CPMINCORES', 100]]) await set('SUB_PROCESSOR', setting, v)
+                              ...idleSettings, ['CPMINCORES', 100]]) await set('SUB_PROCESSOR', setting, v)
   await set('SUB_SLEEP', 'STANDBYIDLE', 0)
   await set('SUB_SLEEP', 'HYBRIDSLEEP', 0)
   await set('501a4d13-42af-4429-9ac1-df54c6bf3fc2', 'ee12f906-d277-404b-b6da-e5fa1a576df5', 0)
@@ -4422,6 +4455,135 @@ function buildRunPlan(runMode, ctx, sysInfo, appliedIds = new Set()) {
 ipcMain.handle('build-run-plan', async (_, { runMode = 'smart', sysInfo = {} } = {}) => {
   const plan = buildRunPlan(runMode, _systemContext, sysInfo)
   return { ok: true, plan, context: _systemContext }
+})
+
+// ─── Auto-Optimize 2.0 ───────────────────────────────────────────────────────
+// scan (probes -> profile -> findings) -> plan (findings + choices -> steps) -> run. The renderer only ever names finding ids; every
+// step is rebuilt here from the cached profile and the catalog allowlist.
+const AutoOpti = require('./lib/auto-opti')
+const AoControls = require('./lib/auto-opti/controls')
+const AoRunLib = require('./lib/auto-opti/run')
+const AoMetrics = require('./lib/auto-opti/metrics')
+const AoVerify = require('./lib/auto-opti/verify')
+const AO_SCAN_TTL_MS = 10 * 60 * 1000
+let _aoScan = null          // { scanId, profile, at }
+let _aoScanning = false
+let _aoRunner = null
+const aoNewId = () => require('crypto').randomBytes(6).toString('hex')
+const aoSend = (ch, payload) => { try { mainWindow?.webContents.send(ch, payload) } catch {} }
+const aoStr = (v, max = 40) => (typeof v === 'string' && v.length <= max ? v : undefined)
+const aoList = (v, max = 60) => (Array.isArray(v) ? v.filter(x => typeof x === 'string' && x.length <= 80).slice(0, max) : [])
+
+function aoFindingCtx(req) {
+  const s = loadSettings()
+  const useCase = AutoOpti.catalog.USE_CASES.includes(req && req.useCase) ? req.useCase : (AutoOpti.catalog.USE_CASES.includes(s.aom_use_case) ? s.aom_use_case : 'mix')
+  const answers = { ...(s.aom_saved_answers || {}), ...((req && typeof req.answers === 'object' && req.answers) || {}) }
+  const applied = new Set(Object.keys(TWEAKS).filter(id => s[`tweak_${id}`] === 'applied'))
+  return { useCase, answers, applied }
+}
+function aoPlanCtx(req) {
+  const modules = {}
+  if (req && req.modules && typeof req.modules === 'object') for (const id of AutoOpti.catalog.MODULES) if (req.modules[id] === false) modules[id] = false
+  const ie = req && req.itemExclude && typeof req.itemExclude === 'object' ? { 'startup-apps': aoList(req.itemExclude['startup-apps'], 80) } : {}
+  return { include: aoList(req && req.include), exclude: aoList(req && req.exclude), modules, itemExclude: ie, startupItems: Array.isArray(req && req.startupItems) ? aoList(req.startupItems, 80) : undefined, premium: !!auth && auth.isPremium() }
+}
+function aoCached(scanId) { return _aoScan && _aoScan.scanId === scanId && Date.now() - _aoScan.at < AO_SCAN_TTL_MS ? _aoScan : null }
+
+function aoRunner() {
+  if (_aoRunner) return _aoRunner
+  _aoRunner = AoRunLib.createRunner({
+    svc: journalSvc(),
+    hasTweak, tierOf: id => TWEAKS[id]?.safetyTier ?? 3,
+    controls: AoControls.CONTROLS, journaledControls: AoControls.JOURNALED,
+    runPS,
+    newId: aoNewId,
+    emit: ev => aoSend('auto-opti-event', ev),
+    createRestorePoint: async () => { const r = await createRestorePointInternal(() => {}); return r },
+    isApplied: async id => { const t = TWEAKS[id]; if (!t || typeof t.check !== 'function') return false; try { return !!(await t.check(runPS, runCmd)) } catch { return false } },
+    isGameRunning: () => _systemContext.gameRunning,
+    metrics: opts => AoMetrics.snapshot({ runPS }, opts),
+    securityProbe: async () => { const pr = AutoOpti.probes.PROBES.find(p => p.id === 'security'); const r = await runPS(pr.script, pr.timeoutMs); const o = r.ok ? pr.parse(r.out) : null; return o && o.security },
+    bootBaseline: async () => { const r = await runPS(AoVerify.BOOT_EVENTS, 20000); return r.ok ? AoVerify.bootBaseline(AoVerify.parseBootEvents(r.out).events) : null },
+    loadSettings, saveSettings,
+    noteSettingsWrites: patch => { for (const [k, v] of Object.entries(patch)) _settingsWriteLog.note(k, v) },
+    emitSettingsPatch: patch => aoSend('settings-patch', patch),
+    appendChangelog: entry => { const log = loadChangelog(); log.unshift({ ...entry, ts: new Date().toISOString() }); if (log.length > 200) log.splice(200); saveChangelog(log) },
+    log: (msg, level, source) => aoSend('log', { msg, level, ts: new Date().toLocaleTimeString(), source }),
+    confirmMs: 15000,
+  })
+  return _aoRunner
+}
+
+ipcMain.handle('auto-opti-scan', async (_, req) => {
+  if (aoRunner().active) return { ok: false, reason: 'run-active' }
+  if (_systemContext.gameRunning) return { ok: false, reason: 'game-running' }
+  if (_aoScanning) return { ok: false, reason: 'scan-active' }
+  if (!(req && req.force) && _aoScan && Date.now() - _aoScan.at < AO_SCAN_TTL_MS) {
+    const c = aoFindingCtx(req)
+    return { ok: true, cached: true, scanId: _aoScan.scanId, profile: _aoScan.profile, findings: AutoOpti.findings.findings(_aoScan.profile, c), useCase: c.useCase, ms: 0 }
+  }
+  _aoScanning = true
+  try {
+    const scanId = aoNewId()
+    const admin = await checkAdmin()
+    const context = { apps: { fivem: false } }
+    const profile = await AutoOpti.detect.detect({ runPS, emit: ev => aoSend('auto-opti-scan-progress', ev) }, { admin, scanId, context })
+    _aoScan = { scanId, profile, at: Date.now() }
+    const c = aoFindingCtx(req)
+    return { ok: true, scanId, profile, findings: AutoOpti.findings.findings(profile, c), useCase: c.useCase, ms: profile.scanMs }
+  } catch (e) { return { ok: false, reason: 'scan-failed', error: String(e && e.message || e).slice(0, 200) } } finally { _aoScanning = false }
+})
+
+ipcMain.handle('auto-opti-plan', (_, req) => {
+  const sc = aoCached(aoStr(req && req.scanId, 24))
+  if (!sc) return { ok: false, reason: 'scan-expired' }
+  const fc = aoFindingCtx(req)
+  const findings = AutoOpti.findings.findings(sc.profile, fc)
+  return { ok: true, findings, plan: AutoOpti.plan.plan(findings, aoPlanCtx(req)), useCase: fc.useCase }
+})
+
+ipcMain.handle('auto-opti-run', async (_, req) => {
+  const sc = aoCached(aoStr(req && req.scanId, 24))
+  if (!sc) return { ok: false, aborted: true, reason: 'scan-expired' }
+  if (!sc.profile.admin) return { ok: false, aborted: true, reason: 'not-admin' }
+  const fc = aoFindingCtx(req)
+  const findings = AutoOpti.findings.findings(sc.profile, fc)
+  const plan = AutoOpti.plan.plan(findings, aoPlanCtx(req))
+  const needsYou = findings.filter(f => f.kind === 'manual').map(f => f.id)
+  setDiscordOverride(OPTI_PHRASES, 'Starting…')
+  try { return await aoRunner().run({ plan, profile: sc.profile, needsYou }) } finally { clearDiscordOverride(); _aoScan = null }
+})
+ipcMain.handle('auto-opti-confirm', (_, req) => aoRunner().confirm(aoStr(req && req.stepId, 80), !!(req && req.keep)))
+ipcMain.handle('auto-opti-stop', () => aoRunner().stop())
+ipcMain.handle('auto-opti-metrics', async (_, req) => AoMetrics.snapshot({ runPS }, { sampleCpu: !!(req && req.sampleCpu) }))
+ipcMain.handle('auto-opti-undo', async (_, req) => {
+  const batchId = aoStr(req && req.batchId, 24)
+  if (!batchId) return { ok: false, reason: 'bad-request' }
+  const r = await journalSvc().undo({ batchId }, { force: !!(req && req.force) })
+  if (r && r.ok) {
+    const s = loadSettings(); delete s.aom_pending_verify; saveSettings(s)
+    const log = loadChangelog(); log.unshift({ type: 'aom-undo', batchId, ts: new Date().toISOString() }); saveChangelog(log.slice(0, 200))
+  }
+  return r
+})
+ipcMain.handle('auto-opti-dismiss-verify', () => { const s = loadSettings(); delete s.aom_pending_verify; saveSettings(s); return { ok: true } })
+ipcMain.handle('auto-opti-verify', async () => {
+  const s = loadSettings(), pv = s.aom_pending_verify
+  if (!pv) return { pending: false }
+  const be = await runPS(AoVerify.BOOT_EVENTS, 20000)
+  const { events, lastBootAt } = be.ok ? AoVerify.parseBootEvents(be.out) : { events: [], lastBootAt: null }
+  if (!(lastBootAt > pv.runAt)) return AoVerify.verifyState(pv, { lastBootAt, events })
+  const { verifyEntry } = require('./lib/journal')
+  const drift = { total: 0, same: 0, drifted: [] }
+  for (const e of journalSvc().list({ batchId: pv.batchId, limit: 500 })) {
+    if (e.action !== 'apply' || !e.changes.length || e.undoneBy) continue
+    const v = await verifyEntry(e, { ps: runPS, cmd: runCmd, handlers: { ...autoOptiUndoHandlers } })
+    drift.total += v.same.length + v.drifted.length; drift.same += v.same.length
+    if (v.drifted.length) drift.drifted.push({ tweakId: e.tweakId, control: e.control, items: v.drifted.map(d => d.name).slice(0, 6) })
+  }
+  const metricsAfter = await AoMetrics.snapshot({ runPS }, { sampleCpu: true })
+  const st = AoVerify.verifyState(pv, { lastBootAt, events, drift })
+  return { ...st, rows: AoMetrics.diff(pv.metricsBefore, metricsAfter) }
 })
 
 let _autoOptiRunning = false
@@ -4613,19 +4775,17 @@ const TWEAKS = {
       const r = await ps('(Get-ItemProperty -Path "HKCU:\\System\\GameConfigStore" -Name GameDVR_Enabled -EA SilentlyContinue).GameDVR_Enabled', 3000)
       return r.ok && r.out.trim() === '0'
     },
+    // Background capture only. Game Bar itself stays: Windows' Game Mode and AMD dual-CCD core parking depend on it.
     apply: async (s, ps) => {
       await ps('Set-ItemProperty -Path "HKCU:\\System\\GameConfigStore" -Name GameDVR_Enabled -Value 0 -Force')
-      await ps('Set-ItemProperty -Path "HKCU:\\System\\GameConfigStore" -Name GameDVR_FSEBehaviorMode -Value 2 -Force')
-      await ps('New-Item -Path "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\GameDVR" -Force -ErrorAction SilentlyContinue | Out-Null')
-      await ps('Set-ItemProperty -Path "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\GameDVR" -Name AllowGameDVR -Value 0 -Force')
-      await ps('Set-ItemProperty -Path "HKCU:\\SOFTWARE\\Microsoft\\GameBar" -Name UseNexusForGameBarEnabled -Value 0 -Force -ErrorAction SilentlyContinue')
-      s('Game DVR / Xbox Game Bar disabled.', 'ok')
+      await ps('New-Item -Path "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\GameDVR" -Force -ErrorAction SilentlyContinue | Out-Null')
+      await ps('Set-ItemProperty -Path "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\GameDVR" -Name AppCaptureEnabled -Value 0 -Force')
+      s('Background game recording disabled.', 'ok')
     },
     restore: async (s, ps) => {
       await ps('Set-ItemProperty -Path "HKCU:\\System\\GameConfigStore" -Name GameDVR_Enabled -Value 1 -Force')
-      await ps('Set-ItemProperty -Path "HKCU:\\System\\GameConfigStore" -Name GameDVR_FSEBehaviorMode -Value 0 -Force')
+      await ps('Set-ItemProperty -Path "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\GameDVR" -Name AppCaptureEnabled -Value 1 -Force')
       await ps('Remove-ItemProperty -Path "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\GameDVR" -Name AllowGameDVR -Force -EA SilentlyContinue')
-      await ps('Set-ItemProperty -Path "HKCU:\\SOFTWARE\\Microsoft\\GameBar" -Name UseNexusForGameBarEnabled -Value 1 -Force -EA SilentlyContinue')
       s('Game DVR restored.', 'ok')
     }
   },
@@ -4912,18 +5072,176 @@ const TWEAKS = {
     category: 'storage',
     safetyTier: 1,
     gamerImpact: 'low',
-    apply: async (s, _, cmd) => { const r = await cmd('powercfg /hibernate off'); s(r.ok ? 'Hibernate disabled.' : `Error: ${r.err}`, r.ok ? 'ok' : 'err') },
+    check: async (ps) => { const r = await ps('Test-Path "C:\\hiberfil.sys"', 3000); return r.ok && /false/i.test(r.out) },
+    apply: async (s, ps, cmd, _a, _b, note) => {
+      const was = await ps('Test-Path "C:\\hiberfil.sys"', 3000)
+      const r = await cmd('powercfg /hibernate off')
+      // powercfg /hibernate is invisible to the journal, so the change is noted for an exact undo.
+      if (r.ok && note && /true/i.test(was.out)) note({ kind: 'hibernate', before: { exists: true, value: 'on' }, after: { exists: true, value: 'off' } })
+      s(r.ok ? 'Hibernate disabled.' : `Error: ${r.err}`, r.ok ? 'ok' : 'err')
+    },
     restore: async (s, _, cmd) => { await cmd('powercfg /hibernate on'); s('Hibernate re-enabled.', 'ok') }
+  },
+  // ── Added for Auto-Optimize 2.0: each one exists because detection found the problem on this PC ──
+  'game-mode-on': {
+    name: 'Windows Game Mode On',
+    category: 'gaming',
+    safetyTier: 1,
+    gamerImpact: 'medium',
+    check: async (ps) => { const r = await ps('(Get-ItemProperty -Path "HKCU:\\Software\\Microsoft\\GameBar" -Name AutoGameModeEnabled -EA SilentlyContinue).AutoGameModeEnabled', 3000); return r.ok && r.out.trim() !== '0' },
+    apply: async (s, ps) => {
+      await ps('New-Item -Path "HKCU:\\Software\\Microsoft\\GameBar" -Force -ErrorAction SilentlyContinue | Out-Null')
+      await ps('Set-ItemProperty -Path "HKCU:\\Software\\Microsoft\\GameBar" -Name AutoGameModeEnabled -Value 1 -Force')
+      await ps('Set-ItemProperty -Path "HKCU:\\Software\\Microsoft\\GameBar" -Name AllowAutoGameMode -Value 1 -Force')
+      s('Game Mode enabled: Windows now prioritises the foreground game and holds back update/driver installs while it runs.', 'ok')
+    },
+    restore: async (s, ps) => {
+      await ps('Remove-ItemProperty -Path "HKCU:\\Software\\Microsoft\\GameBar" -Name AutoGameModeEnabled -EA SilentlyContinue')
+      await ps('Remove-ItemProperty -Path "HKCU:\\Software\\Microsoft\\GameBar" -Name AllowAutoGameMode -EA SilentlyContinue')
+      s('Game Mode back to the Windows default.', 'ok')
+    }
+  },
+  'laptop-power-mode': {
+    name: 'Laptop Best Performance Mode (on AC)',
+    category: 'cpu',
+    safetyTier: 1,
+    gamerImpact: 'medium',
+    apply: async (s, ps, cmd, _a, _b, note) => {
+      const key = 'HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Power\\User\\PowerSchemes'
+      const g = 'ded574b5-45a0-4f42-8737-46345c09c238'
+      const was = await ps(`(Get-ItemProperty -Path "${key}" -Name ActiveOverlayAcPowerScheme -EA SilentlyContinue).ActiveOverlayAcPowerScheme`, 3000)
+      const prev = String(was.out || '').trim() || '00000000-0000-0000-0000-000000000000'
+      const r = await cmd(`powercfg /overlaysetactive ${g}`)
+      if (!r.ok) { s('This Windows build has no power mode overlay. Nothing was changed.', 'warn'); return }
+      if (note) note({ kind: 'power-overlay', before: { exists: true, value: prev }, after: { exists: true, value: g } })
+      s('Power mode set to Best performance while plugged in.', 'ok')
+    },
+    restore: async (s, ps, cmd) => { await cmd('powercfg /overlaysetactive 00000000-0000-0000-0000-000000000000'); s('Power mode back to Balanced.', 'ok') }
+  },
+  'x3d-balanced': {
+    name: 'Ryzen X3D Balanced Plan (V-Cache scheduling)',
+    category: 'cpu',
+    safetyTier: 1,
+    gamerImpact: 'high',
+    check: async (ps, cmd) => { const r = await cmd('powercfg /getactivescheme'); return r.ok && /381b4222-f694-41f0-9685-ff5bb260df2e/i.test(r.out) },
+    // Dual-CCD X3D parts park the non-cache CCD only under the Balanced plan with Game Bar present; a max-performance plan breaks that.
+    apply: async (s, ps, cmd) => { await cmd('powercfg /setactive 381b4222-f694-41f0-9685-ff5bb260df2e'); s('Balanced plan active: the V-Cache cores are used for games.', 'ok') },
+    restore: async (s, ps, cmd) => { await cmd('powercfg /setactive 381b4222-f694-41f0-9685-ff5bb260df2e'); s('Balanced plan kept.', 'ok') }
+  },
+  'power-balanced-restore': {
+    name: 'Leave Power Saver (back to Balanced)',
+    category: 'cpu',
+    safetyTier: 1,
+    gamerImpact: 'high',
+    check: async (ps, cmd) => { const r = await cmd('powercfg /getactivescheme'); return r.ok && !/a1841308-3541-4fab-bc81-f71556f20b4a/i.test(r.out) },
+    apply: async (s, ps, cmd) => { await cmd('powercfg /setactive 381b4222-f694-41f0-9685-ff5bb260df2e'); s('Balanced plan active (was Power saver, which caps the CPU).', 'ok') },
+    restore: async (s, ps, cmd) => { await cmd('powercfg /setactive a1841308-3541-4fab-bc81-f71556f20b4a'); s('Power saver plan restored.', 'ok') }
+  },
+  'fast-startup-off': {
+    name: 'Turn Off Fast Startup',
+    category: 'storage',
+    safetyTier: 1,
+    gamerImpact: 'low',
+    check: async (ps) => { const r = await ps('(Get-ItemProperty -Path "HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Power" -Name HiberbootEnabled -EA SilentlyContinue).HiberbootEnabled', 3000); return r.ok && r.out.trim() === '0' },
+    apply: async (s, ps) => { await ps('Set-ItemProperty -Path "HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Power" -Name HiberbootEnabled -Value 0 -Type DWord -Force'); s('Fast Startup off: shutdown is a real shutdown and drivers load fresh.', 'ok') },
+    restore: async (s, ps) => { await ps('Set-ItemProperty -Path "HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Power" -Name HiberbootEnabled -Value 1 -Type DWord -Force'); s('Fast Startup restored.', 'ok') }
+  },
+  'pagefile-auto': {
+    name: 'Let Windows Manage the Page File',
+    category: 'storage',
+    safetyTier: 1,
+    gamerImpact: 'high',
+    apply: async (s, ps) => {
+      await ps('Set-ItemProperty -Path "HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Memory Management" -Name PagingFiles -Value @("?:\\pagefile.sys") -Type MultiString -Force')
+      s('Page file set to system-managed. Takes effect after a restart.', 'ok')
+    },
+    restore: async (s, ps) => {
+      await ps('Set-ItemProperty -Path "HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Memory Management" -Name PagingFiles -Value @() -Type MultiString -Force')
+      s('Page file setting restored (none).', 'ok')
+    }
+  },
+  'trim-enable': {
+    name: 'Turn SSD TRIM Back On',
+    category: 'storage',
+    safetyTier: 1,
+    gamerImpact: 'medium',
+    check: async (ps) => { const r = await ps('(Get-ItemProperty -Path "HKLM:\\SYSTEM\\CurrentControlSet\\Control\\FileSystem" -Name DisableDeleteNotification -EA SilentlyContinue).DisableDeleteNotification', 3000); return r.ok && (r.out.trim() === '0' || r.out.trim() === '') },
+    apply: async (s, ps, cmd) => {
+      await ps('Set-ItemProperty -Path "HKLM:\\SYSTEM\\CurrentControlSet\\Control\\FileSystem" -Name DisableDeleteNotification -Value 0 -Type DWord -Force')
+      await cmd('fsutil behavior set DisableDeleteNotify 0')
+      s('TRIM enabled: deleted blocks are handed back to the SSD so writes stay fast.', 'ok')
+    },
+    restore: async (s, ps) => { await ps('Set-ItemProperty -Path "HKLM:\\SYSTEM\\CurrentControlSet\\Control\\FileSystem" -Name DisableDeleteNotification -Value 1 -Type DWord -Force'); s('TRIM setting restored.', 'ok') }
+  },
+  'telemetry-tasks': {
+    name: 'Stop Background Telemetry Tasks',
+    category: 'privacy',
+    safetyTier: 1,
+    gamerImpact: 'low',
+    // Not StartupAppTask: Task Manager's startup-impact column depends on it.
+    apply: async (s, ps) => {
+      await ps(`
+        $tasks = @(
+          @('\\Microsoft\\Windows\\Application Experience\\','Microsoft Compatibility Appraiser'),
+          @('\\Microsoft\\Windows\\Application Experience\\','ProgramDataUpdater'),
+          @('\\Microsoft\\Windows\\Application Experience\\','PcaPatchDbTask'),
+          @('\\Microsoft\\Windows\\Customer Experience Improvement Program\\','Consolidator'),
+          @('\\Microsoft\\Windows\\Customer Experience Improvement Program\\','UsbCeip'),
+          @('\\Microsoft\\Windows\\DiskDiagnostic\\','Microsoft-Windows-DiskDiagnosticDataCollector'))
+        foreach ($t in $tasks) { Disable-ScheduledTask -TaskPath $t[0] -TaskName $t[1] -ErrorAction SilentlyContinue | Out-Null }
+      `)
+      s('Compatibility, CEIP and disk-diagnostic telemetry tasks disabled (these cause periodic CPU/disk spikes).', 'ok')
+    },
+    restore: async (s, ps) => {
+      await ps(`
+        $tasks = @(
+          @('\\Microsoft\\Windows\\Application Experience\\','Microsoft Compatibility Appraiser'),
+          @('\\Microsoft\\Windows\\Application Experience\\','ProgramDataUpdater'),
+          @('\\Microsoft\\Windows\\Application Experience\\','PcaPatchDbTask'),
+          @('\\Microsoft\\Windows\\Customer Experience Improvement Program\\','Consolidator'),
+          @('\\Microsoft\\Windows\\Customer Experience Improvement Program\\','UsbCeip'),
+          @('\\Microsoft\\Windows\\DiskDiagnostic\\','Microsoft-Windows-DiskDiagnosticDataCollector'))
+        foreach ($t in $tasks) { Enable-ScheduledTask -TaskPath $t[0] -TaskName $t[1] -ErrorAction SilentlyContinue | Out-Null }
+      `)
+      s('Telemetry tasks re-enabled.', 'ok')
+    }
+  },
+  'search-local-only': {
+    name: 'Start Menu Search Without Bing',
+    category: 'privacy',
+    safetyTier: 1,
+    gamerImpact: 'low',
+    check: async (ps) => { const r = await ps('(Get-ItemProperty -Path "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Search" -Name BingSearchEnabled -EA SilentlyContinue).BingSearchEnabled', 3000); return r.ok && r.out.trim() === '0' },
+    apply: async (s, ps) => {
+      await ps('New-Item -Path "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\Windows Search" -Force -ErrorAction SilentlyContinue | Out-Null')
+      await ps('Set-ItemProperty -Path "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\Windows Search" -Name DisableWebSearch -Value 1 -Type DWord -Force')
+      await ps('Set-ItemProperty -Path "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\Windows Search" -Name ConnectedSearchUseWeb -Value 0 -Type DWord -Force')
+      await ps('Set-ItemProperty -Path "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\Windows Search" -Name AllowCloudSearch -Value 0 -Type DWord -Force')
+      await ps('New-Item -Path "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Search" -Force -ErrorAction SilentlyContinue | Out-Null')
+      await ps('Set-ItemProperty -Path "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Search" -Name BingSearchEnabled -Value 0 -Type DWord -Force')
+      await ps('Set-ItemProperty -Path "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Search" -Name CortanaConsent -Value 0 -Type DWord -Force')
+      await ps('New-Item -Path "HKCU:\\Software\\Policies\\Microsoft\\Windows\\Explorer" -Force -ErrorAction SilentlyContinue | Out-Null')
+      await ps('Set-ItemProperty -Path "HKCU:\\Software\\Policies\\Microsoft\\Windows\\Explorer" -Name DisableSearchBoxSuggestions -Value 1 -Type DWord -Force')
+      s('Start menu searches this PC only: no Bing lookups, no web results, no search lag from the network.', 'ok')
+    },
+    restore: async (s, ps) => {
+      for (const n of ['DisableWebSearch', 'ConnectedSearchUseWeb', 'AllowCloudSearch'])
+        await ps(`Remove-ItemProperty -Path "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\Windows Search" -Name ${n} -EA SilentlyContinue`)
+      await ps('Set-ItemProperty -Path "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Search" -Name BingSearchEnabled -Value 1 -Type DWord -Force -EA SilentlyContinue')
+      await ps('Remove-ItemProperty -Path "HKCU:\\Software\\Policies\\Microsoft\\Windows\\Explorer" -Name DisableSearchBoxSuggestions -EA SilentlyContinue')
+      s('Web search in Start restored.', 'ok')
+    }
   },
   'explorer-perf': {
     name: 'Explorer Performance Tweaks',
     category: 'gaming',
     safetyTier: 1,
     gamerImpact: 'low',
+    // Only the startup delay: LaunchTo is a preference (where File Explorer opens), not performance, so it is left alone.
     apply: async (s, ps) => {
-      await ps('Set-ItemProperty -Path "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced" -Name LaunchTo -Value 1 -Force')
+      await ps('New-Item -Path "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Serialize" -Force -ErrorAction SilentlyContinue | Out-Null')
       await ps('Set-ItemProperty -Path "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Serialize" -Name StartupDelayInMSec -Value 0 -Force -ErrorAction SilentlyContinue')
-      s('Explorer performance tweaks applied.', 'ok')
+      s('Explorer startup delay removed.', 'ok')
     },
     restore: async (s, ps) => {
       await ps('Remove-ItemProperty -Path "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Serialize" -Name StartupDelayInMSec -EA SilentlyContinue')
@@ -5075,19 +5393,7 @@ const TWEAKS = {
       await cmd('powercfg /setacvalueindex SCHEME_CURRENT 2a737441-1930-4402-8d77-b2bebba308a3 48e6b7a6-50f5-4782-a5d4-53bb8f07e226 0')
       await cmd('powercfg /setdcvalueindex SCHEME_CURRENT 2a737441-1930-4402-8d77-b2bebba308a3 48e6b7a6-50f5-4782-a5d4-53bb8f07e226 0')
       await cmd('powercfg /setactive SCHEME_CURRENT')
-      // Per-device selective suspend — survives sleep/wake and monitor transitions
-      // powercfg alone resets on wake; device-level EnhancedPowerManagementEnabled=0 does not
-      await ps(`
-        $hubs = Get-ChildItem 'HKLM:\\SYSTEM\\CurrentControlSet\\Enum\\USB' -EA SilentlyContinue | Get-ChildItem -EA SilentlyContinue
-        foreach ($dev in $hubs) {
-          $pp = Join-Path $dev.PSPath 'Device Parameters'
-          if (Test-Path $pp) {
-            Set-ItemProperty -Path $pp -Name SelectiveSuspendEnabled -Value 0 -Force -EA SilentlyContinue
-          }
-          Set-ItemProperty -Path $dev.PSPath -Name EnhancedPowerManagementEnabled -Value 0 -Force -EA SilentlyContinue
-        }
-      `)
-      s('USB Selective Suspend disabled (power plan + per-device). Survives sleep/wake.', 'ok')
+      s('USB Selective Suspend disabled in the active power plan.', 'ok')
     },
     restore: async (s, ps, cmd) => {
       await cmd('powercfg /setacvalueindex SCHEME_CURRENT 2a737441-1930-4402-8d77-b2bebba308a3 48e6b7a6-50f5-4782-a5d4-53bb8f07e226 1')
@@ -5193,7 +5499,7 @@ const TWEAKS = {
     category: 'cpu',
     safetyTier: 1,
     gamerImpact: 'high',
-    apply: async (s, ps, cmd) => applyMaxPerfPlan({ vendor: 'amd', label: 'AMD', vendorSetting: { name: 'CPPCENABLED', value: 1 }, s, ps, cmd }),
+    apply: async (s, ps, cmd) => applyMaxPerfPlan({ vendor: 'amd', label: 'AMD', vendorSetting: { name: 'CPPCENABLED', value: 1 }, s, ps, cmd, idle: false }),
     restore: async (s, _, cmd) => restoreMaxPerfPlan({ s, cmd })
   },
   'cpu-parking': {
@@ -7462,19 +7768,27 @@ if ($r.Count -eq 0) { Write-Output "NONE_FOUND" } else { foreach ($x in $r) { Wr
     }
   },
   'nudge-blocker': {
+    name: 'Stop Silent App Installs & Suggestions',
+    category: 'privacy',
     safetyTier: 1,
+    gamerImpact: 'low',
+    check: async (ps) => {
+      const r = await ps('(Get-ItemProperty -Path "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\ContentDeliveryManager" -Name SilentInstalledAppsEnabled -EA SilentlyContinue).SilentInstalledAppsEnabled', 3000)
+      return r.ok && r.out.trim() === '0'
+    },
     apply: async (s, ps) => {
       const base = 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\ContentDeliveryManager'
+      // Includes the old win-tips keys. The lock-screen picture settings are a preference and are left alone.
       const keys = ['SoftLandingEnabled','SubscribedContent-338389Enabled','SubscribedContent-338388Enabled',
-        'SubscribedContent-310093Enabled','RotatingLockScreenEnabled','RotatingLockScreenOverlayEnabled',
-        'SystemPaneSuggestionsEnabled','OemPreInstalledAppsEnabled','PreInstalledAppsEnabled',
+        'SubscribedContent-310093Enabled','SystemPaneSuggestionsEnabled','OemPreInstalledAppsEnabled','PreInstalledAppsEnabled',
         'SilentInstalledAppsEnabled','ContentDeliveryAllowed']
       for (const k of keys) await ps(`Set-ItemProperty -Path "${base}" -Name "${k}" -Value 0 -Force -EA SilentlyContinue`)
-      s('Account nudges, feedback flags, and content suggestions disabled.', 'ok')
+      s('Silent app installs, account nudges and content suggestions disabled.', 'ok')
     },
     restore: async (s, ps) => {
       const base = 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\ContentDeliveryManager'
-      await ps(`Set-ItemProperty -Path "${base}" -Name SoftLandingEnabled -Value 1 -Force -EA SilentlyContinue`)
+      for (const k of ['SoftLandingEnabled','SubscribedContent-338389Enabled','SubscribedContent-338388Enabled','SubscribedContent-310093Enabled','SystemPaneSuggestionsEnabled','OemPreInstalledAppsEnabled','PreInstalledAppsEnabled','SilentInstalledAppsEnabled','ContentDeliveryAllowed'])
+        await ps(`Set-ItemProperty -Path "${base}" -Name "${k}" -Value 1 -Force -EA SilentlyContinue`)
       s('Nudge blocker restored.', 'ok')
     }
   },
@@ -7563,6 +7877,9 @@ if ($r.Count -eq 0) { Write-Output "NONE_FOUND" } else { foreach ($x in $r) { Wr
     }
   },
   'sticky-keys-guard': {
+    name: 'Sticky Keys Shortcut Guard',
+    category: 'input',
+    gamerImpact: 'low',
     safetyTier: 1,
     apply: async (s, ps) => {
       await ps('Set-ItemProperty -Path "HKCU:\\Control Panel\\Accessibility\\StickyKeys" -Name Flags -Value "506" -Force -EA SilentlyContinue')
@@ -8144,15 +8461,29 @@ if ($r.Count -eq 0) { Write-Output "NONE_FOUND" } else { foreach ($x in $r) { Wr
     }
   },
   'vrr-borderless': {
+    name: 'Optimizations for Windowed Games (VRR)',
+    category: 'gpu',
     safetyTier: 1,
+    gamerImpact: 'medium',
+    check: async (ps) => {
+      const r = await ps('(Get-ItemProperty -Path "HKCU:\\Software\\Microsoft\\DirectX\\UserGpuPreferences" -Name DirectXUserGlobalSettings -EA SilentlyContinue).DirectXUserGlobalSettings', 3000)
+      return r.ok && /VRROptimizeEnable=1/.test(r.out) && /SwapEffectUpgradeEnable=1/.test(r.out)
+    },
+    // Merged into the existing string: it also holds the user's other graphics options (Auto HDR etc.).
     apply: async (s, ps) => {
       const base = 'HKCU:\\Software\\Microsoft\\DirectX\\UserGpuPreferences'
+      const cur = await ps(`(Get-ItemProperty -Path "${base}" -Name DirectXUserGlobalSettings -EA SilentlyContinue).DirectXUserGlobalSettings`, 3000)
+      const next = dxSettings.merge(String(cur.out || '').trim(), dxSettings.VRR)
       await ps(`New-Item -Path "${base}" -Force -EA SilentlyContinue | Out-Null`)
-      await ps(`Set-ItemProperty -Path "${base}" -Name DirectXUserGlobalSettings -Value "VRROptimizeEnable=1;SwapEffectUpgradeEnable=1;" -Type String -Force`)
-      s('VRR / G-Sync in borderless windowed mode enabled.', 'ok')
+      await ps(`Set-ItemProperty -Path "${base}" -Name DirectXUserGlobalSettings -Value "${next}" -Type String -Force`)
+      s('VRR / G-Sync and flip-model upgrade enabled for windowed games.', 'ok')
     },
     restore: async (s, ps) => {
-      await ps('Remove-ItemProperty -Path "HKCU:\\Software\\Microsoft\\DirectX\\UserGpuPreferences" -Name DirectXUserGlobalSettings -EA SilentlyContinue')
+      const base = 'HKCU:\\Software\\Microsoft\\DirectX\\UserGpuPreferences'
+      const cur = await ps(`(Get-ItemProperty -Path "${base}" -Name DirectXUserGlobalSettings -EA SilentlyContinue).DirectXUserGlobalSettings`, 3000)
+      const next = dxSettings.remove(String(cur.out || '').trim(), Object.keys(dxSettings.VRR))
+      if (next) await ps(`Set-ItemProperty -Path "${base}" -Name DirectXUserGlobalSettings -Value "${next}" -Type String -Force`)
+      else await ps(`Remove-ItemProperty -Path "${base}" -Name DirectXUserGlobalSettings -EA SilentlyContinue`)
       s('VRR borderless setting removed.', 'ok')
     }
   },

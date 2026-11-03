@@ -8,17 +8,7 @@
    },
    {
     "kind": "reg",
-    "target": "HKCU:\\System\\GameConfigStore\\GameDVR_FSEBehaviorMode",
-    "after": "2"
-   },
-   {
-    "kind": "reg",
-    "target": "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\GameDVR\\AllowGameDVR",
-    "after": "0"
-   },
-   {
-    "kind": "reg",
-    "target": "HKCU:\\SOFTWARE\\Microsoft\\GameBar\\UseNexusForGameBarEnabled",
+    "target": "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\GameDVR\\AppCaptureEnabled",
     "after": "0"
    }
   ],
@@ -234,13 +224,122 @@
   "untracked": 1,
   "fidelity": "partial"
  },
- "explorer-perf": {
+ "game-mode-on": {
   "touches": [
    {
     "kind": "reg",
-    "target": "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced\\LaunchTo",
+    "target": "HKCU:\\Software\\Microsoft\\GameBar\\AutoGameModeEnabled",
     "after": "1"
    },
+   {
+    "kind": "reg",
+    "target": "HKCU:\\Software\\Microsoft\\GameBar\\AllowAutoGameMode",
+    "after": "1"
+   }
+  ],
+  "dynamic": false,
+  "untracked": 0,
+  "fidelity": "exact"
+ },
+ "laptop-power-mode": {
+  "touches": [],
+  "dynamic": false,
+  "untracked": 0,
+  "fidelity": "exact"
+ },
+ "x3d-balanced": {
+  "touches": [],
+  "dynamic": false,
+  "untracked": 0,
+  "fidelity": "exact"
+ },
+ "power-balanced-restore": {
+  "touches": [],
+  "dynamic": false,
+  "untracked": 0,
+  "fidelity": "exact"
+ },
+ "fast-startup-off": {
+  "touches": [
+   {
+    "kind": "reg",
+    "target": "HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Power\\HiberbootEnabled",
+    "after": "0"
+   }
+  ],
+  "dynamic": false,
+  "untracked": 0,
+  "fidelity": "exact"
+ },
+ "pagefile-auto": {
+  "touches": [
+   {
+    "kind": "reg",
+    "target": "HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Memory Management\\PagingFiles",
+    "after": "@("
+   }
+  ],
+  "dynamic": false,
+  "untracked": 0,
+  "fidelity": "exact"
+ },
+ "trim-enable": {
+  "touches": [
+   {
+    "kind": "reg",
+    "target": "HKLM:\\SYSTEM\\CurrentControlSet\\Control\\FileSystem\\DisableDeleteNotification",
+    "after": "0"
+   }
+  ],
+  "dynamic": false,
+  "untracked": 0,
+  "fidelity": "exact"
+ },
+ "telemetry-tasks": {
+  "touches": [],
+  "dynamic": false,
+  "untracked": 0,
+  "fidelity": "none"
+ },
+ "search-local-only": {
+  "touches": [
+   {
+    "kind": "reg",
+    "target": "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\Windows Search\\DisableWebSearch",
+    "after": "1"
+   },
+   {
+    "kind": "reg",
+    "target": "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\Windows Search\\ConnectedSearchUseWeb",
+    "after": "0"
+   },
+   {
+    "kind": "reg",
+    "target": "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\Windows Search\\AllowCloudSearch",
+    "after": "0"
+   },
+   {
+    "kind": "reg",
+    "target": "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Search\\BingSearchEnabled",
+    "after": "0"
+   },
+   {
+    "kind": "reg",
+    "target": "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Search\\CortanaConsent",
+    "after": "0"
+   },
+   {
+    "kind": "reg",
+    "target": "HKCU:\\Software\\Policies\\Microsoft\\Windows\\Explorer\\DisableSearchBoxSuggestions",
+    "after": "1"
+   }
+  ],
+  "dynamic": false,
+  "untracked": 0,
+  "fidelity": "exact"
+ },
+ "explorer-perf": {
+  "touches": [
    {
     "kind": "reg",
     "target": "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Serialize\\StartupDelayInMSec",
@@ -352,7 +451,7 @@
  },
  "usb-suspend": {
   "touches": [],
-  "dynamic": true,
+  "dynamic": false,
   "untracked": 0,
   "fidelity": "exact"
  },
@@ -1455,14 +1554,14 @@
  "compat-scanner-off": {
   "touches": [],
   "dynamic": false,
-  "untracked": 1,
-  "fidelity": "partial"
+  "untracked": 0,
+  "fidelity": "none"
  },
  "compat-tasks-off": {
   "touches": [],
   "dynamic": false,
-  "untracked": 1,
-  "fidelity": "partial"
+  "untracked": 0,
+  "fidelity": "none"
  },
  "cortana-blackout": {
   "touches": [
@@ -1536,8 +1635,8 @@
  "diag-tasks-off": {
   "touches": [],
   "dynamic": false,
-  "untracked": 1,
-  "fidelity": "partial"
+  "untracked": 0,
+  "fidelity": "none"
  },
  "diagnostics-off": {
   "touches": [

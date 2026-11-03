@@ -62,8 +62,9 @@
     const boot = document.getElementById('loading')
     if (boot && boot.style.display !== 'none') return true
     if (document.querySelector('.modal-overlay.open, .j-modal-backdrop.j-open, #cmd-palette-overlay.open')) return true
-    const ao = document.getElementById('auto-opti-modal')
-    return !!ao && ao.style.display !== 'none'
+    if (root.JylliAutoOpti && root.JylliAutoOpti.active) return true
+    const ao = document.getElementById('auto-opti')
+    return !!ao && ao.style.display !== 'none' && ao.style.display !== ''
   }
 
   function waitFor(sel, ms) {

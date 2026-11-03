@@ -26,6 +26,7 @@ const SCHEME = String(arg('scheme', 'dark'))   // dark | light | system
 const SCALE = Number(arg('scale', 1)) || 1        // <1 shrinks screenshots (cheaper to view)
 const LINT = !!arg('lint', false)                 // run tools/ui-preview/lint-page.js on every page and put the text report in report.txt
 const NOSHOT = !!arg('noshot', false)             // skip PNGs (use with --lint)
+const AUTO_OPTI = !!arg('auto-opti', false)   // --auto-opti: shoot every Auto-Optimize scene (--ao-profile <fixture>)
 const GALLERY = !!arg('gallery', false)   // shoot tools/ui-preview/gallery.html (every component) instead of the app
 
 const PAGES = ['dashboard', 'preflight', 'fixes', 'restore-points', 'performance', 'gaming', 'network', 'privacy-cleanup', 'startup-manager', 'process-manager',
@@ -40,8 +41,10 @@ ipcMain.on('mock-keys', e => { e.returnValue = apiKeys })
 
 const ctxByContents = new Map()
 const unknownCalls = new Map()
-ipcMain.handle('mock', (e, name, args) => {
+const AO = require('./auto-opti-preview')
+ipcMain.handle('mock', async (e, name, args) => {
   const ctx = ctxByContents.get(e.sender.id) || { lang: 'en', premium: true }
+  if (/^ao[A-Z]/.test(name)) { const r = await AO.handle(name, args, e.sender, ctx); if (r !== undefined) return r }
   const r = respond(name, args, ctx)
   if (r === undefined) { unknownCalls.set(name, (unknownCalls.get(name) || 0) + 1); return { ok: false, mock: 'no-fixture' } }
   return r
@@ -82,6 +85,31 @@ async function appReady(win, timeoutMs = 20000) {
   return false
 }
 
+async function autoOptiShots(win, dir, logs, report) {
+  const js = c => win.webContents.executeJavaScript(c).catch(e => { logs.push('[ao] ' + e.message) })
+  const scene = () => js("document.getElementById('auto-opti').dataset.scene")
+  const until = async (fn, ms = 30000) => { const t0 = Date.now(); while (Date.now() - t0 < ms) { if (await js(fn)) return true; await sleep(150) } report.push('TIMEOUT waiting for ' + fn); return false }
+  const click = sel => js("(function(){const b=document.querySelector(" + JSON.stringify(sel) + ");if(b){b.click();return true}return false})()")
+  await js("settings.onboardingDone = true; void 0")
+  await js('runAutoOpti(); void 0')
+  await sleep(1500); await shot(win, path.join(dir, 'ao-1-scan.png'))
+  await until("document.getElementById('auto-opti').dataset.scene === 'diagnosis'")
+  await sleep(1400); await shot(win, path.join(dir, 'ao-2-diagnosis.png'))
+  await js("document.getElementById('ao-right').scrollTop = 600; void 0"); await sleep(500); await shot(win, path.join(dir, 'ao-2b-diagnosis-scrolled.png'))
+  await click('#ao-next'); await until("document.getElementById('auto-opti').dataset.scene === 'plan'"); await sleep(1400)
+  await js("(document.querySelector('[data-toggle-open=startup]')||{click(){}}).click(); void 0"); await sleep(500)
+  await shot(win, path.join(dir, 'ao-3-plan.png'))
+  await click('#ao-go'); await until("!!document.querySelector('.ao-sheet')"); await sleep(900)
+  await shot(win, path.join(dir, 'ao-4-run-confirm.png'))
+  await click('#ao-cf-yes'); await sleep(2800); await shot(win, path.join(dir, 'ao-4b-run-mid.png'))
+  await until("document.getElementById('auto-opti').dataset.scene === 'result'", 60000); await sleep(1500)
+  await shot(win, path.join(dir, 'ao-5-result.png'))
+  await js("document.getElementById('ao-right').scrollTop = 700; void 0"); await sleep(400); await shot(win, path.join(dir, 'ao-5b-result-scrolled.png'))
+  await js('JylliAutoOpti.close(true); void 0'); await sleep(600)
+  await js("settings.aom_pending_verify = { runAt: 1 }; void 0")
+  await js('JylliAutoOpti.welcomeBack(); void 0'); await sleep(1800); await shot(win, path.join(dir, 'ao-6-welcome.png'))
+}
+
 async function main() {
   await app.whenReady()
   fs.mkdirSync(OUT, { recursive: true })
@@ -102,6 +130,7 @@ async function main() {
     if (!ready) { report.push(`${name}: APP NEVER BECAME READY`); logs.forEach(l => report.push('   ' + l)); win.destroy(); continue }
     await sleep(1800)   // boot animation + first metrics
     if (SCHEME !== 'dark') await win.webContents.executeJavaScript(`JylliTheme.applyScheme(${JSON.stringify(SCHEME)})`).catch(() => {})
+    if (AUTO_OPTI) { await autoOptiShots(win, path.join(OUT, name), logs, report); win.destroy(); continue }
     for (const page of (ONLY_PAGES || PAGES)) {
       logs.length = 0
       await win.webContents.executeJavaScript(`showPage(${JSON.stringify(page)})`).catch(e => logs.push('[showPage] ' + e.message))
