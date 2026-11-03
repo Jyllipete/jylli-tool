@@ -1,5 +1,6 @@
 node_modules/
-dist/
+dist/*
+!dist/Jylli-Tool-Installer.exe   # the branded installer is always committed
 *.log
 .claude/
 bot.js
@@ -9,3 +10,7 @@ assets/lhm/
 assets/fancontrol/
 assets/ryzenadj/
 assets/scewin/
+
+# installer build output
+build/extra/
+tools/installer/BuildInfo.cs

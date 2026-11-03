@@ -9,7 +9,10 @@
     "pack": "electron-builder --dir",
     "check": "node tools/check.js && node tools/scan-injection.js && node tools/check-ui.js && node tools/check-contrast.js && node tools/check-keys.js && node tools/check-vendor.js && node tools/journal-coverage.js --check",
     "test": "node --test \"test/**/*.test.js\"",
-    "preview": "electron tools/ui-preview/preview-main.js"
+    "preview": "electron tools/ui-preview/preview-main.js",
+    "build:uninstaller": "powershell -NoProfile -ExecutionPolicy Bypass -File tools/installer/build.ps1 -Uninstaller",
+    "build:installer": "powershell -NoProfile -ExecutionPolicy Bypass -File tools/installer/build.ps1",
+    "dist": "npm run build:uninstaller && npm run build && npm run build:installer"
   },
   "build": {
     "appId": "com.jylli.tool",
@@ -39,7 +42,8 @@
       "artifactName": "Jylli-Tool-Setup.exe",
       "installerSidebar": "assets/installer-sidebar.bmp",
       "uninstallerSidebar": "assets/installer-sidebar.bmp",
-      "installerHeader": "assets/installer-header.bmp"
+      "installerHeader": "assets/installer-header.bmp",
+      "include": "build/installer.nsh"
     },
     "asarUnpack": [
       "lib/os-poller.ps1",
@@ -58,7 +62,13 @@
       "owner": "Jyllipete",
       "repo": "jylli-tool",
       "releaseType": "release"
-    }
+    },
+    "extraFiles": [
+      {
+        "from": "build/extra/Jylli Tool Uninstaller.exe",
+        "to": "Jylli Tool Uninstaller.exe"
+      }
+    ]
   },
   "devDependencies": {
     "electron": "^45.0.0",
