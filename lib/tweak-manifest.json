@@ -245,7 +245,7 @@
   "touches": [],
   "dynamic": false,
   "untracked": 0,
-  "fidelity": "exact"
+  "fidelity": "none"
  },
  "x3d-balanced": {
   "touches": [],

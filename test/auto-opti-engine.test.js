@@ -363,3 +363,12 @@ test('describe: a setting changed twice shows first before and last after', () =
   const d = ao.describe.describeEntry({ changes: [r(1, 0), r(0, 2)] })
   assert.strictEqual(d.length, 1); assert.deepStrictEqual([d[0].before.v, d[0].after.v], ['off', 'on'])
 })
+
+test('power mode overlay: only GUIDs reach PowerShell, output is parsed strictly', () => {
+  const ov = require('../lib/auto-opti/overlay')
+  assert.match(ov.setScript(ov.PERFORMANCE), /\[guid\]'ded574b5-45a0-4f42-8737-46345c09c238'/)
+  assert.throws(() => ov.setScript("x'; calc; '"))
+  assert.strictEqual(ov.parseRead('JOVL=DED574B5-45A0-4F42-8737-46345C09C238 RC=0'), 'ded574b5-45a0-4f42-8737-46345c09c238')
+  assert.strictEqual(ov.parseRead('JOVL=00000000-0000-0000-0000-000000000000 RC=5'), null)
+  assert.strictEqual(ov.setOk('JOSET=0'), true); assert.strictEqual(ov.setOk('JOSET=87'), false)
+})

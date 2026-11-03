@@ -4054,11 +4054,8 @@ function hasTweak(id, action = 'apply') {
 const aoDisplay = require('./lib/auto-opti/display')
 const autoOptiUndoHandlers = {
   'power-overlay': {
-    read: async () => {
-      const r = await runPS('(Get-ItemProperty -Path "HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Power\\User\\PowerSchemes" -Name ActiveOverlayAcPowerScheme -EA SilentlyContinue).ActiveOverlayAcPowerScheme', 4000)
-      return { exists: true, value: String(r.out || '').trim().toLowerCase() || '00000000-0000-0000-0000-000000000000' }
-    },
-    restore: async c => (await runCmd(`powercfg /overlaysetactive ${String(c.before.value).replace(/[^0-9a-f-]/gi, '')}`)).ok !== false,
+    read: async () => { const ov = require('./lib/auto-opti/overlay'); const v = ov.parseRead((await runPS(ov.readScript(), 8000)).out); return v ? { exists: true, value: v } : { unknown: true } },
+    restore: async c => { const ov = require('./lib/auto-opti/overlay'); return ov.setOk((await runPS(ov.setScript(String(c.before.value)), 8000)).out) },
   },
   hibernate: {
     read: async () => { const r = await runPS('Test-Path "C:\\hiberfil.sys"', 4000); return { exists: true, value: /true/i.test(r.out) ? 'on' : 'off' } },
@@ -5126,17 +5123,18 @@ const TWEAKS = {
     category: 'cpu',
     safetyTier: 1,
     gamerImpact: 'medium',
+    // Power mode is an overlay with no powercfg command on current builds: it goes through powrprof.dll (lib/auto-opti/overlay.js).
     apply: async (s, ps, cmd, _a, _b, note) => {
-      const key = 'HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Power\\User\\PowerSchemes'
-      const g = 'ded574b5-45a0-4f42-8737-46345c09c238'
-      const was = await ps(`(Get-ItemProperty -Path "${key}" -Name ActiveOverlayAcPowerScheme -EA SilentlyContinue).ActiveOverlayAcPowerScheme`, 3000)
-      const prev = String(was.out || '').trim() || '00000000-0000-0000-0000-000000000000'
-      const r = await cmd(`powercfg /overlaysetactive ${g}`)
-      if (!r.ok) { s('This Windows build has no power mode overlay. Nothing was changed.', 'warn'); return }
-      if (note) note({ kind: 'power-overlay', before: { exists: true, value: prev }, after: { exists: true, value: g } })
+      const ov = require('./lib/auto-opti/overlay')
+      const prev = ov.parseRead((await ps(ov.readScript(), 8000)).out)
+      if (!prev) { s('This Windows build has no power mode overlay. Nothing was changed.', 'warn'); return }
+      if (prev === ov.PERFORMANCE) { s('Power mode is already Best performance.', 'ok'); return }
+      const r = await ps(ov.setScript(ov.PERFORMANCE), 8000)
+      if (!ov.setOk(r.out) || ov.parseRead((await ps(ov.readScript(), 8000)).out) !== ov.PERFORMANCE) { s('Windows refused the power mode change. Nothing was changed.', 'warn'); return }
+      if (note) note({ kind: 'power-overlay', before: { exists: true, value: prev }, after: { exists: true, value: ov.PERFORMANCE } })
       s('Power mode set to Best performance while plugged in.', 'ok')
     },
-    restore: async (s, ps, cmd) => { await cmd('powercfg /overlaysetactive 00000000-0000-0000-0000-000000000000'); s('Power mode back to Balanced.', 'ok') }
+    restore: async (s, ps) => { const ov = require('./lib/auto-opti/overlay'); await ps(ov.setScript(ov.ZERO), 8000); s('Power mode back to Balanced.', 'ok') }
   },
   'x3d-balanced': {
     name: 'Ryzen X3D Balanced Plan (V-Cache scheduling)',
