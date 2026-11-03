@@ -547,6 +547,14 @@ function tSection(title) { return title }
 function tDesc(id)    { return (LANG[currentLang]?.tweakDescs?.[id]  ?? LANG.en.tweakDescs?.[id]) ?? null }
 function tName(id)    { return (LANG[currentLang]?.tweakNames?.[id]    ?? LANG.en.tweakNames?.[id])    ?? null }
 function tWarn(id)    { return (LANG[currentLang]?.tweakWarnings?.[id] ?? LANG.en.tweakWarnings?.[id]) ?? null }
+function tRiskLines(id) { return (LANG[currentLang]?.tweakRisk?.[id] ?? LANG.en.tweakRisk?.[id]) ?? [] }
+function tRisk(id) {
+  const lines = tRiskLines(id), r = window._tweakMeta?.[id]?.risk
+  if (!lines.length && !r) return ''
+  const tags = a => (a || []).map(t => tG('riskTag', t)).join(', ')
+  const rev = r ? tUI(r.revert === 'manual' ? 'riskRevertManual' : r.revert === 'none' ? 'riskRevertNone' : 'riskRevertJournal') : ''
+  return `<div class="tc-risk"><b>${tUI('riskWhat')}</b><ul>${lines.map(l => `<li>${l}</li>`).join('')}</ul>${r && r.avoid.length ? `<div class="tc-risk-avoid"><b>${tUI('riskAvoid')}:</b> ${tags(r.avoid)}</div>` : ''}${r && r.caution.length ? `<div class="tc-risk-caution"><b>${tUI('riskCaution')}:</b> ${tags(r.caution)}</div>` : ''}${rev ? `<div class="tc-risk-rev">${rev}</div>` : ''}</div>`
+}
 function tFixDesc(id) { return (LANG[currentLang]?.fixDescs?.[id]      ?? LANG.en.fixDescs?.[id])      ?? null }
 function tWizard(key) { return (LANG[currentLang]?.wizard?.[key]     ?? LANG.en.wizard?.[key])   ?? key }
 function tG(group, key, vars) {
@@ -626,7 +634,7 @@ async function init(isPremium = false) {
     if (currentBootMs) {
       const prevBootMs = settings.lastBootTimeMs || 0
       const REBOOT_IDS = ['hpet','tsc-sync','msi-mode','gpu-hwsch','cursor-max-rate',
-                          'spectre-meltdown','bcd-tweaks','global-timer-resolution']
+                          'spectre-meltdown','bcd-tweaks','global-timer-resolution','hypervisor-off','disable-mpo']
       // Same boot as last session — restore verified set from disk so bar stays hidden
       if (settings.rebootVerifiedMs === currentBootMs && Array.isArray(settings.verifiedRebootIds)) {
         for (const id of settings.verifiedRebootIds) window._verifiedThisBoot.add(id)
@@ -682,7 +690,8 @@ async function init(isPremium = false) {
   // ThermalGuard: wire sidebar badge to thermal ticks
   // Main knows each tweak's real safety tier; cards use it instead of guessing in the renderer.
   api.aoAllowed?.().then(l => { if (Array.isArray(l) && l.length) window._aoAllowed = new Set(l) }).catch(() => {})
-  api.getTweakMeta?.().then(list => { window._tweakMeta = Object.fromEntries((list || []).map(m => [m.id, m])) }).catch(() => {})
+  api.getApplicability?.().then(r => { if (r && r.ok) window._applic = r.map }).catch(() => {})
+  window._tweakMetaReady = (api.getTweakMeta?.() || Promise.resolve(null)).then(list => { if (Array.isArray(list)) window._tweakMeta = Object.fromEntries(list.map(m => [m.id, m])); return !!window._tweakMeta }).catch(() => false)
   try { JylliTelemetry.start() } catch {}
   api.onSettingsPatch?.(p => { if (p && typeof p === 'object') Object.assign(settings, p) })
   api.onThermalTick(d => { updateThermalGuardBadge(d); if (d?.cpuTemp != null) _lastSensorCpuTemp = parseFloat(d.cpuTemp) || 0 })
@@ -7273,6 +7282,24 @@ async function _guardLghubCheck(id, action) {
 }
 
 // ─── Tweak execution ──────────────────────────────────────────────────────────
+// Expert-tier (3) tweaks lower a Windows protection: typed confirmation on top of the safety toggle (main also forces a fresh restore point).
+// Fails closed: if main's tweak meta never loaded, or the id is not in it, the tweak is treated as tier 3.
+async function confirmTier(id) {
+  try { await Promise.race([window._tweakMetaReady, new Promise(r => setTimeout(r, 4000))]) } catch {}
+  const meta = window._tweakMeta
+  // Meta never loaded -> unknown, assume expert tier. Meta loaded but id absent -> not a TWEAKS entry (fix, helper): no tier.
+  const tier = meta && Object.keys(meta).length ? (meta[id]?.safetyTier ?? 0) : 3
+  if (tier < 3) return true
+  const word = tUI('tier3ConfirmWord')
+  const risk = typeof tRisk === 'function' ? tRisk(id) : ''
+  const typed = await showPrompt({ title: tUI('tier3ConfirmTitle'), body: tUI('tier3ConfirmBody').replace('{name}', tName(id) || id).replace('{word}', word) + risk, placeholder: '', okText: tUI('tier3ConfirmOk'), icon: 'fa-shield-halved' })
+  if (String(typed || '').trim().toUpperCase() !== word.toUpperCase()) {
+    if (typed) toast(tUI('tier3ConfirmTitle'), tUI('tier3ConfirmWrong'), 'warn')
+    return false
+  }
+  return true
+}
+
 async function applyTweak(id, action = 'apply') {
   if (id.startsWith('fivem-') && !settings.isPremium) {
     toast(tUI('premiumLockTitle'), tUI('aomFivemLockedDesc'), 'warn')
@@ -7297,15 +7324,7 @@ async function applyTweak(id, action = 'apply') {
         return { ok: false, skipped: true }
       }
     }
-    // Tier 3 lowers a Windows protection: typed confirmation on top of the safety toggle (main also forces a fresh restore point).
-    if ((window._tweakMeta?.[id]?.safetyTier ?? 0) >= 3) {
-      const word = tUI('tier3ConfirmWord')
-      const typed = await showPrompt({ title: tUI('tier3ConfirmTitle'), body: tUI('tier3ConfirmBody').replace('{name}', tName(id) || id).replace('{word}', word), placeholder: '', okText: tUI('tier3ConfirmOk'), icon: 'fa-shield-halved' })
-      if (String(typed || '').trim().toUpperCase() !== word.toUpperCase()) {
-        if (typed) toast(tUI('tier3ConfirmTitle'), tUI('tier3ConfirmWrong'), 'warn')
-        return { ok: false, skipped: true }
-      }
-    }
+    if (!await confirmTier(id)) return { ok: false, skipped: true }
   }
 
   if (!await _guardLghubCheck(id, action)) return { ok: false, skipped: true }
@@ -7580,7 +7599,7 @@ function genCollapseSection(secId) {
 
 let _genSections = null
 
-const REBOOT_TWEAK_IDS = new Set(['hpet','tsc-sync','msi-mode','gpu-hwsch','cursor-max-rate','spectre-meltdown','bcd-tweaks','global-timer-resolution'])
+const REBOOT_TWEAK_IDS = new Set(['hpet','tsc-sync','msi-mode','gpu-hwsch','cursor-max-rate','spectre-meltdown','bcd-tweaks','global-timer-resolution','hypervisor-off','disable-mpo'])
 
 function genUpdateRebootBar() {
   const bar = document.getElementById('reboot-queue-bar')
@@ -7619,7 +7638,7 @@ async function genRebootNow() {
 }
 
 function genRefreshQuickWinStrip() {
-  const QW_IDS = ['game-dvr','disable-fso','disable-mouse-accel','mmcss','disable-background-apps','mmcss-proaudio','defender-idle-priority','vrr-borderless']
+  const QW_IDS = ['game-dvr','disable-fso','disable-mouse-accel','disable-background-apps','vrr-borderless']
   QW_IDS.forEach(id => {
     const applied = settings[`tweak_${id}`] === 'applied'
     const card = document.getElementById('qwc-' + id)
@@ -7639,7 +7658,7 @@ function genRefreshQuickWinStrip() {
 }
 
 async function genApplyQuickWins() {
-  const QW_IDS = ['game-dvr','disable-fso','disable-mouse-accel','mmcss','disable-background-apps','mmcss-proaudio','defender-idle-priority','vrr-borderless']
+  const QW_IDS = ['game-dvr','disable-fso','disable-mouse-accel','disable-background-apps','vrr-borderless']
   const toApply = QW_IDS.filter(id => settings[`tweak_${id}`] !== 'applied')
   if (!toApply.length) return
   await applyTweakBatch(toApply, 'apply')
@@ -9361,6 +9380,10 @@ const TWEAK_COMPAT = {
   'intel-power-plan':    si => !si.isLaptop && si.cpuBrand === 'intel',
   'amd-power-plan':      si => !si.isLaptop && si.cpuBrand === 'amd',
   'speed-shift':         si => si.cpuBrand === 'intel',
+  // Needs facts only the capability scan has (hybrid graphics, running hypervisor): hidden until it lands.
+  'gpu-per-app-preference': () => false,
+  'hypervisor-off':      () => false,
+  'wifi-gaming-tune':    si => !!si.isWifi,
   // GPU brand-specific tweaks
   'gpu-hwsch':           si => { const g = (si.gpu||'').toLowerCase(); return /nvidia|rtx|gtx|geforce|rx\s*6|rx\s*7|rx\s*9|\barc\b/.test(g) },
   'nvidia-max-perf':     si => si.gpuBrand === 'nvidia',
@@ -9388,6 +9411,9 @@ const TWEAK_COMPAT = {
   'bluetooth-hard-off':  si => si.hasBluetooth !== false,
 }
 function tweakCompat(id, si_override) {
+  // The shared rule table (lib/tweak-applicability.js, evaluated in main) wins once the capability scan has landed; the table above is the fallback.
+  const a = !si_override && window._applic && window._applic[id]
+  if (a) return a.show
   const si = si_override || sysInfo
   const fn = TWEAK_COMPAT[id]
   return fn ? fn(si) : true  // unlisted tweaks are always compatible
@@ -9496,6 +9522,7 @@ function buildWindowsOpti(c, mode) {
     { id:'game-overlays', get title() { return tUI('genSecGameOverlays') }, icon:'<i class="fa fa-gamepad"></i>', cards:[
       { id:'game-dvr',    name:'Disable Game DVR / Xbox Game Bar', desc:'Removes background recording overhead — reduces CPU/GPU usage while gaming even when not recording.', icon:'<i class="fa fa-gamepad"></i>' },
       { id:'disable-fso', name:'Disable Fullscreen Optimizations', desc:'Prevents Windows rendering games in hybrid mode. Reduces input latency in exclusive fullscreen.', icon:'<i class="fa fa-display"></i>' },
+      ...(tweakCompat('gpu-per-app-preference') ? [{ id:'gpu-per-app-preference', name:'Run Games on the Dedicated GPU', desc:'Runs every detected game on the high-performance GPU.', icon:'<i class="fa fa-microchip"></i>' }] : []),
     ]},
     { id:'telemetry', get title() { return tUI('genSecTelemetry') }, cards:[
       { id:'telemetry', name:'Disable Windows Telemetry', desc:'Stops Windows sending usage data to Microsoft. Frees background CPU and disk activity.', icon:'<i class="fa fa-satellite-dish"></i>', danger:true, dangerLabel:'Confirm off' },
@@ -9507,9 +9534,11 @@ function buildWindowsOpti(c, mode) {
       { id:'explorer-perf',  name:'Optimise Windows Explorer', desc:'Removes the 10-second Explorer startup delay, disables thumbnail database writes on network folders, and sets This PC as default view. Also separates the Explorer process from the desktop shell so a crash does not kill the taskbar.', icon:'<i class="fa fa-folder-open"></i>' },
       { id:'hibernate',      name:'Disable Hibernate', desc:'Removes hiberfil.sys (~equal to RAM in size). Frees significant disk space.', icon:'<i class="fa fa-moon"></i>', warning: isLaptop ? tUI('warnLaptopHibernate') : '' },
       { id:'disable-mouse-accel', name:'Disable Mouse Acceleration', desc:'Turns off Enhance Pointer Precision system-wide. Your mouse moves at a 1:1 ratio with no Windows curve applied. Essential for consistent aim.', icon:'<i class="fa fa-computer-mouse"></i>' },
+      { id:'mouse-pointer-1to1', name:'Mouse Pointer Speed 6/11 (1:1)', desc:'Pointer speed 6/11 moves the cursor exactly as far as the mouse reports.', icon:'<i class="fa fa-computer-mouse"></i>' },
     ]},
     { id:'background', get title() { return tUI('genSecBackground') }, cards:[
       { id:'disable-background-apps', name:'Disable UWP Background Apps', desc:'Stops all UWP apps (News, Weather, Mail, Xbox etc.) from running silently in the background. Real CPU and RAM saving during gaming.', icon:'<i class="fa fa-ban"></i>' },
+      { id:'fth-reset', name:'Reset Fault Tolerant Heap', desc:'Clears the list of programs Windows runs with the slower safe memory allocator after crashes.', icon:'<i class="fa fa-memory"></i>', warning:'Cannot be restored; Windows rebuilds the list if a program starts crashing again.' },
       { id:'disable-auto-maintenance', name:'Disable Automatic Maintenance', desc:'Prevents Windows from running disk scans, defrag and security checks mid-session. Eliminates the frame time spikes caused by background maintenance tasks.', icon:'<i class="fa fa-screwdriver-wrench"></i>' },
       { id:'disable-delivery-opt', name:'Disable Windows Update P2P Sharing', desc:'Stops Windows using your internet connection to upload updates to other PCs. Removes background bandwidth usage and CPU overhead during sessions.', icon:'<i class="fa fa-arrows-turn-to-dots"></i>' },
       { id:'usb-suspend', name:'Disable USB Selective Suspend', desc:'Prevents Windows from cutting power to USB devices between inputs. Eliminates micro-stutter and mouse ghosting after sleep/wake and monitor switches. Applied at both power plan and per-device level so it survives screen sleep.', icon:'<i class="fa fa-usb fab"></i>', warning: isLaptop ? tUI('warnLaptopPcie') : tUI('warnUsbSuspendLghub') },
@@ -9517,7 +9546,7 @@ function buildWindowsOpti(c, mode) {
     ]},
     { id:'registry', get title() { return tUI('genSecRegistry') }, cards:[
       { id:'mmcss',           name:'MMCSS Game Scheduling (GPU Priority=8)', desc:'Configures Windows Multimedia Class Scheduler to maximise CPU time slices for games. SystemResponsiveness is set to 10 (safe) — never 0, which would starve USB/HID drivers.', icon:'<i class="fa fa-bullseye"></i>' },
-      { id:'global-timer-resolution', name:'Global Timer Resolution (Win11)', desc:'Restores system-wide 0.5ms timer precision on Windows 11. Fixes mysterious FPS caps in games that do not call timeBeginPeriod(). Windows 11 only — skipped automatically on Windows 10.', icon:'<i class="fa fa-clock"></i>' },
+      { id:'global-timer-resolution', name:'Global Timer Resolution (Win11)', desc:'Lets a timer-resolution request from one program (for example a 0.5 ms request from a game or audio app) apply to the whole system again, as before Windows 10 2004. Only changes anything when some running program asks for a finer timer; costs a little more power. Windows 11 only.', icon:'<i class="fa fa-clock"></i>' },
       { id:'priority-sep',    name:'Foreground Process Priority Boost', desc:'Sets Win32PrioritySeparation=38 — the active window receives 3× longer CPU time quanta than background processes. Largest impact on CPUs with 4–8 cores running multiple background apps.', icon:'<i class="fa fa-arrow-trend-up"></i>' },
       { id:'sysmain',         name:'Disable SysMain (SuperFetch)', desc:'Stops pre-loading apps into RAM. Best on 16GB+ RAM. May hurt performance with less.', icon:'<i class="fa fa-brain"></i>', warning: si.ramGB > 0 && si.ramGB < 12 ? tUI('warnLowRamSysmain').replace('{n}', si.ramGB) : '' },
       { id:'power-throttling',name:'Disable Power Throttling', desc:'Prevents Windows EcoQoS from throttling background process clocks to ~50% speed. Keeps game-adjacent processes (Discord, launchers, voice chat) running at full CPU speed during sessions.', icon:'<i class="fa fa-bolt"></i>', warning: isLaptop ? tUI('warnLaptopBattery') : '' },
@@ -9527,13 +9556,13 @@ function buildWindowsOpti(c, mode) {
     { id:'timer', get title() { return tUI('genSecTimer') }, cards:[
       { id:'hpet',     name:'Disable HPET', desc:'Forces Windows off the HPET platform clock and back to TSC. On Intel CPUs improves frame-time consistency by 2–5%; effect on AMD Ryzen is system-dependent — test with a frame-time tool. Reboot required.', icon:'<i class="fa fa-stopwatch"></i>', danger:true, dangerLabel:'Confirm', reboot:true },
       { id:'tsc-sync', name:'BCDEdit TSC Sync → Enhanced', desc:'Sets TSC synchronisation policy to Enhanced mode across all CPU cores. Reduces timer drift on multi-socket and multi-CCX layouts — measurable in LatencyMon as a lower DPC maximum latency. Reboot required.', icon:'<i class="fa fa-arrows-rotate"></i>', reboot:true },
-      { id:'msi-mode', name:'Enable MSI Interrupt Mode (PCI)', desc:'Switches GPU and NIC from legacy line-based (INTx) to Message Signaled Interrupts. Eliminates shared-IRQ contention — typically 20–50% lower interrupt latency measured in LatencyMon. Reboot required.', icon:'<i class="fa fa-plug"></i>', reboot:true },
+      { id:'msi-mode', name:'Enable MSI Interrupt Mode (Graphics Card)', desc:'Switches the graphics card from legacy line-based interrupts to message-signalled interrupts, only if it still uses the legacy kind. Recent drivers already do this. Reboot required.', icon:'<i class="fa fa-plug"></i>', reboot:true },
     ]},
     { id:'gpu', get title() { return tUI('genSecGpu') }, cards:[
       { id:'gpu-hwsch', name:'GPU Hardware Scheduling (WDDM 2.7)', desc:'Offloads the DirectX command queue from the CPU to the GPU\'s own scheduler (WDDM 2.7). Most impactful when the CPU is the bottleneck — reduces frame latency 1–3ms in CPU-bound titles. Requires a DX12-capable GPU. Reboot required.', icon:'<i class="fa fa-palette"></i>', reboot:true },
       { id:'tdr-delay', name:'Extend GPU TDR Timeout (10s)', desc:'Prevents GPU driver timeout crashes under heavy DXR/modding load.', icon:'<i class="fa fa-shield-halved"></i>' },
       { id:'vrr-borderless', name:'VRR / G-Sync in Borderless Windowed', desc:'Enables Variable Refresh Rate and G-Sync/FreeSync in borderless windowed mode. Most competitive games run borderless — without this, VRR is inactive and fixed vsync adds 8–16ms frame delivery variance. Requires G-Sync or FreeSync monitor. Safe to apply without one.', icon:'<i class="fa fa-display"></i>' },
-      { id:'disable-mpo', name:'Disable Multi-Plane Overlay (MPO)', desc:'Sets OverlayTestMode=5 in DWM registry — forces Windows to stop using GPU overlay planes for compositing. Eliminates a class of GPU driver-level flicker, black screen, and frame-time variance bugs present on NVIDIA and AMD. Documented fix by both GPU vendors. Reboot required.', icon:'<i class="fa fa-layer-group"></i>', reboot:true },
+      { id:'disable-mpo', name:'Disable Multi-Plane Overlay (MPO)', desc:'Turns off GPU overlay planes in the desktop compositor. Helps flicker, black screens and uneven frame times on some NVIDIA and AMD setups, mostly with several monitors. Driver and Windows updates can reset it. Reboot required.', icon:'<i class="fa fa-layer-group"></i>', reboot:true },
     ]},
     { id:'filesystem', get title() { return tUI('genSecFilesystem') }, cards:[
       { id:'ntfs',       name:'NTFS: Disable 8.3 Names + Timestamps', desc:'Reduces metadata overhead on every file read/write. Measurable improvement on busy SSDs.', icon:'<i class="fa fa-hard-drive"></i>' },
@@ -9589,7 +9618,7 @@ function buildWindowsOpti(c, mode) {
   SECTIONS = (mode === 'qol' ? [qolSection] : SECTIONS).filter(s => s.cards.length)
 
   // Quick Win strip — curated top section
-  const QUICK_WIN_IDS = ['game-dvr','disable-fso','disable-mouse-accel','mmcss','disable-background-apps','mmcss-proaudio','defender-idle-priority','vrr-borderless']
+  const QUICK_WIN_IDS = ['game-dvr','disable-fso','disable-mouse-accel','disable-background-apps','vrr-borderless']
   const QUICK_WIN_META = {
     'game-dvr':               { get benefit() { return tUI('qwBenefitGameDvr') } },
     'disable-fso':            { get benefit() { return tUI('qwBenefitFso') } },
@@ -10455,13 +10484,14 @@ async function buildHardware(c) {
         { id:'nvidia-pstate-lock', name:'NVIDIA P-State Lock (P0 always)', desc:'Forces NVIDIA GPU to stay in P0 (maximum performance state) at all times via registry. Eliminates boost-clock ramp-up latency.', icon:'<i class="fa fa-trophy"></i>' },
         { id:'nvidia-profile',     name:'NVIDIA Profile Optimiser', desc:'Applies low-latency, maximum performance and pre-rendered frames settings to the NVIDIA global driver profile via registry.', icon:'<i class="fa fa-sliders"></i>' },
       ] : []),
-      { id:'hvci-offload', name:'HVCI Offload (Hypervisor Code Integrity)', desc:'Enables HVCI offload mode — moves kernel integrity checks to the hypervisor instead of real-time inline. Reduces overhead on Virtualization-Based Security.', icon:'<i class="fa fa-server"></i>', danger:true, dangerLabel:'Confirm', warning:'Modifies VBS/HVCI policy. Reboot required. Revert before troubleshooting boot issues.', reboot:true },
-      { id:'vbs-disable', name:'Disable VBS (Virtualization-Based Security)', desc:'Disables the full VBS umbrella — goes further than HVCI offload. ~5-10% FPS gain in CPU-bound games. Breaks Hyper-V, WSL2, Windows Sandbox, and some anti-cheat (Vanguard/FACEIT). Reboot required.', icon:'<i class="fa fa-shield-halved"></i>', danger:true, dangerLabel:'I understand the risks', warning:'SECURITY IMPACT: Breaks Hyper-V, WSL2, Windows Sandbox, and some anti-cheat (Vanguard/FACEIT). Reboot required. Revert if you use virtualization.', reboot:true },
+      { id:'hvci-offload', name:'HVCI Offload (Hypervisor Code Integrity)', desc:'Turns off Memory Integrity (HVCI). Drivers are no longer verified in isolated memory, which removes the overhead; the gain is mainly on older CPUs without mode-based execution control.', icon:'<i class="fa fa-server"></i>', danger:true, dangerLabel:'Confirm', warning:'Lowers a Windows security protection. Reboot required. Windows may turn Memory Integrity back on after an update.', reboot:true },
+      { id:'vbs-disable', name:'Disable VBS (Virtualization-Based Security)', desc:'Disables the full VBS umbrella — goes further than HVCI offload. Gain is measurable mainly on older CPUs (about 8% seen on a Ryzen 7 5800X3D under 24H2). Reboot required.', icon:'<i class="fa fa-shield-halved"></i>', danger:true, dangerLabel:'I understand the risks', warning:'SECURITY IMPACT: turns off Memory Integrity and Credential Guard-style protections. Some anti-cheats check the VBS state. Reboot required. Revert if you use virtualization.', reboot:true },
+      ...(tweakCompat('hypervisor-off') ? [{ id:'hypervisor-off', name:'Turn Off the Windows Hypervisor', desc:'Turns off the hypervisor at boot so virtualization-based features stop costing frame time.', icon:'<i class="fa fa-server"></i>', danger:true, dangerLabel:'I understand the risks', reboot:true }] : []),
     ]},
     { secId:'hw-mem', get title() { return tUI('hwSecMemMitigations') }, get sub() { return tUI('hwSecMemMitigationsSub') }, cards:[
       { id:'memory-guard-tune',    name:'Memory Guard Tune', desc:'Sets MoveImages and MemoryPressureResponse policies to optimise kernel memory pressure handling and ASLR image placement.', icon:'<i class="fa fa-memory"></i>' },
       { id:'pool-usage-max',       name:'Kernel Pool Usage Max (96%)', desc:'Raises Windows kernel non-paged pool reclaim threshold from 60% to 96%. Defers kernel pool reclaim longer, reducing DX12/Vulkan command buffer allocation stalls. Most impactful on 16GB systems running memory-heavy games (Warzone, Hogwarts Legacy).', icon:'<i class="fa fa-layer-group"></i>', safetyTier:2 },
-      { id:'full-mitigation-wipe', name:'Full Mitigation Wipe', desc:'Sets all process mitigations via ProcessMitigationOptions2 to disabled. Maximum FPS gain — removes nearly all kernel security mitigations.', icon:'<i class="fa fa-triangle-exclamation"></i>', danger:true, dangerLabel:'I accept ALL risks', warning:'DANGEROUS: Disables nearly all kernel and process mitigations including ASLR, CFG, CET, DEP extensions. Never on a shared or internet-exposed PC.' },
+      { id:'full-mitigation-wipe', name:'Full Mitigation Wipe', desc:'Turns off Control Flow Guard, SEHOP, forced ASLR relocation and the Spectre/Meltdown mitigations system-wide. Valorant needs Control Flow Guard.', icon:'<i class="fa fa-triangle-exclamation"></i>', danger:true, dangerLabel:'I accept ALL risks', warning:'DANGEROUS: removes several Windows exploit protections system-wide. Never on a shared or internet-exposed PC.' },
       { id:'process-count-reduction', name:'Process Count Reduction', desc:'Disables non-essential Windows services (sysmain, diagsvc, dmwappushservice) to reduce total running process count and free RAM.', icon:'<i class="fa fa-list-check"></i>' },
     ]},
     ...(isAmd ? [{ secId:'hw-amd', get title() { return tUI('hwSecAmdGpu') }, get sub() { return tUI('hwSecAmdGpuSub') }, cards:[
@@ -10482,6 +10512,8 @@ async function buildHardware(c) {
     grid.className = 'tweak-card-grid'
     sec.cards.forEach(tw => grid.appendChild(makeCard(tw)))
     card.appendChild(grid)
+    // A section whose cards are all hidden (retired, or not for this hardware) would be an empty header.
+    if (sec.cards.length && ![...grid.children].some(el => el.style.display !== 'none')) card.style.display = 'none'
     try {
       if (sec.secId && localStorage.getItem('sec_col_' + sec.secId) === '1') {
         grid.classList.add('sec-collapsed')
@@ -11220,7 +11252,9 @@ function buildNetwork(c) {
       get title() { return tUI('netSecNic') },
       get sub()   { return tUI('netSecNicSub') },
       secId: 'net-nic',
-      rows: si.isWifi ? [] : [
+      rows: si.isWifi ? [
+        ...(tweakCompat('wifi-gaming-tune') ? [{ id:'wifi-gaming-tune', name:'Wi-Fi Gaming Tuning', desc:'Steadier Wi-Fi latency: least aggressive roaming, background scanning blocked, power saving off.', icon:'<i class="fa fa-wifi"></i>' }] : []),
+      ] : [
         { id:'nic-offloads',        name:'Disable NIC hardware offloads (checksum, LSO, RSC)', desc:'Hardware offloads save CPU but add latency overhead. Disabling them gives more consistent network timing.' },
         { id:'nic-interrupt-mod',   name:'Disable NIC Interrupt Moderation', desc:'Interrupt moderation batches incoming packets to reduce CPU interrupts — but this increases latency. Disabling it gives more consistent ping under load. Real measurable gain for competitive play.' },
         { id:'nic-flow-control',    name:'Disable NIC Flow Control', desc:'Flow control pauses transmission when buffers fill, adding jitter. Disabling both Rx and Tx flow control gives smoother packet delivery.' },
@@ -11742,6 +11776,11 @@ function makeCard({ id, name, desc, icon = '<i class="fa fa-gear"></i>', danger 
   desc = tDesc(id) || desc
   name = tName(id) || name
   warning = tWarn(id) || warning
+  safetyTier = window._tweakMeta?.[id]?.safetyTier ?? safetyTier   // main's tier wins over the literal on the card
+  if (safetyTier >= 3) danger = true
+  const riskHtml = safetyTier >= 2 ? tRisk(id) : ''
+  const ap = window._applic && window._applic[id]
+  const apHtml = ap && ap.state === 'caution' && ap.why ? `<div class="tc-conflict-warn"><i class="fa fa-triangle-exclamation jx-155"></i>${tUI('applic_' + ap.why)}</div>` : ap && ap.state === 'recommended' ? `<span class="tc-rec"><i class="fa fa-thumbs-up"></i> ${tUI('applicRecommended')}</span>` : ''
   const applied = tweakState(id) === 'applied'
   const pfStates = getPreflightStates()
   // preApplied: scan detected this tweak is already active on the system (not applied by this tool)
@@ -11767,6 +11806,8 @@ function makeCard({ id, name, desc, icon = '<i class="fa fa-gear"></i>', danger 
         <div class="tc-desc">${desc}</div>
         ${preApplied ? `<div class="tc-warn jx-39"><i class="fa fa-lock"></i> Already active on your system — applying again is safe but redundant.</div>` : ''}
         ${warning ? `<div class="tc-warn"><i class="fa fa-triangle-exclamation"></i> ${warning}</div>` : ''}
+        ${riskHtml}
+        ${apHtml}
         ${warnMsg ? `<div class="tc-conflict-warn"><i class="fa fa-triangle-exclamation jx-155"></i>${warnMsg}</div>` : ''}
         ${ethernetSpike ? `<div class="tc-conflict-warn jx-17"><i class="fa fa-wave-square jx-155"></i>${tUI('warnEthernetSpike')}</div>` : ''}
         ${reboot ? `<span class="reboot-badge"><i class="fa fa-rotate-right"></i> ${tUI('genRebootBadge')}</span>` : ''}
@@ -11817,6 +11858,11 @@ async function applyTweakCard(id, checked, isDanger = false) {
       ripCard.appendChild(rip)
       setTimeout(() => rip.remove(), 540)
     }
+  }
+  if (action === 'apply' && !await confirmTier(id)) {
+    const tct = document.getElementById(`tct-${id}`)
+    if (tct) tct.checked = false
+    return
   }
   if (!await _guardLghubCheck(id, action)) {
     const tct = document.getElementById(`tct-${id}`)

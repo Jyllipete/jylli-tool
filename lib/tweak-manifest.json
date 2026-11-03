@@ -1981,6 +1981,47 @@
     "kind": "reg",
     "target": "HKLM:\\SOFTWARE\\Microsoft\\Windows\\Dwm\\OverlayTestMode",
     "after": "5"
+   },
+   {
+    "kind": "reg",
+    "target": "HKLM:\\SOFTWARE\\Microsoft\\Windows\\Dwm\\OverlayMinFPS",
+    "after": "0"
+   }
+  ],
+  "dynamic": false,
+  "untracked": 0,
+  "fidelity": "exact"
+ },
+ "gpu-per-app-preference": {
+  "touches": [],
+  "dynamic": true,
+  "untracked": 0,
+  "fidelity": "exact"
+ },
+ "mouse-pointer-1to1": {
+  "touches": [],
+  "dynamic": false,
+  "untracked": 0,
+  "fidelity": "exact"
+ },
+ "fth-reset": {
+  "touches": [],
+  "dynamic": false,
+  "untracked": 0,
+  "fidelity": "none"
+ },
+ "wifi-gaming-tune": {
+  "touches": [],
+  "dynamic": false,
+  "untracked": 1,
+  "fidelity": "partial"
+ },
+ "hypervisor-off": {
+  "touches": [
+   {
+    "kind": "bcd",
+    "target": "hypervisorlaunchtype",
+    "after": "off"
    }
   ],
   "dynamic": false,

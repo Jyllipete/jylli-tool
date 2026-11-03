@@ -1,5 +1,22 @@
 # Changelog
 
+## Julkaisematon (Suorituskykyauditointi)
+
+### Säädöt
+- **Placebo pois**: 24 säätöä jäi eläkkeelle (mm. TCP-pino, NVIDIA/AMD-rekisteriavaimet, MMCSS, SvcHost-yhdistys); ne eivät muuttaneet mitään mitattavaa. Todisteet: `docs/TWEAK_EVIDENCE.md`
+- **Uudet säädöt**: pelien ajo erillisellä GPU:lla (hybridigrafiikka), hiiren osoitin 6/11, Fault Tolerant Heap -nollaus, Wi-Fi-pelioptimointi, hypervisorin sammutus (riskitaso 3); MPO ja MSI-tila uudistettu
+- **Riskilohko**: jokaisella riskitason 2 ja 3 säädöllä on "Mitä voi tapahtua / Älä käytä näissä" -osio kortissa ja vahvistusikkunassa
+- Auto-optimointi löytää uusia asioita: Intel 13./14. sukupolven mikrokoodi, Intel APO, ReBAR pois, pelit kiintolevyllä, Windows 10, hybridiprosessori Windows 10:llä
+
+### Laitteistontunnistus
+- Yksi `caps`-kuvaus koneesta ja yksi sääntötaulu (`lib/tweak-applicability.js`), jota sekä Auto-optimointi että käsinvalintasivut käyttävät
+- Uudet tunnistukset: prosessorin P/E-ytimet ja CCD-määrä, mikrokoodi, VBS/HVCI käynnissä, hypervisor, oikea VRAM, keskeytystila, järjestelmälevyn väylä, Wi-Fi-ajurin asetukset, ajastimen tarkkuus
+- Korjattu: Intel Arc luokiteltiin integroiduksi, NVMe-tunnistus oli aina tosi, kahden CCD:n X3D tunnistettiin ytimien määrästä, parkkeeraus ja AMD-virrankäyttösuunnitelma näkyivät X3D-koneilla, HAGS-ehdotus ilman tietoa, tuntematon kotelotyyppi ohitti kaikki pöytäkonehavainnot
+
+### Turvallisuus
+- Kirjoitettava vahvistus (riskitaso 3) toimii nyt myös Windows-, Laatu- ja Laitteisto-välilehtien korteissa ja epäonnistuu suljetusti jos tietoja ei ole ladattu
+- Korjattu VBS-varoitus: se ei riko WSL2:ta; Valorant-varoitus kohdistuu CFG:hen
+
 ## Julkaisematon (4.0 "Lasin läpi")
 
 ### Ulkoasu

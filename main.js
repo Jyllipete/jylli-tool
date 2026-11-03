@@ -1788,17 +1788,7 @@ async function detectSystemInfo() {
     }
 
     // Method 3 (Win32_PnPSignedDriver) removed — that WMI class takes 30–120s on many systems.
-    // Method 4 (stornvme registry key) is equivalent and instant.
-
-    // Method 4: Registry StorNVMe service — if it exists, NVMe is present
-    if (!info.nvme) {
-      const nvmeRegR = await runPS(
-        'Test-Path "HKLM:\\SYSTEM\\CurrentControlSet\\Services\\stornvme"'
-      )
-      if (nvmeRegR.out.trim().toLowerCase() === 'true') {
-        info.nvme = true; info.diskType = 'NVMe SSD'
-      }
-    }
+    // Method 4 (the stornvme service key) was removed: Windows ships that driver on every install, so the key says nothing about the hardware.
 
     // Disk usage
     const diskUsageR = await runPS('$d=Get-PSDrive C; Write-Output ($d.Used); Write-Output ($d.Used+$d.Free)')
@@ -2113,6 +2103,8 @@ ipcMain.handle('get-tweak-states', async () => {
       "spectre-meltdown=$(if((& $gp $mm 'FeatureSettingsOverride') -eq 3){'1'}else{'0'})"
       "cursor-max-rate=$(if((& $gp 'HKLM:\\SYSTEM\\CurrentControlSet\\Services\\mouclass\\Parameters' 'MouseDataQueueSize') -eq 20){'1'}else{'0'})"
       "msi-mode=$(if($msiFound){'1'}else{'0'})"
+      "hypervisor-off=$(if($bcd -match 'hypervisorlaunchtype\\s+Off'){'1'}else{'0'})"
+      "disable-mpo=$(if((& $gp 'HKLM:\\SOFTWARE\\Microsoft\\Windows\\Dwm' 'OverlayTestMode') -eq 5){'1'}else{'0'})"
     )
   `, 12000)
   if (!r.ok) return null
@@ -4396,6 +4388,31 @@ const RETIRED_TWEAKS = {
   'nic-flow-control':          'Changes how the adapter paces packets but has no measurable effect on latency.',
   'cursor-max-rate':           'The mouse data queue size is not a limit on current Windows; no measurable effect.',
   'raw-aim-curve':             'Covered by Disable Mouse Acceleration; the extra curve table changes nothing further.',
+  // Retired in the performance audit: every value is a Windows default, undocumented, aimed at a different workload, or not a performance change.
+  'tcp-stack':                 'Every value it writes is already the Windows default except initialrto=2000, which is slower than the default of 1000.',
+  'tcp-keepalive':             'Keep-alive timers only affect idle connections; they do not change game latency.',
+  'tcp-retransmit':            'Lowering TcpMaxDataRetransmissions only gives up on a dead connection sooner; it does not lower latency.',
+  'fivem-network':             'TcpAckFrequency and TCPNoDelay are ignored at the global level and games use UDP; the remaining values are the ones already retired.',
+  'fivem-vm':                  'DisablePagingExecutive and LargeSystemCache have no effect on a modern client Windows (both were retired on their own).',
+  'memory-guard-tune':         'DisablePagingExecutive and LargeSystemCache have no effect on a modern client Windows, and the page file line only repeats the system default.',
+  'mmcss':                     'Only threads that register with MMCSS are affected, games rarely do, and GPU Priority 8 and Clock Rate are already the defaults.',
+  'fivem-mmcss':               'Same values as the MMCSS tweak, which only affects threads that register with MMCSS.',
+  'process-count-reduction':   'Merging svchost processes saves a little memory, not frame time, and removes service isolation.',
+  'split-large-caches':        'An undocumented kernel value with no measurable effect.',
+  'nvidia-max-perf':           'PowerMizer class values are legacy and ignored by current drivers; the real control is Power management mode in the NVIDIA profile.',
+  'nvidia-low-latency':        'D3PCLatency and F1MaxLatency are undocumented values; the real Low Latency Mode and Reflex are driver-profile and in-game settings.',
+  'nvidia-pstate-lock':        'Writes a value name the driver does not read (DisableDynamicPstates) and pins the GPU at full clocks for no frame-time gain.',
+  'nvidia-profile':            'A bundle of the retired NVIDIA PowerMizer and latency values; TDR settings remain available as GPU TDR Delay.',
+  'fivem-gpu':                 'Bundles the retired NVIDIA PowerMizer values; GPU Hardware Scheduling has its own tweak.',
+  'amd-chill-off':             'The KMD_* values are not documented; Chill, Boost and Anti-Lag are Adrenalin settings.',
+  'amd-power-hold':            'The KMD_* and DalPowerPolicy values are not documented and the description named a different setting.',
+  'amd-service-trim':          'Disabling AMD crash and logging services saves no measurable CPU and removes crash reporting.',
+  'amd-ulps-disable':          'ULPS only matters for multi-GPU CrossFire setups.',
+  'speed-shift':               'PERFAUTONOMOUS=1 is already the default on every CPU that supports Speed Shift.',
+  'nic-ndis-poll':             'Almost no network driver exposes an NDIS Polling property.',
+  'disable-hdcp':              'No performance effect, and it breaks protected video playback.',
+  'bcd-tweaks':                'Boot menu timeout and boot log only change start-up cosmetics, not game performance.',
+  'disable-auto-maintenance':  'Stops TRIM, updates and other upkeep for an anecdotal gain.',
 }
 let _retiredApplied = false
 function retireTweaks() {
@@ -4542,15 +4559,54 @@ ipcMain.handle('auto-opti-scan', async (_, req) => {
   try {
     const scanId = aoNewId()
     const admin = await checkAdmin()
-    const context = { apps: { fivem: fs.existsSync(path.join(process.env.LOCALAPPDATA || '', 'FiveM', 'FiveM.app')) && !!findFivemSettings() } }
+    let gameCount = 0
+    try { gameCount = (await getGamesRegistry(false)).games.length } catch {}
+    const context = { apps: { fivem: fs.existsSync(path.join(process.env.LOCALAPPDATA || '', 'FiveM', 'FiveM.app')) && !!findFivemSettings(), games: gameCount } }
     const profile = await AutoOpti.detect.detect({ runPS, emit: ev => aoSend('auto-opti-scan-progress', ev) }, { admin, scanId, context })
     _aoScan = { scanId, profile, at: Date.now() }
+    _capsProfile = profile; _capsAt = Date.now()
     const c = aoFindingCtx(req)
     return { ok: true, scanId, profile, findings: AutoOpti.findings.findings(profile, c), useCase: c.useCase, ms: profile.scanMs }
   } catch (e) { return { ok: false, reason: 'scan-failed', error: String(e && e.message || e).slice(0, 200) } } finally { _aoScanning = false }
 })
 
 ipcMain.handle('auto-opti-allowed', () => [...AutoOpti.catalog.allowedTweaks()])
+
+// ─── Capabilities + tweak applicability ───────────────────────────────────────
+// One typed description of this PC (lib/capabilities.js) and one rule table (lib/tweak-applicability.js) decide which tweaks every tab shows.
+// The profile comes from the Auto-Optimize scan when it is fresh, otherwise from a quiet background detect that is cached for 30 minutes.
+const Caps = require('./lib/capabilities')
+const Applic = require('./lib/tweak-applicability')
+const CAPS_TTL_MS = 30 * 60 * 1000
+let _capsProfile = null, _capsAt = 0, _capsBusy = null
+function capsProfileFresh() {
+  if (_aoScan && Date.now() - _aoScan.at < AO_SCAN_TTL_MS) return _aoScan.profile
+  return _capsProfile && Date.now() - _capsAt < CAPS_TTL_MS ? _capsProfile : null
+}
+async function ensureCapsProfile(force) {
+  const fresh = !force && capsProfileFresh()
+  if (fresh) return fresh
+  if (_capsBusy) return _capsBusy
+  if (_systemContext.gameRunning) return _capsProfile      // never run a scan under a game: stale is fine
+  _capsBusy = (async () => {
+    try {
+      const admin = await checkAdmin()
+      const profile = await AutoOpti.detect.detect({ runPS, emit: () => {} }, { admin, scanId: aoNewId(), context: {} })
+      _capsProfile = profile; _capsAt = Date.now()
+      return profile
+    } catch { return _capsProfile } finally { _capsBusy = null }
+  })()
+  return _capsBusy
+}
+ipcMain.handle('get-applicability', async (_, req) => {
+  const profile = await ensureCapsProfile(!!(req && req.force))
+  if (!profile) return { ok: false }
+  const caps = Caps.deriveCaps(profile)
+  const map = {}
+  for (const id of Object.keys(TWEAKS)) if (Applic.RULES[id]) { const r = Applic.evaluate(id, caps); map[id] = { show: r.show, state: r.state, why: r.why } }
+  return { ok: true, map, summary: { form: caps.form, cpu: caps.cpu && caps.cpu.name, gpu: caps.gpu && caps.gpu.name, hybridGraphics: caps.hybridGraphics, dualCcdX3d: caps.cpu ? caps.cpu.dualCcdX3d : null } }
+})
+app.whenReady().then(() => setTimeout(() => { ensureCapsProfile(false).catch(() => {}) }, 20000)).catch(() => {})
 ipcMain.handle('auto-opti-plan', (_, req) => {
   const sc = aoCached(aoStr(req && req.scanId, 24))
   if (!sc) return { ok: false, reason: 'scan-expired' }
@@ -4781,6 +4837,26 @@ function buildAutoOptiSteps(si) {
 
 // ─── Individual tweak registry ────────────────────────────────────────────────
 // Each tweak has apply/restore functions
+/** Executables of installed games (Steam and Epic install folders, FiveM) for per-program Windows settings. Capped; installers, crash reporters and launchers' helpers are skipped. */
+async function gameExePathsForGpu() {
+  const out = new Set()
+  const skipName = /unins|crash|report|setup|redist|dxsetup|dotnet|installer|helper|easyanticheat|battleye|beservice|cef|webview|updater|launcher_?helper/i
+  const skipDir = /^(_commonredist|redist|directx|__installer|support|crashpad|\.)/i
+  const walk = (dir, depth) => {
+    if (depth > 3 || out.size >= 60) return
+    let ents; try { ents = fs.readdirSync(dir, { withFileTypes: true }) } catch { return }
+    for (const e of ents) {
+      const p = path.join(dir, e.name)
+      if (e.isDirectory()) { if (!skipDir.test(e.name)) walk(p, depth + 1) }
+      else if (/\.exe$/i.test(e.name) && !skipName.test(e.name)) { try { if (fs.statSync(p).size >= 2 * 1024 * 1024) out.add(p) } catch {} }
+    }
+  }
+  try { const reg = await getGamesRegistry(false); for (const g of reg.games) if (g.install) walk(g.install, 0) } catch {}
+  const fivem = path.join(process.env.LOCALAPPDATA || '', 'FiveM', 'FiveM.exe')
+  try { if (fs.existsSync(fivem)) out.add(fivem) } catch {}
+  return [...out].slice(0, 60)
+}
+
 const TWEAKS = {
   // ── Windows Optimizations ────────────────────────────────────────────────
   'game-dvr': {
@@ -4887,7 +4963,7 @@ const TWEAKS = {
     name: 'Global Timer Resolution (Win11)',
     category: 'cpu',
     safetyTier: 1,
-    gamerImpact: 'high',
+    gamerImpact: 'medium',
     check: async (ps) => {
       const r = await ps('(Get-ItemProperty -Path "HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Session Manager\\kernel" -Name GlobalTimerResolutionRequests -EA SilentlyContinue).GlobalTimerResolutionRequests', 3000)
       return r.ok && r.out.trim() === '1'
@@ -4899,7 +4975,7 @@ const TWEAKS = {
         return
       }
       await ps('Set-ItemProperty -Path "HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Session Manager\\kernel" -Name GlobalTimerResolutionRequests -Value 1 -Type DWord -Force')
-      s('Global timer resolution enabled — 0.5ms system-wide precision restored. Fixes FPS caps in games that skip timeBeginPeriod().', 'ok')
+      s('Global timer resolution enabled — a finer timer request from any program now applies system-wide.', 'ok')
     },
     restore: async (s, ps) => {
       await ps('Remove-ItemProperty -Path "HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Session Manager\\kernel" -Name GlobalTimerResolutionRequests -EA SilentlyContinue')
@@ -4979,21 +5055,20 @@ const TWEAKS = {
     }
   },
   'msi-mode': {
-    name: 'MSI Interrupt Mode (PCI Devices)',
+    name: 'MSI Interrupt Mode (Graphics Card)',
     category: 'latency',
     safetyTier: 2,
     gamerImpact: 'medium',
     apply: async (s, ps) => {
       const r = await ps(`
         $base = "HKLM:\\SYSTEM\\CurrentControlSet\\Enum\\PCI"
-        # network adapters (Wi-Fi/NIC drivers drop out with forced MSI) and storage controllers (can make Windows unbootable) are never touched
-        $skipClasses = @('{4d36e972-e325-11ce-bfc1-08002be10318}','{4d36e97b-e325-11ce-bfc1-08002be10318}','{4d36e96a-e325-11ce-bfc1-08002be10318}','{4d36e967-e325-11ce-bfc1-08002be10318}')
+        # Only display adapters are touched. Network, storage, audio and USB controllers are left alone: forcing MSI on them can drop the device or make Windows unbootable.
+        $gpuClass = '{4d36e968-e325-11ce-bfc1-08002be10318}'
         Get-ChildItem $base -EA SilentlyContinue | ForEach-Object {
           Get-ChildItem $_.PSPath -EA SilentlyContinue | ForEach-Object {
             $devPath = $_.PSPath
             $props = Get-ItemProperty -Path $devPath -EA SilentlyContinue
-            if ($skipClasses -contains $props.ClassGUID) { return }
-            if ($props.Service -match 'iwifi|netathr|bcmwl|rt[l6]8|rtswlan|netadap|Netwtw|netrtwlane|RtlW|IntelWifi|mrvlpcie|rtwlane|stornvme|storahci|iaStor|nvme') { return }
+            if ($props.ClassGUID -ne $gpuClass) { return }
             $p = "$devPath\\Device Parameters\\Interrupt Management\\MessageSignaledInterruptProperties"
             $old = (Get-ItemProperty -Path $p -Name MSISupported -EA SilentlyContinue).MSISupported
             if ($old -eq 1) { return }
@@ -5009,7 +5084,7 @@ const TWEAKS = {
         if (m) snap[m[1]] = m[2] === '' ? null : Number(m[2])
       }
       snapshots.merge('msi-mode', snap)
-      s(`MSI interrupt mode applied to ${Object.keys(snap).length} PCI device(s) (network and storage controllers excluded). Reboot required.`, 'ok')
+      s(Object.keys(snap).length ? `MSI interrupt mode enabled on ${Object.keys(snap).length} graphics adapter(s). Reboot required.` : 'Your graphics adapter already uses message-signalled interrupts. Nothing was changed.', Object.keys(snap).length ? 'ok' : 'warn')
     },
     restore: async (s, ps) => {
       const snap = snapshots.load('msi-mode')
@@ -8167,11 +8242,11 @@ if ($r.Count -eq 0) { Write-Output "NONE_FOUND" } else { foreach ($x in $r) { Wr
       return r.ok && r.out.trim() === '0'
     },
     apply: async (s, ps) => {
-      s('WARNING: Disabling VBS breaks Hyper-V, WSL2, Windows Sandbox, and some anti-cheat (Vanguard/FACEIT). Reboot required.', 'warn')
+      s('WARNING: Disabling VBS turns off Memory Integrity and Credential Guard-style protections; some anti-cheats check the VBS state. Reboot required.', 'warn')
       await ps('New-Item -Path "HKLM:\\SYSTEM\\CurrentControlSet\\Control\\DeviceGuard" -Force -EA SilentlyContinue | Out-Null')
       await ps('Set-ItemProperty -Path "HKLM:\\SYSTEM\\CurrentControlSet\\Control\\DeviceGuard" -Name EnableVirtualizationBasedSecurity -Value 0 -Type DWord -Force')
       await ps('Set-ItemProperty -Path "HKLM:\\SYSTEM\\CurrentControlSet\\Control\\DeviceGuard\\Scenarios\\HypervisorEnforcedCodeIntegrity" -Name Enabled -Value 0 -Force -EA SilentlyContinue')
-      s('VBS disabled. Reboot required for full effect. Expect ~5-10% FPS gain in CPU-bound games.', 'ok')
+      s('VBS disabled. Reboot required for full effect. Gain is measurable mainly on older CPUs.', 'ok')
     },
     restore: async (s, ps) => {
       await ps('Set-ItemProperty -Path "HKLM:\\SYSTEM\\CurrentControlSet\\Control\\DeviceGuard" -Name EnableVirtualizationBasedSecurity -Value 1 -Type DWord -Force')
@@ -8508,7 +8583,7 @@ if ($r.Count -eq 0) { Write-Output "NONE_FOUND" } else { foreach ($x in $r) { Wr
   'disable-mpo': {
     name: 'Disable Multi-Plane Overlay (MPO)',
     category: 'gpu',
-    safetyTier: 1,
+    safetyTier: 2,
     gamerImpact: 'high',
     check: async (ps) => {
       const r = await ps('(Get-ItemProperty -Path "HKLM:\\SOFTWARE\\Microsoft\\Windows\\Dwm" -Name OverlayTestMode -EA SilentlyContinue).OverlayTestMode', 3000)
@@ -8517,12 +8592,141 @@ if ($r.Count -eq 0) { Write-Output "NONE_FOUND" } else { foreach ($x in $r) { Wr
     apply: async (s, ps) => {
       await ps('New-Item -Path "HKLM:\\SOFTWARE\\Microsoft\\Windows\\Dwm" -Force -EA SilentlyContinue | Out-Null')
       await ps('Set-ItemProperty -Path "HKLM:\\SOFTWARE\\Microsoft\\Windows\\Dwm" -Name OverlayTestMode -Value 5 -Type DWord -Force')
-      s('MPO disabled (OverlayTestMode=5). Eliminates GPU driver flicker/stutter class. Reboot required.', 'ok')
+      // Windows 11 24H2 and newer ignore OverlayTestMode on its own; the minimum overlay frame rate has to be zero too.
+      const ver = await ps('[System.Environment]::OSVersion.Version.Build')
+      if (ver.ok && parseInt(ver.out.trim()) >= 26100) await ps('Set-ItemProperty -Path "HKLM:\\SOFTWARE\\Microsoft\\Windows\\Dwm" -Name OverlayMinFPS -Value 0 -Type DWord -Force')
+      s('MPO disabled (OverlayTestMode=5). Helps flicker and stutter on some NVIDIA/AMD multi-monitor setups. Driver or Windows updates can reset it. Reboot required.', 'ok')
     },
     restore: async (s, ps) => {
       await ps('Remove-ItemProperty -Path "HKLM:\\SOFTWARE\\Microsoft\\Windows\\Dwm" -Name OverlayTestMode -EA SilentlyContinue')
+      await ps('Remove-ItemProperty -Path "HKLM:\\SOFTWARE\\Microsoft\\Windows\\Dwm" -Name OverlayMinFPS -EA SilentlyContinue')
       s('MPO restored to Windows default. Reboot required.', 'ok')
     }
+  },
+  // ── Added in the performance audit ───────────────────────────────────────────
+  'gpu-per-app-preference': {
+    name: 'Run Games on the Dedicated GPU',
+    category: 'gpu',
+    safetyTier: 1,
+    gamerImpact: 'high',
+    check: async (ps) => {
+      const exes = await gameExePathsForGpu()
+      if (!exes.length) return false
+      const r = await ps(`$k = Get-ItemProperty -Path 'HKCU:\\Software\\Microsoft\\DirectX\\UserGpuPreferences' -EA SilentlyContinue; $n = 0; foreach ($e in @(${exes.map(e => V.psQuote(e)).join(',')})) { $p = if ($k) { $k.PSObject.Properties[$e] } else { $null }; if ($p -and "$($p.Value)" -match 'GpuPreference=2') { $n++ } }; Write-Output $n`, 10000)
+      return r.ok && Number(r.out.trim()) > 0
+    },
+    // Windows' per-app graphics setting. Programs the user already configured are left alone.
+    apply: async (s, ps) => {
+      const exes = await gameExePathsForGpu()
+      if (!exes.length) { s('No installed games were found. Nothing was changed.', 'warn'); return }
+      const r = await ps(`$k = 'HKCU:\\Software\\Microsoft\\DirectX\\UserGpuPreferences'
+New-Item -Path $k -Force -EA SilentlyContinue | Out-Null
+$cur = Get-ItemProperty -Path $k -EA SilentlyContinue
+$n = 0
+foreach ($e in @(${exes.map(e => V.psQuote(e)).join(',')})) { if ($cur -and $cur.PSObject.Properties[$e]) { continue }; Set-ItemProperty -Path $k -Name $e -Value 'GpuPreference=2;' -Type String -Force; $n++ }
+Write-Output $n`, 20000)
+      s(`${Number(r.out.trim()) || 0} game program(s) set to the high-performance GPU. Programs you had already configured were left alone. Restart the game for it to take effect.`, 'ok')
+    },
+    restore: async (s, ps) => {
+      const exes = await gameExePathsForGpu()
+      if (exes.length) await ps(`$k = 'HKCU:\\Software\\Microsoft\\DirectX\\UserGpuPreferences'; $cur = Get-ItemProperty -Path $k -EA SilentlyContinue; foreach ($e in @(${exes.map(e => V.psQuote(e)).join(',')})) { $p = if ($cur) { $cur.PSObject.Properties[$e] } else { $null }; if ($p -and "$($p.Value)" -eq 'GpuPreference=2;') { Remove-ItemProperty -Path $k -Name $e -EA SilentlyContinue } }`, 20000)
+      s('Per-game GPU preference removed; Windows chooses the GPU again.', 'ok')
+    }
+  },
+  'mouse-pointer-1to1': {
+    name: 'Mouse Pointer Speed 6/11 (1:1)',
+    category: 'input',
+    safetyTier: 1,
+    gamerImpact: 'medium',
+    check: async (ps) => {
+      const r = await ps('(Get-ItemProperty -Path "HKCU:\\Control Panel\\Mouse" -Name MouseSensitivity -EA SilentlyContinue).MouseSensitivity', 3000)
+      return r.ok && r.out.trim() === '10'
+    },
+    // Pointer speed 6/11 is the only setting that moves the cursor exactly as many pixels as the mouse reports; every other step scales or skips.
+    apply: async (s, ps) => {
+      await ps('Set-ItemProperty -Path "HKCU:\\Control Panel\\Mouse" -Name MouseSensitivity -Value "10" -Force')
+      await ps(`Add-Type -Namespace JT -Name Spi -MemberDefinition '[DllImport("user32.dll")] public static extern bool SystemParametersInfo(int a, int b, IntPtr c, int d);'; [JT.Spi]::SystemParametersInfo(0x71, 0, [IntPtr]10, 3) | Out-Null`)
+      s('Pointer speed set to 6/11 (1:1). Adjust your mouse DPI if it now feels too slow or fast.', 'ok')
+    },
+    restore: async (s) => { s('Use Undo in the change history to bring back your previous pointer speed (6/11 is also the Windows default).', 'info') }
+  },
+  'fth-reset': {
+    name: 'Reset Fault Tolerant Heap',
+    category: 'cpu',
+    safetyTier: 2,
+    gamerImpact: 'medium',
+    // Windows silently applies a slower "fault tolerant" memory allocator to programs that crashed several times, including games, and keeps it for good.
+    apply: async (s, ps, cmd) => {
+      const before = await ps(`(Get-Item 'HKLM:\\SOFTWARE\\Microsoft\\FTH\\State' -EA SilentlyContinue).ValueCount`, 4000)
+      await cmd('rundll32.exe fthsvc.dll,FthSysprepSpecialize')
+      s(`Fault Tolerant Heap list cleared (${Number(before.out.trim()) || 0} program(s) were on it). Programs that keep crashing will be added again.`, 'ok')
+    },
+    restore: async (s) => { s('Nothing to restore: Windows rebuilds the list by itself if a program starts crashing again.', 'info') }
+  },
+  'wifi-gaming-tune': {
+    name: 'Wi-Fi Gaming Tuning',
+    category: 'network',
+    safetyTier: 2,
+    gamerImpact: 'medium',
+    // Only settings the driver actually exposes are touched, each remembered so Restore puts the old value back.
+    apply: async (s, ps) => {
+      const r = await ps(`
+        $rt = Get-NetRoute -DestinationPrefix '0.0.0.0/0' | Sort-Object { $_.RouteMetric + $_.InterfaceMetric } | Select-Object -First 1
+        $ad = if ($rt) { Get-NetAdapter -InterfaceIndex $rt.ifIndex } else { $null }
+        if (-not $ad -or ($ad.PhysicalMediaType -ne 'Native 802.11' -and $ad.InterfaceDescription -notmatch '802\\.11|Wireless|Wi-?Fi')) { Write-Output 'NOWIFI'; return }
+        $want = @(
+          @('Roam.*Aggress', '^(1\\.\\s*)?Lowest$'), @('MIMO.*Power', '^No SMPS$'), @('^Power Sav(ing|e)( Mode)?$', '^(Disabled|Off)$|Max.*Perf'),
+          @('U-?APSD', '^Disabled$'), @('Preferred Band', '5\\s*GHz'), @('Background Scan|BG Scan', '^Always$')
+        )
+        foreach ($p in Get-NetAdapterAdvancedProperty -Name $ad.Name) {
+          foreach ($w in $want) {
+            if ($p.DisplayName -notmatch $w[0]) { continue }
+            $target = @($p.ValidDisplayValues) | Where-Object { $_ -match $w[1] } | Select-Object -First 1
+            if (-not $target -or $target -eq $p.DisplayValue) { continue }
+            Set-NetAdapterAdvancedProperty -Name $ad.Name -RegistryKeyword $p.RegistryKeyword -DisplayValue $target -EA SilentlyContinue
+            Write-Output ('SNAP|' + $ad.Name + '|' + $p.RegistryKeyword + '|' + $p.DisplayValue + '|' + $target)
+            break
+          }
+        }`, 30000)
+      if (/NOWIFI/.test(r.out || '')) { s('The active connection is not Wi-Fi. Nothing was changed.', 'warn'); return }
+      const snap = {}
+      for (const line of String(r.out || '').split(/\r?\n/)) {
+        const m = /^SNAP\|([^|]+)\|([^|]+)\|([^|]*)\|(.*)$/.exec(line.trim())
+        if (m) snap[`${m[1]}|${m[2]}`] = { adapter: m[1], keyword: m[2], old: m[3], now: m[4] }
+      }
+      snapshots.merge('wifi-gaming-tune', snap)
+      const n = Object.keys(snap).length
+      s(n ? `Wi-Fi tuned: ${n} driver setting(s) changed (${Object.values(snap).map(x => x.keyword).join(', ')}). Reconnect Wi-Fi or reboot if it does not take effect.` : 'Your Wi-Fi driver is already set the way this tweak would set it, or exposes none of these settings. Nothing was changed.', n ? 'ok' : 'warn')
+    },
+    restore: async (s, ps) => {
+      const snap = snapshots.load('wifi-gaming-tune')
+      if (!snap) { s('No saved Wi-Fi settings found. Nothing was restored.', 'warn'); return }
+      let n = 0
+      for (const v of Object.values(snap)) {
+        if (!v || typeof v.adapter !== 'string' || typeof v.keyword !== 'string' || typeof v.old !== 'string') continue
+        await ps(`Set-NetAdapterAdvancedProperty -Name ${V.psQuote(v.adapter)} -RegistryKeyword ${V.psQuote(v.keyword)} -DisplayValue ${V.psQuote(v.old)} -EA SilentlyContinue`)
+        n++
+      }
+      snapshots.remove('wifi-gaming-tune')
+      s(`Wi-Fi driver settings restored (${n}).`, 'ok')
+    }
+  },
+  'hypervisor-off': {
+    name: 'Turn Off the Windows Hypervisor',
+    category: 'cpu',
+    safetyTier: 3,
+    gamerImpact: 'high',
+    check: async (ps, cmd) => {
+      const r = await ps('(bcdedit /enum "{current}" 2>$null | Select-String hypervisorlaunchtype) -join " "', 6000)
+      return r.ok && /hypervisorlaunchtype\s+off/i.test(r.out)
+    },
+    // The hypervisor is what Memory Integrity, Virtual Machine Platform and WSL2 stand on; without it Windows runs on bare metal.
+    apply: async (s, _, cmd) => {
+      s('WARNING: WSL2, Docker Desktop, Windows Sandbox and Hyper-V virtual machines stop working until this is undone. Reboot required.', 'warn')
+      await cmd('bcdedit /set hypervisorlaunchtype off')
+      s('Hypervisor turned off for the next boot. Memory Integrity and other virtualization-based security switch off with it.', 'ok')
+    },
+    restore: async (s, _, cmd) => { await cmd('bcdedit /set hypervisorlaunchtype auto'); s('Hypervisor set back to automatic. Reboot required.', 'ok') }
   },
   'pool-usage-max': {
     safetyTier: 2,
@@ -12935,7 +13139,7 @@ ipcMain.handle('get-health-score', async (_, settings) => {
 
   // 4. Tweaks applied (0-30 points)
   const appliedTweaks = Object.entries(settings || {}).filter(([k,v]) => k.startsWith('tweak_') && v === 'applied').length
-  const RECOMMENDED_TWEAKS = ['game-dvr','visual-effects','mmcss','gpu-hwsch','ntfs','qos-reserve','net-throttling','tcp-stack','disable-netbios','disable-wpad']
+  const RECOMMENDED_TWEAKS = ['game-dvr','visual-effects','gpu-hwsch','disable-fso','disable-mouse-accel','vrr-borderless','disable-background-apps','disable-netbios','disable-wpad']
   const recommendedApplied = RECOMMENDED_TWEAKS.filter(id => settings?.[`tweak_${id}`] === 'applied').length
   scores.tweaks = Math.min(30, Math.round((recommendedApplied / RECOMMENDED_TWEAKS.length) * 30))
 

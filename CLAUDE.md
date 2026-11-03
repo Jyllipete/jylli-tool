@@ -18,6 +18,7 @@ Search for these section markers instead of reading the file:
 - `js/arrival.js` first-launch flow (`JylliArrival`), `js/tour.js` + `js/tours.js` guided tours, `js/concierge.js` + `js/pages/home-concierge.js` first-move suggestions; LANG groups `arrival`, `tour`, `concierge`
 - `js/auto-opti.js` + `js/auto-opti/reactor.js` + `css/auto-opti.css`: Auto-Optimize 2.0 (scan, diagnosis, plan, run, result, welcome back); engine in `lib/auto-opti/` (catalog = the only list of tweaks it may run); LANG group `autoOpti`; `npm run preview -- --auto-opti` shoots every scene
 - `npm run preview -- --arrival` / `--tours` shoots those flows (`tools/ui-preview`)
+- `lib/capabilities.js` (profile -> `caps`), `lib/tweak-applicability.js` (one rule table: which tweak shows/recommends on which PC), `lib/cpu-arch.js` / `lib/gpu-arch.js` (name -> generation/arch), `lib/auto-opti/probes2.js` (CPU layout, VBS, GPU memory/IRQ, disk bus, NIC props), `lib/tweak-risk.js` + LANG `tweakRisk`/`riskTag` (required for every tier >= 2 tweak); `docs/TWEAK_EVIDENCE.md` says why each tweak is in or out; IPC `get-applicability`
 - `storePreflightResult(r)`  the single writer of preflight state; `window._bootFinished`  resolves when the splash is gone
 <!-- Add these marker comments to index.html once; the map is only useful if they exist. -->
 

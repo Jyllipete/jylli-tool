@@ -58,7 +58,8 @@ function respond(name, args, ctx) {
       const on = mode !== 'none'
       return { capabilities: { 'cpu.load': cap(on), 'cpu.temp.package': cap(mode === 'full'), 'gpu0.load': cap(on), 'gpu0.temp.core': cap(on), 'gpu0.fan.rpm': cap(mode === 'full'), 'net.rx': cap(on) }, context: { sensorRunning: mode === 'full' } }
     }
-    case 'getTweakMeta': return []
+    case 'getTweakMeta': { const T3 = ['spectre-meltdown', 'vbs-disable', 'hvci-offload', 'full-mitigation-wipe', 'defender-core-off', 'biometrics-off', 'bluetooth-hard-off', 'hypervisor-off']; return Object.entries(require('../../lib/tweak-risk').RISK).map(([id, risk]) => ({ id, name: id, safetyTier: T3.includes(id) ? 3 : 2, risk, retired: null })) }
+    case 'getApplicability': return { ok: true, map: { 'gpu-per-app-preference': { show: true, state: 'recommended', why: null }, 'global-timer-resolution': { show: true, state: 'caution', why: 'batteryDrain' } } }
     case 'journalList': return []
     case 'isAdmin': case 'checkIsAdmin': return true
     case 'relaunchAdmin': return { ok: true }

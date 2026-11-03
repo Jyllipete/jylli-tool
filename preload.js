@@ -102,6 +102,7 @@ contextBridge.exposeInMainWorld('api', {
   fivemImportPack:    ()           => ipcRenderer.invoke('fivem-import-pack'),
   runAutoOpti:        (si)         => ipcRenderer.invoke('run-auto-opti', si),
   aoAllowed:          ()           => ipcRenderer.invoke('auto-opti-allowed'),
+  getApplicability:   (req)        => ipcRenderer.invoke('get-applicability', req),
   aoScan:             (req)        => ipcRenderer.invoke('auto-opti-scan', req),
   aoPlan:             (req)        => ipcRenderer.invoke('auto-opti-plan', req),
   aoRun:              (req)        => ipcRenderer.invoke('auto-opti-run', req),

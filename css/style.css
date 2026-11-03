@@ -4731,3 +4731,10 @@ body::before {
   font-size: 11px; color: var(--c-text-secondary); line-height: 1.7;
   font-family: 'Geist Mono', 'Consolas', monospace;
 }
+
+/* Structured risk block (tier 2+ cards): what can happen / who should avoid it */
+.tc-risk { font-size:11px; color:var(--text-secondary,inherit); border:1px solid var(--warning-bg); border-left:3px solid var(--warning); border-radius:4px; padding:6px 8px; margin-top:6px; }
+.tc-risk ul { margin:3px 0 4px 16px; padding:0; }
+.tc-risk-avoid { color:var(--danger,var(--warning)); margin-top:3px; }
+.tc-risk-caution, .tc-risk-rev { margin-top:3px; opacity:.85; }
+.tc-rec { display:inline-block; margin-top:4px; font-size:11px; color:var(--success,#3fb950); }
