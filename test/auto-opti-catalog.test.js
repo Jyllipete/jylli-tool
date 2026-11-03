@@ -50,15 +50,6 @@ test('DirectX settings merge keeps the user\'s other options', () => {
   assert.strictEqual(dx.merge('garbage;;=;', {}), '')
 })
 
-test('every verdict names a real tweak, and nothing on the allowlist is labelled placebo or risky', () => {
-  const okT = ao.catalog.allowedTweaks()
-  for (const [id, v] of Object.entries(ao.catalog.VERDICTS)) {
-    assert.ok(['placebo', 'minor', 'risky'].includes(v), id)
-    assert.ok(manifest[id], `${id} in VERDICTS but not a tweak`)
-    assert.ok(!okT.has(id), `${id} is both allowed and labelled ${v}`)
-  }
-})
-
 function loadLang() {
   const ctx = {}
   vm.runInNewContext(fs.readFileSync(path.join(__dirname, '..', 'js', 'lang', 'en.js'), 'utf8') + '\n' + fs.readFileSync(path.join(__dirname, '..', 'js', 'lang', 'fi.js'), 'utf8') + '\n;globalThis.__L = LANG', ctx)
@@ -96,4 +87,21 @@ test('autoOpti LANG group: en and fi have the same keys, and every key the UI ca
   for (const m of dsrc.matchAll(/labelKey: '([A-Za-z]+)'/g)) labelKeys.add(m[1])
   for (const k of ['junk', 'startupItem', 'refreshRate']) labelKeys.add(k)
   for (const k of labelKeys) assert.ok(en['chg_' + k] != null, 'chg_' + k)
+})
+
+test('no user-visible text calls a feature low-value: no verdict wording in any language file', () => {
+  for (const f of ['en', 'fi']) {
+    const src = fs.readFileSync(path.join(__dirname, '..', 'js', 'lang', f + '.js'), 'utf8')
+    assert.ok(!/placebo|tweakVerdict/i.test(src), f + '.js')
+  }
+})
+
+test('retired tweaks are never offered by Auto-Optimize and stay restorable', () => {
+  const src = fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'utf8')
+  const block = src.slice(src.indexOf('const RETIRED_TWEAKS = {'), src.indexOf('let _retiredApplied'))
+  const ids = [...block.matchAll(/^  '([a-z0-9-]+)':/gm)].map(m => m[1])
+  for (const id of ['priority-sep', 'qos-reserve', 'nvme-latency', 'directstorage-nvme', 'ntfs', 'net-throttling', 'tcp-ctcp', 'nic-flow-control', 'cursor-max-rate', 'raw-aim-curve']) assert.ok(ids.includes(id), id + ' not retired')
+  const allowed = ao.catalog.allowedTweaks()
+  for (const id of ids) assert.ok(!allowed.has(id), id + ' is retired but Auto-Optimize allows it')
+  for (const id of ids) assert.ok(manifest[id], id + ' retired but not a tweak')
 })

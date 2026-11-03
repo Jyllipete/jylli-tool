@@ -8,6 +8,7 @@
     { id: 'home', icon: 'house', page: 'dashboard', tabs: [{ id: 'home', page: 'dashboard' }] },
     { id: 'optimize', icon: 'gauge-high', tabs: [
       { id: 'windows', page: 'windows-opti' },
+      { id: 'qol', page: 'windows-opti' },
       { id: 'cpumem', page: 'hardware', premium: true },
       { id: 'gpu', page: 'hardware', premium: true },
       { id: 'power', page: 'hardware', premium: true },

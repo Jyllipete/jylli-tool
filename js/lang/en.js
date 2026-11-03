@@ -29,7 +29,7 @@ LANG.en = {
       advanced:'Advanced', language:'Language', langCode:'EN',
       sidebarGeneral:'General', sidebarTweaks:'Tweaks', sidebarTools:'Tools', sidebarCollapse:'Collapse',
       sidebarOverview:'Overview', sidebarOptimize:'Optimize', sidebarSystem:'System',
-      tabQuickWins:'Quick Wins', tabWindows:'Windows', tabCPUMem:'CPU & Memory', tabGPU:'GPU', tabPower:'Power',
+      tabQuickWins:'Quick Wins', tabQoL:'Quality of Life', genSecQoL:'Quality of Life', tabWindows:'Windows', tabCPUMem:'CPU & Memory', tabGPU:'GPU', tabPower:'Power',
       tabGameProfiles:'Game Profiles', tabAppOptimizer:'App Optimizer', tabFiveM:'FiveM',
       tabCleanup:'Cleanup', tabDebloater:'Debloater', tabPrivacy:'Privacy', tabServices:'Services',
       logTitle:'Output log', logLegend:'✓=ok   ⚠=warn   ✗=err   ◆=section', logClear:'Clear',
@@ -2044,7 +2044,6 @@ LANG.en = {
       // Modal buttons
       btnCancel:'Cancel', btnConfirm:'Confirm', btnOk:'OK', btnGotIt:'Got it',
       // Status badges
-      tweakVerdict_placebo:'Placebo', tweakVerdictTip_placebo:'Placebo: no measurable benefit on modern Windows. Auto-Optimize no longer applies it.', tweakVerdict_minor:'Minor', tweakVerdictTip_minor:'Minor: tiny or preference-only effect. Auto-Optimize no longer applies it.', tweakVerdict_risky:'Risky', tweakVerdictTip_risky:'Risky: can cause side effects. Auto-Optimize no longer applies it.',
       tweakRetired:'Retired', tweakRetiredTip:'Retired: no measurable benefit. You can still restore it if it was applied earlier.',
       tier3ConfirmTitle:'Lowers Windows security', tier3ConfirmBody:'<b>{name}</b> weakens a Windows protection. A fresh restore point is created first; if that fails, nothing is changed. Type <b>{word}</b> to continue.', tier3ConfirmWord:'CONFIRM', tier3ConfirmOk:'Apply', tier3ConfirmWrong:'Not applied: the confirmation word did not match.',
       unexpectedErrorTitle:'Something went wrong', rpRequiredTitle:'Restore point required', tweakFailedTitle:'Tweak failed', statusApplied:'APPLIED', statusRestored:'RESTORED', statusDefault:'DEFAULT',

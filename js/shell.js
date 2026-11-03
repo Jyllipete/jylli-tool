@@ -10,7 +10,7 @@
   const SECTION_KEYS = { home: 'navHome', optimize: 'navOptimize', gaming: 'navGaming', clean: 'navClean', system: 'navSystem', settings: 'navSettings' }
   const SECTION_SUB_KEYS = { home: 'navHomeSub', optimize: 'navOptimizeSub', gaming: 'navGamingSub', clean: 'navCleanSub', system: 'navSystemSub', settings: 'navSettingsSub' }
   const TAB_KEYS = {
-    windows: 'tabWindows', cpumem: 'tabCPUMem', gpu: 'tabGPU', power: 'tabPower', network: 'tabNetwork', fixes: 'tabFixes',
+    windows: 'tabWindows', qol: 'tabQoL', cpumem: 'tabCPUMem', gpu: 'tabGPU', power: 'tabPower', network: 'tabNetwork', fixes: 'tabFixes',
     pulse: 'tabPulse', games: 'tabGames', apps: 'tabApps', fivem: 'tabFiveM', latency: 'tabLatency', replay: 'tabReplay',
     cleanup: 'tabCleanup', debloat: 'tabDebloater', startup: 'tabStartup',
     diagnostics: 'tabDiagnostics', processes: 'tabProcesses', bios: 'tabBios', scheduler: 'tabScheduler', restore: 'tabRestore', history: 'tabHistory',
@@ -28,6 +28,7 @@
   const TAB_BUILDERS = {
     home: c => buildDashboard(c),
     windows: c => buildWindowsOpti(c, 'full'),
+    qol: c => buildWindowsOpti(c, 'qol'),
     cpumem: c => hardwareTab(c, 'cpumem'),
     gpu: c => hardwareTab(c, 'gpu'),
     power: c => hardwareTab(c, 'power'),

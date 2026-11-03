@@ -4280,7 +4280,7 @@ ipcMain.handle('get-power-plan', async () => {
   return m ? { guid: m[1], name: m[2] } : { name: null }
 })
 
-ipcMain.handle('get-tweak-meta', (_, ids) => { retireTweaks(); return journalSvc().tweakMeta(Array.isArray(ids) ? ids.slice(0, 400) : null).map(m => AutoOpti.catalog.VERDICTS[m.id] ? { ...m, verdict: AutoOpti.catalog.VERDICTS[m.id] } : m) })
+ipcMain.handle('get-tweak-meta', (_, ids) => { retireTweaks(); return journalSvc().tweakMeta(Array.isArray(ids) ? ids.slice(0, 400) : null) })
 ipcMain.handle('apply-batch', (_, req) => journalSvc().applyBatch(req))
 ipcMain.handle('journal-list', (_, opts) => {
   const o = opts && typeof opts === 'object' ? opts : {}
@@ -4389,6 +4389,16 @@ const RETIRED_TWEAKS = {
   'gpu-preemption':            'EnablePreemption is already on by default and VsyncIdleTimeout is a folk value; no measurable effect.',
   'wasapi-min-period':         'Only matters for apps that open an exclusive-mode audio stream, and the MMDevices keys are protected, so the write usually does not stick.',
   'hpet':                      'Forcing platform tick / disabling dynamic tick raises power use and can add timer jitter; modern Windows picks the right timer itself.',
+  'priority-sep':              'Windows already uses an equivalent foreground boost; this value matches the client default.',
+  'qos-reserve':               'Windows does not hold back 20% of bandwidth for QoS; this value changes nothing measurable.',
+  'nvme-latency':              'These StorPort values are not documented settings and have no measurable effect.',
+  'directstorage-nvme':        'DirectStorage is configured by the game and driver; these registry values are not used.',
+  'ntfs':                      'Windows already uses these file system defaults on current drives.',
+  'net-throttling':            'NetworkThrottlingIndex only affects multimedia playback, not game traffic.',
+  'tcp-ctcp':                  'Windows uses CUBIC by default, which performs as well or better for games and downloads.',
+  'nic-flow-control':          'Changes how the adapter paces packets but has no measurable effect on latency.',
+  'cursor-max-rate':           'The mouse data queue size is not a limit on current Windows; no measurable effect.',
+  'raw-aim-curve':             'Covered by Disable Mouse Acceleration; the extra curve table changes nothing further.',
 }
 let _retiredApplied = false
 function retireTweaks() {

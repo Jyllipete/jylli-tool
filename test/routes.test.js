@@ -34,3 +34,9 @@ test('entry remembers the last tab and falls back to the first', () => {
   assert.strictEqual(R.entry('clean', 'bogus').page, 'cleanup')
   assert.strictEqual(R.entry('nope'), null)
 })
+
+test('Quality of Life is a tab of Optimize that shares the Windows page', () => {
+  const r = R.resolve('windows-opti', 'qol')
+  assert.deepStrictEqual([r.section, r.tab, r.page], ['optimize', 'qol', 'windows-opti'])
+  assert.strictEqual(R.resolve('windows-opti').tab, 'windows')     // the page itself still opens on Windows
+})

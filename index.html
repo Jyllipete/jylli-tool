@@ -7536,11 +7536,6 @@ function makeRow({ id, name, desc, danger = false, dangerLabel = 'I understand t
     </div>
     <div class="tweak-progress" id="prog-${id}"><div class="tweak-progress-bar" id="prog-bar-${id}"></div></div>
   `
-  const verdict = window._tweakMeta?.[id]?.verdict
-  if (verdict && !window._tweakMeta[id].retired) {
-    const bd = div.querySelector('.tweak-badge')
-    if (bd && bd.parentElement) bd.parentElement.insertAdjacentHTML('afterbegin', `<span class="tweak-badge" title="${tUI('tweakVerdictTip_' + verdict)}">${tUI('tweakVerdict_' + verdict)}</span>`)
-  }
   if (window._tweakMeta?.[id]?.retired) {
     const ab = div.querySelector('[data-tweak-apply]')
     if (ab) { ab.disabled = true; ab.title = window._tweakMeta[id].retired }
@@ -7624,7 +7619,7 @@ async function genRebootNow() {
 }
 
 function genRefreshQuickWinStrip() {
-  const QW_IDS = ['game-dvr','disable-fso','disable-mouse-accel','mmcss','priority-sep','disable-background-apps','mmcss-proaudio','defender-idle-priority','vrr-borderless']
+  const QW_IDS = ['game-dvr','disable-fso','disable-mouse-accel','mmcss','disable-background-apps','mmcss-proaudio','defender-idle-priority','vrr-borderless']
   QW_IDS.forEach(id => {
     const applied = settings[`tweak_${id}`] === 'applied'
     const card = document.getElementById('qwc-' + id)
@@ -7644,7 +7639,7 @@ function genRefreshQuickWinStrip() {
 }
 
 async function genApplyQuickWins() {
-  const QW_IDS = ['game-dvr','disable-fso','disable-mouse-accel','mmcss','priority-sep','disable-background-apps','mmcss-proaudio','defender-idle-priority','vrr-borderless']
+  const QW_IDS = ['game-dvr','disable-fso','disable-mouse-accel','mmcss','disable-background-apps','mmcss-proaudio','defender-idle-priority','vrr-borderless']
   const toApply = QW_IDS.filter(id => settings[`tweak_${id}`] !== 'applied')
   if (!toApply.length) return
   await applyTweakBatch(toApply, 'apply')
@@ -9466,7 +9461,7 @@ async function quickCleanRam() {
 if (!window._activeTab) window._activeTab = {}
 
 // ─── Page: Windows Opti ───────────────────────────────────────────────────────
-function buildWindowsOpti(c) {
+function buildWindowsOpti(c, mode) {
   const si = sysInfo
   const isLaptop = si.isLaptop
 
@@ -9497,7 +9492,7 @@ function buildWindowsOpti(c) {
   `
   c.appendChild(toolbar)
 
-  const SECTIONS = [
+  let SECTIONS = [
     { id:'game-overlays', get title() { return tUI('genSecGameOverlays') }, icon:'<i class="fa fa-gamepad"></i>', cards:[
       { id:'game-dvr',    name:'Disable Game DVR / Xbox Game Bar', desc:'Removes background recording overhead — reduces CPU/GPU usage while gaming even when not recording.', icon:'<i class="fa fa-gamepad"></i>' },
       { id:'disable-fso', name:'Disable Fullscreen Optimizations', desc:'Prevents Windows rendering games in hybrid mode. Reduces input latency in exclusive fullscreen.', icon:'<i class="fa fa-display"></i>' },
@@ -9586,8 +9581,15 @@ function buildWindowsOpti(c) {
     ]},
   ]
 
+  // Preference-style tweaks (they change how Windows behaves or looks, with no frame-rate effect) live on the Quality of Life tab
+  const QOL_IDS = ['win-tips','explorer-perf','nudge-blocker','search-box-local','search-cloud-off','cloud-sync-off','cortana','cortana-blackout','cortana-remnant-off','boot-sound-off','security-quiet','security-toast-off']
+  const qolCards = []
+  SECTIONS.forEach(s => { s.cards = s.cards.filter(cd => { if (!QOL_IDS.includes(cd.id)) return true; qolCards.push(cd); return false }) })
+  const qolSection = { id:'qol', get title() { return tUI('genSecQoL') }, cards: qolCards }
+  SECTIONS = (mode === 'qol' ? [qolSection] : SECTIONS).filter(s => s.cards.length)
+
   // Quick Win strip — curated top section
-  const QUICK_WIN_IDS = ['game-dvr','disable-fso','disable-mouse-accel','mmcss','priority-sep','disable-background-apps','mmcss-proaudio','defender-idle-priority','vrr-borderless']
+  const QUICK_WIN_IDS = ['game-dvr','disable-fso','disable-mouse-accel','mmcss','disable-background-apps','mmcss-proaudio','defender-idle-priority','vrr-borderless']
   const QUICK_WIN_META = {
     'game-dvr':               { get benefit() { return tUI('qwBenefitGameDvr') } },
     'disable-fso':            { get benefit() { return tUI('qwBenefitFso') } },
@@ -9661,7 +9663,7 @@ function buildWindowsOpti(c) {
   })
   qwLayout.appendChild(qwStrip)
   qwSection.appendChild(qwLayout)
-  c.appendChild(qwSection)
+  if (mode !== 'qol') c.appendChild(qwSection)
 
   _genSections = SECTIONS
   _genBadgeCache.clear()
@@ -9747,6 +9749,7 @@ function genFilterTweaks(query) {
 // action: 'apply' | 'restore'
 // Returns: { applied, failed }
 async function applyTweakBatch(ids, action = 'apply') {
+  if (action === 'apply') ids = ids.filter(id => !window._tweakMeta?.[id]?.retired)   // retired tweaks change nothing, so a batch skips them quietly
   const modal    = document.getElementById('batch-progress-modal')
   const titleEl  = document.getElementById('bpm-title')
   const subEl    = document.getElementById('bpm-sub')
@@ -10331,7 +10334,7 @@ function spwBuildTweakList() {
   if (useEthernet) SPW_NIC_EXTRA.forEach(id => ids.add(id))
   if (_spwBluetooth === true)  ids.delete('bluetooth-hard-off')
   if (_spwGames.has('fivem'))  SPW_FIVEM_IDS.forEach(id => ids.add(id))
-  // Same allowlist as Auto-Optimize (served by main): placebo, risky and security-touching tweaks never go in an automatic run
+  // Same allowlist as Auto-Optimize (served by main): low-value, side-effect-prone and security-touching tweaks never go in an automatic run
   const allowed = window._aoAllowed
   return [...ids].filter(id => tweakCompat(id) && tweakState(id) !== 'applied' && (!allowed || allowed.has(id)))
 }
@@ -11746,6 +11749,7 @@ function makeCard({ id, name, desc, icon = '<i class="fa fa-gear"></i>', danger 
   const { hasConflict, conflictWith, hasWarn, warnMsg, ethernetSpike } = getConflictInfo(id)
 
   const d = document.createElement('div')
+  if (!applied && window._tweakMeta?.[id]?.retired) d.style.display = 'none'   // retired and never applied: nothing to offer (an applied one keeps its card so it can be restored)
   const _tierClass = danger ? 'tier-risk' : (safetyTier === 2 ? 'tier-caution' : 'tier-safe')
   d.className = 'tweak-card ' + _tierClass + (danger ? ' tc-danger' : '') + (applied ? ' tc-applied' : '') + (preApplied ? ' tc-preapplied' : '') + (hasConflict ? ' tc-conflict' : '')
   d.id = `tcw-${id}`

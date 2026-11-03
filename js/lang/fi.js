@@ -49,7 +49,7 @@ LANG.fi = {
       advanced:'Lisäasetukset', language:'Kieli', langCode:'FI',
       sidebarGeneral:'Yleiset', sidebarTweaks:'Säädöt', sidebarTools:'Työkalut', sidebarCollapse:'Pienennä',
       sidebarOverview:'Yleiskatsaus', sidebarOptimize:'Optimointi', sidebarSystem:'Järjestelmä',
-      tabQuickWins:'Pikanäppäimet', tabWindows:'Windows', tabCPUMem:'CPU & Muisti', tabGPU:'GPU', tabPower:'Virta',
+      tabQuickWins:'Pikanäppäimet', tabQoL:'Elämänlaatu', genSecQoL:'Elämänlaatu', tabWindows:'Windows', tabCPUMem:'CPU & Muisti', tabGPU:'GPU', tabPower:'Virta',
       tabGameProfiles:'Peliprofiilit', tabAppOptimizer:'Sovellusoptimointi', tabFiveM:'FiveM',
       tabCleanup:'Siivous', tabDebloater:'Bloatware', tabPrivacy:'Yksityisyys', tabServices:'Palvelut',
       logTitle:'Loki', logLegend:'✓=ok   ⚠=varoitus   ✗=virhe   ◆=osio', logClear:'Tyhjennä',
@@ -2059,7 +2059,6 @@ LANG.fi = {
       // Modal buttons
       btnCancel:'Peruuta', btnConfirm:'Vahvista', btnOk:'OK', btnGotIt:'Selvä',
       // Status badges
-      tweakVerdict_placebo:'Lume', tweakVerdictTip_placebo:'Lume: ei mitattavaa hyötyä nykyisessä Windowsissa. Auto-optimointi ei enää käytä sitä.', tweakVerdict_minor:'Vähäinen', tweakVerdictTip_minor:'Vähäinen: pieni tai pelkkä mieltymysvaikutus. Auto-optimointi ei enää käytä sitä.', tweakVerdict_risky:'Riskialtis', tweakVerdictTip_risky:'Riskialtis: voi aiheuttaa sivuvaikutuksia. Auto-optimointi ei enää käytä sitä.',
       tweakRetired:'Poistettu', tweakRetiredTip:'Poistettu: ei mitattavaa hyötyä. Voit silti palauttaa sen, jos se on otettu käyttöön aiemmin.',
       tier3ConfirmTitle:'Heikentää Windowsin suojausta', tier3ConfirmBody:'<b>{name}</b> heikentää Windowsin suojausta. Ensin luodaan uusi palautuspiste; jos se epäonnistuu, mitään ei muuteta. Jatka kirjoittamalla <b>{word}</b>.', tier3ConfirmWord:'VAHVISTA', tier3ConfirmOk:'Ota käyttöön', tier3ConfirmWrong:'Ei otettu käyttöön: vahvistussana ei täsmännyt.',
       unexpectedErrorTitle:'Jokin meni pieleen', rpRequiredTitle:'Palautuspiste vaaditaan', tweakFailedTitle:'Säätö epäonnistui', statusApplied:'KÄYTÖSSÄ', statusRestored:'PALAUTETTU', statusDefault:'OLETUS',

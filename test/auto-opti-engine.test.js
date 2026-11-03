@@ -281,7 +281,7 @@ test('plan: display first, plan-switch before powercfg tweaks, cleanup last', ()
   assert.ok(pidx >= 0 && uidx > pidx)
 })
 
-test('plan: no placebo, redundant or risky tweak and nothing from NEVER_AUTO is ever emitted, for every fixture and use case', () => {
+test('plan: no redundant, low-value or side-effect-prone tweak and nothing from NEVER_AUTO is ever emitted, for every fixture and use case', () => {
   for (const name of Object.keys(P)) for (const useCase of ao.catalog.USE_CASES) {
     const list = ao.findings.findings(P[name](), { useCase })
     const pl = ao.plan.plan(list, { premium: true, include: list.map(f => f.id) })
