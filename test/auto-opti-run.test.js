@@ -245,3 +245,24 @@ test('before/after rows are measured values only', async () => {
   assert.deepStrictEqual([by('startupEnabled').before, by('startupEnabled').after], [9, 5])
   assert.strictEqual(by('ramUsedGB'), undefined)       // missing on one side: left out, not shown as 0
 })
+
+// ── fivem settings control ──
+test('FiveM settings: only differing recommended values are written, the backup is journaled, Undo can restore it', async () => {
+  const { fivemSettings } = require('../lib/auto-opti/controls')
+  const rec = require('../lib/auto-opti/fivem-rec').recommend
+  assert.strictEqual(rec(12288).TextureQuality, '3'); assert.strictEqual(rec(4096).TextureQuality, '2'); assert.strictEqual(rec(0).ReflectionQuality, '0')
+  const want = rec(8192), vals = { ...want, GrassQuality: '3', MSAA: '4', DoF: null }
+  let written = null; const noted = []
+  const fivem = { read: async () => ({ ok: true, vals, path: 'C:/x/gta5_settings.xml', size: 100 }), write: async c => { written = c; return { ok: true, size: 90 } }, vramMB: async () => 8192 }
+  const r = await fivemSettings({ rec: { note: c => noted.push(c) }, fivem })
+  assert.strictEqual(r.status, 'ok')
+  assert.deepStrictEqual(Object.keys(written).sort(), ['DoF', 'GrassQuality', 'MSAA'])   // a key missing from the file (null) is added by the writer
+  assert.deepStrictEqual(noted[0], { kind: 'file-backup', file: 'C:/x/gta5_settings.xml', backup: 'C:/x/gta5_settings.xml.bak', before: { exists: true, value: 100 }, after: { exists: true, value: 90 } })
+  assert.deepStrictEqual(controlChanges('fivem-settings', r).map(c => [c.label, c.before.v, c.after.v]), [['MSAA', '4', '0'], ['GrassQuality', '3', '0'], ['DoF', null, 'false']])
+  // nothing to do / no file / write refused
+  assert.strictEqual((await fivemSettings({ rec: null, fivem: { ...fivem, read: async () => ({ ok: true, vals: want }) } })).reason, 'already-recommended')
+  assert.strictEqual((await fivemSettings({ rec: null, fivem: { ...fivem, read: async () => ({ ok: false }) } })).reason, 'no-settings-file')
+  const bad = await fivemSettings({ rec: { note: () => assert.fail('must not journal a failed write') }, fivem: { ...fivem, write: async () => ({ ok: false, reason: 'corrupt' }) } })
+  assert.strictEqual(bad.status, 'failed')
+  assert.strictEqual((await fivemSettings({ rec: null, fivem: null })).status, 'skipped')
+})

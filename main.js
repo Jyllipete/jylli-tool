@@ -3369,6 +3369,9 @@ ipcMain.handle('fivem-read-settings', async (_, manualPath) => {
 
 ipcMain.handle('fivem-write-settings', async (_, changes, manualPath) => {
   if (!requiresPremium('fivem-write-settings')) return { ok: false, reason: 'premium_required' }
+  return fivemWriteSettingsCore(changes, manualPath)
+})
+async function fivemWriteSettingsCore(changes, manualPath) {
   const settingsPath = findFivemSettings(manualPath)
   if (!settingsPath) return { ok: false, reason: 'gta5_settings.xml not found — cannot save.' }
   let content
@@ -3430,8 +3433,9 @@ ipcMain.handle('fivem-write-settings', async (_, changes, manualPath) => {
     }
   } catch (_) {}
 
-  return { ok: true, path: settingsPath, changed: changedCount }
-})
+  let size = 0; try { size = fs.statSync(settingsPath).size } catch {}
+  return { ok: true, path: settingsPath, changed: changedCount, size }
+}
 
 // ─── CitizenFX.ini batch read/write helper ────────────────────────────────────
 // All CitizenFX.ini tweaks share one read→mutate→write cycle to avoid spawning
@@ -4510,6 +4514,11 @@ function aoRunner() {
     appendChangelog: entry => { const log = loadChangelog(); log.unshift({ ...entry, ts: new Date().toISOString() }); if (log.length > 200) log.splice(200); saveChangelog(log) },
     log: (msg, level, source) => aoSend('log', { msg, level, ts: new Date().toLocaleTimeString(), source }),
     confirmMs: 15000,
+    controlDeps: { fivem: {
+      read: async () => { const p = findFivemSettings(); if (!p) return { ok: false }; try { const raw = fs.readFileSync(p, 'utf8'); const vals = {}; for (const def of FIVEM_SETTINGS_DEFS) { const m = raw.match(_fivemSettingsRegexMap.get(def.key).read); vals[def.key] = m ? m[1] : null } return { ok: true, vals, path: p, size: Buffer.byteLength(raw) } } catch { return { ok: false } } },
+      write: changes => fivemWriteSettingsCore(changes, null),
+      vramMB: async () => (cachedSysInfo && cachedSysInfo.vramMB) || 0,
+    } },
   })
   return _aoRunner
 }
@@ -4526,7 +4535,7 @@ ipcMain.handle('auto-opti-scan', async (_, req) => {
   try {
     const scanId = aoNewId()
     const admin = await checkAdmin()
-    const context = { apps: { fivem: false } }
+    const context = { apps: { fivem: fs.existsSync(path.join(process.env.LOCALAPPDATA || '', 'FiveM', 'FiveM.app')) && !!findFivemSettings() } }
     const profile = await AutoOpti.detect.detect({ runPS, emit: ev => aoSend('auto-opti-scan-progress', ev) }, { admin, scanId, context })
     _aoScan = { scanId, profile, at: Date.now() }
     const c = aoFindingCtx(req)
