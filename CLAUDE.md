@@ -2,7 +2,7 @@
 
 ## Commands
 - Start app: `npm start`   <!-- replace with your real command -->
-- Build/package: `npm run build`   <!-- replace with your real command -->
+- Build/package: `npm run dist` (uninstaller → NSIS → branded `dist/Jylli-Tool-Installer.exe`; plain `npm run build` needs `npm run build:uninstaller` first)
 
 ## Large File Rules (index.html is >100KB)
 - NEVER Read `index.html` in full. Use Grep to find the section, then Read with `offset`/`limit`.
@@ -11,10 +11,13 @@
 
 ## index.html map (keep updated)
 Search for these section markers instead of reading the file:
-- `// === LANG ===`      translations object
-- `// === SETTINGS ===`  settings + `setLanguage(lang)`
-- `// === WIZARD ===`     onboarding / `language-picker`
-- `// === UI ===`         tab rendering
+- `js/lang/en.js`, `js/lang/fi.js`  translations (`LANG.en` / `LANG.fi`); helpers `tUI`, `tG(group, key, vars)` near `// ─── Language ───`
+- `var settings = {}`  global settings; `async function setLanguage(lang)` saves the language
+- `// ─── Onboarding Wizard ───`  `buildWizardSteps` / `startOnboarding` (being replaced by `js/arrival.js`); `js/boot-logic.js` `selectLanguage` for `#lang-picker`
+- `function showPage(page, tabId)`  tab rendering; `js/shell.js` nav and header; `js/pages/*.js` page builders
+- `js/arrival.js` first-launch flow (`JylliArrival`), `js/tour.js` + `js/tours.js` guided tours, `js/concierge.js` + `js/pages/home-concierge.js` first-move suggestions; LANG groups `arrival`, `tour`, `concierge`
+- `npm run preview -- --arrival` / `--tours` shoots those flows (`tools/ui-preview`)
+- `storePreflightResult(r)`  the single writer of preflight state; `window._bootFinished`  resolves when the splash is gone
 <!-- Add these marker comments to index.html once; the map is only useful if they exist. -->
 
 ## Translations (EN & FI)

@@ -459,7 +459,7 @@ function openShortcutSheet() {
   }
   const { html } = ui
   const keys = k => html`<span class="j-keys">${k.split('+').map(x => html`<kbd class="j-kbd">${x}</kbd>`)}</span>`
-  const rows = [['Ctrl+K', 'scPalette'], ['Ctrl+1…5', 'scSections'], ['Ctrl+,', 'scSettings'], ['Ctrl+Shift+L', 'scActivity'], ['Ctrl+/', 'scSheet'], ['Esc', 'scClose']]
+  const rows = [['Ctrl+K', 'scPalette'], ['Ctrl+1…5', 'scSections'], ['Ctrl+,', 'scSettings'], ['Ctrl+Shift+L', 'scActivity'], ['Ctrl+/', 'scSheet'], ['F1', 'scTour'], ['Esc', 'scClose']]
   el.innerHTML = String(html`<div class="j-modal j-modal-md" role="dialog" aria-modal="true" aria-labelledby="shortcuts-title">
     <div class="j-modal-head"><h2 class="j-modal-title" id="shortcuts-title">${tUI('shortcutsTitle')}</h2>${ui.button({ iconOnly: true, icon: 'xmark', variant: 'ghost', size: 'sm', title: tUI('scClose'), onclick: 'closeShortcutSheet()' })}</div>
     <div class="j-modal-body">${rows.map(([k, label]) => html`<div class="j-row"><div class="j-row-main"><div class="j-row-title">${tUI(label)}</div></div><div class="j-row-control">${keys(k)}</div></div>`)}</div>

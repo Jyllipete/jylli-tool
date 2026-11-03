@@ -1497,7 +1497,7 @@ async function checkAdmin() {
 }
 
 // ─── Settings persistence ────────────────────────────────────────────────────
-const SETTINGS_SCHEMA_VERSION = 3
+const SETTINGS_SCHEMA_VERSION = 4
 
 function migrateSettings(s) {
   if (!s || typeof s !== 'object') return {}
@@ -1516,6 +1516,14 @@ function migrateSettings(s) {
 
   if (v < 3) {
     if (s.startAtLogin === undefined) s.startAtLogin = false
+  }
+
+  if (v < 4) {
+    // v3 → v4: Arrival / tours / concierge state are objects; drop anything corrupted
+    for (const k of ['arrival', 'toursSeen', 'toursOffered', 'concierge']) {
+      if (s[k] !== undefined && (!s[k] || typeof s[k] !== 'object' || Array.isArray(s[k]))) delete s[k]
+    }
+    if (s.toursEnabled !== undefined && typeof s.toursEnabled !== 'boolean') delete s.toursEnabled
   }
 
   s.__schemaVersion = SETTINGS_SCHEMA_VERSION

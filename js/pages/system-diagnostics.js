@@ -6,15 +6,15 @@ function buildPreflight(c) {
   const { html, raw } = ui
   c.innerHTML = String(html`
     <p class="j-lede">${tUI('preflightHeroSub')}</p>
-    <div class="j-toolbar j-diag-bar">
+    <div class="j-toolbar j-diag-bar" data-tour="diagnostics-scan">
       ${ui.button({ label: tUI('preflightRunScan'), icon: 'magnifying-glass', variant: 'primary', id: 'pf-scan-btn', onclick: 'runPreflightScan(this)' })}
       <span id="pf-status" class="j-muted">${tUI('preflightReady')}</span>
     </div>
     <div class="pf-scan-bar-wrap"><div id="pf-scan-bar"></div></div>
-    <div id="pf-results"></div>
+    <div id="pf-results" data-tour="diagnostics-results"></div>
     <div class="j-gap"></div>
     ${ui.card({ title: tUI('pfDriverTitle'), sub: tUI('pfDriverDesc'), body: html`
-      <div class="j-toolbar">
+      <div class="j-toolbar" data-tour="diagnostics-drivers">
         ${ui.button({ label: tUI('pfDriverScanBtn'), icon: 'magnifying-glass', size: 'sm', id: 'driver-scan-btn', onclick: 'doDriverScan()' })}
         <span id="driver-status" class="j-muted">${tUI('pfDriverReady')}</span>
         <span id="driver-last-scan" class="j-muted j-push"></span>

@@ -97,7 +97,9 @@
     const s = R.section(route.section)
     const single = s.tabs.length === 1
     const tabs = single ? '' : root.ui.tabs(visibleTabs(s, route.tab).map(t => ({ id: t.id, label: tabLabel(t.id), pro: t.premium && !settings.isPremium })), route.tab, "Shell.tab('{id}')")
-    const actions = route.section === 'home' ? root.ui.button({ label: tUI('createRp'), icon: 'shield-halved', variant: 'secondary', size: 'sm', id: 'create-rp-btn', onclick: 'quickCreateRP()' }) : ''
+    const rp = route.section === 'home' ? root.ui.button({ label: tUI('createRp'), icon: 'shield-halved', variant: 'secondary', size: 'sm', id: 'create-rp-btn', onclick: 'quickCreateRP()' }) : ''
+    const help = root.ui.button({ iconOnly: true, icon: 'circle-question', variant: 'ghost', size: 'sm', id: 'tour-help-btn', title: tG('tour', 'help') + ' (F1)', onclick: 'JylliTour.replay()' })
+    const actions = root.ui.html`${rp}${help}`
     head.innerHTML = String(root.ui.section({ title: sectionLabel(route.section), sub: tUI(SECTION_SUB_KEYS[route.section]), actions, tabs }))
     const crumb = document.getElementById('j-crumb')
     if (crumb) crumb.innerHTML = String(single ? html`<b>${sectionLabel(route.section)}</b>` : html`<span>${sectionLabel(route.section)}</span><span>/</span><b>${tabLabel(route.tab)}</b>`)

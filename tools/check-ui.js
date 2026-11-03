@@ -22,7 +22,8 @@ function walk(dir, out = []) {
 }
 
 // ── 1. no hex / colour literals in the new component code ──
-const files = [path.join(root, 'js', 'ui.js'), ...walk(path.join(root, 'js', 'pages'))].filter(f => fs.existsSync(f))
+const NEW_FILES = ['tour', 'tours', 'concierge', 'arrival'].map(n => path.join(root, 'js', n + '.js'))
+const files = [path.join(root, 'js', 'ui.js'), ...NEW_FILES, ...walk(path.join(root, 'js', 'pages'))].filter(f => fs.existsSync(f))
 const COLOR_STYLE = /style\s*=\s*["'`][^"'`]*(color|background|border|box-shadow|fill|stroke)\s*:/i
 for (const f of files) {
   fs.readFileSync(f, 'utf8').split('\n').forEach((line, i) => {
@@ -70,6 +71,34 @@ else {
       fs.writeFileSync(b, JSON.stringify({ missingFi, missingEn }, null, 1))
       console.log('baseline written')
     }
+  }
+}
+
+// 2b. Tours (js/tours.js): every stop has en + fi copy, and every target exists. A [data-tour="x"] target must be defined as
+// data-tour="x" in a builder (or via the tour's own `tag` map, whose #id / .class tokens must exist in the sources); plain #id selectors must exist too.
+{
+  const tp = path.join(root, 'js', 'tours.js')
+  if (fs.existsSync(tp)) {
+    const srcFiles = [path.join(root, 'index.html'), path.join(root, 'js', 'shell.js'), path.join(root, 'js', 'fivem-logic.js'), ...walk(path.join(root, 'js', 'pages'))].filter(f => fs.existsSync(f))
+    const src = srcFiles.map(f => fs.readFileSync(f, 'utf8')).join('\n')
+    const ctx = { window: null }; ctx.window = ctx; vm.createContext(ctx)
+    vm.runInContext(fs.readFileSync(tp, 'utf8'), ctx, { filename: tp })
+    let n = 0
+    for (const [key, def] of Object.entries(ctx.JylliTours || {})) {
+      for (const [name, css] of Object.entries(def.tag || {})) {
+        for (const tok of css.match(/[#.][A-Za-z][\w-]*/g) || []) if (!src.includes(tok.slice(1))) fail(`tours.js ${key}: tag ${name} uses "${tok}" which no builder defines`)
+      }
+      for (const s of def.stops) {
+        n++
+        for (const l of ['en', 'fi']) if (!s[l] || !s[l].t || !s[l].b) fail(`tours.js ${key}: stop ${s.sel} lacks ${l} copy`)
+        const m = /^\[data-tour="([^"]+)"\]$/.exec(s.sel)
+        if (m) {
+          const name = m[1], tpl = name.startsWith('settings-') && src.includes('data-tour="settings-${id}"')
+          if (!(def.tag && def.tag[name]) && !src.includes(`data-tour="${name}"`) && !src.includes(`dataset.tour = '${name}'`) && !tpl) fail(`tours.js ${key}: [data-tour="${name}"] has no builder`)
+        } else if (/^#[\w-]+$/.test(s.sel) && !src.includes(`id="${s.sel.slice(1)}"`)) fail(`tours.js ${key}: ${s.sel} not found`)
+      }
+    }
+    console.log(`tours: ${Object.keys(ctx.JylliTours || {}).length} tours, ${n} stops checked`)
   }
 }
 

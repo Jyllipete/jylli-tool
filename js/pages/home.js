@@ -25,7 +25,7 @@ function buildDashboard(c) {
 
   // Hero: health ring, verdict, main actions
   put(html`<section id="db-hero" class="j-card j-home-hero j-home-hero-twin">
-    <div class="j-twin-stage" id="home-twin-stage">
+    <div class="j-twin-stage" id="home-twin-stage" data-tour="home-rig">
       <div class="j-twin-slot" id="home-twin-slot" data-twin-view="rig:home"></div>
       <div class="j-twin-hint" id="twin-hint">${tUI('twinHint')}</div>
       <div class="j-twin-inspector" id="twin-inspector" role="region" aria-label="${tUI('twinInspector')}" aria-live="polite" hidden></div>
@@ -33,7 +33,7 @@ function buildDashboard(c) {
     </div>
     <div class="j-home-hero-side">
     <div class="j-home-hero-main">
-    <div class="j-home-ring">
+    <div class="j-home-ring" data-tour="home-ring">
       <svg width="104" height="104" viewBox="0 0 88 88" aria-hidden="true">
         <circle class="j-ring-bg" cx="44" cy="44" r="34"/>
         <circle class="j-ring-fg j-health-arc" id="health-ring-arc" cx="44" cy="44" r="34" stroke-dasharray="213.6" stroke-dashoffset="213.6"/>
@@ -64,8 +64,10 @@ function buildDashboard(c) {
     </div>
   </section>`)
 
+  put(conciergeCardHtml())
+
   // Live tiles
-  const tile = (id, label, valId, trendId, sparkId, footer, unitless) => html`<div class="db-metric-tile j-stat" id="${id}">
+  const tile =(id, label, valId, trendId, sparkId, footer, unitless) => html`<div class="db-metric-tile j-stat" id="${id}">
     <div class="j-stat-label">${label}</div>
     <div class="j-stat-value"><span class="${unitless ? 'dmt-val-sm' : ''}" id="${valId}">—</span><span class="dmt-trend" id="${trendId}"></span></div>
     <div class="j-stat-sub">${footer}</div>
@@ -334,7 +336,9 @@ function twinFirstRun(slot) {
       } else stage.appendChild(bar)
       settings.assemblyDone = true; api.saveSettings(settings)
       if (!bar.isConnected) return          // the user left Home during the animation
-      bar.innerHTML = `<span>${escHtml(tUI('twinAssembled'))}</span><button type="button" class="j-btn j-btn-primary j-btn-sm" onclick="runAutoOpti()">${escHtml(tUI('dashAutoOptimize'))}</button><button type="button" class="j-btn j-btn-ghost j-btn-sm" id="twin-assembly-close">${escHtml(tUI('close'))}</button>`
+      // the concierge card carries the recommendation; a second Auto-Optimize offer would compete with it
+      const autoBtn = conciergeCardShown() ? '' : `<button type="button" class="j-btn j-btn-primary j-btn-sm" onclick="runAutoOpti()">${escHtml(tUI('dashAutoOptimize'))}</button>`
+      bar.innerHTML = `<span>${escHtml(tUI('twinAssembled'))}</span>${autoBtn}<button type="button" class="j-btn j-btn-ghost j-btn-sm" id="twin-assembly-close">${escHtml(tUI('close'))}</button>`
       bar.querySelector('#twin-assembly-close').onclick = () => bar.remove()
     } else if (JylliTwin.state === 'static' || ++tries > 40) { clearInterval(wait); settings.assemblyDone = true; api.saveSettings(settings) }
   }, 300)

@@ -12,6 +12,8 @@
 <link rel="stylesheet" href="css/style.css">
 <link rel="stylesheet" href="css/pro.css">
 <link rel="stylesheet" href="css/glass.css">
+<link rel="stylesheet" href="css/tour.css">
+<link rel="stylesheet" href="css/arrival.css">
 </head>
 <body>
 
@@ -83,29 +85,14 @@
 </div>
 <button id="debug-toggle-btn" onclick="toggleDebugConsole(true)"><i class="fa fa-bug"></i> ERRORS</button>
 
-<!-- Onboarding Wizard -->
-<div id="onboarding-overlay" style="display:none">
-  <div class="wizard-card">
-    <div class="wizard-step-dots-wrap">
-      <div class="wizard-step-counter" id="wizard-step-counter">Step 1 of 6</div>
-      <div class="wizard-step-dots">
-        <div class="wizard-dot active" id="wdot-0"></div>
-        <div class="wizard-dot" id="wdot-1"></div>
-        <div class="wizard-dot" id="wdot-2"></div>
-        <div class="wizard-dot" id="wdot-3"></div>
-        <div class="wizard-dot" id="wdot-4"></div>
-        <div class="wizard-dot" id="wdot-5"></div>
-      </div>
-    </div>
-    <div id="wizard-body"></div>
-  </div>
-</div>
+<!-- Arrival: first-launch flow (js/arrival.js) -->
+<div id="arrival" style="display:none" aria-live="off"></div>
 
-<!-- Language picker (first launch only) -->
+<!-- Language picker (first launch only): the doorstep -->
 <div id="lang-picker" style="display:none">
-  <div class="lang-picker-icon"><i class="fa fa-bolt"></i></div>
+  <svg class="ar-mark" viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="30"/><path d="M38 16v21a8 8 0 0 1-8 8h-2a8 8 0 0 1-8-8"/></svg>
   <div class="lang-picker-heading">
-    <div class="lang-picker-title">Jylli Tool</div>
+    <div class="lang-picker-title" id="lang-picker-greeting">Jylli Tool</div>
     <div class="lang-picker-sub">Choose your language / Valitse kieli</div>
   </div>
   <div class="lang-picker-btns">
@@ -546,7 +533,9 @@
 <script src="js/twin/host.js"></script>
 <script src="js/boot-stage.js"></script>
 <script src="js/shell.js"></script>
+<script src="js/concierge.js"></script>
 <script src="js/pages/home.js"></script>
+<script src="js/pages/home-concierge.js"></script>
 <script src="js/pages/settings.js"></script>
 <script src="js/pages/system-processes.js"></script>
 <script src="js/pages/system-history.js"></script>
@@ -564,6 +553,9 @@
 <script src="js/pages/clean-startup.js"></script>
 <script src="js/pages/gaming-pulse.js"></script>
 <script src="js/ui-helpers.js"></script>
+<script src="js/tours.js"></script>
+<script src="js/tour.js"></script>
+<script src="js/arrival.js"></script>
 <script src="js/fivem-logic.js"></script>
 <script>
 'use strict'
@@ -580,7 +572,11 @@ function tName(id)    { return (LANG[currentLang]?.tweakNames?.[id]    ?? LANG.e
 function tWarn(id)    { return (LANG[currentLang]?.tweakWarnings?.[id] ?? LANG.en.tweakWarnings?.[id]) ?? null }
 function tFixDesc(id) { return (LANG[currentLang]?.fixDescs?.[id]      ?? LANG.en.fixDescs?.[id])      ?? null }
 function tWizard(key) { return (LANG[currentLang]?.wizard?.[key]     ?? LANG.en.wizard?.[key])   ?? key }
-function tAOName(id)  { return (LANG[currentLang]?.aoNames?.[id]  ?? LANG.en.aoNames?.[id])  ?? id }
+function tG(group, key, vars) {
+  const s = String((LANG[currentLang]?.[group]?.[key] ?? LANG.en[group]?.[key]) ?? key)
+  return vars ? s.replace(/\{(\w+)\}/g, (m, k) => (k in vars) ? vars[k] : m) : s
+}
+function tAOName(id) { return (LANG[currentLang]?.aoNames?.[id]  ?? LANG.en.aoNames?.[id])  ?? id }
 function tAODesc(id)  { return (LANG[currentLang]?.aoDescs?.[id]  ?? LANG.en.aoDescs?.[id])  ?? '' }
 function applyI18n() {
   document.querySelectorAll('[data-i18n]').forEach(el => { el.textContent = tUI(el.dataset.i18n) })
@@ -777,12 +773,16 @@ async function init(isPremium = false) {
   }
 
   // Scan complete: slide splash up, app slides in from below
+  // Resolves once the splash is gone; Arrival and tours wait on it.
+  var _bootResolve
+  window._bootFinished = new Promise(function(res) { _bootResolve = res })
   function finishLoading() {
     var el = document.getElementById('loading')
-    if (!el) return
+    if (!el) { _bootResolve(); return }
     var hide = function() {
       el.style.display = 'none'
       el.classList.remove('complete', 'handoff', 'handoff-done')
+      _bootResolve()
     }
     // With the boot stage running, the rig's canvas travels to Home first (js/boot-stage.js); otherwise the old slide-out.
     if (window.JylliBootStage && JylliBootStage.active) {
@@ -1105,12 +1105,10 @@ async function init(isPremium = false) {
   setTimeout(() => {
     const pfTs = parseInt(localStorage.getItem('pf_scan_ts') || '0')
     const stale = (Date.now() - pfTs) / 3600000 > 6 || !localStorage.getItem('pf_tweak_states')
-    if (stale) {
+    // Arrival runs its own scan; a second one would compete with it
+    if (stale && settings.onboardingDone) {
       api.runPreflightScan().then(result => {
-        if (result?.tweakStates) {
-          localStorage.setItem('pf_tweak_states', JSON.stringify(result.tweakStates))
-          _invalidatePfStatesCache()
-          localStorage.setItem('pf_scan_ts', Date.now())
+        if (storePreflightResult(result)) {
           if (document.querySelector('[data-page="preflight"].active')) renderPreflightResults(result)
         }
       }).catch(e => api.startupTrace?.(`[preflight] Background scan failed: ${e}`))
@@ -1348,58 +1346,24 @@ async function init(isPremium = false) {
     stopPfHogRail()
   })
 
-  // Show onboarding on first launch
-  if (!settings.onboardingDone) {
-    setTimeout(async () => {
-      const isAdmin = await api.isAdmin()
-      if (!isAdmin && !settings.adminRelaunchDismissed) {
-        // Auto-relaunch countdown — 3 seconds, skippable
-        let secs = 3
-        let cancelled = false
-        window._adminRelaunchCancel = () => {
-          cancelled = true
-          settings.adminRelaunchDismissed = true
-          api.saveSettings(settings)
-          startOnboarding()
-        }
-        const showCountdown = () => {
-          if (cancelled) return
-          const container = document.getElementById('toast-container')
-          if (!container) return
-          // Remove previous countdown toast if present
-          const prev = document.getElementById('admin-relaunch-toast')
-          if (prev) prev.remove()
-          const t = document.createElement('div')
-          t.id = 'admin-relaunch-toast'
-          t.className = 'toast warn'
-          t.innerHTML = `
-            <span class="toast-icon-wrap"><i class="fa fa-lock"></i></span>
-            <div class="toast-body">
-              <div class="toast-title">${tWizard('autoRelaunchTitle')}</div>
-              <div class="toast-msg">${tWizard('autoRelaunchDesc').replace('{s}', secs)}</div>
-              <div class="toast-bar" style="animation-duration:${secs * 1000}ms"></div>
-            </div>
-            <button class="toast-close" onclick="window._adminRelaunchCancel()" aria-label="${tUI('ttDismiss')}"><i class="fa fa-xmark"></i></button>
-          `
-          container.appendChild(t)
-        }
-        showCountdown()
-        const iv = setInterval(() => {
-          if (cancelled) { clearInterval(iv); return }
-          secs--
-          if (secs <= 0) {
-            clearInterval(iv)
-            const t = document.getElementById('admin-relaunch-toast')
-            if (t) t.remove()
-            if (!cancelled) api.relaunchAdmin()
-            return
-          }
-          showCountdown()
-        }, 1000)
-      } else {
-        startOnboarding()
+  // First launch: Arrival (js/arrival.js) starts once the splash is gone
+  if (!settings.onboardingDone) window._bootFinished.then(() => setTimeout(() => JylliArrival.maybeStart(), 300))
+
+  // Existing installs: tours stay off until the user opts in. One toast offers them, once, when nothing else owns the screen.
+  if (settings.onboardingDone && settings.toursEnabled === undefined) {
+    settings.toursEnabled = false
+    api.saveSettings(settings)
+    if (!settings.toursOffered) window._bootFinished.then(() => {
+      let tries = 0
+      const offer = () => {
+        if (JylliTour.blocked() && ++tries < 60) return setTimeout(offer, 1000)
+        if (tries >= 60) return
+        settings.toursOffered = { at: Date.now() }
+        api.saveSettings(settings)
+        toast(tG('tour', 'offeredToast'), '', 'info', 14000, { tag: 'tours-offer', action: { label: tG('tour', 'offeredOn'), run: () => { settings.toursEnabled = true; api.saveSettings(settings) } } })
       }
-    }, 800)
+      setTimeout(offer, 3000)
+    })
   }
 
   // Existing installs: ask once about opt-in telemetry
@@ -1685,11 +1649,12 @@ async function _buildTabPremiumLock(c, tabKey) {
   const tabName = (PREMIUM_TAB_NAMES[currentLang] || PREMIUM_TAB_NAMES.en)[tabKey] || tabKey
   const lock = document.createElement('div')
   lock.className = 'tab-premium-lock'
+  lock.dataset.tour = 'prolock-card'
   lock.innerHTML = `
     <div class="tab-premium-lock-icon"><i class="fa fa-lock"></i></div>
     <div class="tab-premium-lock-title"><i class="fa fa-crown jx-48"></i>${tabName} — ${tUI('premiumLockTitle')}</div>
     <div class="tab-premium-lock-sub">${tUI('premiumLockDesc')}</div>
-    <a href="#" class="btn btn-primary btn-sm" style="background:var(--c-accent);margin-top:4px" onclick="api.openExternal('${url}');return false">
+    <a href="#" data-tour="prolock-cta" class="btn btn-primary btn-sm" style="background:var(--c-accent);margin-top:4px" onclick="api.openExternal('${url}');return false">
       <i class="fa fa-crown"></i> ${tUI('premiumLockCta')}
     </a>`
   c.appendChild(lock)
@@ -1788,6 +1753,7 @@ function showPage(page, tabId) {
     // Directional page-enter — fires on populated content (no forced reflow: page-enter was removed before the exit, so adding it starts fresh)
     if (_navDir === -1) c.classList.add('dir-up')
     c.classList.add('page-enter')
+    setTimeout(() => { if (window._navToken === navToken) try { JylliTour.onPage(route, c); conciergeHint(route, c, navToken) } catch {} }, 360)
   }, _exitDur)
 }
 
@@ -2145,6 +2111,10 @@ function initUiSounds() {
     if (!settings.uiSounds) return
     if (e.target.matches && e.target.matches('.btn:not(:disabled), .j-btn:not(:disabled)')) _playUiTick()
   }, true)
+}
+function settingsToggleTours(on) {
+  settings.toursEnabled = !!on
+  api.saveSettings(settings)
 }
 function settingsToggleUiSounds(on) {
   settings.uiSounds = on
@@ -2516,254 +2486,9 @@ const SEARCH_INDEX = [
   { id:'lfsvc',                 label:'Geolocation Service Off',                    page:'cleanup',      desc:'Disable Windows location service' },
 ]
 
-// ─── Onboarding Wizard ────────────────────────────────────────────────────────
-function buildWizardSteps() {
-  return [
-    {
-      icon: '<i class="fa fa-lock"></i>',
-      get title() { return tWizard('adminTitle') },
-      get desc()  { return tWizard('adminDesc')  },
-      action: async () => {
-        const isAdmin = await api.isAdmin()
-        return isAdmin
-          ? { status: 'ok',   text: tWizard('adminOk') }
-          : { status: 'warn', text: `<i class="fa fa-triangle-exclamation"></i> ${tWizard('adminWarn')}` }
-      },
-      extra: () => `<button class="btn btn-danger jx-203" onclick="api.relaunchAdmin()"><i class="fa fa-lock"></i> ${tWizard('adminBtn')}</button><div class="jx-204">${tWizard('adminSkipHint')}</div>`
-    },
-    {
-      icon: '<i class="fa fa-shield-halved"></i>',
-      get title() { return tWizard('rpTitle') },
-      get desc()  { return tWizard('rpDesc')  },
-      action: async () => {
-        const r = await api.createRestorePoint('JylliTool_v1_FirstRun')
-        return r.ok
-          ? { status: 'ok',  text: tWizard('rpOk') }
-          : { status: 'err', text: `✗ ${tWizard('rpFailed').replace('{e}', r.error || tWizard('rpUnknownError'))}` }
-      }
-    },
-    {
-      icon: '<i class="fa fa-heart-pulse"></i>',
-      get title() { return tWizard('healthTitle') },
-      get desc()  { return tWizard('healthDesc')  },
-      action: async () => {
-        const statusEl = document.getElementById('wizard-status')
-        api.offWindowsHealthProgress()
-        api.onWindowsHealthProgress(({ msg, level }) => {
-          if (statusEl) {
-            const colors = { ok:'var(--success)', warn:jStatus('warn'), err:'var(--danger)', info:'var(--muted)' }
-            statusEl.style.color = colors[level] || colors.info
-            statusEl.innerHTML = `<i class="fa fa-spinner fa-spin"></i> ${msg}`
-          }
-        })
-        let r
-        try { r = await api.runWindowsHealth() } catch { r = { ok: false, issues: [] } }
-        localStorage.setItem('health_check_ts', Date.now())
-        localStorage.setItem('health_check_ok', r?.ok ? '1' : '0')
-        if (r?.ok) return { status: 'ok', text: tWizard('healthOk') }
-        const issues = r?.issues || []
-        return { status: 'warn', text: `⚠ ${issues.length} issue(s) found${issues.length ? ': ' + issues.join(' · ') : ''} — consider repairing before optimizing` }
-      }
-    },
-    {
-      icon: '<i class="fa fa-magnifying-glass"></i>',
-      get title() { return tWizard('scanTitle') },
-      get desc()  { return tWizard('scanDesc')  },
-      action: async () => {
-        try { sysInfo = await api.getSystemInfo() } catch { sysInfo = {} }
-        sysInfo = sysInfo || {}
-        const parts = [
-          `CPU: ${sysInfo.cpu || '?'}`,
-          `RAM: ${sysInfo.ramGB || '?'}GB`,
-          `GPU: ${sysInfo.gpu || '?'}`,
-          sysInfo.nvme ? 'NVMe SSD ✓' : 'SSD/HDD',
-          sysInfo.isWifi ? 'Wi-Fi' : 'Ethernet',
-          sysInfo.isLaptop ? 'Laptop' : 'Desktop'
-        ]
-        return { status: 'ok', text: '✓ ' + parts.join(' · ') }
-      }
-    },
-    {
-      icon: '<i class="fa fa-shield-halved"></i>',
-      get title() { return tWizard('preflightTitle') },
-      get desc()  { return tWizard('preflightDesc')  },
-      action: async () => {
-        const statusEl = document.getElementById('wizard-status')
-        if (statusEl) statusEl.innerHTML = `<i class="fa fa-spinner fa-spin"></i> ${tWizard('preflightProgress')}`
-        let result
-        try {
-          result = await api.runPreflightScan()
-        } catch (e) {
-          return { status: 'err', text: `✗ Pre-Flight scan failed: ${e.message}` }
-        }
-        if (result.tweakStates) {
-          localStorage.setItem('pf_tweak_states', JSON.stringify(result.tweakStates))
-          _invalidatePfStatesCache()
-          localStorage.setItem('pf_scan_ts', Date.now())
-        }
-        const applied = Object.values(result.tweakStates || {}).filter(Boolean).length
-        const scoreColor = result.safetyScore >= 80 ? 'var(--success)' : result.safetyScore >= 50 ? 'var(--warning)' : 'var(--danger)'
-        const high = result.detections?.filter(d => d.severity === 'high') || []
-        window._wizardLowScore = result.safetyScore < 50
-        const alertHtml = high.length > 0
-          ? `<div class="jx-205"><i class="fa fa-triangle-exclamation"></i> ${high.length} high-severity detection(s): ${high.map(d => d.name).join(', ')}</div>`
-          : `<div class="jx-206"><i class="fa fa-circle-check"></i> ${tWizard('preflightClean')}</div>`
-        return {
-          status: result.safetyScore >= 80 ? 'ok' : result.safetyScore >= 50 ? 'warn' : 'err',
-          text: `<div class="jx-207">
-            <div class="jx-27">
-              <div class="jx-65">${tUI('pfOsType')}</div>
-              <div style="font-size:13px;font-weight:800;color:${result.osType === 'Stock' ? 'var(--success)' : 'var(--warning)'}">${result.osType}</div>
-            </div>
-            <div class="jx-27">
-              <div class="jx-65">${tUI('pfSafetyScore')}</div>
-              <div style="font-size:20px;font-weight:900;color:${scoreColor}">${result.safetyScore}<span class="jx-7">/100</span></div>
-            </div>
-            <div class="jx-27">
-              <div class="jx-65">${tUI('pfPreApplied')}</div>
-              <div class="jx-99">${applied}</div>
-            </div>
-          </div>${alertHtml}`
-        }
-      }
-    },
-    {
-      icon: '<i class="fa fa-rocket"></i>',
-      get title() { return tWizard('choiceTitle') },
-      desc: '',
-      isChoice: true,
-    }
-  ]
-}
-// Keep reference for length checks etc.
-const WIZARD_STEPS = { get length() { return 6 } }
-
-let wizardStep = 0
-
-async function runWizardStep(step) {
-  const steps = buildWizardSteps()
-  const s = steps[step]
-  const body = document.getElementById('wizard-body')
-
-  // Update dots + step counter
-  for (let i = 0; i < steps.length; i++) {
-    const dot = document.getElementById(`wdot-${i}`)
-    if (dot) dot.className = 'wizard-dot' + (i === step ? ' active' : i < step ? ' done' : '')
-  }
-  const counter = document.getElementById('wizard-step-counter')
-  if (counter) counter.textContent = `Step ${step + 1} of ${steps.length}`
-
-  // Special: Auto-Optimize choice step
-  if (s.isChoice) {
-    body.innerHTML = `
-      <div class="wizard-icon">${s.icon}</div>
-      <div class="wizard-title">${tWizard('choiceTitle')}</div>
-      <div class="wizard-desc jx-208">${tWizard('choiceDesc')}</div>
-
-      <div class="jx-209">
-
-        <!-- Auto-Optimize card -->
-        <div onclick="wizardChooseAutoOpti()" id="wiz-choice-auto"
-          style="background:var(--surface-2);border:1px solid rgba(var(--c-success-rgb),0.25);border-radius:12px;padding:16px 18px;cursor:pointer;transition:border-color .15s,background .15s"
-          onmouseenter="this.style.borderColor = 'rgba(var(--c-success-rgb),0.6)';this.style.background = 'var(--surface-2)'"
-          onmouseleave="this.style.borderColor = 'rgba(var(--c-success-rgb),0.25)';this.style.background = 'var(--surface-2)'">
-          <div class="jx-100">
-            <div class="jx-210"><i class="fa fa-rocket"></i></div>
-            <div>
-              <div class="jx-66">${tWizard('autoTitle')} <span class="jx-211">${tWizard('autoBadge')}</span></div>
-              <div class="jx-33">${tWizard('autoSub')}</div>
-            </div>
-          </div>
-          <div class="jx-212">${tWizard('autoDesc')}</div>
-          <div class="jx-213">
-            ${['Disables bloat services','Network stack tuning','Best power plan','Input optimisation','GPU scheduling','Privacy tweaks'].map(t =>
-              `<span class="jx-214">${t}</span>`
-            ).join('')}
-          </div>
-        </div>
-
-        <!-- Manual card -->
-        <div onclick="wizardChooseManual()" id="wiz-choice-manual"
-          style="background:var(--surface-2);border:1px solid var(--hairline-strong);border-radius:12px;padding:16px 18px;cursor:pointer;transition:border-color .15s,background .15s"
-          onmouseenter="this.style.borderColor = 'var(--hairline-strong)';this.style.background = 'var(--surface-2)'"
-          onmouseleave="this.style.borderColor = 'var(--hairline-strong)';this.style.background = 'var(--surface-2)'">
-          <div class="jx-100">
-            <div class="jx-215"><i class="fa fa-sliders"></i></div>
-            <div>
-              <div class="jx-66">${tWizard('manualTitle')}</div>
-              <div class="jx-33">${tWizard('manualSub')}</div>
-            </div>
-          </div>
-          <div class="jx-216">${tWizard('manualDesc')}</div>
-        </div>
-      </div>
-
-      <div class="wizard-btns">
-        <button class="btn btn-ghost" onclick="wizardPrev()">← ${tUI('back')}</button>
-      </div>`
-    return
-  }
-
-  body.innerHTML = `
-    <div class="wizard-icon">${s.icon}</div>
-    <div class="wizard-title">${s.title}</div>
-    <div class="wizard-desc">${s.desc}</div>
-    <div class="wizard-status jx-3" id="wizard-status"><i class="fa fa-spinner fa-spin"></i> ${tUI('running')}</div>
-    <div class="wizard-btns">
-      ${step > 0 ? `<button class="btn btn-ghost" onclick="wizardPrev()">← ${tUI('back')}</button>` : ''}
-      <button class="btn btn-primary" id="wizard-next-btn" disabled>${tUI('next')} →</button>
-    </div>
-  `
-
-  const result = await s.action()
-  const statusEl = document.getElementById('wizard-status')
-  statusEl.innerHTML = result.text
-  statusEl.className = `wizard-status ${result.status}`
-
-  if (s.extra && result.status !== 'ok') {
-    statusEl.insertAdjacentHTML('afterend', s.extra())
-  }
-
-  const nextBtn = document.getElementById('wizard-next-btn')
-  nextBtn.disabled = false
-  if (window._wizardLowScore) {
-    nextBtn.textContent = tUI('pfAcknowledgeProceed')
-    nextBtn.className = 'btn btn-danger'
-    nextBtn.onclick = () => {
-      window._wizardLowScore = false
-      nextBtn.className = 'btn btn-primary'
-      wizardStep++; runWizardStep(wizardStep)
-    }
-  } else {
-    nextBtn.onclick = () => { wizardStep++; runWizardStep(wizardStep) }
-  }
-}
-
-async function wizardFinish() {
-  document.getElementById('onboarding-overlay').style.display = 'none'
-  settings.onboardingDone = true
-  api.saveSettings(settings)
-  toast(tWizard('welcomeTitle'), `Setup complete — enjoy Jylli Tool v${appVersion}`, 'ok', 4000)
-  await askAnalyticsConsent()
-}
-
-async function wizardChooseAutoOpti() {
-  await wizardFinish()
-  setTimeout(() => runAutoOpti(), 300)
-}
-
-async function wizardChooseManual() {
-  await wizardFinish()
-  toast(tWizard('exploreTitle'), tWizard('exploreSub'), 'info', 4000)
-}
-
-function wizardPrev() { if (wizardStep > 0) { wizardStep--; runWizardStep(wizardStep) } }
-
-function startOnboarding() {
-  wizardStep = 0
-  document.getElementById('onboarding-overlay').style.display = 'flex'
-  runWizardStep(0)
-}
+// ─── Onboarding ───────────────────────────────────────────────────────────────
+// The first-launch flow is js/arrival.js; this keeps the old entry point (Settings, Home resume card) working.
+function startOnboarding() { JylliArrival.start({ rerun: true }) }
 
 // ─── Page: Pulse ─────────────────────────────────────────────────────────────
 const PULSE_PRESET_LIST = [
@@ -4313,11 +4038,7 @@ async function runPreflightScan(btn) {
   try {
     const result = await api.runPreflightScan()
     // Persist tweak states so makeCard() can read them immediately
-    if (result.tweakStates) {
-      localStorage.setItem('pf_tweak_states', JSON.stringify(result.tweakStates))
-      _invalidatePfStatesCache()
-      localStorage.setItem('pf_scan_ts', Date.now())
-    }
+    storePreflightResult(result)
     if (scanBar) { scanBar.style.width = '100%'; setTimeout(() => { if (scanBar) scanBar.style.width = '0%' }, 800) }
     try { JylliWorld.scanProgress(100); setTimeout(() => JylliWorld.scanEnd(), 700) } catch {}
     renderPreflightResults(result)
@@ -10979,7 +10700,7 @@ function buildWindowsOpti(c) {
   const toolbar = document.createElement('div')
   toolbar.className = 'gen-toolbar'
   toolbar.innerHTML = `
-    <div class="search-bar-wrap jx-2">
+    <div class="search-bar-wrap jx-2" data-tour="windows-search">
       <i class="fa fa-magnifying-glass"></i>
       <input id="gen-search" type="text" placeholder="${tUI('genSearchPlaceholder')}"
         class="search-bar-input"
@@ -10992,7 +10713,7 @@ function buildWindowsOpti(c) {
     <button onclick="genApplySafeDefaults()" class="gen-safe-btn">
       <i class="fa fa-wand-magic-sparkles"></i> ${tUI('genSafeDefaults')}
     </button>
-    <button onclick="genRestoreAllApplied()" id="gen-restore-all-btn" class="gen-restore-btn">
+    <button onclick="genRestoreAllApplied()" id="gen-restore-all-btn" data-tour="windows-undo" class="gen-restore-btn">
       <i class="fa fa-rotate-left"></i> ${tUI('genRestoreAll')}
     </button>
     <span id="gen-applied-counter" class="gen-counter"><i class="fa fa-circle-check"></i> <span id="gen-counter-text">0 ${tUI('genTweaksActive')}</span></span>
@@ -13224,6 +12945,17 @@ function getPreflightStates() {
 }
 function _invalidatePfStatesCache() { _pfStatesCache = null }
 
+// Single writer for a finished preflight scan (runAutoOpti gates on pf_scan_ts). Returns true when states were stored.
+function storePreflightResult(r) {
+  if (!r?.tweakStates) return false
+  localStorage.setItem('pf_tweak_states', JSON.stringify(r.tweakStates))
+  _invalidatePfStatesCache()
+  localStorage.setItem('pf_scan_ts', Date.now())
+  if (typeof r.safetyScore === 'number') localStorage.setItem('pf_safety_score', r.safetyScore)   // read by the concierge
+  if (r.osType) localStorage.setItem('pf_os_type', r.osType)
+  return true
+}
+
 function makeCard({ id, name, desc, icon = '<i class="fa fa-gear"></i>', danger = false, dangerLabel = 'Confirm', restore = true, warning = '', reboot = false, sinceVersion = '', safetyTier = 1 }) {
   desc = tDesc(id) || desc
   name = tName(id) || name
@@ -13238,6 +12970,7 @@ function makeCard({ id, name, desc, icon = '<i class="fa fa-gear"></i>', danger 
   const _tierClass = danger ? 'tier-risk' : (safetyTier === 2 ? 'tier-caution' : 'tier-safe')
   d.className = 'tweak-card ' + _tierClass + (danger ? ' tc-danger' : '') + (applied ? ' tc-applied' : '') + (preApplied ? ' tc-preapplied' : '') + (hasConflict ? ' tc-conflict' : '')
   d.id = `tcw-${id}`
+  d.dataset.tour = 'tweak-card'
   d.dataset.search = `${name} ${desc} ${id}`.toLowerCase()
   const tierNum = danger ? 3 : (safetyTier || 1)
   const tierIcon = tierNum === 1 ? '●' : tierNum === 2 ? '▲' : '⚠'

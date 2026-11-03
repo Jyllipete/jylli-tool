@@ -219,6 +219,10 @@ async function selectLanguage(lang) {
     api.startupTrace?.('initLanguage done')
     if (!settings.language) {
       api.startupTrace?.('no language — showing picker')
+      try {   // the doorstep greets in both languages, by time of day
+        const k = JylliArrival.greetingKey(new Date().getHours()), gr = document.getElementById('lang-picker-greeting')
+        if (gr) gr.textContent = LANG.en.arrival[k] + ' ' + LANG.fi.arrival[k]
+      } catch {}
       document.getElementById('lang-picker').style.display = 'flex'
       return
     }

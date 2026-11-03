@@ -137,6 +137,8 @@
   --font-size-xl:   18px;
   --font-size-2xl:  20px;
   --font-size-3xl:  24px;
+  --font-size-hero: 28px;      /* Arrival scene titles */
+  --font-size-display: 40px;   /* Arrival greeting */
 
   /* ── Typography line-heights ── */
   --lh-tight:   1.2;

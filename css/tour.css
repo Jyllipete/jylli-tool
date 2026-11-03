@@ -1,0 +1,20 @@
+/* Guided tour layer (js/tour.js). Tokens only; opacity/transform animations scale with --motion-scale. */
+.jt { position: fixed; inset: 0; z-index: var(--z-tooltip); opacity: 0; pointer-events: none; transition: opacity calc(160ms * var(--motion-scale, 1)); }
+.jt.jt-on { opacity: 1; pointer-events: auto; }
+.jt.jt-fade { opacity: 0; transition-duration: calc(120ms * var(--motion-scale, 1)); }
+.jt.jt-paused { opacity: 0; pointer-events: none; }
+.jt-svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.jt-m-all { fill: white; }
+.jt-m-hole { fill: black; }
+.jt-dim { fill: var(--c-overlay); }
+.jt-ring { fill: none; stroke: var(--c-accent); stroke-width: 1.5; opacity: .8; pointer-events: none; }
+.jt-card { position: absolute; top: 0; left: 0; width: 320px; max-width: calc(100vw - 24px); box-sizing: border-box; padding: 16px; border-radius: 12px;
+  background: var(--surface-2); border: 1px solid var(--hairline-strong); box-shadow: var(--hairline-top), 0 12px 32px var(--c-overlay); color: var(--c-text-primary); }
+.jt-count { font-family: var(--font-mono); font-size: var(--font-size-xs); color: var(--c-text-tertiary); font-variant-numeric: tabular-nums; margin-bottom: 6px; }
+.jt-title { margin: 0 0 6px; font-size: var(--font-size-lg); font-weight: 500; letter-spacing: -.01em; }
+.jt-body { margin: 0 0 14px; font-size: var(--font-size-base); line-height: 1.5; color: var(--c-text-secondary); }
+.jt-actions { display: flex; align-items: center; gap: 8px; }
+.jt-spacer { flex: 1; }
+.jt-off { display: block; margin: 12px 0 0; padding: 0; border: 0; background: none; font: inherit; font-size: var(--font-size-xs); color: var(--c-text-tertiary); cursor: pointer; text-decoration: underline; }
+.jt-off:hover { color: var(--c-text-secondary); }
+html.motion-reduced .jt, html.motion-reduced .jt * { transition: none; }

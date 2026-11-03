@@ -64,7 +64,7 @@ function respond(name, args, ctx) {
     case 'relaunchAdmin': return { ok: true }
     case 'getMetrics': return metrics(Date.now() / 3000)
     case 'loadSettings': case 'getSettings':
-      return { language: lang, onboardingDone: true, analyticsConsent: false, avTipDismissed: true, adminRelaunchDismissed: true, isPremium: premium,
+      return { language: lang, onboardingDone: !ctx.arrival, toursEnabled: !!ctx.tours, analyticsConsent: false, avTipDismissed: true, adminRelaunchDismissed: true, isPremium: premium,
                accentColor: ctx.accent || undefined, theme: ctx.theme || undefined, advancedMode: !!ctx.advanced, ...tweakKeys() }
     case 'saveSettings': return true
     case 'authVerify': return { ok: true, reason: 'ok', isPremium: premium }

@@ -4,13 +4,21 @@
 ;(function (root) {
   const PEAK = 0.063   // -24 dBFS
 
-  // name -> list of tone segments { type, f0, f1, ms, lp? } or a noise click
+  // name -> list of tone segments { type, f0, f1, ms, lp?, at? (ms offset), gain? (0..1), attack? (ms) } or a noise click
   const SPECS = {
     tick: { segs: [{ type: 'sine', f0: 1200, f1: 1200, ms: 25 }] },
     apply: { segs: [{ type: 'sine', f0: 660, f1: 990, ms: 140 }] },
     undo: { segs: [{ type: 'sine', f0: 990, f1: 660, ms: 140 }] },
     warning: { segs: [{ type: 'square', f0: 220, f1: 220, ms: 180, lp: 600 }], gain: 0.7 },
     click: { noise: true, ms: 15 },
+    // Arrival chimes: staggered sines, soft attack
+    welcome: { segs: [
+      { type: 'sine', f0: 659, f1: 659, ms: 260, at: 0, gain: 0.8, attack: 20 },
+      { type: 'sine', f0: 831, f1: 831, ms: 260, at: 90, gain: 0.8, attack: 20 },
+      { type: 'sine', f0: 988, f1: 988, ms: 300, at: 180, gain: 0.8, attack: 20 },
+    ] },
+    step: { segs: [{ type: 'sine', f0: 880, f1: 880, ms: 60, gain: 0.6, attack: 8 }] },
+    ready: { segs: [{ type: 'sine', f0: 440, f1: 659, ms: 380, gain: 0.9, attack: 30 }] },
   }
   const spec = name => SPECS[name] || null
 
@@ -46,12 +54,13 @@
       }
       for (const seg of s.segs) {
         const o = a.createOscillator(), g = a.createGain()
+        const ts = t0 + (seg.at || 0) / 1000, te = ts + seg.ms / 1000, atk = (seg.attack || 6) / 1000
         o.type = seg.type
-        o.frequency.setValueAtTime(seg.f0, t0); if (seg.f1 !== seg.f0) o.frequency.linearRampToValueAtTime(seg.f1, t0 + seg.ms / 1000)
-        g.gain.setValueAtTime(0.0001, t0); g.gain.exponentialRampToValueAtTime(1, t0 + 0.006); g.gain.exponentialRampToValueAtTime(0.0001, t0 + seg.ms / 1000)
+        o.frequency.setValueAtTime(seg.f0, ts); if (seg.f1 !== seg.f0) o.frequency.linearRampToValueAtTime(seg.f1, te)
+        g.gain.setValueAtTime(0.0001, ts); g.gain.exponentialRampToValueAtTime(seg.gain || 1, ts + atk); g.gain.exponentialRampToValueAtTime(0.0001, te)
         let node = g
         if (seg.lp) { const f = a.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = seg.lp; g.connect(f); node = f }
-        o.connect(g); node.connect(out); o.start(t0); o.stop(t0 + seg.ms / 1000 + 0.02)
+        o.connect(g); node.connect(out); o.start(ts); o.stop(te + 0.02)
       }
       return true
     } catch { return false }

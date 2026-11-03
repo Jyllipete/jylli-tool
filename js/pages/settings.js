@@ -18,7 +18,7 @@ function buildSettings(c) {
     ['account', 'settingsDiscordAccount', 'circle-user'],
     ['about', 'settingsAbout', 'circle-info'],
   ]
-  const section = (id, titleKey, body) => html`<section class="j-settings-sec" id="set-sec-${id}"><h2 class="j-settings-h">${tUI(titleKey)}</h2>${body}</section>`
+  const section = (id, titleKey, body) => html`<section class="j-settings-sec" id="set-sec-${id}" data-tour="settings-${id}"><h2 class="j-settings-h">${tUI(titleKey)}</h2>${body}</section>`
 
   const motionBtns = ['snappy', 'default', 'smooth', 'reduced'].map(m => html`<button id="motion-${m}-btn" type="button" class="${ui.cls('j-seg-item', (settings.motionMode || 'default') === m && 'j-seg-active')}" onclick="settingsSetMotionMode('${m}')">${tUI('motion' + m.charAt(0).toUpperCase() + m.slice(1))}</button>`)
 
@@ -40,7 +40,12 @@ function buildSettings(c) {
         row(tUI('settingsDiscordRpc'), tUI('settingsDiscordRpcDesc'), sw('settings-rpc-check', 'settingsToggleDiscordRpc(this.checked)', tUI('settingsDiscordRpc'))),
         row(tUI('applyMode'), tUI('applyModeDesc'), html`<div class="j-seg">${['immediate', 'review'].map(v => html`<button type="button" data-applymode="${v}" class="${ui.cls('j-seg-item', (settings.applyMode || 'immediate') === v && 'j-seg-active')}" onclick="settingsSetApplyMode('${v}')">${tUI('applyMode_' + v)}</button>`)}</div>`),
         row(tUI('settingsUiSounds'), tUI('settingsUiSoundsDesc'), sw('settings-sounds-check', 'settingsToggleUiSounds(this.checked)', tUI('settingsUiSounds'))),
-      ])}`)}
+      ])}
+      <div data-tour="settings-tours">${ui.group('', [
+        row(tG('tour', 'toursOn'), tG('tour', 'toursOnSub'), sw('settings-tours-check', 'settingsToggleTours(this.checked)', tG('tour', 'toursOn'))),
+        row(tG('tour', 'reset'), '', ui.button({ label: tG('tour', 'reset'), size: 'sm', onclick: 'JylliTour.reset()' })),
+        row(tG('tour', 'welcomeAgain'), tG('tour', 'welcomeAgainSub'), ui.button({ label: tG('tour', 'welcomeAgain'), size: 'sm', onclick: 'startOnboarding()' })),
+      ])}</div>`)}
 
     ${section('appearance', 'settingsAppearance', html`
       <p class="j-muted j-settings-hint">${tUI('settingsThemeHint')}</p>
@@ -144,6 +149,7 @@ function buildSettings(c) {
   const setChecked = (id, v) => { const el = document.getElementById(id); if (el) el.checked = v }
   setChecked('settings-rpc-check', settings.discordRpcEnabled !== false)
   setChecked('settings-sounds-check', !!settings.uiSounds)
+  setChecked('settings-tours-check', !!settings.toursEnabled)
   setChecked('settings-aria-check', settings.ariaEnabled === true)
   setChecked('settings-fps-hud-check', !!settings.ariaFpsHudEnabled)
   setChecked('settings-silent-check', !!settings.silentModeEnabled)
