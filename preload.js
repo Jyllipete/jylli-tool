@@ -219,6 +219,8 @@ contextBridge.exposeInMainWorld('api', {
   bios2Status:        ()            => ipcRenderer.invoke('bios2-status'),
   bios2ScewinImport:  ()            => ipcRenderer.invoke('bios2-scewin-import'),
   bios2Commit:        (req)         => ipcRenderer.invoke('bios2-commit', { engine: req && req.engine, changes: req && req.changes, typed: req && req.typed }),
+  bios2Trial:         ()            => ipcRenderer.invoke('bios2-trial'),
+  bios2TrialDisarm:   ()            => ipcRenderer.invoke('bios2-trial-disarm'),
   bios2Snapshots:     ()            => ipcRenderer.invoke('bios2-snapshots'),
   bios2Restore:       (req)         => ipcRenderer.invoke('bios2-restore', { id: req && req.id, typed: req && req.typed }),
   bios2Read:          (req)         => ipcRenderer.invoke('bios2-read', { engine: req && req.engine, confirmUnverified: !!(req && req.confirmUnverified) }),

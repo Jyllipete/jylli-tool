@@ -79,5 +79,8 @@
 .bw-recovery { margin-top: 12px; padding: 10px 12px; border: 1px solid var(--hairline-strong); border-radius: var(--r-sm); background: var(--surface-2); }
 .bw-recovery p { margin: 4px 0 8px; font-size: var(--fs-2); }
 .bw-recovery label { display: flex; flex-direction: column; gap: 4px; font-size: var(--fs-2); }
+.bw-trial { flex: 1 0 100%; order: 9; display: flex; align-items: center; gap: 10px; padding: 6px 10px; border-radius: var(--r-sm); background: var(--surface-2); font-size: var(--fs-2); color: var(--c-text-secondary); }
+.bw-trial span { flex: 1; }
+.bw-trial-armed > i { color: var(--c-success); } .bw-trial-bad > i { color: var(--c-warning); }
 @media (max-width: 1180px) { .bw-main { grid-template-columns: 148px minmax(0, 1fr); } .bw-inspector { display: none; } }
 @media (prefers-reduced-motion: reduce) { .bw * { transition: none !important; } }

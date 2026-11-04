@@ -9,7 +9,7 @@
   const ROW_H = 34
 
   const S = { info: null, engines: [], findings: [], engine: null, settings: [], loading: false, view: 'purpose', cat: 'all', q: '',
-    changed: false, sel: null, staged: new Map(), deck: 'changes', log: [], confirmScewin: false, error: null, snaps: [], busy: false }
+    changed: false, sel: null, staged: new Map(), deck: 'changes', log: [], confirmScewin: false, error: null, snaps: [], busy: false, trial: null }
   let el = null
 
   const log = m => { S.log.push(`${new Date().toLocaleTimeString()}  ${m}`); if (S.log.length > 200) S.log.shift() }
@@ -71,11 +71,13 @@
       <label class="bw-search"><i class="fa fa-magnifying-glass" aria-hidden="true"></i><input id="bw-q" type="search" value="${S.q}" placeholder="${T('searchPlaceholder', { n: S.settings.length })}" aria-label="${T('search')}" ${S.settings.length ? '' : 'disabled'}></label>
       <label class="bw-toggle"><input id="bw-changed" type="checkbox" ${S.changed ? 'checked' : ''}> ${T('changedOnly')}</label>
       <span class="bw-staged bw-mono">${T('staged', { n: staged })}</span>
-      <button class="j-btn j-btn-primary j-btn-sm" id="bw-commit" type="button" ${staged ? '' : 'disabled'}><i class="fa ${writable() ? 'fa-pen-to-square' : 'fa-lock'}" aria-hidden="true"></i> ${T('commit')}</button>`)
+      ${trialBanner()}<button class="j-btn j-btn-primary j-btn-sm" id="bw-commit" type="button" ${staged ? '' : 'disabled'}><i class="fa ${writable() ? 'fa-pen-to-square' : 'fa-lock'}" aria-hidden="true"></i> ${T('commit')}</button>`)
     const q = el.querySelector('#bw-q')
     q.addEventListener('input', () => { S.q = q.value; S.sel = null; refreshGrid() })
     el.querySelector('#bw-changed').addEventListener('change', e => { S.changed = e.target.checked; refreshGrid() })
     el.querySelector('#bw-commit').addEventListener('click', openCommit)
+    const dis = el.querySelector('#bw-disarm'); if (dis) dis.addEventListener('click', async () => { await api.bios2TrialDisarm(); log('boot trial disarmed'); await loadTrial() })
+    const dismiss = el.querySelector('#bw-trial-ok'); if (dismiss) dismiss.addEventListener('click', async () => { await api.bios2TrialDisarm(); await loadTrial() })
   }
 
   function drawTree() {
@@ -196,6 +198,21 @@
     drawRows(); drawInspector()
   }
 
+  // ── boot trial ──
+  function trialBanner() {
+    const t = S.trial
+    if (!t) return ''
+    if (t.status === 'armed') return html`<div class="bw-trial bw-trial-armed"><i class="fa fa-shield-halved" aria-hidden="true"></i><span>${T('trialArmed')}</span><button type="button" class="j-btn j-btn-ghost j-btn-sm" id="bw-disarm">${T('trialDisarm')}</button></div>`
+    if (t.status === 'reverted') return html`<div class="bw-trial bw-trial-bad"><i class="fa fa-rotate-left" aria-hidden="true"></i><span>${T('trialReverted', { names: (t.names || []).join(', ') })}</span><button type="button" class="j-btn j-btn-ghost j-btn-sm" id="bw-trial-ok">${T('trialOk')}</button></div>`
+    if (t.status === 'revert_failed') return html`<div class="bw-trial bw-trial-bad"><i class="fa fa-triangle-exclamation" aria-hidden="true"></i><span>${T('trialRevertFailed', { names: (t.names || []).join(', ') })}</span><button type="button" class="j-btn j-btn-ghost j-btn-sm" id="bw-trial-ok">${T('trialOk')}</button></div>`
+    return ''
+  }
+  async function loadTrial() {
+    const r = await api.bios2Trial()
+    S.trial = r && r.ok ? r.trial : null
+    drawStrip()
+  }
+
   // ── commit / restore ──
   function dialog({ title, rows, critical, confirmLabel, onConfirm, typedFirst }) {
     const bd = document.createElement('div')
@@ -245,8 +262,8 @@
     S.busy = false
     if (r.ok) {
       log(`written and verified, snapshot ${r.snapshotId}`)
-      root.toast(T('committedTitle'), T('committedBody', { n: r.applied }), 'success')
-      await load(S.engine); loadSnaps()
+      root.toast(T('committedTitle'), T('committedBody', { n: r.applied }) + (r.trial === 'armed' ? ' ' + T('trialNote') : r.trial === 'failed' ? ' ' + T('trialFailedNote') : ''), 'success')
+      await load(S.engine); loadSnaps(); loadTrial()
     } else {
       log(`commit failed: ${r.error}${r.reverted ? ', reverted ' + r.reverted : ''}`)
       root.toast(T('failedTitle'), errText(r.error) + (r.reverted ? ' ' + T('revertedNote') : ''), 'error')
@@ -294,6 +311,7 @@
     const st = await api.bios2Status()
     if (!st.ok) { el.innerHTML = String(html`<div class="bw-empty"><i class="fa fa-lock" aria-hidden="true"></i><h4>${T('proOnly')}</h4></div>`); return }
     S.info = st.info; S.engines = st.engines; S.findings = st.findings
+    try { const tr = await api.bios2Trial(); S.trial = tr && tr.ok ? tr.trial : null } catch { S.trial = null }
     const ready = st.engines.find(e => e.state === 'ready')
     drawStrip(); drawTree(); S._list = []; drawInspector(); drawDeck()
     if (ready && ready.id === 'hp-wmi') await load('hp-wmi')
