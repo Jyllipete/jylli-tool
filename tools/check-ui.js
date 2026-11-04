@@ -22,7 +22,7 @@ function walk(dir, out = []) {
 }
 
 // ── 1. no hex / colour literals in the new component code ──
-const NEW_FILES = ['tour', 'tours', 'concierge', 'arrival', 'auto-opti', 'auto-opti/reactor', 'bios/category', 'bios/workstation'].map(n => path.join(root, 'js', n + '.js'))
+const NEW_FILES = ['tour', 'tours', 'concierge', 'arrival', 'auto-opti', 'auto-opti/reactor', 'bios/category', 'bios/workstation', 'bios/easy'].map(n => path.join(root, 'js', n + '.js'))
 const files = [path.join(root, 'js', 'ui.js'), ...NEW_FILES, ...walk(path.join(root, 'js', 'pages'))].filter(f => fs.existsSync(f))
 const COLOR_STYLE = /style\s*=\s*["'`][^"'`]*(color|background|border|box-shadow|fill|stroke)\s*:/i
 for (const f of files) {

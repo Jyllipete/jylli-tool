@@ -13201,7 +13201,8 @@ ipcMain.handle('get-health-score', async (_, settings) => {
 })
 
 // ─── BIOS workstation (lib/bios): status, SCEWIN import, read-only engines ────
-require('./lib/bios/ipc').register({ ipcMain, requiresPremium, runPS, runFile, app, dialog, getWindow: () => mainWindow, log: debugLog })
+require('./lib/bios/ipc').register({ ipcMain, requiresPremium, runPS, runFile, app, dialog, getWindow: () => mainWindow, log: debugLog,
+  getCaps: async () => { const profile = await ensureCapsProfile(false); return profile ? { profile, caps: Caps.deriveCaps(profile) } : null } })
 
 // ─── BIOS Tuner IPC handlers (legacy, removed with the old tab) ───────────────
 

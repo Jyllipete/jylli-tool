@@ -50,6 +50,16 @@ function respond(name, args, ctx) {
       const info = { vendor: 'HP', biosVersion: 'T70 Ver. 01.25.01', biosDate: '2026-06-17', board: 'HP 87E0', system: 'HP ProBook 440 G8', uefi: true, hvci: true, elevated: true }
       return { ok: true, info, engines: [{ id: 'hp-wmi', state: 'ready', verified: false, writable: true }], findings: doctor.diagnose({ vendor: 'HP', elevated: true, uefi: true, hvci: true, hpWmi: 'ok' }) }
     }
+    // Easy mode: the REAL advisor on a synthetic gaming laptop (RAM below rated speed, ReBAR off, fan always on)
+    case 'bios2Advise': {
+      const adv = require('../../lib/bios/advisor'), model = require('../../lib/bios/model')
+      const e = (n, cur, opts) => ({ cls: 'HP_BIOSEnumeration', Name: n, CurrentValue: cur, PossibleValues: opts, Path: 'Advanced/System Options', IsReadOnly: false })
+      const settings = model.fromHp([e('XMP Profile', 'Disable', ['Disable', 'Profile 1']), e('CSM Support', 'Enable', ['Enable', 'Disable']), e('Above 4G Decoding', 'Disable', ['Disable', 'Enable']), e('Resizable BAR', 'Disable', ['Disable', 'Enable']), e('Fan Always On', 'Enable', ['Enable', 'Disable']), e('Graphics Mode', 'Hybrid', ['Hybrid', 'Discrete']), e('Core Performance Boost', 'Auto', ['Disable', 'Auto'])])
+      const caps = { form: 'laptop', hybridGraphics: true, anyDiscrete: true, rebar: false, bios: { date: '2025-03-12' }, cpu: { name: 'AMD Ryzen 7 7840HS', vendor: 'amd', family: 'zen4', mobile: true }, gpu: { name: 'NVIDIA GeForce RTX 4060 Laptop GPU', vendor: 'nvidia', arch: 'rtx40', discrete: true }, sec: { secureBoot: true }, host: { antiCheat: [] } }
+      const out = adv.advise({ caps, ram: { xmp: 'off', type: 'DDR5', xmpConfiguredMT: 4800, xmpRatedMT: 5600 }, info: { board: 'HP 8A44', vendor: 'HP', uefi: true }, settings, writable: true })
+      return { ok: true, engine: 'hp-wmi', writable: true, haveSettings: true, capsKnown: true, ...out }
+    }
+    case 'bios2Restart': return { ok: true }
     case 'bios2Commit': return { ok: true, snapshotId: 1, applied: (args[0] && args[0].changes || []).length, restartNeeded: true }
     case 'bios2Snapshots': return { ok: true, snapshots: [{ id: 1, ts: now - 3600000, engine: 'hp-wmi', reason: 'commit', changes: [{ id: 'Fast Boot', name: 'Fast Boot', from: 'Disable', to: 'Enable' }], count: 713 }] }
     case 'bios2Restore': return { ok: true, applied: 1 }

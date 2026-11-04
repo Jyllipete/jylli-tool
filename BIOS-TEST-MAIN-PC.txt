@@ -1,0 +1,173 @@
+BIOS WORKSTATION - TESTS TO RUN ON THE MAIN PC
+==============================================
+Written 2026-11-04. Code is in commits 2fa70d7 and 4be374a.
+
+What is already proven (on the HP ProBook 440 G8 only, through scripts):
+  - HP interface read (223 settings), write, read back, restore, and the value surviving a restart
+  - Boot trial: the task registers and removes, and the real startup script reverts a setting
+Everything below is NOT proven yet. Write down what you see; "it looked fine" is not enough for
+the items marked REPORT.
+
+
+0. BEFORE YOU START
+-------------------
+[ ] Know your board's Clear CMOS method (jumper, button or battery). Software cannot recover a PC
+    that does not reach Windows.
+[ ] Note your BIOS vendor and version (the app shows them; or run: systeminfo | findstr /I /C:BIOS).
+[ ] Make a normal Windows restore point and note your BitLocker / device encryption status
+    (Settings > Privacy and security > Device encryption). A BIOS change can ask for the recovery
+    key on the next boot. Have the key available.
+[ ] Close games and anti-cheat software (Vanguard, EAC, BattlEye) before any SCEWIN step. SCEWIN
+    loads a kernel driver and anti-cheat may object.
+[ ] Run Jylli Tool as administrator. Use a Pro account (the whole tab is Pro-gated).
+[ ] Take photos of your current BIOS setup screens for any setting you plan to change.
+
+
+1. WHICH ENGINE WILL YOUR PC USE?   (the Doctor tab tells you)
+---------------------------------------------------------------
+Open System > BIOS, then the Doctor tab at the bottom.
+[ ] REPORT: the board name, BIOS vendor, BIOS version and date shown in the strip.
+[ ] REPORT: every Doctor finding and its wording. Wrong or confusing findings are bugs.
+[ ] AMI board  -> do section 2.
+    HP / Lenovo / Dell / other -> HP follows section 3; Lenovo and Dell have no engine yet, so
+    "No engine for this BIOS yet" is the CORRECT result. Report it and skip to section 4.
+
+
+2. AMI BOARD (SCEWIN)  -  nothing here has ever run on a real AMI board
+----------------------------------------------------------------------
+You need your own copy of SCEWIN: a folder with SCEWIN_64.exe, amifldrv64.sys and amigendrv64.sys.
+Jylli Tool does not ship or download them. Use a source you trust (for example MSI Center).
+
+2a. Import
+[ ] Doctor shows "SCEWIN isn't imported". Click "Import your SCEWIN folder" and pick the folder.
+[ ] Wrong folder (missing a file): the message must name the missing files.
+[ ] Right folder: toast says imported. REPORT whether it says "Signed by AMI" or the unsigned warning.
+[ ] Look in C:\ProgramData\JylliTool\bios\scewin: three files plus manifest.json should exist.
+    Right-click the folder > Properties > Security: only SYSTEM and Administrators should have access.
+[ ] Edit or replace one copied file, reopen the tab: Doctor must say the files changed.
+    Then import again to fix it.
+
+2b. Read
+[ ] With Memory Integrity ON (Windows Security > Device security > Core isolation): click
+    "Read settings". REPORT what happens. It may fail because Windows blocks the driver; the
+    Doctor should then say so. It must NOT turn Memory Integrity off for you.
+[ ] Result of the read: how many settings, and how long it took.
+[ ] Pick the first error Doctor shows (if any) and REPORT the exact text SCEWIN printed. The app
+    maps these messages: driver load, HII not published, BIOS not compatible, platform
+    identification failed, error writing variable.
+[ ] ASUS / ASRock: if reading shows no settings, enable "Publish HII Resources" in BIOS (Tool),
+    and on newer boards turn off "Password protection of Runtime Variables".
+
+2c. THE MOST IMPORTANT ONE - the dump format
+The app wrote what SCEWIN exported to:
+    %APPDATA%\<app data folder>\bios\nvram-read.txt   (folder is "Jylli Tool" or "jylli-tool")
+[ ] REPORT: send me this file. FIRST open it and remove anything that looks like a serial number,
+    UUID, asset tag, MAC address or password hint (search for "Serial", "UUID", "Asset", "MAC").
+    The parser was written from public sample dumps, not from a real board. If the app shows 0
+    settings or odd values, this file is how I fix the parser.
+[ ] Open System > BIOS > search "Above 4G" and "C-state" (or "XMP"/"DOCP"/"EXPO"): do the
+    names, current values and options match what your BIOS setup screen shows?
+[ ] Spot-check at least 10 settings against the real BIOS screens. REPORT any mismatch.
+[ ] Check the risk labels make sense: voltages, timings and clocks should be Critical;
+    passwords, Secure Boot keys, Boot Guard, TPM clear should be Read-only.
+
+2d. Writes (CURRENTLY LOCKED FOR SCEWIN - do not expect Commit to work)
+The SCEWIN write path is not implemented in the app yet. Commit on an AMI board must say writing is
+locked. [ ] Confirm that is what you see, and that nothing changed in the BIOS.
+
+
+3. EVERY PC (also the HP laptop for the app-level parts)
+--------------------------------------------------------
+Only works where an engine is ready (HP now). On an AMI PC just verify the UI items.
+
+3a. Layout and text
+[ ] Resize the window to the minimum (1060 x 660): nothing overlaps, grid and deck still usable.
+[ ] Light theme (Settings > Appearance): everything readable.
+[ ] Finnish language: no English leftovers in the BIOS tab, no cut-off text.
+[ ] Search box finds settings by name; "Changed only" works; By purpose / Firmware menu switch works.
+[ ] Keyboard: click the grid, Arrow Up/Down moves selection, Tab reaches the controls.
+[ ] Select a setting: the inspector on the right shows name, path, risk, raw values.
+[ ] With a big list (1000+ settings) scrolling stays smooth. REPORT the count and any lag.
+
+3b. Staging
+[ ] Change a value: the row highlights, the strip says "1 staged", the Changes tab lists it.
+[ ] Undo on the Changes tab clears it.
+[ ] Read-only rows show a lock and have no control.
+
+3c. Commit through the APP (HP only today; this has never been clicked in the real app)
+Use a harmless setting such as "Audio Alerts During Boot" or "Fast Boot".
+[ ] Battery test: unplug the charger, try to commit -> must refuse with the charger message.
+[ ] Plug in. Stage one change. Hold the Commit button: the dialog must show the diff, the
+    restart note, and no typed confirmation for a Normal setting.
+[ ] Quick click on "Hold to write" must NOT write; holding must.
+[ ] Success toast; the new value shows in "Now"; Timeline tab shows a new snapshot.
+[ ] Restart; REPORT whether the value held.
+[ ] Timeline > Restore on that snapshot: dialog asks you to type WRITE; the old value comes back.
+[ ] Critical setting (number such as a voltage/offset, if your PC lists any): dialog must show
+    the "if the PC stops starting" card and demand typing WRITE. Do NOT commit a real voltage
+    change just to test; cancel at the dialog.
+[ ] A setting the BIOS refuses (BIOS setup password set): the error must be readable and
+    nothing must stay half-changed.
+
+3d. Boot trial through the APP (has only been tested through scripts)
+Use a MODERATE setting you can live with (for example Turbo Boost, Wake on LAN or C-state
+support; check the risk badge says Moderate).
+[ ] Commit it. The toast must say the trial boot is armed, and the yellow/green banner must appear.
+[ ] Check Task Scheduler for a task named JylliBiosTrial (runs as SYSTEM at startup).
+[ ] Restart and use Windows normally for more than 5 minutes: the task must delete itself and the
+    banner must disappear. REPORT if it does not.
+[ ] Disarm button: arm again, press Disarm, the task must disappear.
+[ ] Only if you are comfortable: force two unexpected shutdowns (hold the power button twice
+    while Windows is running, after arming). On the second boot the setting should be restored
+    and the PC should restart by itself about 30 seconds in. REPORT everything you see,
+    including whether the banner then says it was reverted. SAVE YOUR WORK first.
+    Check Event Viewer > Windows Logs > System for Kernel-Power event 41 after each forced
+    shutdown; if there are none, the trial cannot count them.
+
+
+7. EASY MODE (presets and suggestions)  -  added after the first test list
+---------------------------------------------------------------------------
+The BIOS tab now opens in Easy mode. The Easy / Workstation switch is top left.
+[ ] The "Your PC" block must match reality: CPU, GPU, RAM running vs rated speed, BIOS date.
+    REPORT any wrong line. A wrong RAM line means a wrong XMP/EXPO suggestion.
+[ ] RAM: if your memory runs below its rated speed, a "Turn on your memory's rated speed"
+    suggestion must appear. If it already runs at rated speed it must show under "Already good".
+[ ] Resizable BAR: compare the suggestion with NVIDIA Control Panel / GPU-Z. REPORT any mismatch.
+[ ] On an AMI board nothing is applied for you; each suggestion must show numbered steps.
+    Follow one set of steps by hand in your BIOS. REPORT whether the names in the steps
+    (XMP/EXPO, CSM, Above 4G Decoding, Resizable BAR) and the "usually found under" hint were right.
+[ ] "Restart into BIOS" must ask first, then restart to the BIOS setup screen. (Needs UEFI.)
+[ ] C-states: if you turned them off yourself, the app must offer "Put back" and must NEVER
+    suggest turning them off.
+[ ] Nothing in any preset may touch voltages, timings, clocks or passwords. REPORT if it does.
+[ ] On the HP laptop: Review and apply on a preset shows the exact diff, applies after you hold
+    the button, then a green panel offers Restart now and Undo. Undo must restore the old values.
+[ ] Finnish and the 1060 x 660 window size: nothing cut off.
+
+4. WHAT TO SEND BACK
+--------------------
+- Section 1 findings (board, BIOS, Doctor wording)
+- The cleaned nvram-read.txt (AMI boards)
+- Any error text, screenshots of anything that looks wrong, and Event Viewer entries for
+  anything involving Kernel-Power or the driver
+- The result (pass / fail / not tried) for every [ ] above
+
+
+5. IF SOMETHING GOES WRONG
+--------------------------
+- A change did not stick or looks wrong: open the BIOS setup screen and set it back by hand
+  (your photos from step 0).
+- A restart is pending that you do not want: open a terminal and run   shutdown /a
+- The PC does not reach Windows: use your board's Clear CMOS method. No software can fix this.
+- The BIOS asks for a BitLocker recovery key: enter it; this is a normal reaction to firmware
+  changes.
+- Remove the startup task by hand if needed (admin terminal):   schtasks /Delete /TN JylliBiosTrial /F
+- Remove imported SCEWIN files: delete C:\ProgramData\JylliTool\bios\scewin
+
+
+6. KNOWN LIMITS (not bugs)
+--------------------------
+- SCEWIN writes, native UEFI writes, Lenovo and Dell engines are locked or missing.
+- The boot trial only supports HP, and only helps if Windows still starts.
+- Setting explanations are generic; the sourced explanation pack is not written yet.
+- The old BIOS tab code is still in index.html and main.js, unused.

@@ -9,7 +9,7 @@
   const ROW_H = 34
 
   const S = { info: null, engines: [], findings: [], engine: null, settings: [], loading: false, view: 'purpose', cat: 'all', q: '',
-    changed: false, sel: null, staged: new Map(), deck: 'changes', log: [], confirmScewin: false, error: null, snaps: [], busy: false, trial: null }
+    changed: false, sel: null, staged: new Map(), deck: 'changes', log: [], confirmScewin: false, error: null, snaps: [], busy: false, trial: null, mode: 'easy' }
   let el = null
 
   const log = m => { S.log.push(`${new Date().toLocaleTimeString()}  ${m}`); if (S.log.length > 200) S.log.shift() }
@@ -42,8 +42,9 @@
   // ── rendering ──
   function shell() {
     el.innerHTML = String(html`
-      <div class="bw" id="bw">
+      <div class="bw bw-mode-${S.mode}" id="bw">
         <div class="bw-strip" id="bw-strip"></div>
+        <div class="bw-easy" id="bw-easy"></div>
         <div class="bw-main">
           <nav class="bw-tree" id="bw-tree" aria-label="${T('treeLabel')}"></nav>
           <section class="bw-grid-wrap">
@@ -63,6 +64,7 @@
     const eng = S.engines.find(e => e.id === S.engine)
     const staged = S.staged.size
     el.querySelector('#bw-strip').innerHTML = String(html`
+      <div class="bw-seg bw-modeseg" role="tablist" aria-label="${T('easy_modeLabel')}"><button type="button" role="tab" aria-selected="${String(S.mode === 'easy')}" data-mode="easy">${T('easy_modeEasy')}</button><button type="button" role="tab" aria-selected="${String(S.mode === 'workstation')}" data-mode="workstation">${T('easy_modeWs')}</button></div>
       <div class="bw-id">
         <i class="fa fa-microchip" aria-hidden="true"></i>
         <div class="bw-id-text"><strong>${i.board || T('boardUnknown')}</strong><span class="bw-mono">${[i.vendor, i.biosVersion, i.biosDate].filter(Boolean).join(' · ')}</span></div>
@@ -76,6 +78,7 @@
     q.addEventListener('input', () => { S.q = q.value; S.sel = null; refreshGrid() })
     el.querySelector('#bw-changed').addEventListener('change', e => { S.changed = e.target.checked; refreshGrid() })
     el.querySelector('#bw-commit').addEventListener('click', openCommit)
+    el.querySelectorAll('#bw-strip [data-mode]').forEach(b => b.addEventListener('click', () => setMode(b.dataset.mode)))
     const dis = el.querySelector('#bw-disarm'); if (dis) dis.addEventListener('click', async () => { await api.bios2TrialDisarm(); log('boot trial disarmed'); await loadTrial() })
     const dismiss = el.querySelector('#bw-trial-ok'); if (dismiss) dismiss.addEventListener('click', async () => { await api.bios2TrialDisarm(); await loadTrial() })
   }
@@ -198,6 +201,17 @@
     drawRows(); drawInspector()
   }
 
+  // ── mode (Easy / Workstation) ──
+  function setMode(m) {
+    if (m === S.mode) return
+    S.mode = m
+    try { const st = root.settings; if (st) { st.biosView = m; root.api.saveSettings(st) } } catch {}
+    const bw = el.querySelector('#bw'); bw.classList.toggle('bw-mode-easy', m === 'easy'); bw.classList.toggle('bw-mode-workstation', m === 'workstation')
+    el.querySelectorAll('#bw-strip [data-mode]').forEach(b => b.setAttribute('aria-selected', String(b.dataset.mode === m)))
+    if (m === 'easy') renderEasy(); else { drawRows() }
+  }
+  function renderEasy() { if (root.JylliBiosEasy) root.JylliBiosEasy.render(el.querySelector('#bw-easy')) }
+
   // ── boot trial ──
   function trialBanner() {
     const t = S.trial
@@ -214,14 +228,14 @@
   }
 
   // ── commit / restore ──
-  function dialog({ title, rows, critical, confirmLabel, onConfirm, typedFirst }) {
+  function dialog({ title, rows, critical, confirmLabel, onConfirm, typedFirst, note }) {
     const bd = document.createElement('div')
     bd.className = 'j-modal-backdrop'
     bd.innerHTML = String(html`<div class="j-modal j-modal-md" role="dialog" aria-modal="true" aria-label="${title}">
       <div class="j-modal-head"><h3 class="j-modal-title">${title}</h3></div>
       <div class="j-modal-body">
-        <ul class="bw-changes bw-dlg-list">${rows.map(r => html`<li><span>${r.name}</span><span class="bw-mono">${r.from} → ${r.to}</span>${r.tier && r.tier !== 'normal' ? html`<span class="j-badge j-badge-${tone(r.tier)}">${T('tier_' + r.tier)}</span>` : html`<span></span>`}</li>`)}</ul>
-        <p>${T('restartNote')}</p>
+        ${rows.length ? '' : ''}<ul class="bw-changes bw-dlg-list" ${rows.length ? '' : 'hidden'}>${rows.map(r => html`<li><span>${r.name}</span><span class="bw-mono">${r.from} → ${r.to}</span>${r.tier && r.tier !== 'normal' ? html`<span class="j-badge j-badge-${tone(r.tier)}">${T('tier_' + r.tier)}</span>` : html`<span></span>`}</li>`)}</ul>
+        <p>${note || T('restartNote')}</p>
         ${critical || typedFirst ? html`<div class="bw-recovery"><strong>${T('recoveryTitle')}</strong><p>${T('recoveryBody')}</p><label>${T('typeToConfirm', { word: 'WRITE' })}<input id="bw-typed" class="bw-input bw-mono" autocomplete="off" spellcheck="false"></label></div>` : ''}
       </div>
       <div class="bw-dlg-foot"><button type="button" class="j-btn j-btn-ghost" id="bw-cancel">${T('cancel')}</button><button type="button" class="j-btn j-btn-primary" id="bw-go2"><i class="fa fa-pen-to-square" aria-hidden="true"></i> ${confirmLabel}</button></div>
@@ -264,6 +278,7 @@
       log(`written and verified, snapshot ${r.snapshotId}`)
       root.toast(T('committedTitle'), T('committedBody', { n: r.applied }) + (r.trial === 'armed' ? ' ' + T('trialNote') : r.trial === 'failed' ? ' ' + T('trialFailedNote') : ''), 'success')
       await load(S.engine); loadSnaps(); loadTrial()
+      if (root.JylliBiosEasy) root.JylliBiosEasy.onCommitted(r)
     } else {
       log(`commit failed: ${r.error}${r.reverted ? ', reverted ' + r.reverted : ''}`)
       root.toast(T('failedTitle'), errText(r.error) + (r.reverted ? ' ' + T('revertedNote') : ''), 'error')
@@ -327,10 +342,12 @@
 
   async function build(container) {
     el = container
-    Object.assign(S, { settings: [], staged: new Map(), sel: null, q: '', cat: 'all', error: null, deck: 'changes' })
+    Object.assign(S, { settings: [], staged: new Map(), sel: null, q: '', cat: 'all', error: null, deck: 'changes', mode: root.settings && root.settings.biosView === 'workstation' ? 'workstation' : 'easy' })
     shell()
+    if (S.mode === 'easy') renderEasy()
     await open()
+    if (S.mode === 'easy') renderEasy()
   }
 
-  root.JylliBios = { build, _state: S }
+  root.JylliBios = { build, _state: S, _api: { dialog, doCommit, openRestore, loadSnaps, load, labelOf, log, tone } }
 })(typeof window !== 'undefined' ? window : globalThis)
