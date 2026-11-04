@@ -12,7 +12,7 @@ contextBridge.exposeInMainWorld('api', {
   getAppVersion:      ()           => ipcRenderer.invoke('get-app-version'),
   getBootTime:        ()           => ipcRenderer.invoke('get-boot-time'),
   getTweakStates:     ()           => ipcRenderer.invoke('get-tweak-states'),
-  getSystemInfo:      ()           => ipcRenderer.invoke('get-system-info'),
+  getSystemInfo:      (opts)       => ipcRenderer.invoke('get-system-info', opts),
   isAdmin:            ()           => ipcRenderer.invoke('is-admin'),
   relaunchAdmin:      ()           => ipcRenderer.invoke('relaunch-admin'),
   getMetrics:         ()           => ipcRenderer.invoke('get-metrics'),

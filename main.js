@@ -4591,7 +4591,7 @@ async function ensureCapsProfile(force) {
   _capsBusy = (async () => {
     try {
       const admin = await checkAdmin()
-      const profile = await AutoOpti.detect.detect({ runPS, emit: () => {} }, { admin, scanId: aoNewId(), context: {} })
+      const profile = await AutoOpti.detect.detect({ runPS, emit: () => {} }, { admin, scanId: aoNewId(), context: {}, concurrency: 1, budgetMs: 120000 })   // background: one PowerShell at a time so the UI's own queries are never starved
       _capsProfile = profile; _capsAt = Date.now()
       return profile
     } catch { return _capsProfile } finally { _capsBusy = null }
@@ -4606,7 +4606,7 @@ ipcMain.handle('get-applicability', async (_, req) => {
   for (const id of Object.keys(TWEAKS)) if (Applic.RULES[id]) { const r = Applic.evaluate(id, caps); map[id] = { show: r.show, state: r.state, why: r.why } }
   return { ok: true, map, summary: { form: caps.form, cpu: caps.cpu && caps.cpu.name, gpu: caps.gpu && caps.gpu.name, hybridGraphics: caps.hybridGraphics, dualCcdX3d: caps.cpu ? caps.cpu.dualCcdX3d : null } }
 })
-app.whenReady().then(() => setTimeout(() => { ensureCapsProfile(false).catch(() => {}) }, 20000)).catch(() => {})
+app.whenReady().then(() => setTimeout(() => { ensureCapsProfile(false).catch(() => {}) }, 60000)).catch(() => {})
 ipcMain.handle('auto-opti-plan', (_, req) => {
   const sc = aoCached(aoStr(req && req.scanId, 24))
   if (!sc) return { ok: false, reason: 'scan-expired' }
