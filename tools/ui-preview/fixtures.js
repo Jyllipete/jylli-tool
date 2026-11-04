@@ -44,6 +44,22 @@ const restorePoints = [
 function respond(name, args, ctx) {
   const lang = ctx.lang, premium = ctx.premium
   switch (name) {
+    // BIOS workstation: runs the REAL model/doctor code on synthetic data (HP-style rows plus a few hundred generated ones to exercise the virtual grid)
+    case 'bios2Status': {
+      const doctor = require('../../lib/bios/doctor')
+      const info = { vendor: 'HP', biosVersion: 'T70 Ver. 01.25.01', biosDate: '2026-06-17', board: 'HP 87E0', system: 'HP ProBook 440 G8', uefi: true, hvci: true, elevated: true }
+      return { ok: true, info, engines: [{ id: 'hp-wmi', state: 'ready', verified: false, writable: true }], findings: doctor.diagnose({ vendor: 'HP', elevated: true, uefi: true, hvci: true, hpWmi: 'ok' }) }
+    }
+    case 'bios2Commit': return { ok: true, snapshotId: 1, applied: (args[0] && args[0].changes || []).length, restartNeeded: true }
+    case 'bios2Snapshots': return { ok: true, snapshots: [{ id: 1, ts: now - 3600000, engine: 'hp-wmi', reason: 'commit', changes: [{ id: 'Fast Boot', name: 'Fast Boot', from: 'Disable', to: 'Enable' }], count: 713 }] }
+    case 'bios2Restore': return { ok: true, applied: 1 }
+    case 'bios2Read': {
+      const model = require('../../lib/bios/model')
+      const names = ['Virtualization Technology (VTx)', 'Fast Boot', 'Turbo Boost', 'Hyper-Threading', 'Secure Boot', 'Power On Password', 'CPU Core Voltage Offset', 'Memory XMP Profile', 'Above 4G Decoding', 'SATA Mode', 'Wake on LAN', 'C-State Support', 'Fan Always On']
+      const rows = names.map((n, i) => ({ cls: i === 6 ? 'HP_BIOSInteger' : 'HP_BIOSEnumeration', Name: n, CurrentValue: i === 6 ? '0' : 'Enable', PossibleValues: ['Enable', 'Disable'], Path: i < 6 ? 'Advanced/System Options' : 'Advanced/Built-In Device Options', IsReadOnly: false, LowerBound: -100, UpperBound: 100 }))
+      for (let i = 0; i < 700; i++) rows.push({ cls: 'HP_BIOSEnumeration', Name: 'Generated option ' + (i + 1), CurrentValue: 'Disable', PossibleValues: ['Enable', 'Disable'], Path: 'Advanced/Generated', IsReadOnly: false })
+      return { ok: true, engine: 'hp-wmi', settings: model.fromHp(rows) }
+    }
     case 'getAppVersion': return '1.6.0'
     case 'getBootTime': return now - 93600000
     case 'getSystemInfo': return sysInfo

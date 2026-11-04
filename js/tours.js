@@ -90,9 +90,9 @@
       T('processes-filter', ['Find a process', 'Filter by name. Priority can be changed per process from its row.'], ['Etsi prosessi', 'Suodata nimellä. Prioriteetin voi muuttaa prosessin riviltä.']),
       T('processes-list', ['Take care here', 'Ending a system process can make Windows unstable. If you are unsure, leave it alone.'], ['Varovaisuutta', 'Järjestelmäprosessin lopettaminen voi tehdä Windowsista epävakaan. Jos olet epävarma, jätä se rauhaan.']),
     ] },
-    bios: { v: 1, tag: { 'bios-board': '#bios-score-card', 'bios-scan': '#bios-scan-btn' }, stops: [
-      T('bios-board', ['Your board and BIOS', 'What your motherboard and firmware report. We only read here.'], ['Emolevysi ja BIOS', 'Mitä emolevysi ja laiteohjelmistosi ilmoittavat. Täällä vain luemme.']),
-      T('bios-scan', ['Guidance, not changes', 'We suggest settings to review in your BIOS. You change them yourself, at boot.'], ['Ohjeita, ei muutoksia', 'Ehdotamme BIOSissa tarkistettavia asetuksia. Muutat ne itse käynnistyksen yhteydessä.']),
+    bios: { v: 1, tag: { 'bios-board': '.bw-strip', 'bios-scan': '#bw-grid' }, stops: [
+      T('bios-board', ['Your board and BIOS', 'What your motherboard and firmware report, and which engine reads it.'], ['Emolevysi ja BIOS', 'Mitä emolevysi ja laiteohjelmistosi ilmoittavat ja mikä moottori niitä lukee.']),
+      T('bios-scan', ['Every setting, with its risk', 'Pick a new value to stage it. Writing to the BIOS stays locked until an engine is proven on real hardware.'], ['Jokainen asetus riskeineen', 'Valitse uusi arvo valmistellaksesi sen. BIOSiin kirjoitus pysyy lukittuna, kunnes moottori on todistettu oikealla laitteella.']),
     ] },
     scheduler: { v: 1, tag: { 'scheduler-create': '#sched-action', 'scheduler-tasks': '#sched-task-list' }, stops: [
       T('scheduler-create', ['Schedule a task', 'Pick what to run and when, such as a cleanup every Sunday.'], ['Ajasta tehtävä', 'Valitse mitä ajetaan ja milloin, esimerkiksi siivous joka sunnuntai.']),

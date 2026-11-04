@@ -1,0 +1,60 @@
+// Script File Name : nvram.txt
+// Created on 09/02/20 at 07:31:41
+// Copyright (c)2017 American Megatrends, Inc.
+// AMISCE Utility. Ver 5.03.1111
+
+
+HIICrc32= EBED1D4C
+
+
+// FORM SET
+// GUID	= c48aa1ac-f870-418d-a6ef-c1dd89c1ce19
+// Title	= Advanced
+
+// FORM
+// Form ID	= 0x2711
+// Title	= PCI Subsystem
+
+Setup Question	= Above 4G Decoding
+Token	=7006	// Do NOT change this line
+Offset	=03
+Width	=01
+BIOS Default	=0 
+MFG Default	=0 
+Value	=0	// Enabled = 1, Disabled = 0
+
+Setup Question	= Hot-Plug Support
+Token	=702A	// Do NOT change this line
+Offset	=04
+Width	=01
+BIOS Default	=<Disabled>
+Options	=*[00]Disabled	// Move "*" to the desired Option
+	 [01]Enabled
+
+// FORM
+// Form ID	= 0x2712
+// Title	= CPU Configuration
+
+Setup Question	= Global C-state Control
+Token	=7010	// Do NOT change this line
+Offset	=10
+Width	=01
+BIOS Default	=<Auto>
+Options	= [00]Disabled	// Move "*" to the desired Option
+	 [01]Enabled
+	*[0F]Auto
+
+Setup Question	= CPU Core Voltage Offset
+Token	=7020	// Do NOT change this line
+Offset	=20
+Width	=02
+BIOS Default	=<0>
+Value	=<18>
+
+Setup Question	= Supervisor Password
+Token	=7030	// Do NOT change this line
+Offset	=30
+Width	=01
+BIOS Default	=0
+Value	=0	// Installed = 1, Not Installed = 0
+

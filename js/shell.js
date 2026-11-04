@@ -45,7 +45,7 @@
     startup: c => buildStartupManager(c),
     diagnostics: c => buildPreflight(c),
     processes: c => buildProcessManager(c),
-    bios: async c => { await buildBiosTuner(c); await buildBoardCard(c) },
+    bios: async c => { if (!settings.isPremium) { await _buildTabPremiumLock(c, 'bios-tuner'); return } await JylliBios.build(c) },
     scheduler: c => buildScheduler(c),
     restore: c => buildRestorePoints(c),
     history: c => buildChangelog(c),

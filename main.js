@@ -13200,7 +13200,10 @@ ipcMain.handle('get-health-score', async (_, settings) => {
   }
 })
 
-// ─── BIOS Tuner IPC handlers ──────────────────────────────────────────────────
+// ─── BIOS workstation (lib/bios): status, SCEWIN import, read-only engines ────
+require('./lib/bios/ipc').register({ ipcMain, requiresPremium, runPS, runFile, app, dialog, getWindow: () => mainWindow, log: debugLog })
+
+// ─── BIOS Tuner IPC handlers (legacy, removed with the old tab) ───────────────
 
 ipcMain.handle('get-bios-info', async () => {
   if (!requiresPremium('get-bios-info')) return { ok: false, reason: 'premium_required' }
