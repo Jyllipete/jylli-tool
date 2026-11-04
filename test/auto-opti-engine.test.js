@@ -322,7 +322,7 @@ test('plan: reboot flag, estimate includes the restore point, empty plan is empt
   const pl = plan('cluttered')
   assert.strictEqual(pl.rebootRequired, true)           // hags + the pagefile style steps
   assert.ok(pl.estSeconds >= ao.plan.RESTORE_POINT_SEC)
-  assert.deepStrictEqual(ao.plan.plan([], {}), { steps: [], modules: [], estSeconds: 0, rebootRequired: false, skipped: [], selected: [] })
+  assert.deepStrictEqual(ao.plan.plan([], {}), { steps: [], modules: [], estSeconds: 0, rebootRequired: false, skipped: [], selected: [], intensity: 'safe', expertOk: [] })
 })
 
 test('plan: a tampered include of a security finding or unknown id builds nothing', () => {
@@ -335,7 +335,8 @@ test('plan: a tampered include of a security finding or unknown id builds nothin
 test('catalog: every step is allowlisted, nothing in NEVER_AUTO is reachable, every fix has a default list', () => {
   const okT = ao.catalog.allowedTweaks()
   for (const [id, c] of Object.entries(ao.catalog.CATALOG)) {
-    for (const s of c.steps) if (s.type === 'tweak') { assert.ok(okT.has(s.id), `${id} -> ${s.id}`); assert.ok(!ao.catalog.NEVER_AUTO.has(s.id), `${id} -> ${s.id}`) }
+    // Maximum rows are reachable only through isAllowedTweak (see test/auto-opti-max.test.js), never through the Safe allowlist.
+    for (const s of c.steps) if (s.type === 'tweak' && c.intensity !== 'max') { assert.ok(okT.has(s.id), `${id} -> ${s.id}`); assert.ok(!ao.catalog.NEVER_AUTO.has(s.id), `${id} -> ${s.id}`) }
     if (c.kind === 'fix') assert.ok(Array.isArray(c.defaultOn), id)
     if (c.kind !== 'fix') assert.strictEqual(c.steps.length, 0, `${id} must not carry steps`)
     assert.ok(ao.catalog.MODULES.includes(c.module) || c.module === 'security', id)

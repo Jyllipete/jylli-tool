@@ -110,6 +110,24 @@ async function autoOptiShots(win, dir, logs, report) {
   await js('JylliAutoOpti.welcomeBack(); void 0'); await sleep(1800); await shot(win, path.join(dir, 'ao-6-welcome.png'))
 }
 
+// --ao-max: the Maximum-mode scenes (diagnosis hint in Safe, the plan with the mode switch, moderate rows with risk blocks, the expert section).
+async function autoOptiMaxShots(win, dir, logs, report) {
+  const js = c => win.webContents.executeJavaScript(c).catch(e => { logs.push('[ao] ' + e.message) })
+  const until = async (fn, ms = 30000) => { const t0 = Date.now(); while (Date.now() - t0 < ms) { if (await js(fn)) return true; await sleep(150) } report.push('TIMEOUT waiting for ' + fn); return false }
+  const click = sel => js("(function(){const b=document.querySelector(" + JSON.stringify(sel) + ");if(b){b.click();return true}return false})()")
+  await js("settings.onboardingDone = true; settings.aom_intensity = 'safe'; void 0")
+  await js('runAutoOpti(); void 0')
+  await until("document.getElementById('auto-opti').dataset.scene === 'diagnosis'"); await sleep(1400)
+  await js("document.getElementById('ao-right').scrollTop = 99999; void 0"); await sleep(500); await shot(win, path.join(dir, 'aomax-1-diagnosis-hint.png'))
+  await click('#ao-next'); await until("document.getElementById('auto-opti').dataset.scene === 'plan'"); await sleep(1200)
+  await shot(win, path.join(dir, 'aomax-2-plan-safe.png'))
+  await click('[data-intensity=max]'); await sleep(1800)
+  for (const m of ['gpu', 'power', 'network', 'windows']) { await js("(document.querySelector('[data-toggle-open=" + m + "]')||{click(){}}).click(); void 0"); await sleep(250) }
+  await shot(win, path.join(dir, 'aomax-3-plan-max.png'))
+  await js("document.getElementById('ao-right').scrollTop = 99999; void 0"); await sleep(500); await shot(win, path.join(dir, 'aomax-4-expert.png'))
+  await js('JylliAutoOpti.close(true); void 0'); await sleep(300)
+}
+
 async function main() {
   await app.whenReady()
   fs.mkdirSync(OUT, { recursive: true })
@@ -130,7 +148,7 @@ async function main() {
     if (!ready) { report.push(`${name}: APP NEVER BECAME READY`); logs.forEach(l => report.push('   ' + l)); win.destroy(); continue }
     await sleep(1800)   // boot animation + first metrics
     if (SCHEME !== 'dark') await win.webContents.executeJavaScript(`JylliTheme.applyScheme(${JSON.stringify(SCHEME)})`).catch(() => {})
-    if (AUTO_OPTI) { await autoOptiShots(win, path.join(OUT, name), logs, report); win.destroy(); continue }
+    if (AUTO_OPTI) { await (arg('ao-max', false) ? autoOptiMaxShots : autoOptiShots)(win, path.join(OUT, name), logs, report); win.destroy(); continue }
     for (const page of (ONLY_PAGES || PAGES)) {
       logs.length = 0
       await win.webContents.executeJavaScript(`showPage(${JSON.stringify(page)})`).catch(e => logs.push('[showPage] ' + e.message))

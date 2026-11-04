@@ -39,3 +39,11 @@ Why each performance tweak is in, out or gated. Evidence is kept here, not in th
 - **Native NVMe driver (`nvmedisk.sys`) via FeatureManagement overrides**: sources conflict on whether Microsoft removed the client workaround ([TechPowerUp](https://www.techpowerup.com/347650/microsoft-removes-registry-hack-for-faster-nvme-ssds-in-windows-11)), and a wrong guess can leave Windows unbootable. Only worth shipping after verifying on a machine with a restore point.
 - **Defender game-folder exclusions**: speed-ups are anecdotal; commit 2f50738 removed exclusions for security reasons.
 - **Win32PrioritySeparation variants, HPET bcdedit, NetworkThrottlingIndex, Dev Drive for games**: no credible measurements.
+
+## Auto-Optimize Maximum mode
+Maximum (Premium) adds tweaks with a trade-off to an Auto-Optimize run. Every row is gated by `lib/tweak-applicability.js`; an unknown fact offers nothing.
+- **Moderate, on by default when the rules recommend them:** MSI mode (graphics card on line-based interrupts), MPO off (NVIDIA, several monitors), NIC interrupt moderation off, Wi-Fi tuning (off by default on laptops), Fault Tolerant Heap reset, PCIe link power management off, power throttling off, background Store apps off.
+- **Optional, always off by default (weak or mixed evidence):** global timer resolution, fullscreen optimizations off, NIC offloads off, SysMain off, memory compression off.
+- **Expert (tier 3), each needs the typed confirmation:** hypervisor off, Memory Integrity off, Spectre/Meltdown mitigations off. Offered only on PCs where they can help; never on domain-joined PCs or with a kernel anti-cheat service; the Memory Integrity row is dropped when the hypervisor row is offered.
+- **Never in any mode:** Defender and notification tweaks, full mitigation wipe, VBS disable (redundant), biometrics and Bluetooth off.
+- **Not in Maximum by design:** `cstates` (the max-performance plan already sets the useful values, and forcing idle states off stops Ryzen single-core boost).

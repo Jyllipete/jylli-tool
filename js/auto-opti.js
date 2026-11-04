@@ -41,7 +41,7 @@
   /** Plan-scene rows: fix findings grouped by module, in module order, with their tick state. */
   function moduleViews(list, on) {
     const by = new Map()
-    for (const f of (list || []).filter(x => x.kind === 'fix')) {
+    for (const f of (list || []).filter(x => x.kind === 'fix' && !(x.risk >= 3))) {   // expert rows live in their own section
       if (!by.has(f.module)) by.set(f.module, [])
       by.get(f.module).push({ ...f, on: !!on.get(f.id) })
     }
@@ -50,6 +50,9 @@
       return { id: m, items, onCount: items.filter(i => i.on).length, total: items.length, on: items.some(i => i.on) }
     })
   }
+
+  /** Tier 3 rows: shown apart, never ticked by a module switch, each needs the typed word. */
+  function expertViews(list) { return (list || []).filter(f => f.kind === 'fix' && f.risk >= 3) }
 
   function newRun(plan) {
     const steps = new Map(), order = []
@@ -108,7 +111,7 @@
   /** Failure copy key for a scan/run refusal. */
   const reasonKey = r => ({ 'game-running': 'rGame', 'run-active': 'rBusy', 'scan-active': 'rBusy', 'not-admin': 'rAdmin', 'scan-expired': 'rExpired', 'already-running': 'rBusy', 'empty-plan': 'rEmpty', 'scan-failed': 'rScan', 'restore-point-failed': 'rRestore', 'not_admin': 'rAdmin', 'rRestore': 'rRestore' }[r] || 'rGeneric')
 
-  const pure = { PROBE_ORDER, MODULE_ORDER, TRAIL, IMPACT_RANK, groupFindings, headline, initialOn, selection, moduleViews, newRun, applyEvent, progress, fmtBytes, fmtDuration, canClose, trailState, reasonKey }
+  const pure = { PROBE_ORDER, MODULE_ORDER, TRAIL, IMPACT_RANK, groupFindings, headline, initialOn, selection, moduleViews, expertViews, newRun, applyEvent, progress, fmtBytes, fmtDuration, canClose, trailState, reasonKey }
   if (typeof module !== 'undefined' && module.exports) module.exports = pure
   if (typeof document === 'undefined') return
 
@@ -126,7 +129,7 @@
   const state = { active: false }
 
   function fresh() {
-    return { scene: 'scan', scanId: null, profile: null, findings: [], plan: null, useCase: null, on: new Map(), startupOn: null, modsOff: {}, answers: {}, expanded: new Set(),
+    return { scene: 'scan', scanId: null, intensity: 'safe', expertOk: new Set(), maxExtra: 0, profile: null, findings: [], plan: null, useCase: null, on: new Map(), startupOn: null, modsOff: {}, answers: {}, expanded: new Set(),
       run: null, result: null, verify: null, probes: {}, reactor: null, unsub: [], busy: false, token: 0, undoBusy: false }
   }
 
@@ -239,12 +242,12 @@
       if (ev.state === 'done') A.reactor.pulse()
     })
     A.unsub.push(off)
-    const r = await root.api.aoScan({ force: !!force, useCase: A.useCase || undefined }).catch(e => ({ ok: false, reason: 'scan-failed', error: String(e) }))
+    const r = await root.api.aoScan({ force: !!force, useCase: A.useCase || undefined, intensity: wantedIntensity() }).catch(e => ({ ok: false, reason: 'scan-failed', error: String(e) }))
     try { off() } catch {}
     if (!A || token !== A.token) return
     A.reactor.scanning(false)
     if (!r || !r.ok) return showError(r && r.reason, () => startScan(true))
-    A.scanId = r.scanId; A.profile = r.profile; A.findings = r.findings; A.useCase = r.useCase
+    A.scanId = r.scanId; A.profile = r.profile; A.findings = r.findings; A.useCase = r.useCase; A.intensity = r.intensity || 'safe'; A.maxExtra = r.maxExtra || 0
     for (const p of PROBE_ORDER) if (!A.probes[p]) A.reactor.probe(p, (r.profile.probes[p] || {}).ok ? 'done' : 'fail')
     A.on = initialOn(A.findings)
     await sleep(500 * scale())
@@ -261,7 +264,7 @@
   }
 
   // ── scene 2: diagnosis ──
-  const impactBadge = f => `<span class="ao-badge" data-k="${f.impact}">${esc(g('impact_' + f.impact))}</span>`
+  const impactBadge = f => `<span class="ao-badge" data-k="${f.impact}">${esc(g('impact_' + f.impact))}</span>${riskLabel(f)}`
   function baStrip(f) {
     if (!f.before || !f.expectedAfter) return ''
     return `<div class="ao-ba"><span class="from">${pv(f.before.v, f.before.unit)}</span><span class="arrow">→</span><span class="to">${pv(f.expectedAfter.v, f.expectedAfter.unit)}</span></div>`
@@ -299,19 +302,21 @@
       ${gr.needsYou.length ? `<h2 class="ao-h2">${esc(g('needsYou'))} <b>${gr.needsYou.length}</b></h2><div class="ao-cols">${gr.needsYou.map(findCard).join('')}</div>` : ''}
       ${gr.info.length ? `<h2 class="ao-h2">${esc(g('goodToKnow'))}</h2><div class="ao-cols">${gr.info.map(findCard).join('')}</div>` : ''}
       ${shieldHtml(A.profile)}
+      ${maxHintHtml()}
       <div class="ao-actions"><span class="ao-spacer ao-muted">${esc(g('scanTook', { ms: A.profile.scanMs || 0 }))}</span>
         <button class="j-btn j-btn-ghost" id="ao-rescan">${esc(g('rescan'))}</button>
         <button class="j-btn j-btn-primary" id="ao-next" ${gr.weFix.length ? '' : 'disabled'}>${esc(g('toPlan'))} <i class="fa fa-arrow-right"></i></button></div></div>`)
     r.querySelectorAll('[data-link]').forEach(b => { b.onclick = () => root.api.openExternal(b.dataset.link) })
     r.querySelectorAll('[data-hvci]').forEach(b => { b.onclick = () => hvciOptIn(b) })
     r.querySelector('#ao-rescan').onclick = () => startScan(true)
+    const mg = r.querySelector('#ao-max-go'); if (mg) mg.onclick = () => setIntensity('max', showDiagnosis)
     r.querySelector('#ao-next').onclick = () => showPlan()
     const nx = r.querySelector('#ao-next'); if (!nx.disabled) nx.focus()
   }
 
   // Memory Integrity: never part of a run. A separate, explicit choice that reuses the manual tweak (which makes its own restore point).
   async function hvciOptIn(btn) {
-    const ok = await root.showConfirm({ title: g('hvciTitle'), body: g('hvciBody'), okText: g('hvciGo'), okStyle: 'warning', icon: 'fa-shield-halved' })
+    const ok = await root.confirmTier('hvci-offload')
     if (!ok) return
     btn.disabled = true
     const r = await root.api.runTweak('hvci-offload', 'apply').catch(() => null)
@@ -319,13 +324,47 @@
     btn.disabled = false
   }
 
+  // ── intensity: Safe (default) or Maximum (Premium) ──
+  const premiumOn = () => !!(root.settings && root.settings.isPremium)
+  function wantedIntensity() { return root.settings && root.settings.aom_intensity === 'max' && premiumOn() ? 'max' : 'safe' }
+  /** Every aoPlan / aoRun request goes through here, so intensity and the typed confirmations can never be dropped by one call site. */
+  function planReq(withSelection) {
+    return { scanId: A.scanId, useCase: A.useCase, answers: A.answers, intensity: A.intensity, expertOk: [...A.expertOk],
+      ...(withSelection ? { ...selection(A.findings, A.on), modules: A.modsOff, startupItems: A.startupOn ? [...A.startupOn] : undefined } : {}) }
+  }
+  async function setIntensity(mode, then) {
+    if (mode === 'max' && !premiumOn()) { root.toast(g('maxLockedT'), g('maxLockedM'), 'warn'); return }
+    if (A.intensity === mode) return
+    A.intensity = mode; A.expertOk.clear()
+    const s = root.settings; if (s) { s.aom_intensity = mode; try { root.api.saveSettings(s) } catch {} }
+    const res = await root.api.aoPlan(planReq(false))
+    if (!A || !res || !res.ok) return showError(res && res.reason, () => startScan(true))
+    A.findings = res.findings; A.on = initialOn(A.findings); A.startupOn = null; A.modsOff = {}; A.intensity = res.intensity || mode
+    if (A.scene === 'plan') { await refreshPlan(); if (A && A.scene === 'plan') renderPlan() } else if (then) then()
+  }
+  const riskLabel = f => (f.risk >= 2 ? `<span class="ao-badge" data-k="risk${f.risk}">${esc(g('risk_' + f.risk))}</span>` : '')
+  const riskBlock = f => { const id = f.steps && f.steps[0] && f.steps[0].id; const h = id && root.tRisk ? root.tRisk(id) : ''; return h ? `<div class="ao-risk">${h}</div>` : '' }
+  function modeSwitchHtml() {
+    const b = (id, k, locked) => `<button type="button" class="ao-tile" role="radio" aria-checked="${A.intensity === id}" data-intensity="${id}"><b>${esc(g(k))}${locked ? ' <i class="fa fa-lock"></i>' : ''}</b><span>${esc(g(k + 'S'))}</span></button>`
+    return `<div class="ao-tiles ao-modes" role="radiogroup" aria-label="${esc(g('modeLabel'))}">${b('safe', 'modeSafe', false)}${b('max', 'modeMax', !premiumOn())}</div>`
+  }
+  function expertHtml() {
+    if (A.intensity !== 'max') return ''
+    const ex = expertViews(A.findings); if (!ex.length) return ''
+    return `<div class="ao-expert"><h2 class="ao-h2">${esc(g('expertTitle'))} <b>${ex.length}</b></h2><p class="ao-item-s">${esc(g('expertLead'))}</p>
+      ${ex.map(f => `<div class="ao-item"><input type="checkbox" id="ao-x-${f.id}" data-expert="${f.id}" ${A.expertOk.has(f.id) ? 'checked' : ''}>
+        <div><label for="ao-x-${f.id}" class="ao-item-t">${esc(g(f.titleKey, f.vars || {}))}</label><div class="ao-item-s">${esc(g(f.whyKey, f.vars || {}))}</div>${riskBlock(f)}</div>${riskLabel(f)}</div>`).join('')}</div>`
+  }
+  function maxHintHtml() {
+    if (A.intensity === 'max' || !(A.maxExtra > 0)) return ''
+    return `<aside class="ao-note"><i class="fa fa-gauge-high"></i><span>${esc(g(premiumOn() ? 'maxHint' : 'maxHintLocked', { n: A.maxExtra }))}</span>${premiumOn() ? `<button type="button" class="j-btn j-btn-ghost j-btn-sm" id="ao-max-go">${esc(g('maxHintBtn'))}</button>` : ''}</aside>`
+  }
+
   // ── scene 3: plan ──
   const USE = [['fps', 'useFps'], ['open', 'useOpen'], ['stream', 'useStream'], ['mix', 'useMix']]
   async function refreshPlan() {
     const token = A.token
-    const sel = selection(A.findings, A.on)
-    const r = await root.api.aoPlan({ scanId: A.scanId, useCase: A.useCase, answers: A.answers, include: sel.include, exclude: sel.exclude, modules: A.modsOff,
-      startupItems: A.startupOn ? [...A.startupOn] : undefined })
+    const r = await root.api.aoPlan(planReq(true))
     if (!A || token !== A.token) return
     if (!r || !r.ok) return showError(r && r.reason, () => startScan(true))
     A.plan = r.plan
@@ -350,8 +389,9 @@
         <div class="ao-mod-h" data-toggle-open="${m.id}"><label class="j-switch" data-stop="1"><input type="checkbox" data-mod-on="${m.id}" ${m.on ? 'checked' : ''} aria-label="${esc(g('mod_' + m.id))}"><span class="j-switch-track"></span></label>
           <b>${esc(g('mod_' + m.id))}</b><span class="ao-count">${m.onCount}/${m.total}</span><i class="fa fa-chevron-right ao-chev"></i></div>
         ${A.expanded.has(m.id) ? `<div class="ao-mod-items">${m.items.map(f => `<div class="ao-item"><input type="checkbox" id="ao-i-${f.id}" data-find="${f.id}" ${f.on ? 'checked' : ''}>
-          <div><label for="ao-i-${f.id}" class="ao-item-t">${esc(g(f.titleKey, f.vars || {}))}</label><div class="ao-item-s">${esc(g(f.whyKey, f.vars || {}))}</div>${f.on || f.id === 'hibernate' ? itemSub(f) : ''}
+          <div><label for="ao-i-${f.id}" class="ao-item-t">${esc(g(f.titleKey, f.vars || {}))}</label><div class="ao-item-s">${esc(g(f.whyKey, f.vars || {}))}</div>${f.risk >= 2 ? riskBlock(f) : ''}${f.on || f.id === 'hibernate' ? itemSub(f) : ''}
             ${f.undoable === false ? `<div class="ao-item-s">${esc(g('notUndoable'))}</div>` : ''}</div>${impactBadge(f)}</div>`).join('')}</div>` : ''}</div>`).join('')}
+      ${expertHtml()}
       <div class="ao-summary"><span>${esc(g('sumSteps'))} <b>${p ? p.steps.length : 0}</b></span><span>${esc(g('sumTime'))} <b>${p ? fmtDuration(p.estSeconds) : '–'}</b></span>
         <span>${esc(g('sumReboot'))} <b>${esc(g(p && p.rebootRequired ? 'yes' : 'no'))}</b></span></div>`
   }
@@ -371,6 +411,7 @@
     const r = right(`<div class="ao-scene ao-enter">
       <div><div class="ao-eyebrow">${esc(g('trail_plan'))}</div><h1 class="ao-title">${esc(g('planTitle'))}</h1></div>
       <p class="ao-lead">${esc(g('planLead'))}</p>
+      ${modeSwitchHtml()}
       <div class="ao-tiles" role="radiogroup" aria-label="${esc(g('goalLabel'))}">${USE.map(([id, k]) => `<button type="button" class="ao-tile" role="radio" aria-checked="${A.useCase === id}" data-use="${id}"><b>${esc(g(k))}</b><span>${esc(g(k + 'S'))}</span></button>`).join('')}</div>
       <div class="ao-mods" id="ao-mods">${planBody()}</div>
       <div class="ao-note"><i class="fa fa-life-ring"></i><span>${esc(g('safetyNote'))}</span></div>
@@ -383,11 +424,12 @@
   function wirePlan(r) {
     r.querySelector('#ao-back').onclick = () => showDiagnosis()
     r.querySelector('#ao-go').onclick = () => startRun()
-    r.querySelectorAll('.ao-tile').forEach(b => { b.onclick = async () => {
+    r.querySelectorAll('[data-intensity]').forEach(b => { b.onclick = () => setIntensity(b.dataset.intensity) })
+    r.querySelectorAll('.ao-tile[data-use]').forEach(b => { b.onclick = async () => {
       if (A.useCase === b.dataset.use) return
-      A.useCase = b.dataset.use
+      A.useCase = b.dataset.use; A.expertOk.clear()   // a typed confirmation belongs to the plan it was given for
       const s = root.settings; if (s) { s.aom_use_case = A.useCase; try { root.api.saveSettings(s) } catch {} }
-      const res = await root.api.aoPlan({ scanId: A.scanId, useCase: A.useCase, answers: A.answers })
+      const res = await root.api.aoPlan(planReq(false))
       if (!A || !res || !res.ok) return
       A.findings = res.findings; A.on = initialOn(A.findings); A.startupOn = null; A.modsOff = {}
       await refreshPlan(); if (A && A.scene === 'plan') renderPlan()
@@ -402,12 +444,22 @@
         const id = h.dataset.toggleOpen; A.expanded.has(id) ? A.expanded.delete(id) : A.expanded.add(id)
         const m = $('#ao-mods'); m.innerHTML = planBody(); wireMods()
       } })
-      box.querySelectorAll('[data-mod-on]').forEach(c => { c.onchange = () => { for (const f of A.findings) if (f.kind === 'fix' && f.module === c.dataset.modOn) A.on.set(f.id, c.checked); redraw() } })
+      box.querySelectorAll('[data-mod-on]').forEach(c => { c.onchange = () => { for (const f of A.findings) if (f.kind === 'fix' && f.module === c.dataset.modOn && !(f.risk >= 3)) A.on.set(f.id, c.checked); redraw() } })
       box.querySelectorAll('[data-find]').forEach(c => { c.onchange = () => { A.on.set(c.dataset.find, c.checked); redraw() } })
+      box.querySelectorAll('[data-expert]').forEach(c => { c.onchange = async () => {
+        const f = A.findings.find(x => x.id === c.dataset.expert); if (!f) return
+        if (c.checked) {
+          const ok = await root.confirmTier(f.steps[0].id)   // the same typed confirmation the manual tabs use
+          if (!A) return
+          if (!ok) { c.checked = false; return }
+          A.expertOk.add(f.id); A.on.set(f.id, true)
+        } else { A.expertOk.delete(f.id); A.on.set(f.id, false) }
+        redraw()
+      } })
       box.querySelectorAll('[data-startup]').forEach(c => { c.onchange = () => { c.checked ? A.startupOn.add(c.dataset.startup) : A.startupOn.delete(c.dataset.startup); redraw() } })
       box.querySelectorAll('[data-answer]').forEach(c => { c.onchange = async () => {
         A.answers[c.dataset.answer] = c.checked
-        const res = await root.api.aoPlan({ scanId: A.scanId, useCase: A.useCase, answers: A.answers })
+        const res = await root.api.aoPlan(planReq(false))
         if (!A || !res || !res.ok) return
         A.findings = res.findings; A.on = initialOn(A.findings); redraw()
       } })
@@ -450,7 +502,7 @@
     $('#ao-stop').onclick = () => { root.api.aoStop(); const b = $('#ao-stop'); b.disabled = true; b.textContent = g('stopping') }
     const off = root.api.onAoEvent(ev => { if (A && token === A.token) onRunEvent(ev) })
     A.unsub.push(off)
-    const req = { scanId: A.scanId, useCase: A.useCase, answers: A.answers, ...selection(A.findings, A.on), modules: A.modsOff, startupItems: A.startupOn ? [...A.startupOn] : undefined }
+    const req = { expertOk: [...A.expertOk], intensity: A.intensity, scanId: A.scanId, useCase: A.useCase, answers: A.answers, ...selection(A.findings, A.on), modules: A.modsOff, startupItems: A.startupOn ? [...A.startupOn] : undefined }
     const res = await root.api.aoRun(req).catch(e => ({ ok: false, aborted: true, reason: 'generic', error: String(e) }))
     try { off() } catch {}
     A.busy = false

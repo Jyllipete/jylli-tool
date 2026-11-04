@@ -4502,18 +4502,29 @@ const aoSend = (ch, payload) => { try { mainWindow?.webContents.send(ch, payload
 const aoStr = (v, max = 40) => (typeof v === 'string' && v.length <= max ? v : undefined)
 const aoList = (v, max = 60) => (Array.isArray(v) ? v.filter(x => typeof x === 'string' && x.length <= 80).slice(0, max) : [])
 
+// Maximum mode is Premium only, checked here and not just in the renderer: anything else is Safe.
+function aoIntensity(req, s) {
+  const want = req && (req.intensity === 'max' || req.intensity === 'safe') ? req.intensity : (s || loadSettings()).aom_intensity
+  return want === 'max' && !!auth && auth.isPremium() ? 'max' : 'safe'
+}
 function aoFindingCtx(req) {
   const s = loadSettings()
   const useCase = AutoOpti.catalog.USE_CASES.includes(req && req.useCase) ? req.useCase : (AutoOpti.catalog.USE_CASES.includes(s.aom_use_case) ? s.aom_use_case : 'mix')
   const answers = { ...(s.aom_saved_answers || {}), ...((req && typeof req.answers === 'object' && req.answers) || {}) }
   const applied = new Set(Object.keys(TWEAKS).filter(id => s[`tweak_${id}`] === 'applied'))
-  return { useCase, answers, applied }
+  return { useCase, answers, applied, intensity: aoIntensity(req, s) }
 }
 function aoPlanCtx(req) {
   const modules = {}
   if (req && req.modules && typeof req.modules === 'object') for (const id of AutoOpti.catalog.MODULES) if (req.modules[id] === false) modules[id] = false
   const ie = req && req.itemExclude && typeof req.itemExclude === 'object' ? { 'startup-apps': aoList(req.itemExclude['startup-apps'], 80) } : {}
-  return { include: aoList(req && req.include), exclude: aoList(req && req.exclude), modules, itemExclude: ie, startupItems: Array.isArray(req && req.startupItems) ? aoList(req.startupItems, 80) : undefined, premium: !!auth && auth.isPremium() }
+  return { include: aoList(req && req.include), exclude: aoList(req && req.exclude), modules, itemExclude: ie, startupItems: Array.isArray(req && req.startupItems) ? aoList(req.startupItems, 80) : undefined, premium: !!auth && auth.isPremium(),
+    intensity: aoIntensity(req), expertOk: aoList(req && req.expertOk, 8) }
+}
+/** How many Maximum-only rows this PC would get (shown as a hint in Safe mode, and locked for free users). */
+function aoMaxExtra(profile, c) {
+  if (c.intensity === 'max') return 0
+  try { return AutoOpti.findings.findings(profile, { ...c, intensity: 'max' }).filter(f => f.intensity === 'max').length } catch { return 0 }
 }
 function aoCached(scanId) { return _aoScan && _aoScan.scanId === scanId && Date.now() - _aoScan.at < AO_SCAN_TTL_MS ? _aoScan : null }
 
@@ -4553,7 +4564,7 @@ ipcMain.handle('auto-opti-scan', async (_, req) => {
   if (_aoScanning) return { ok: false, reason: 'scan-active' }
   if (!(req && req.force) && _aoScan && Date.now() - _aoScan.at < AO_SCAN_TTL_MS) {
     const c = aoFindingCtx(req)
-    return { ok: true, cached: true, scanId: _aoScan.scanId, profile: _aoScan.profile, findings: AutoOpti.findings.findings(_aoScan.profile, c), useCase: c.useCase, ms: 0 }
+    return { ok: true, cached: true, scanId: _aoScan.scanId, profile: _aoScan.profile, findings: AutoOpti.findings.findings(_aoScan.profile, c), useCase: c.useCase, intensity: c.intensity, maxExtra: aoMaxExtra(_aoScan.profile, c), ms: 0 }
   }
   _aoScanning = true
   try {
@@ -4566,7 +4577,7 @@ ipcMain.handle('auto-opti-scan', async (_, req) => {
     _aoScan = { scanId, profile, at: Date.now() }
     _capsProfile = profile; _capsAt = Date.now()
     const c = aoFindingCtx(req)
-    return { ok: true, scanId, profile, findings: AutoOpti.findings.findings(profile, c), useCase: c.useCase, ms: profile.scanMs }
+    return { ok: true, scanId, profile, findings: AutoOpti.findings.findings(profile, c), useCase: c.useCase, intensity: c.intensity, maxExtra: aoMaxExtra(profile, c), ms: profile.scanMs }
   } catch (e) { return { ok: false, reason: 'scan-failed', error: String(e && e.message || e).slice(0, 200) } } finally { _aoScanning = false }
 })
 
@@ -4612,7 +4623,7 @@ ipcMain.handle('auto-opti-plan', (_, req) => {
   if (!sc) return { ok: false, reason: 'scan-expired' }
   const fc = aoFindingCtx(req)
   const findings = AutoOpti.findings.findings(sc.profile, fc)
-  return { ok: true, findings, plan: AutoOpti.plan.plan(findings, aoPlanCtx(req)), useCase: fc.useCase }
+  return { ok: true, findings, plan: AutoOpti.plan.plan(findings, aoPlanCtx(req)), useCase: fc.useCase, intensity: fc.intensity }
 })
 
 ipcMain.handle('auto-opti-run', async (_, req) => {
@@ -4653,6 +4664,19 @@ ipcMain.handle('auto-opti-verify', async () => {
     const v = await verifyEntry(e, { ps: runPS, cmd: runCmd, handlers: { ...autoOptiUndoHandlers } })
     drift.total += v.same.length + v.drifted.length; drift.same += v.same.length
     if (v.drifted.length) drift.drifted.push({ tweakId: e.tweakId, control: e.control, label: (e.tweakId && TWEAKS[e.tweakId]?.name) || ({ 'auto-opti:startup-cleanup': 'Startup apps', 'auto-opti:display-refresh': 'Refresh rate' })[e.control] || null, items: v.drifted.map(d => d.name).slice(0, 6) })
+  }
+  // Registry values can survive a restart while Windows still ignores them (Memory Integrity locked by firmware or policy): ask the machine what is actually running.
+  const asked = new Set((pv.checks || []).map(c => c.tweakId))
+  if (asked.has('hvci-offload') || asked.has('hypervisor-off')) {
+    try {
+      const pr = AutoOpti.probes.PROBES.find(p => p.id === 'sys2'); const r = await runPS(pr.script, pr.timeoutMs); const sys = r.ok ? (pr.parse(r.out) || {}).sys : null
+      if (sys) {
+        drift.total += 1
+        const stillOn = asked.has('hypervisor-off') ? sys.hypervisorPresent === true : sys.hvciRunning === true
+        if (stillOn) drift.drifted.push({ tweakId: asked.has('hypervisor-off') ? 'hypervisor-off' : 'hvci-offload', control: null, label: asked.has('hypervisor-off') ? 'Hypervisor is still running (a firmware or policy setting is keeping it on)' : 'Memory Integrity is still running (a firmware or policy setting is keeping it on)', items: [] })
+        else drift.same += 1
+      }
+    } catch {}
   }
   const metricsAfter = await AoMetrics.snapshot({ runPS }, { sampleCpu: true })
   const st = AoVerify.verifyState(pv, { lastBootAt, events, drift })

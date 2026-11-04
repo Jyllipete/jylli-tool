@@ -2,6 +2,12 @@
 
 ## Julkaisematon (Suorituskykyauditointi)
 
+### Auto-optimointi: Maksimitila
+- Uusi **Maksimi**-ajotila (Premium) Turvallisen rinnalle: lisää koneeseen sopivat säädöt, joissa on kompromissi, ja näyttää jokaisen riskit ennen ajoa; Turvallinen toimii kuten ennen ja on oletus, viimeksi käytetty tila muistetaan
+- **Asiantuntijasäädöt** (hypervisor pois, muistin eheys pois, Spectre/Meltdown pois): omassa osiossaan, mitään ei valita puolestasi, jokainen vaatii kirjoitetun vahvistuksen ja tarjotaan vain koneilla joilla niistä on hyötyä (ei toimialueen koneille eikä ytimen huijauksenestolla)
+- Ajo tarkistaa itse: vahvistamaton asiantuntijasäätö ei koskaan etene suunnitelmasta ajoon asti; uudelleenkäynnistyksen jälkeen tarkistetaan että muistin eheys tai hypervisor todella sammui
+- Korjattu: Muistin eheyden erillinen valinta ohitti kirjoitettavan vahvistuksen
+
 ### Säädöt
 - **Placebo pois**: 24 säätöä jäi eläkkeelle (mm. TCP-pino, NVIDIA/AMD-rekisteriavaimet, MMCSS, SvcHost-yhdistys); ne eivät muuttaneet mitään mitattavaa. Todisteet: `docs/TWEAK_EVIDENCE.md`
 - **Uudet säädöt**: pelien ajo erillisellä GPU:lla (hybridigrafiikka), hiiren osoitin 6/11, Fault Tolerant Heap -nollaus, Wi-Fi-pelioptimointi, hypervisorin sammutus (riskitaso 3); MPO ja MSI-tila uudistettu

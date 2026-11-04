@@ -29,6 +29,15 @@ const FX = {
     os: { build: 19045, ubr: 1, edition: 'Core', win11: false }, cpu: { name: 'Intel(R) Core(TM) i7-7700K CPU @ 4.20GHz', vendor: 'intel', cores: 4, threads: 8, x3d: 'none' },
   }), gpu('AMD Radeon RX 580', 'amd', true)),
   'wifi-desktop': () => withGpus(Object.assign(P.healthy(), { net: { primary: 'wifi', name: 'Wi-Fi', desc: 'Intel AX200', speed: '1 Gbps', eee: 'n/a' } }), gpu('NVIDIA GeForce RTX 3060', 'nvidia', true)),
+  // A desktop with everything Maximum mode looks at known: clean of domain/anti-cheat/virtualization, Wi-Fi tunable, a stale FTH list.
+  'max-desktop': () => withGpus(Object.assign(P.healthy(), {
+    cpu: { name: 'Intel(R) Core(TM) i7-13700K', vendor: 'intel', cores: 16, threads: 24, x3d: 'none' },
+    cpuX: { hybrid: true, pCores: 8, eCores: 8, llcGroups: 1, microcode: 0x129 },
+    sys: { build: 26100, vbsRunning: true, hvciRunning: true, hypervisorPresent: true, pcSystemType: 1, partOfDomain: false, antiCheat: [], fthCount: 3, services: { wsl: false, docker: false, hyperV: false, vmp: false } },
+    background: { ...P.healthy().background, bgAppsOff: false },
+    context: { apps: { games: 12 } },
+    netX: { vendor: 'realtek', props: [{ name: 'Interrupt Moderation', value: 'Enabled', keyword: '*InterruptModeration', valid: ['Enabled', 'Disabled'] }] },
+  }), gpu('NVIDIA GeForce RTX 4070', 'nvidia', true)),
   'unknown-all': () => ({ v: 1, probes: {} }),
 }
 

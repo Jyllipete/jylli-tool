@@ -3,6 +3,7 @@
 const path = require('path')
 const ao = require('../../lib/auto-opti')
 const { P } = require('../../test/fixtures/auto-opti/profiles')
+const { FX } = require('../../test/fixtures/auto-opti/hw-fixtures')
 
 const sleep = ms => new Promise(r => setTimeout(r, ms))
 const PROFILE = () => { const n = process.argv.indexOf('--ao-profile'); return n >= 0 ? process.argv[n + 1] : 'cluttered' }
@@ -21,12 +22,13 @@ const FAKE = {
 let st = null     // { profile, scanId, confirm: resolver }
 
 function profileFor() {
-  const p = (P[PROFILE()] || P.cluttered)()
+  const p = (P[PROFILE()] || FX[PROFILE()] || P.cluttered)()
   p.scanMs = 2310; p.gpuList = p.gpus
   p.probes = Object.fromEntries(ao.probes.PROBES.map(x => [x.id, { ok: true, ms: 300 }]))
   return p
 }
-const ctxOf = (req, premium) => ({ useCase: (req && req.useCase) || 'fps', answers: (req && req.answers) || {}, applied: new Set() })
+const ctxOf = (req, premium) => ({ useCase: (req && req.useCase) || 'fps', answers: (req && req.answers) || {}, applied: new Set(), intensity: req && req.intensity === 'max' ? 'max' : 'safe' })
+const planCtx = (req, c, ctx) => ({ include: req.include || [], exclude: req.exclude || [], modules: req.modules || {}, startupItems: req.startupItems, premium: ctx.premium, intensity: c.intensity, expertOk: req.expertOk || [] })
 
 async function handle(name, args, sender, ctx) {
   const req = args && args[0]
@@ -43,16 +45,16 @@ async function handle(name, args, sender, ctx) {
         send('onAoScanProgress', { scanId, probe: pr.id, state: 'done', ms: 180 + Math.round(Math.random() * 900), chips })
       }
       const c = ctxOf(req)
-      return { ok: true, scanId, profile, findings: ao.findings.findings(profile, c), useCase: c.useCase, ms: 2310 }
+      const maxExtra = c.intensity === 'max' ? 0 : ao.findings.findings(profile, { ...c, intensity: 'max' }).filter(f => f.intensity === 'max').length
+      return { ok: true, scanId, profile, findings: ao.findings.findings(profile, c), useCase: c.useCase, intensity: c.intensity, maxExtra, ms: 2310 }
     }
     case 'aoPlan': {
       const c = ctxOf(req); const findings = ao.findings.findings(st.profile, c)
-      const include = (req.include || []), exclude = (req.exclude || [])
-      return { ok: true, findings, useCase: c.useCase, plan: ao.plan.plan(findings, { include, exclude, modules: req.modules || {}, startupItems: req.startupItems, premium: ctx.premium }) }
+      return { ok: true, findings, useCase: c.useCase, intensity: c.intensity, plan: ao.plan.plan(findings, planCtx(req, c, ctx)) }
     }
     case 'aoRun': {
       const c = ctxOf(req); const findings = ao.findings.findings(st.profile, c)
-      const plan = ao.plan.plan(findings, { include: req.include || [], exclude: req.exclude || [], modules: req.modules || {}, startupItems: req.startupItems, premium: ctx.premium })
+      const plan = ao.plan.plan(findings, planCtx(req, c, ctx))
       const ev = (e) => send('onAoEvent', { runId: 'pv', ...e })
       const counters = { settingsChanged: 0, startupRemoved: 0, tasksDisabled: 0, bytesReclaimed: 0 }
       ev({ phase: 'measure', state: 'start' }); await sleep(700); ev({ phase: 'measure', state: 'done' })
