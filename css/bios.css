@@ -111,7 +111,7 @@
 .bw-sug-steps { margin: 6px 0 4px 18px; padding: 0; }
 .bw-sug-actions { display: flex; gap: 8px; margin-top: 8px; }
 .bw-sug-actions:empty { display: none; }
-.bw-more summary { cursor: pointer; font-size: var(--fs-2); color: var(--c-text-secondary); margin-bottom: 8px; }
+.bw-more summary { display: flex; align-items: center; min-height: 28px; cursor: pointer; font-size: var(--fs-2); color: var(--c-text-secondary); margin-bottom: 8px; }
 .bw-myths { margin: 6px 0 0 18px; padding: 0; font-size: var(--fs-2); color: var(--c-text-secondary); }
 .bw-done { display: flex; align-items: center; gap: 12px; padding: 10px 14px; margin-bottom: 16px; border: 1px solid var(--c-success); border-radius: var(--r-sm); background: var(--surface-2); font-size: var(--fs-2); }
 .bw-done > i { color: var(--c-success); font-size: var(--fs-5); }

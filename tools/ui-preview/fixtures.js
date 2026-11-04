@@ -60,6 +60,7 @@ function respond(name, args, ctx) {
       return { ok: true, engine: 'hp-wmi', writable: true, haveSettings: true, capsKnown: true, ...out }
     }
     case 'bios2Restart': return { ok: true }
+    case 'bios2Trial': return { ok: true, trial: null }
     case 'bios2Commit': return { ok: true, snapshotId: 1, applied: (args[0] && args[0].changes || []).length, restartNeeded: true }
     case 'bios2Snapshots': return { ok: true, snapshots: [{ id: 1, ts: now - 3600000, engine: 'hp-wmi', reason: 'commit', changes: [{ id: 'Fast Boot', name: 'Fast Boot', from: 'Disable', to: 'Enable' }], count: 713 }] }
     case 'bios2Restore': return { ok: true, applied: 1 }
