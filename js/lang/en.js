@@ -3257,6 +3257,9 @@ aoHeroEyebrow:'App scanner', aoHeroDetected:'{n} apps detected', aoHeroScanning:
       errAdmin:'Administrator rights required', errPath:'Game path not found. Try scanning again.', errUnknown:'Unknown error', errPerm:'Permission denied. Try running as administrator.', errScan:'Scan failed',
       bundleHint:'Choose Create bundle to snapshot your current preset.', bundleEmpty:'Empty bundle',
     },
+    procx: {
+      hogTitle:'CPU hog rail', hogSub:'Freeze any process. It is restored automatically when your game exits.', kill:'End process', saved:'saved {n}s of CPU', freezeErr:'Could not freeze the process', ipcFailed:'The request failed',
+    },
     tab: {
       showAll:'Show all {n}', showLess:'Show less', 
       chipAll:'All', chipRecommended:'Recommended', chipApplied:'Applied', chipReboot:'Needs restart', chipRisky:'Risky',

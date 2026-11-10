@@ -7,8 +7,8 @@ function buildProcessManager(c) {
   const th = (key, labelKey, width) => html`<th id="th-${key}" class="j-sortable" ${ui.raw(width ? `style="width:${width}px"` : '')} onclick="sortProcesses('${key}')">${tUI(labelKey)}<span class="sort-arrow" id="sa-${key}">▼</span></th>`
   c.innerHTML = String(html`
     ${ui.card({
-      title: html`<i class="fa fa-snowflake" aria-hidden="true"></i> CPU Hog Rail`,
-      sub: 'Freeze any process — auto-restores when your game exits',
+      title: html`<i class="fa fa-snowflake" aria-hidden="true"></i> ${tG('procx', 'hogTitle')}`,
+      sub: tG('procx', 'hogSub'),
       body: html`<div id="pf-hog-cards" class="j-hog-cards"><div class="j-muted">${tUI('pmScanning')}</div></div>
         <div id="pf-session-report" class="j-callout j-callout-ok" style="display:none"></div>`,
       id: 'pf-hog-rail',
@@ -26,16 +26,6 @@ function buildProcessManager(c) {
   loadProcesses()
   startPfHogRail()
 
-  // Sync Launch Rules checkboxes and arm count after DOM is ready
-  syncLaunchRuleChecks()
-
-  // If a game is already running when the page opens, light up immediately
-  api.getSystemContext().then(ctx => {
-    if (ctx?.gameRunning) {
-      setLaunchRuleDots(true)
-      _gwStripShow(ctx.gameName || ctx.gameExe || '')
-    }
-  }).catch(() => {})
 }
 
 // One card of the hog rail. `frozen` cards get the info tone; `savings` is already formatted text or ''.
@@ -68,7 +58,7 @@ function renderProcessTable(data) {
       <td class="cpu-bar-cell">${ui.meter(cpuPct)}<div class="j-proc-val j-num">${p.CPU || 0}%</div></td>
       <td>${ui.meter(ramPct, ramTone)}<div class="j-proc-val j-num">${(p.RAM || 0).toFixed(0)} MB</div></td>
       <td class="j-num j-muted">${p.Id || '?'}</td>
-      <td><button class="kill-btn j-btn j-btn-ghost j-btn-icon j-btn-sm" type="button" aria-label="Kill" onclick="doKillProcess(${Number(p.Id) || 0},${ui.raw(jsArg(String(p.Name || '')))})"><i class="fa fa-xmark" aria-hidden="true"></i></button></td>
+      <td><button class="kill-btn j-btn j-btn-ghost j-btn-icon j-btn-sm" type="button" aria-label="${tG('procx', 'kill')}" onclick="doKillProcess(${Number(p.Id) || 0},${ui.raw(jsArg(String(p.Name || '')))})"><i class="fa fa-xmark" aria-hidden="true"></i></button></td>
     </tr>`)
   }).join('')
   _updateSortIndicators()

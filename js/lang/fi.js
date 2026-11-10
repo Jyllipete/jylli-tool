@@ -3440,6 +3440,9 @@ aoHeroEyebrow:'Sovellusskanneri', aoHeroDetected:'{n} sovellusta tunnistettu', a
       errAdmin:'Vaatii järjestelmänvalvojan oikeudet', errPath:'Pelin polkua ei löytynyt. Kokeile skannata uudelleen.', errUnknown:'Tuntematon virhe', errPerm:'Käyttö estetty. Kokeile ajaa järjestelmänvalvojana.', errScan:'Skannaus epäonnistui',
       bundleHint:'Valitse Luo paketti tallentaaksesi nykyisen esiasetuksen.', bundleEmpty:'Tyhjä paketti',
     },
+    procx: {
+      hogTitle:'CPU-syöpöt', hogSub:'Jäädytä mikä tahansa prosessi. Se palautuu automaattisesti, kun pelisi sulkeutuu.', kill:'Lopeta prosessi', saved:'säästetty {n} s CPU:ta', freezeErr:'Prosessia ei voitu jäädyttää', ipcFailed:'Pyyntö epäonnistui',
+    },
     tab: {
       showAll:'Näytä kaikki {n}', showLess:'Näytä vähemmän', 
       chipAll:'Kaikki', chipRecommended:'Suositellut', chipApplied:'Käytössä', chipReboot:'Vaatii käynnistyksen', chipRisky:'Riskialttiit',

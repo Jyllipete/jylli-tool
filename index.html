@@ -2546,7 +2546,7 @@ async function _pfUpdateHogRail() {
     }
     container.innerHTML = hogs.map(p => {
       const frozen = frozenPids.has(p.Id)
-      const savings = _pfFrozenSavings[p.Id] ? ` · Saved ${Math.round(_pfFrozenSavings[p.Id] / 1000)}s CPU` : ''
+      const savings = _pfFrozenSavings[p.Id] ? ` · ${tG('procx', 'saved', { n: Math.round(_pfFrozenSavings[p.Id] / 1000) })}` : ''
       return pfHogCardHtml(p, frozen, savings)
     }).join('')
   } catch {} finally { _pfHogBusy = false }
@@ -2569,7 +2569,7 @@ async function pfToggleFreeze(pid, name, cpuPct) {
     }
     _pfUpdateHogRail()
   } catch (e) {
-    toast(tUI('pmFreezeErrorTitle') || 'Freeze error', e?.message || 'IPC failed', 'err')
+    toast(tG('procx', 'freezeErr'), e?.message || tG('procx', 'ipcFailed'), 'err')
   }
 }
 
