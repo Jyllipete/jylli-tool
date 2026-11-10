@@ -19,7 +19,7 @@ const metrics = (t = 0) => ({
 })
 
 const tweakStates = {}
-for (const id of ['game-dvr', 'mmcss', 'priority-sep', 'ntfs', 'disable-mouse-accel', 'tcp-stack', 'net-throttling', 'qos-reserve', 'visual-effects']) tweakStates[id] = true
+for (const id of ['chrome-optimize', 'steam-optimize', 'discord-optimize', 'obs-optimize', 'explorer-optimize', 'game-dvr', 'mmcss', 'priority-sep', 'ntfs', 'disable-mouse-accel', 'tcp-stack', 'net-throttling', 'qos-reserve', 'visual-effects']) tweakStates[id] = true
 
 const processes = [
   ['chrome', 11.2, 1240], ['Discord', 4.1, 520], ['steamwebhelper', 3.8, 410], ['FiveM_b3095_GTAProcess', 28.6, 5600], ['obs64', 7.4, 880],
@@ -99,6 +99,9 @@ function respond(name, args, ctx) {
     case 'getCachedTier': return premium
     case 'getTweakStates': return tweakStates
     case 'getProcesses': return processes
+    case 'scanInstalledApps': return ['edge-optimize','chrome-optimize','firefox-optimize','discord-optimize','discord-cpu-priority','spotify-optimize','steam-optimize','epic-optimize','riot-optimize','obs-optimize','nvidia-app-optimize','vscode-optimize','explorer-optimize']
+    case 'healthCheckAppOptimizer': return { 'chrome-optimize': 'drifted', 'steam-optimize': 'ok' }
+    case 'aoGetCpuCaps': return {}
     case 'freezeGetPids': return { ok: true, frozenPids: [] }
     case 'getStartupItems': return startupItems
     case 'getBootImpact': return { ok: true, items: [] }

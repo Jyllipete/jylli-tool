@@ -1394,6 +1394,7 @@ LANG.fi = {
       aoHeroScoreLabel:'OPTIMOITU',
       aoOptimizeAll:'Optimoi kaikki',
       aoOptimizeAllDone:'Kaikki optimoitu',
+aoHeroEyebrow:'Sovellusskanneri', aoHeroDetected:'{n} sovellusta tunnistettu', aoHeroScanning:'Skannataan…', aoHeroNone:'Tuettuja sovelluksia ei löytynyt',      aoHeroLead:'Löytää koneelta sovellukset, jotka kilpailevat peleistä CPU:sta ja GPU:sta, ja hiljentää ne.',      aoHeroStatRunning:'Käynnissä nyt', aoHeroStatDrifted:'Muuttunut', aoHeroStatLeft:'Optimoimatta',      aoHeroArc_applied:'Optimoitu', aoHeroArc_drifted:'Muuttunut käytön jälkeen', aoHeroArc_live:'Käynnissä, ei optimoitu', aoHeroArc_idle:'Ei optimoitu',
       aoCatSubBrowsers:'Vapauta GPU-resurssit peleille',
       aoCatSubCommunication:'Vähennä viestintäsovellusten kuormaa',
       aoCatSubMedia:'Pidä mediaohjelmat hiljaisina pelissä',

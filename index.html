@@ -15,6 +15,7 @@
 <link rel="stylesheet" href="css/tour.css">
 <link rel="stylesheet" href="css/arrival.css">
 <link rel="stylesheet" href="css/auto-opti.css">
+<link rel="stylesheet" href="css/app-hero.css">
 <link rel="stylesheet" href="css/bios.css">
 <link rel="stylesheet" href="css/premium.css">
 </head>
@@ -535,6 +536,7 @@
 <script src="js/tour.js"></script>
 <script src="js/arrival.js"></script>
 <script src="js/auto-opti/reactor.js"></script>
+<script src="js/pages/app-hero.js"></script>
 <script src="js/auto-opti.js"></script>
 <script src="js/bios/category.js"></script>
 <script src="js/bios/workstation.js"></script>
@@ -10345,6 +10347,7 @@ async function doGPScan(btn, auto = false) {
 // ─── Page: App Optimizer ───────────────────────────────────────────────────────
 let _aoInstalled = new Set()
 let _aoRunningUnoptimized = []
+let _aoHero = null, _aoRunningIds = new Set(), _aoDriftedIds = new Set()
 const AO_CONFLICTS = [
   {
     id: 'gpu-queue-double',
@@ -10429,59 +10432,19 @@ const APP_OPTI_DEFS = [
 ]
 
 async function buildAppOptimizer(c) {
-  // ── Hero command card ─────────────────────────────────────────────────────
-  // Compute initial score
+  // ── Hero: coverage scanner (js/pages/app-hero.js) — mounted first, scanning until the real probes resolve ──
+  const _catKeyMap2 = { Browsers:'aoCatBrowsers', Communication:'aoCatCommunication', Media:'aoCatMedia', Launchers:'aoCatLaunchers', Streaming:'aoCatStreaming', System:'aoCatSystem' }
+  if (_aoHero) { try { _aoHero.destroy() } catch {} }
+  _aoRunningIds = new Set(); _aoDriftedIds = new Set()
+  _aoHero = JylliAppHero.mount(c, {
+    t: (key, vars) => { let v = tUI(key); if (vars) for (const k in vars) v = v.replace('{' + k + '}', vars[k]); return v },
+    catLabel: cat => tUI(_catKeyMap2[cat]) || cat,
+    appName: id => tAOName(id) || id,
+  })
   let _aoInitInstalled = new Set()
   try { _aoInitInstalled = new Set(await api.scanInstalledApps()) } catch {}
   _aoInstalled = _aoInitInstalled
-  const _aoInitTotal   = APP_OPTI_DEFS.filter(a => _aoInitInstalled.has(a.id)).length
-  const _aoInitApplied = APP_OPTI_DEFS.filter(a => _aoInitInstalled.has(a.id) && tweakState(a.id) === 'applied').length
-  const _aoInitScore   = _aoInitTotal > 0 ? Math.round((_aoInitApplied / _aoInitTotal) * 100) : 0
-  const _aoScoreColor  = _aoInitScore === 100 ? 'var(--c-success)' : _aoInitScore >= 67 ? 'var(--c-accent-fg)' : _aoInitScore >= 34 ? 'var(--c-warning)' : 'var(--c-danger)'
-  const _aoAllDone     = _aoInitApplied >= _aoInitTotal && _aoInitTotal > 0
-
-  // Build category chip HTML
-  const _catKeyMap2 = { Browsers:'aoCatBrowsers', Communication:'aoCatCommunication', Media:'aoCatMedia', Launchers:'aoCatLaunchers', Streaming:'aoCatStreaming', System:'aoCatSystem' }
-  const _cats2 = [...new Set(APP_OPTI_DEFS.map(a => a.cat))]
-  const catChipsHtml = _cats2.map(cat => {
-    const catApps    = APP_OPTI_DEFS.filter(a => a.cat === cat && _aoInitInstalled.has(a.id))
-    if (catApps.length === 0) return ''
-    const catApplied = catApps.filter(a => tweakState(a.id) === 'applied').length
-    const done       = catApplied === catApps.length
-    return `<span class="ao-hero-chip${done ? ' chip-done' : ''} chip-${cat.toLowerCase()}" id="ao-cat-chip-${cat.toLowerCase()}">${tUI(_catKeyMap2[cat]) || cat} ${catApplied}/${catApps.length}</span>`
-  }).join('')
-
-  const hero = document.createElement('div')
-  hero.className = 'ao-hero'
-  hero.innerHTML = `
-    <div class="ao-ring-wrap">
-      <div class="ao-ring-shimmer${_aoInitScore < 100 ? ' active' : ''}" id="ao-ring-shimmer"></div>
-      <svg width="96" height="96" viewBox="0 0 96 96" style="transform:rotate(-90deg)">
-        <circle class="ao-ring-track" cx="48" cy="48" r="40"/>
-        <circle class="ao-ring-fill" id="ao-ring-fill" cx="48" cy="48" r="40" style="stroke:${_aoScoreColor}"/>
-      </svg>
-      <div class="ao-ring-center">
-        <span class="ao-ring-num" id="ao-ring-num" style="color:${_aoScoreColor}">${_aoInitScore}%</span>
-        <span class="ao-ring-lbl">${tUI('aoHeroScoreLabel')}</span>
-      </div>
-    </div>
-    <div class="ao-hero-body">
-      <div class="ao-hero-title">${tUI('appOptiHeroTitle')}</div>
-      <div class="ao-hero-sub">${tUI('appOptiHeroDesc')}</div>
-      <div class="ao-hero-chips">${catChipsHtml}</div>
-    </div>
-    <div class="ao-hero-cta">
-      <button class="btn-ao-optimize" id="ao-optimize-all-btn"
-        ${_aoAllDone ? 'disabled' : `onclick="applyAllRunningApps(${jsArg(APP_OPTI_DEFS.filter(a => _aoInitInstalled.has(a.id) && tweakState(a.id) !== 'applied').map(a => a.id))})"`}>
-        <i class="fa fa-bolt"></i> ${_aoAllDone ? tUI('aoOptimizeAllDone') : tUI('aoOptimizeAll')}
-      </button>
-    </div>`
-  c.appendChild(hero)
-  // Animate ring in on next frame
-  requestAnimationFrame(() => {
-    const fill = document.getElementById('ao-ring-fill')
-    if (fill) fill.style.strokeDashoffset = String(251 - (_aoInitScore / 100) * 251)
-  })
+  _aoHero.update(JylliAppHero.summary(APP_OPTI_DEFS, _aoInstalled, _aoStateMap(), _aoRunningIds, _aoDriftedIds))
 
   // Use the already-scanned installed set from hero build
   const installed = _aoInstalled
@@ -10520,6 +10483,8 @@ async function buildAppOptimizer(c) {
     }
   } catch {}
 
+  _aoRunningIds = runningAppIds
+  _aoRefreshHero()
   const catKeyMap = { Browsers:'aoCatBrowsers', Communication:'aoCatCommunication', Media:'aoCatMedia', Launchers:'aoCatLaunchers', Streaming:'aoCatStreaming', System:'aoCatSystem' }
   const cats = [...new Set(APP_OPTI_DEFS.map(a => a.cat))]
 
@@ -10714,6 +10679,8 @@ async function buildAppOptimizer(c) {
   if (appliedIds.length > 0) {
     try {
       const health = await api.healthCheckAppOptimizer()
+      _aoDriftedIds = new Set(appliedIds.filter(id => health[id] === 'drifted'))
+      _aoRefreshHero()
       for (const id of appliedIds) {
         const status = health[id]
         if (status === 'drifted') {
@@ -10802,6 +10769,7 @@ async function buildAppOptimizer(c) {
       }
     } catch {}
   }
+  if (_aoHero) _aoHero.scanning(false)
 }
 
 async function aoFpRestore(id) {
@@ -10902,27 +10870,16 @@ async function applyAllRunningApps(ids) {
   for (const id of ids) await doAppOpti(id, 'apply').catch(() => {})
   toast(tUI('aoApplyAllRunning'), `${ids.length} apps optimized`, 'ok')
 }
+function _aoStateMap() {
+  const m = {}
+  APP_OPTI_DEFS.forEach(a => { m[a.id] = tweakState(a.id) })
+  return m
+}
 function _aoRefreshHero() {
   const inst = _aoInstalled
-  if (!inst?.size) return
-  const total   = APP_OPTI_DEFS.filter(a => inst.has(a.id)).length
-  const applied  = APP_OPTI_DEFS.filter(a => inst.has(a.id) && tweakState(a.id) === 'applied').length
-  const score   = total > 0 ? Math.round((applied / total) * 100) : 0
-  const color   = score === 100 ? 'var(--c-success)' : score >= 67 ? 'var(--c-accent-fg)' : score >= 34 ? 'var(--c-warning)' : 'var(--c-danger)'
-  const fill    = document.getElementById('ao-ring-fill')
-  const num     = document.getElementById('ao-ring-num')
-  if (fill) { fill.style.strokeDashoffset = String(188 - (score / 100) * 188); fill.style.stroke = color }
-  if (num)  { num.textContent = score + '%'; num.style.color = color }
-  // Update category chips
+  if (!inst?.size) { if (_aoHero) { _aoHero.update(JylliAppHero.summary(APP_OPTI_DEFS, [], {}, [], [])); _aoHero.scanning(false) } return }
+  if (_aoHero) _aoHero.update(JylliAppHero.summary(APP_OPTI_DEFS, inst, _aoStateMap(), _aoRunningIds, _aoDriftedIds))
   const _cm2 = { Browsers:'aoCatBrowsers', Communication:'aoCatCommunication', Media:'aoCatMedia', Launchers:'aoCatLaunchers', Streaming:'aoCatStreaming', System:'aoCatSystem' }
-  for (const cat of [...new Set(APP_OPTI_DEFS.map(a => a.cat))]) {
-    const chip = document.getElementById(`ao-cat-chip-${cat.toLowerCase()}`)
-    if (!chip) continue
-    const catApps    = APP_OPTI_DEFS.filter(a => a.cat === cat && inst.has(a.id))
-    const catApplied = catApps.filter(a => tweakState(a.id) === 'applied').length
-    chip.textContent = `${tUI(_cm2[cat]) || cat} ${catApplied}/${catApps.length}`
-    chip.classList.toggle('chip-done', catApplied === catApps.length)
-  }
   // Update section progress badges
   for (const cat of [...new Set(APP_OPTI_DEFS.map(a => a.cat))]) {
     const secId = `ao-${cat.toLowerCase()}`
@@ -10933,21 +10890,7 @@ function _aoRefreshHero() {
     spb.textContent  = `${catApplied}/${catApps.length}`
     spb.className    = 'sec-progress-badge' + (catApplied === catApps.length ? ' spb-full' : catApplied > 0 ? ' spb-partial' : '')
   }
-  // Update hero CTA button state
-  const ctaBtn = document.getElementById('ao-optimize-all-btn')
-  if (ctaBtn) {
-    const allDone = applied >= total && total > 0
-    ctaBtn.disabled = allDone
-    ctaBtn.style.opacity = allDone ? '0.5' : ''
-    ctaBtn.style.pointerEvents = allDone ? 'none' : ''
-    ctaBtn.innerHTML = `<i class="fa fa-bolt"></i> ${allDone ? tUI('aoOptimizeAllDone') : tUI('aoOptimizeAll')}`
-    if (!allDone) {
-      const remaining = APP_OPTI_DEFS.filter(a => inst.has(a.id) && tweakState(a.id) !== 'applied').map(a => a.id)
-      ctaBtn.setAttribute('onclick', `applyAllRunningApps(${JSON.stringify(remaining)})`)
-    }
-  }
 }
-
 async function doAppOpti(id, action = 'apply') {
   const bar = document.getElementById(`aopb-${id}`)
   const badge = document.getElementById(`aob-${id}`)

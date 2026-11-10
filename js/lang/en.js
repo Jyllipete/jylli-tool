@@ -1373,6 +1373,7 @@ LANG.en = {
       aoHeroScoreLabel:'OPTIMIZED',
       aoOptimizeAll:'Optimize All',
       aoOptimizeAllDone:'All optimized',
+aoHeroEyebrow:'App scanner', aoHeroDetected:'{n} apps detected', aoHeroScanning:'Scanning…', aoHeroNone:'No supported apps found',      aoHeroLead:'Finds the apps on this PC that fight your games for CPU and GPU, and quiets them.',      aoHeroStatRunning:'Running now', aoHeroStatDrifted:'Changed', aoHeroStatLeft:'Left to optimize',      aoHeroArc_applied:'Optimized', aoHeroArc_drifted:'Changed since applied', aoHeroArc_live:'Running, not optimized', aoHeroArc_idle:'Not optimized',
       aoCatSubBrowsers:'Free GPU resources for games',
       aoCatSubCommunication:'Reduce communication app overhead',
       aoCatSubMedia:'Keep media apps quiet while gaming',
