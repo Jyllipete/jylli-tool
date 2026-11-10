@@ -73,7 +73,7 @@
       return `<line class="aoh-tick${major ? ' major' : ''}" x1="${f(x0)}" y1="${f(y0)}" x2="${f(x1)}" y2="${f(y1)}"/>`
     }).join('')
     el.innerHTML = `
-      <div class="aoh-dial">
+      <div class="aoh-dial" data-lint-hole="0.695">
         <div class="aoh-glow"></div>
         <svg viewBox="0 0 200 200" aria-hidden="true" focusable="false">
           <g class="aoh-ticks">${ticks}</g>

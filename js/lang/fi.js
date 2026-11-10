@@ -239,7 +239,8 @@ LANG.fi = {
       impactRestoreHint:'Vinkki: Luo palautuspiste ennen muutosten tekemistä, jos et ole varma.',
       bsUwpLabel:'UWP-bloat', bsSvcLabel:'Palvelut', bsTaskLabel:'Tehtävät',
       bsScoreLabel:'Bloat-pisteet', bsSparklineTitle:'Pistehistoria — alempi on parempi',
-      bloatTier_clean:'Puhdas', bloatTier_light:'Kevyt', bloatTier_moderate:'Kohtalainen', bloatTier_heavy:'Raskas',
+      bloatTier_clean:'Puhdas', bloatTier_moderate:'Kohtalainen', bloatTier_bloated:'Runsas', bloatTier_critical:'Kriittinen',
+      bhScanning:'Tarkistetaan kauppasovelluksia, palveluita ja tehtäviä…', bhChecked:'Tarkistettu juuri nyt', bhSrc_uwp:'Kauppasovellukset', bhSrc_svc:'Palvelut', bhSrc_task:'Ajoitetut tehtävät', bhOf:'/', bhPts:'pistettä', bhLowerBetter:'Pienempi on parempi. 0 tarkoittaa, ettei poistettavaa ole.', bhRescan:'Skannaa uudelleen', bhTrend:'Viimeksi',
       desktopInfoReady:'Lataa sovellukset nähdäksesi tilastot', desktopInfoApps:'asennettua sovellusta', desktopInfoSize:'arvioitu kokonaiskoko',
       svcDescs:{
         SysMain:'Lataa usein käytetyt sovellukset RAM-muistiin ennakkoon — lisää muistinkäyttöä, ei tarpeen pelaamiseen.',

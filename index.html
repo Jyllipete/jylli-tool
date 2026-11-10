@@ -16,6 +16,7 @@
 <link rel="stylesheet" href="css/arrival.css">
 <link rel="stylesheet" href="css/auto-opti.css">
 <link rel="stylesheet" href="css/app-hero.css">
+<link rel="stylesheet" href="css/bloat-hero.css">
 <link rel="stylesheet" href="css/bios.css">
 <link rel="stylesheet" href="css/premium.css">
 </head>
@@ -537,6 +538,7 @@
 <script src="js/arrival.js"></script>
 <script src="js/auto-opti/reactor.js"></script>
 <script src="js/pages/app-hero.js"></script>
+<script src="js/pages/bloat-hero.js"></script>
 <script src="js/auto-opti.js"></script>
 <script src="js/bios/category.js"></script>
 <script src="js/bios/workstation.js"></script>
@@ -11995,102 +11997,21 @@ async function doWin32Uninstall() {
 function buildDebloater(c) {
   appVars = {}
 
-  // ── Premium Bloat Tier Hero ───────────────────────────────────────────────
-  // Built entirely with createElement — closure refs are the ONLY update path.
-  const summaryCard = document.createElement('div')
-  summaryCard.className = 'bloat-tier-hero'
-
-  // Score ring (SVG)
-  const scoreWrap = document.createElement('div')
-  scoreWrap.className = 'bloat-score-wrap'
-  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
-  svg.setAttribute('viewBox', '0 0 84 84')
-  svg.className.baseVal = 'bloat-score-ring-svg'
-  const track = document.createElementNS('http://www.w3.org/2000/svg', 'circle')
-  track.setAttribute('cx','42'); track.setAttribute('cy','42'); track.setAttribute('r','35')
-  track.className.baseVal = 'bloat-score-track'
-  const ring = document.createElementNS('http://www.w3.org/2000/svg', 'circle')
-  ring.setAttribute('cx','42'); ring.setAttribute('cy','42'); ring.setAttribute('r','35')
-  ring.className.baseVal = 'bloat-score-arc'
-  svg.appendChild(track); svg.appendChild(ring)
-  const ringCenter = document.createElement('div')
-  ringCenter.className = 'bloat-score-center'
-  const scoreEl = document.createElement('span')
-  scoreEl.className = 'bloat-score-num'; scoreEl.textContent = '—'
-  const scoreLbl = document.createElement('span')
-  scoreLbl.className = 'bloat-score-lbl'; scoreLbl.textContent = tUI('bsScoreLabel') || 'Score'
-  ringCenter.appendChild(scoreEl); ringCenter.appendChild(scoreLbl)
-  scoreWrap.appendChild(svg); scoreWrap.appendChild(ringCenter)
-
-  // Body: badge + description + stats grid + actions
-  const body = document.createElement('div')
-  body.className = 'bloat-tier-body'
-
-  const tierEl = document.createElement('span')
-  tierEl.className = 'bloat-tier-badge'; tierEl.textContent = '—'
-
-  const descEl = document.createElement('div')
-  descEl.className = 'bloat-tier-desc'; descEl.textContent = tUI('bsScanPrompt') || 'Run a scan to see your bloat score.'
-
-  // Stats grid (3 clickable tiles)
-  const statsGrid = document.createElement('div')
-  statsGrid.className = 'bloat-tier-stats'
-  const mkStat = (colorCls, label, tabTarget) => {
-    const tile = document.createElement('div')
-    tile.className = 'bloat-tier-stat'
-    tile.onclick = () => switchDebloatTab(tabTarget)
-    const num = document.createElement('span')
-    num.className = `bloat-tier-stat-num ${colorCls}`; num.textContent = '—'
-    const lbl = document.createElement('span')
-    lbl.className = 'bloat-tier-stat-label'; lbl.textContent = label
-    tile.appendChild(num); tile.appendChild(lbl)
-    return { tile, val: num }
-  }
-  const uwpStat  = mkStat('stat-uwp',  tUI('bsUwpLabel'),  'store')
-  const svcStat  = mkStat('stat-svc',  tUI('bsSvcLabel'),  'store')
-  const taskStat = mkStat('stat-task', tUI('bsTaskLabel'), 'store')
-  statsGrid.appendChild(uwpStat.tile)
-  statsGrid.appendChild(svcStat.tile)
-  statsGrid.appendChild(taskStat.tile)
-
-  // Action buttons
-  const actions = document.createElement('div')
-  actions.className = 'bloat-tier-actions'
-  actions.innerHTML = `
-    <button class="btn btn-sm jx-62" onclick="doDebloatRecommended()"><i class="fa fa-gamepad"></i> ${tUI('scanGaming')}</button>
-    <button class="btn btn-info btn-sm" onclick="doDebloatScan()"><i class="fa fa-magnifying-glass"></i> ${tUI('scanBtn')}</button>
-  `
-
-  // Sparkline canvas (kept for history drawing, hidden visually — still updated by _bloatRefreshCard)
-  const canvas = document.createElement('canvas')
-  canvas.width = 80; canvas.height = 36
-  canvas.title = tUI('bsSparklineTitle')
-  canvas.style.display = 'none'
-
-  // scoreRight mirrors score number (kept for _bloatRefreshCard compat)
-  const scoreRight = document.createElement('span')
-  scoreRight.style.display = 'none'
-
-  body.appendChild(tierEl)
-  body.appendChild(descEl)
-  body.appendChild(statsGrid)
-  body.appendChild(actions)
-  body.appendChild(canvas)
-  body.appendChild(scoreRight)
-
-  summaryCard.appendChild(scoreWrap)
-  summaryCard.appendChild(body)
-  c.appendChild(summaryCard)
-
-  // Score bar (for _bloatRefreshCard compat — no longer shown, but kept to avoid null refs)
-  const scoreBar = document.createElement('div')
-  scoreBar.style.display = 'none'
-
-  // Closure over live element refs
-  const _card = { ring, score: scoreEl, tier: tierEl, uwp: uwpStat.val, svc: svcStat.val, task: taskStat.val, scoreRight, sparkline: canvas, summaryCard, descEl }
-  window._bloatRefresh  = () => _bloatRefreshCard(_card)
-  window._bloatScoreBar = scoreBar
-  _pageCleanupFns['debloater'] = () => { window._bloatRefresh = null; window._bloatScoreBar = null }
+  // ── Bloat hero (js/pages/bloat-hero.js): score ring with three weighted sources ──
+  _bloatMeasured = { uwp: false, svc: false, task: false }
+  const _visitStart = Date.now()
+  let _prevScore = null
+  try { _prevScore = JylliBloatHero.trend(JSON.parse(localStorage.getItem('debloat-score-history') || '[]'), _visitStart) } catch {}
+  const heroCtl = JylliBloatHero.mount(c, {
+    t: tUI, previous: _prevScore,
+    onOpen: src => bloatHeroGoto('debloat-sec-' + src),
+    onPreset: () => { switchDebloatTab('store'); doDebloatRecommended(); bloatHeroGoto('debloat-sec-uwp') },
+    onRescan: () => bloatRescan(),
+  })
+  window._bloatRefresh = () => _bloatRefreshCard(heroCtl)
+  _bloatScanStart = _visitStart
+  const _heroGiveUp = setTimeout(() => window._bloatRefresh?.(), 45000)
+  _pageCleanupFns['debloater'] = () => { window._bloatRefresh = null; clearTimeout(_heroGiveUp) }
 
   // Sub-tab toggle (segmented control)
   const tabToggleWrap = document.createElement('div')
@@ -12141,7 +12062,7 @@ function buildDebloater(c) {
 
   // UWP card
   const uwpCard = makeSection(tUI('uwpSectionTitle'), tUI('uwpSub'))
-  uwpCard.classList.add('bloat-sec-pink')
+  uwpCard.classList.add('bloat-sec-pink'); uwpCard.id = 'debloat-sec-uwp'
 
   const uwpSearch = document.createElement('div')
   uwpSearch.style.cssText = 'padding:8px 18px 4px;position:relative'
@@ -12220,7 +12141,7 @@ function buildDebloater(c) {
 
   // Scheduled Tasks card
   const taskCard = makeSection(tUI('tasksSectionTitle'), tUI('tasksSub'))
-  taskCard.classList.add('bloat-sec-orange')
+  taskCard.classList.add('bloat-sec-orange'); taskCard.id = 'debloat-sec-task'
   const TASK_CATEGORIES = [
     { key:'Telemetry',   icon:'fa-tower-broadcast', label:tUI('taskCatTelemetry') },
     { key:'Diagnostics', icon:'fa-stethoscope',      label:tUI('taskCatDiagnostics') },
@@ -12285,7 +12206,7 @@ function buildDebloater(c) {
 
   // Services card
   const svcCard = makeSection(tUI('svcsSectionTitle'), tUI('servicesSub'))
-  svcCard.classList.add('bloat-sec-purple')
+  svcCard.classList.add('bloat-sec-purple'); svcCard.id = 'debloat-sec-svc'
   const SVC_GROUPS = [
     { key:'performance', label: tUI('svcGroupPerformance'), icon:'fa-gauge-high' },
     { key:'privacy',     label: tUI('svcGroupPrivacy'),     icon:'fa-eye-slash' },
@@ -12435,8 +12356,8 @@ function buildDebloater(c) {
   requestAnimationFrame(() => { switchDebloatTab._svcLoaded = true; loadServiceStatuses() })
   // Render history
   requestAnimationFrame(() => renderDebloatHistory())
-  // First-paint ring render before async data arrives
-  setTimeout(() => updateBloatSummaryCard(), 350)
+  // Store apps are read-only to scan; the hero needs them for the score, so scan on open like services and tasks
+  requestAnimationFrame(() => doDebloatScan().catch(() => {}))
 
 }
 
@@ -12550,37 +12471,36 @@ async function doDebloatScan() {
   appendLog('Scanning installed UWP apps…', 'info')
 
   // Run both scans in parallel: installed packages + provisioned packages
-  const [list, provList] = await Promise.all([api.scanUwpApps(), api.scanProvisionedUwp()])
+  const provP = api.scanProvisionedUwp().catch(() => [])   // slow; the score does not need it
+  const list = (await api.scanUwpApps()) || []
   debloatInstalledSet = new Set(list.map(n => n.toLowerCase()))
-  _debloatProvisionedSet = new Set((provList || []).map(n => n.toLowerCase()))
   prog.style.width = '100%'
 
   let found = 0
   Object.entries(UWP_APPS).forEach(([,apps]) => apps.forEach(app => {
     const isInstalled = list.some(n => n.toLowerCase().includes(app.pkg.toLowerCase()) || app.pkg.toLowerCase().includes(n.toLowerCase()))
-    const isProvisioned = [..._debloatProvisionedSet].some(n => n.includes(app.pkg.toLowerCase()) || app.pkg.toLowerCase().includes(n))
     const instEl = document.getElementById(`inst-${app.pkg}`)
-    const provEl = document.getElementById(`prov-${app.pkg}`)
     const chkEl = document.getElementById(`chk-${app.pkg}`)
     if (instEl) {
       if (isInstalled) { instEl.textContent = '● installed'; instEl.className = 'app-installed'; found++ }
       else { instEl.textContent = '○ not installed'; instEl.className = 'app-not-installed'; if (chkEl) chkEl.checked = false }
     }
-    if (provEl) {
-      if (isProvisioned) { provEl.textContent = '⚡ provisioned'; provEl.title = 'Will reinstall for new users or after Windows updates — will be removed permanently'; provEl.style.display = '' }
-      else { provEl.style.display = 'none' }
-    }
+  }))
+  _bloatMeasured.uwp = list.length > 0   // an empty list means the query failed (no admin), not a clean PC
+  updateBloatSummaryCard()
+  _debloatProvisionedSet = new Set(((await provP) || []).map(n => n.toLowerCase()))
+  Object.entries(UWP_APPS).forEach(([,apps]) => apps.forEach(app => {
+    const provEl = document.getElementById(`prov-${app.pkg}`)
+    if (!provEl) return
+    const isProvisioned = [..._debloatProvisionedSet].some(n => n.includes(app.pkg.toLowerCase()) || app.pkg.toLowerCase().includes(n))
+    if (isProvisioned) { provEl.textContent = '⚡ provisioned'; provEl.title = 'Will reinstall for new users or after Windows updates — will be removed permanently'; provEl.style.display = '' }
+    else { provEl.style.display = 'none' }
   }))
 
   document.getElementById('scan-status').innerHTML = found > 0 ? `✓ Found ${found} installed bloatware app(s) on this PC.` : '<i class="fa fa-check"></i> Scan complete — no known bloatware detected (or requires Admin).'
   appendLog(`Scan complete. ${found} installed bloatware apps found.`, found > 0 ? 'warn' : 'ok')
 
   updateBloatSummaryCard()
-  if (window._bloatScoreBar) {
-    const total = Object.values(UWP_APPS).flat().length
-    const color = found === 0 ? '#4caf50' : found <= 3 ? '#f5a623' : '#e53935'
-    window._bloatScoreBar.innerHTML = `<span style="color:${color};font-weight:600">${tUI('bloatwareScore').replace('{x}', found).replace('{y}', total)}</span>`
-  }
 }
 
 async function doUwpRemove() {
@@ -12623,6 +12543,7 @@ async function loadServiceStatuses() {
   const ids = SERVICES.map(s => s.id)
   let statuses = {}
   try { statuses = await api.getServiceStatuses(ids) } catch { return }
+  _bloatMeasured.svc = !!statuses && Object.keys(statuses).length > 0
   const labelMap = {
     Running:  tUI('svcStatusRunning'),
     Stopped:  tUI('svcStatusStopped'),
@@ -12732,7 +12653,8 @@ async function doDisableTasks() {
 }
 
 async function doScanTaskStates() {
-  const states = await api.getTaskStates().catch(() => ({}))
+  const states = (await api.getTaskStates().catch(() => ({}))) || {}
+  _bloatMeasured.task = Object.keys(states).length > 0
   for (const t of BLOAT_TASKS) {
     const safeId = t.name.replace(/\W/g,'_')
     const badge  = document.getElementById(`task-state-${safeId}`)
@@ -13047,82 +12969,62 @@ async function doDisableOptFeatures() {
 }
 
 // ── Cross-Tab Bloat Score Summary Card ────────────────────────────────────────
+// A source only counts once it was really measured (JylliBloatHero.compute returns a null score until all three are).
+// Totals are what exists on this PC: services and tasks that are missing are not part of the denominator.
+let _bloatMeasured = { uwp: false, svc: false, task: false }
+let _bloatScanStart = 0
 function computeBloatScore() {
-  const uwpInstalled = Object.values(UWP_APPS).flat().filter(app => {
-    const inst = document.getElementById(`inst-${app.pkg}`)
-    return inst && inst.classList.contains('app-installed')
-  }).length
-  const uwpTotal = Object.values(UWP_APPS).flat().length
+  const uwpAll = Object.values(UWP_APPS).flat()
+  const uwpN = uwpAll.filter(app => document.getElementById(`inst-${app.pkg}`)?.classList.contains('app-installed')).length
 
-  const gamingSvcs = SERVICES.filter(s => s.gaming)
-  const svcActive = gamingSvcs.filter(s => {
-    const badge = document.getElementById(`svcbadge-${s.id}`)
-    if (badge && badge.className) {
-      if (badge.className.includes('running') || badge.className.includes('stopped')) return true
-      if (badge.className.includes('disabled') || badge.className.includes('missing')) return false
-    }
-    const el = document.getElementById(`svc-${s.id}`)
-    return el && el.checked
-  }).length
-  const svcTotal = gamingSvcs.length
+  let svcN = 0, svcTotal = 0
+  SERVICES.filter(s => s.gaming).forEach(s => {
+    const cls = document.getElementById(`svcbadge-${s.id}`)?.className || ''
+    if (/\bdisabled\b/.test(cls)) svcTotal++
+    else if (/\b(running|stopped)\b/.test(cls)) { svcTotal++; svcN++ }
+  })
 
-  const safeTasks = BLOAT_TASKS.filter(t => t.safe)
-  const taskActive = safeTasks.filter(t => {
-    const badge = document.getElementById(`task-state-${t.name.replace(/\W/g,'_')}`)
-    if (badge && badge.dataset.state) return badge.dataset.state !== 'disabled' && badge.dataset.state !== 'unknown'
-    const el = document.getElementById(`task-chk-${t.name.replace(/\W/g,'_')}`)
-    return el && el.checked
-  }).length
-  const taskTotal = safeTasks.length
+  let taskN = 0, taskTotal = 0
+  BLOAT_TASKS.filter(t => t.safe).forEach(t => {
+    const st = document.getElementById(`task-state-${t.name.replace(/\W/g, '_')}`)?.dataset.state
+    if (st === 'disabled') taskTotal++
+    else if (st === 'enabled') { taskTotal++; taskN++ }
+  })
 
-  const score = Math.round(
-    (uwpInstalled / Math.max(uwpTotal, 1)) * 40 +
-    (svcActive / Math.max(svcTotal, 1)) * 35 +
-    (taskActive / Math.max(taskTotal, 1)) * 25
-  )
-
-  return { score, uwpInstalled, svcActive, taskActive }
+  return JylliBloatHero.compute({
+    uwp:  { n: uwpN,  total: uwpAll.length, measured: _bloatMeasured.uwp },
+    svc:  { n: svcN,  total: svcTotal,      measured: _bloatMeasured.svc },
+    task: { n: taskN, total: taskTotal,     measured: _bloatMeasured.task },
+  })
 }
 
 function updateBloatSummaryCard() { window._bloatRefresh?.() }
 
-function _bloatRefreshCard(card) {
-  const { score, uwpInstalled, svcActive, taskActive } = computeBloatScore()
-  // Map score → 4-tier system (clean / moderate / bloated / critical)
-  const tier = score <= 25 ? 'clean' : score <= 55 ? 'moderate' : score <= 80 ? 'bloated' : 'critical'
-  const color = { clean:jStatus('ok'), moderate:jStatus('warn'), bloated:jStatus('err'), critical:jStatus('err') }[tier]
-  const circ = 220
-  card.score.textContent      = score
-  card.scoreRight.textContent = score
-  card.uwp.textContent        = uwpInstalled
-  card.svc.textContent        = svcActive
-  card.task.textContent       = taskActive
-  // Update arc ring
-  card.ring.className.baseVal = 'bloat-score-arc'
-  card.ring.setAttribute('stroke', color)
-  card.ring.setAttribute('stroke-dasharray', String(circ))
-  card.ring.setAttribute('stroke-dashoffset', String(circ - (Math.max(Math.min(score,100),2)/100)*circ))
-  // Update score number color
-  card.score.style.color = color
-  // Update tier badge
-  card.tier.className    = `bloat-tier-badge tier-${tier}`
-  card.tier.textContent  = tUI('bloatTier_' + tier)
-  // Update tier description
-  if (card.descEl) {
-    const descs = {
-      clean:    tUI('bloatDesc_clean')    || 'Your system is clean. No action needed.',
-      moderate: tUI('bloatDesc_moderate') || 'Moderate bloat detected. Gaming preset recommended.',
-      bloated:  tUI('bloatDesc_bloated')  || 'High bloat. Full scan and cleanup advised.',
-      critical: tUI('bloatDesc_critical') || 'Critical bloat. Immediate action recommended.',
-    }
-    card.descEl.textContent = descs[tier]
-  }
-  // Update hero card tier class for gradient background
-  if (card.summaryCard) {
-    card.summaryCard.className = `bloat-tier-hero tier-${tier}`
-  }
-  saveBloatScoreHistory(score)
-  _bloatDrawSparkline(card.sparkline)
+function _bloatRefreshCard(hero) {
+  const r = computeBloatScore()
+  hero.scanning(r.partial && Date.now() - _bloatScanStart < 45000)
+  hero.update(r)
+  if (r.score != null) saveBloatScoreHistory(r.score)
+}
+
+function bloatHeroGoto(id) {
+  switchDebloatTab('store')
+  const el = document.getElementById(id); if (!el) return
+  requestAnimationFrame(() => {
+    el.scrollIntoView({ behavior: document.documentElement.classList.contains('motion-reduced') ? 'auto' : 'smooth', block: 'start' })
+    el.classList.remove('bh-flash'); void el.offsetWidth; el.classList.add('bh-flash')
+    setTimeout(() => el.classList.remove('bh-flash'), 1400)
+  })
+}
+
+function bloatRescan() {
+  _bloatMeasured = { uwp: false, svc: false, task: false }
+  _bloatScanStart = Date.now()
+  setTimeout(() => window._bloatRefresh?.(), 45000)
+  updateBloatSummaryCard()
+  doDebloatScan().catch(() => {})
+  loadServiceStatuses().catch(() => {})
+  doScanTaskStates().catch(() => {})
 }
 
 let _saveScoreTimer = null
@@ -13133,59 +13035,13 @@ function saveBloatScoreHistory(score) {
       const key = 'debloat-score-history'
       const raw = localStorage.getItem(key)
       const history = raw ? JSON.parse(raw) : []
+      const last = history[history.length - 1]
+      if (last && last.score === score && Date.now() - last.ts < 3600000) return   // same result within the hour is not a new data point
       history.push({ score, ts: Date.now() })
       if (history.length > 8) history.splice(0, history.length - 8)
       localStorage.setItem(key, JSON.stringify(history))
     } catch {}
   }, 1000)
-}
-
-function _bloatDrawSparkline(canvas) {
-  if (!canvas) return
-  try {
-    const raw = localStorage.getItem('debloat-score-history')
-    const history = raw ? JSON.parse(raw) : []
-    const ctx = canvas.getContext('2d')
-    ctx.clearRect(0, 0, canvas.width, canvas.height)
-    if (history.length < 2) return
-
-    const scores = history.map(h => h.score)
-    const min = Math.max(0, Math.min(...scores) - 5)
-    const max = Math.min(100, Math.max(...scores) + 5)
-    const range = max - min || 1
-    const w = canvas.width, h = canvas.height
-    const pad = 4
-
-    const toX = i => pad + (i / (scores.length - 1)) * (w - pad * 2)
-    const toY = v => h - pad - ((v - min) / range) * (h - pad * 2)
-
-    // Gradient fill
-    const grad = ctx.createLinearGradient(0, 0, 0, h)
-    grad.addColorStop(0, 'rgba(228,100,255,0.3)')
-    grad.addColorStop(1, 'rgba(228,100,255,0.02)')
-    ctx.beginPath()
-    ctx.moveTo(toX(0), toY(scores[0]))
-    scores.forEach((s, i) => { if (i > 0) ctx.lineTo(toX(i), toY(s)) })
-    ctx.lineTo(toX(scores.length - 1), h)
-    ctx.lineTo(toX(0), h)
-    ctx.closePath()
-    ctx.fillStyle = grad
-    ctx.fill()
-
-    // Line
-    ctx.beginPath()
-    ctx.moveTo(toX(0), toY(scores[0]))
-    scores.forEach((s, i) => { if (i > 0) ctx.lineTo(toX(i), toY(s)) })
-    ctx.strokeStyle = 'rgba(228,100,255,0.8)'
-    ctx.lineWidth = 1.5
-    ctx.stroke()
-
-    // Last point dot
-    ctx.beginPath()
-    ctx.arc(toX(scores.length - 1), toY(scores[scores.length - 1]), 3, 0, Math.PI * 2)
-    ctx.fillStyle = '#e464ff'
-    ctx.fill()
-  } catch {}
 }
 
 // ── Debloat History + Undo ────────────────────────────────────────────────────

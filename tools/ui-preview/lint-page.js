@@ -39,6 +39,20 @@ module.exports = String.raw`(() => {
     // clamped text whose box is overflow:visible paints its hidden lines over the next sibling (the tweak-card hover bug)
     if (cs.webkitLineClamp && cs.webkitLineClamp !== 'none' && cs.overflowY === 'visible' && el.scrollHeight > el.clientHeight + 1) add('clamp-paints-outside', name(el))
   }
+  // text inside a ring dial must sit inside the ring's hole: [data-lint-hole="0.72"] = hole diameter as a fraction of the dial width
+  for (const d of root.querySelectorAll('[data-lint-hole]')) {
+    if (!vis(d)) continue
+    const b = d.getBoundingClientRect(), rr = parseFloat(d.getAttribute('data-lint-hole')) * b.width / 2, cx = b.left + b.width / 2, cy = b.top + b.height / 2
+    const tw = document.createTreeWalker(d, NodeFilter.SHOW_TEXT)
+    for (let n = tw.nextNode(); n; n = tw.nextNode()) {
+      if (!n.textContent.trim()) continue
+      const range = document.createRange(); range.selectNodeContents(n)
+      for (const r of range.getClientRects()) {
+        if (r.width < 1) continue
+        if ([[r.left, r.top], [r.right, r.top], [r.left, r.bottom], [r.right, r.bottom]].some(p => Math.hypot(p[0] - cx, p[1] - cy) > rr)) { add('text-outside-ring', n.textContent.trim().slice(0, 30)); break }
+      }
+    }
+  }
   if (root.scrollWidth > root.clientWidth + 2) add('page-h-scroll', root.scrollWidth + '>' + root.clientWidth)
   if (primary > 1) add('multiple-primary', String(primary))
   const lines = []

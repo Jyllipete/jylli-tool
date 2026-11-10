@@ -756,8 +756,6 @@ html #loading { flex-direction: row; justify-content: flex-start; padding-left: 
 /* Info-coloured buttons follow the one-accent rule */
 #page-content .btn-info { background: var(--surface-2); color: var(--c-text-primary); border: 1px solid var(--hairline-strong); }
 #page-content .btn-info:hover:not(:disabled) { background: var(--surface-3); border-color: var(--c-border-strong); }
-#page-content .bloat-tier-actions .btn { background: var(--surface-2); color: var(--c-text-primary); border: 1px solid var(--hairline-strong); }
-#page-content .bloat-tier-actions .btn-info { background: var(--c-accent); color: var(--on-accent); border-color: transparent; font-weight: 600; }
 
 /* Clean > Startup */
 .j-su-hero { display: flex; align-items: center; gap: 20px; padding: 16px; margin-bottom: 14px; border: 1px solid var(--hairline); border-radius: var(--r-md); background: var(--surface-1); }

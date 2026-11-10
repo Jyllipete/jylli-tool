@@ -218,7 +218,8 @@ LANG.en = {
       impactRestoreHint:'Tip: Create a Restore Point before making changes if you\'re unsure.',
       bsUwpLabel:'UWP bloat', bsSvcLabel:'Services', bsTaskLabel:'Tasks',
       bsScoreLabel:'Bloat Score', bsSparklineTitle:'Score history — lower is better',
-      bloatTier_clean:'Clean', bloatTier_light:'Light', bloatTier_moderate:'Moderate', bloatTier_heavy:'Heavy',
+      bloatTier_clean:'Clean', bloatTier_moderate:'Moderate', bloatTier_bloated:'Bloated', bloatTier_critical:'Critical',
+      bhScanning:'Checking Store apps, services and tasks…', bhChecked:'Checked just now', bhSrc_uwp:'Store apps', bhSrc_svc:'Services', bhSrc_task:'Scheduled tasks', bhOf:'of', bhPts:'points', bhLowerBetter:'Lower is better. 0 means nothing to remove.', bhRescan:'Rescan', bhTrend:'Last time',
       desktopInfoReady:'Load apps to see stats', desktopInfoApps:'apps installed', desktopInfoSize:'estimated total size',
       svcDescs:{
         SysMain:'Prefetches frequently used apps into RAM — increases memory usage, not needed for gaming.',

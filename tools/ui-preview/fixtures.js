@@ -100,6 +100,11 @@ function respond(name, args, ctx) {
     case 'getTweakStates': return tweakStates
     case 'getProcesses': return processes
     case 'scanInstalledApps': return ['edge-optimize','chrome-optimize','firefox-optimize','discord-optimize','discord-cpu-priority','spotify-optimize','steam-optimize','epic-optimize','riot-optimize','obs-optimize','nvidia-app-optimize','vscode-optimize','explorer-optimize']
+    // debloat hero: a realistic mix so the preview shows a real score
+    case 'scanUwpApps': return ['Microsoft.BingNews', 'Microsoft.BingWeather', 'Microsoft.GetHelp', 'Microsoft.Getstarted', 'Microsoft.MicrosoftSolitaireCollection', 'Microsoft.WindowsMaps', 'Microsoft.WindowsStore', 'Microsoft.XboxApp', 'Microsoft.YourPhone', 'Microsoft.ZuneVideo', 'Microsoft.WindowsCalculator']
+    case 'scanProvisionedUwp': return ['Microsoft.BingNews_8wekyb3d8bbwe', 'Microsoft.GetHelp_8wekyb3d8bbwe']
+    case 'getServiceStatuses': return Object.fromEntries((args[0] || []).map((id, i) => [id, ['Running', 'Stopped', 'Disabled', 'Running', 'MISSING'][i % 5]]))
+    case 'getTaskStates': return { 'Consolidator': 'Ready', 'UsbCeip': 'Ready', 'DiskDiagnosticDataCollector': 'Disabled', 'Microsoft Compatibility Appraiser': 'Ready', 'ProgramDataUpdater': 'Disabled', 'StartupAppTask': 'Ready' }
     case 'healthCheckAppOptimizer': return { 'chrome-optimize': 'drifted', 'steam-optimize': 'ok' }
     case 'aoGetCpuCaps': return {}
     case 'freezeGetPids': return { ok: true, frozenPids: [] }
