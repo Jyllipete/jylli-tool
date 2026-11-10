@@ -1,5 +1,26 @@
 # Changelog
 
+## Julkaisematon (Välilehtien uudistus)
+
+### Yhteinen pohja
+- Uusi **välilehtipohja** (`js/ui/tab-kit.js`, `js/ui/filter.js`, `css/tab-kit.css`): sama hero (mittari, otsikko, rivistö, yksi pääpainike), sama haku ja suodatinchipit, osiot, kehys sekä lataus-, tyhjä- ja virhetila Yritä uudelleen -painikkeella
+- Yksi hakusuodatin korvasi neljä erillistä; se koskee vain omaa listaansa eikä piilota Live-monitoria, työkaluja tai muita osioita
+- `registerPageCleanup` on nyt additiivinen: Verkko-välilehden live-ping ei jää käyntiin välilehdeltä poistuttaessa
+- `body.game-running` → `body.game-live` (pelin aikainen animaatioiden pysäytys toimii nyt oikeasti); ui.css:n nollaukset eivät enää syö uusien herojen varjoja
+
+### Välilehdet
+- **Windows / Elämänlaatu**: hero kattavuusmittarilla, osioiden rivistö (klikkaus vierittää ja korostaa), Suositellut-painike rajattuna avoimeen välilehteen; Pikavoitot-nauha yhdistettiin heroon; suodatinchipit (Kaikki, Suositellut, Käytössä, Vaatii käynnistyksen, Riskialttiit)
+- **CPU & Muisti / GPU / Virta**: työkalupaneelit omilla välilehdillään (Topologia ja Latenssibudjetti → CPU & Muisti, Thermal → GPU, Tehokkuus → Virta); tyhjät osiot (Audio) piilossa; haku ja laskurit vain avoimelle välilehdelle
+- **Verkko, FiveM**: sama suodatin; FiveM:n **Käytä kaikki turvalliset** toimii nyt (se ei tehnyt mitään) ja pisteet voivat nousta 100 %:iin
+- **Korjaukset**: hero ja "Suositeltu tälle koneelle" -osio ylhäällä
+- **Pikasiivous**: hero mittaa vapautettavan koon heti avattaessa, osiokohtainen rivistö, vahvistus ennen siivousta (Roskakori tyhjenee pysyvästi), epäonnistunut mittaus ei enää näytä "ei siivottavaa"
+- **Latenssi, Pelit, Toisto, Diagnostiikka, Ajastin, Historia**: heroon nostettu olennainen luku (DPC+ISR, optimoidut pelit, tallenteet, turvapisteet viime skannauksesta, seuraava ajo, kirjatut muutokset)
+- **Toisto**: päälista ja tiedot rinnakkain; lukuvirhe näytetään virheenä eikä "ei tallenteita"
+- **Historia**: erän ja istunnon peruutus kysyy ensin; **Ajastin**: kaikkien ottaminen käyttöön tai keskeyttäminen kysyy ensin
+- **Koti**: viimeksi optimoitu, putki ja viimeisin ajo päivittyvät joka vierailulla; varoitukset suomeksi
+- **Asetukset**: sivupalkki näyttää nykyisen osion; Tarkista-painike (sormenjälki) avaa oikean välilehden
+- **Muuta**: Käynnistys-haun tyhjä tila ei enää näytä raakaavaimia; Palautuspisteen kuvaus escapataan; useita kovakoodattuja englanninkielisiä tekstejä siirretty LANG:iin (EN ja FI)
+- Opastukset (Siivous, Prosessit, Historia) päivitetty vastaamaan uusia sivuja
 ## Julkaisematon (Suorituskykyauditointi)
 
 ### Auto-optimointi: Maksimitila

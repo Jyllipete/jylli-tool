@@ -56,6 +56,13 @@ Plan: `UI_4_0_PLAN.md`; visual reference: `design-4-preview.html`. Code: `js/wor
 - **Also.** The Ctrl K palette and dialogs are glass over a softly blurred world; Network gets a "flight" (a bright comet along every link at the start and landing of a speed test, plus the test's own measured rate as particles); Clean shows the drive as a bar with the removable part inside it that empties after a clean; a batch that needs a restart puts an amber "!" overlay on the taskbar icon; Replay shows its lowest second and steadiness and exports a share card containing a still of the real rig.
 - **Motion rules.** Reduced motion: no rolling digits, no pulse, camera cuts, light stays still. No glow on text, cards or badges. Nothing animates while a game runs.
 
+## Tab kit (every tab uses it)
+Code: `js/ui/tab-kit.js`, `js/ui/filter.js`, `css/tab-kit.css`. A tab is: **hero** (one number that matters, headline, ledger of its parts, stats, ONE primary action) → **toolbar** (search + status chips, only when the tab has a list) → **sections** (dense rows) → designed states.
+- `JylliHero.mount(host, cfg)` → `update({ pct | value+unit, eyebrow, lead, ledger, stats, cta, tone, scanning })`. `pct` draws the arc (tone follows 80/50 unless `tone` is given; use `'accent'` for coverage, never red for "not done yet"); `value` shows a number with a unit and no arc (sizes, counts, DPC+ISR). Ledger rows beyond six fold behind Show all.
+- `JylliTab.load(slot, fn)`: skeleton, then `fn`; a throw becomes an error state with Retry. A failed read is never shown as an empty result.
+- `JylliFilter.mount(list, { item, section, input, chipsEl, expand, skip, onResult })`: sets `hidden` on items and on sections that contain items; everything else on the page is left alone. Items carry `data-search/applied/recommended/reboot/risk`.
+- Rules: confirm before anything that deletes for good or applies a batch (showConfirm, with the number of items); strings in LANG for both languages; no hex in JS; `jk` on kit roots; `game-live` (not `game-running`) stops animation while a game runs.
+
 ## Components
 Buttons: primary, secondary, ghost, danger, icon; sizes sm 28, md 32, lg 36; states default, hover, focus-visible, active, disabled, loading. Inputs, search, select, checkbox, switch, segmented control, slider. Cards, dense list rows (expandable), table (sticky head), tabs, badges, impact bars, stat tile, meter, ring, sparkline, avatar, tooltip, toast (with undo), modal (sm/md/lg), command palette, skeleton, empty and error states, kbd.
 
