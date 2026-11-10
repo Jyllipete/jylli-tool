@@ -145,18 +145,18 @@
   // ───────────────────────────── Tab frame and states ─────────────────────────────
   // frame(c, { tab }) -> { root, hero, bar, body }: the standard page skeleton.
   function frame(c, o) {
-    const node = el('div', 'jk jt')
+    const node = el('div', 'jk tk')
     if (o && o.tab) node.dataset.tab = o.tab
-    const hero = el('div', 'jt-hero'), bar = el('div', 'jt-bar'), body = el('div', 'jt-body')
+    const hero = el('div', 'tk-hero'), bar = el('div', 'tk-bar'), body = el('div', 'tk-body')
     node.append(hero, bar, body)
     c.appendChild(node)
     return { root: node, hero, bar, body }
   }
 
   function skeleton(kind, n) {
-    if (kind === 'hero') return '<div class="jt-sk-hero" aria-hidden="true"><span class="j-skeleton jt-sk-dial"></span><div class="jt-sk-col"><span class="j-skeleton jt-sk-t"></span><span class="j-skeleton jt-sk-l"></span><span class="j-skeleton jt-sk-l2"></span></div></div>'
-    const row = '<div class="jt-sk-row"><span class="j-skeleton jt-sk-a"></span><span class="j-skeleton jt-sk-b"></span></div>'
-    return `<div class="jt-sk" role="status" aria-label="${esc(g('loading'))}">${row.repeat(n || 6)}</div>`
+    if (kind === 'hero') return '<div class="tk-sk-hero" aria-hidden="true"><span class="j-skeleton tk-sk-dial"></span><div class="tk-sk-col"><span class="j-skeleton tk-sk-t"></span><span class="j-skeleton tk-sk-l"></span><span class="j-skeleton tk-sk-l2"></span></div></div>'
+    const row = '<div class="tk-sk-row"><span class="j-skeleton tk-sk-a"></span><span class="j-skeleton tk-sk-b"></span></div>'
+    return `<div class="tk-sk" role="status" aria-label="${esc(g('loading'))}">${row.repeat(n || 6)}</div>`
   }
 
   // load(slot, fn, { kind, n, title, sub }) shows a skeleton that matches the final layout, runs fn(slot),
@@ -171,7 +171,7 @@
     } catch (e) {
       if (slot._jtTok !== token) return
       slot.innerHTML = ''
-      const box = el('div', 'j-error jt-error'); box.setAttribute('role', 'alert')
+      const box = el('div', 'j-error tk-error'); box.setAttribute('role', 'alert')
       box.innerHTML = `<div class="j-error-icon"><i class="fa fa-triangle-exclamation" aria-hidden="true"></i></div><div class="j-error-title">${esc(o.title || g('loadFailTitle'))}</div><div class="j-error-sub">${esc(o.sub || g('loadFailSub'))}</div>`
       const b = el('button', 'j-btn j-btn-secondary j-btn-md'); b.type = 'button'; b.textContent = g('retry')
       b.addEventListener('click', () => load(slot, fn, o))
@@ -183,18 +183,18 @@
   // toolbar({ placeholder, chips }) -> { el, input, chipsEl }; wire it with JylliFilter.mount(list, { input, chipsEl, ... })
   function toolbar(o) {
     o = o || {}
-    const bar = el('div', 'jk jt-toolbar')
+    const bar = el('div', 'jk tk-toolbar')
     const chips = o.chips || ['all', 'recommended', 'applied', 'reboot', 'risky']
     const ph = o.placeholder || g('searchTweaks')
     bar.innerHTML = `
-      <label class="jt-search"><i class="fa fa-magnifying-glass" aria-hidden="true"></i><input type="search" class="jt-search-in" placeholder="${esc(ph)}" aria-label="${esc(ph)}" autocomplete="off"></label>
-      <div class="jt-chips" role="group" aria-label="${esc(g('filterBy'))}">${chips.map(c => `<button type="button" class="jt-chip" data-chip="${esc(c)}" aria-pressed="${c === 'all'}">${esc(g('chip' + c.charAt(0).toUpperCase() + c.slice(1)))}<span class="jt-chip-n" data-n>0</span></button>`).join('')}</div>`
-    return { el: bar, input: bar.querySelector('.jt-search-in'), chipsEl: bar.querySelector('.jt-chips') }
+      <label class="tk-search"><i class="fa fa-magnifying-glass" aria-hidden="true"></i><input type="search" class="tk-search-in" placeholder="${esc(ph)}" aria-label="${esc(ph)}" autocomplete="off"></label>
+      <div class="tk-chips" role="group" aria-label="${esc(g('filterBy'))}">${chips.map(c => `<button type="button" class="tk-chip" data-chip="${esc(c)}" aria-pressed="${c === 'all'}">${esc(g('chip' + c.charAt(0).toUpperCase() + c.slice(1)))}<span class="tk-chip-n" data-n>0</span></button>`).join('')}</div>`
+    return { el: bar, input: bar.querySelector('.tk-search-in'), chipsEl: bar.querySelector('.tk-chips') }
   }
 
   // noMatch(q, onClear) -> an empty state for a filter with no results; keep it outside the filtered list
   function noMatch(q, onClear) {
-    const box = el('div', 'j-empty jt-nomatch')
+    const box = el('div', 'j-empty tk-nomatch')
     box.innerHTML = `<div class="j-empty-icon"><i class="fa fa-magnifying-glass" aria-hidden="true"></i></div><div class="j-empty-title">${esc(g('noMatchTitle'))}</div><div class="j-empty-sub">${esc(g('noMatchSub', { q: q || '' }))}</div>`
     const b = el('button', 'j-btn j-btn-secondary j-btn-md'); b.type = 'button'; b.textContent = g('clearFilter'); b.addEventListener('click', () => onClear && onClear())
     box.appendChild(b); return box
@@ -202,27 +202,27 @@
 
   // section({ id, title, sub, collapsible }) -> { el, body, progress(a, n) }. Collapse state shares makeSection's `sec_col_<id>` key.
   function section(o) {
-    const sec = el('section', 'jk jt-sec'); if (o.id) sec.dataset.secId = o.id
-    const head = el('header', 'jt-sec-head')
-    head.innerHTML = `<div class="jt-sec-t"><h3>${esc(o.title)}</h3>${o.sub ? `<p>${esc(o.sub)}</p>` : ''}</div><span class="jt-sec-prog" hidden></span>`
-    const body = el('div', 'jt-sec-body'); body.dataset.collapsed = ''
+    const sec = el('section', 'jk tk-sec'); if (o.id) sec.dataset.secId = o.id
+    const head = el('header', 'tk-sec-head')
+    head.innerHTML = `<div class="tk-sec-t"><h3>${esc(o.title)}</h3>${o.sub ? `<p>${esc(o.sub)}</p>` : ''}</div><span class="tk-sec-prog" hidden></span>`
+    const body = el('div', 'tk-sec-body'); body.dataset.collapsed = ''
     sec.append(head, body)
     sec.dataset.collapsed = '0'
     if (o.collapsible !== false && o.id) {
-      const btn = el('button', 'jt-sec-tog'); btn.type = 'button'; btn.innerHTML = '<i class="fa fa-chevron-down" aria-hidden="true"></i>'
+      const btn = el('button', 'tk-sec-tog'); btn.type = 'button'; btn.innerHTML = '<i class="fa fa-chevron-down" aria-hidden="true"></i>'
       head.appendChild(btn)
       const set = c => { sec.dataset.collapsed = c ? '1' : '0'; btn.setAttribute('aria-expanded', String(!c)); btn.setAttribute('aria-label', g(c ? 'expand' : 'collapse')) }
       let c0 = false; try { c0 = localStorage.getItem('sec_col_' + o.id) === '1' } catch (e) { /* storage blocked: stay open */ }
       set(c0)
       btn.addEventListener('click', () => { const c = sec.dataset.collapsed !== '1'; set(c); try { localStorage.setItem('sec_col_' + o.id, c ? '1' : '') } catch (e) { /* ignore */ } })
     }
-    const prog = head.querySelector('.jt-sec-prog')
+    const prog = head.querySelector('.tk-sec-prog')
     return { el: sec, body, progress(a, n) { prog.hidden = !(n > 0); prog.textContent = `${a}/${n}`; prog.title = g('appliedOf', { a, n }); prog.dataset.full = n > 0 && a >= n ? '1' : '0' } }
   }
 
   // seg(items:[{id,label,icon}], active, onChange) -> { el, set(id) }: one segmented control (arrow keys, aria-selected)
   function seg(items, active, onChange) {
-    const wrap = el('div', 'jk j-seg jt-seg'); wrap.setAttribute('role', 'tablist')
+    const wrap = el('div', 'jk j-seg tk-seg'); wrap.setAttribute('role', 'tablist')
     const btns = items.map(it => {
       const b = el('button', 'j-seg-item', `${it.icon ? `<i class="fa fa-${esc(it.icon)}" aria-hidden="true"></i>` : ''}<span>${esc(it.label)}</span>`)
       b.type = 'button'; b.setAttribute('role', 'tab'); b.dataset.id = it.id
@@ -245,9 +245,9 @@
   // actionBar(c, { summary, ghost: [{ label, onClick }], primary: { label, onClick, id, disabled } }) -> { el, update, destroy }
   // The sticky footer from Auto-Optimize: ghosts left, one primary right.
   function actionBar(c, o) {
-    const bar = el('div', 'jk jt-actions'); bar.setAttribute('role', 'region')
-    const sum = el('div', 'jt-actions-sum'); bar.appendChild(sum)
-    const gh = el('div', 'jt-actions-gh'); bar.appendChild(gh)
+    const bar = el('div', 'jk tk-actions'); bar.setAttribute('role', 'region')
+    const sum = el('div', 'tk-actions-sum'); bar.appendChild(sum)
+    const gh = el('div', 'tk-actions-gh'); bar.appendChild(gh)
     ;(o.ghost || []).forEach(x => { const b = el('button', 'j-btn j-btn-ghost j-btn-md'); b.type = 'button'; b.textContent = x.label; b.addEventListener('click', x.onClick); gh.appendChild(b) })
     const p = el('button', 'j-btn j-btn-primary j-btn-md'); p.type = 'button'; if (o.primary.id) p.id = o.primary.id
     p.addEventListener('click', () => { if (!p.disabled && o.primary.onClick) o.primary.onClick() }); bar.appendChild(p)
