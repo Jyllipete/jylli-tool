@@ -71,6 +71,9 @@
 .jh-row-n { font-family: var(--font-mono); font-size: var(--font-size-xs); font-variant-numeric: tabular-nums; color: var(--c-text-tertiary); }
 .jh-row[data-full="1"] .jh-row-n { color: var(--c-success); }
 
+.jh-more { grid-column: 1 / -1; justify-self: start; padding: 4px 2px; border: 0; background: transparent; cursor: pointer; font: inherit; font-size: var(--font-size-md); color: var(--c-accent-fg); }
+.jh-more:hover { text-decoration: underline; }
+.jh-more:focus-visible { outline: 2px solid var(--c-accent-ring); outline-offset: 2px; border-radius: var(--r-sm); }
 .jh-cmd { display: flex; flex-direction: column; gap: 14px; }
 .jh-stats { margin: 0; display: flex; flex-direction: column; }
 .jh-stats > div { display: flex; align-items: baseline; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--hairline); }
@@ -161,3 +164,11 @@
 html.motion-reduced .jh-enter > *, html.motion-reduced .jh-beam, html.motion-reduced .jh-ripple.go, html.motion-reduced .jh-dot, html.motion-reduced .jh-flash,
 body.game-live .jh *, body.game-live .jh { animation: none !important; }
 @media (prefers-reduced-motion: reduce) { .jh-beam, .jh-dot { animation: none !important; } }
+
+/* ───────── legacy tweak lists under the shared filter ───────── */
+.tweak-card[hidden], .section-card[hidden], .tk-nomatch[hidden] { display: none !important; }
+.section-card[data-search-open] .tweak-card-grid.sec-collapsed { display: grid; }
+.tk-hero { container-type: inline-size; margin-bottom: 14px; }
+.tk-hero:empty { display: none; }
+.win-toolbar { margin-bottom: 4px; }
+.section-card.jh-flash { animation: jh-flash calc(1200ms * var(--motion-scale, 1)) ease-out; }

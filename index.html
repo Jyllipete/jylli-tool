@@ -540,6 +540,7 @@
 <script src="js/auto-opti/reactor.js"></script>
 <script src="js/ui/filter.js"></script>
 <script src="js/ui/tab-kit.js"></script>
+<script src="js/pages/windows-hero.js"></script>
 <script src="js/pages/app-hero.js"></script>
 <script src="js/pages/bloat-hero.js"></script>
 <script src="js/auto-opti.js"></script>
@@ -5585,32 +5586,6 @@ async function genRebootNow() {
   if (!r || r.ok === false) toast(tUI('genRebootBarBtn'), tUI('tkOpFailed'), 'err')
 }
 
-function genRefreshQuickWinStrip() {
-  const QW_IDS = ['game-dvr','disable-fso','disable-mouse-accel','disable-background-apps','vrr-borderless']
-  QW_IDS.forEach(id => {
-    const applied = settings[`tweak_${id}`] === 'applied'
-    const card = document.getElementById('qwc-' + id)
-    if (card) card.classList.toggle('qw-done', applied)
-    const badge = document.getElementById('qws-badge-' + id)
-    if (badge) {
-      badge.className = 'qw-badge' + (applied ? ' applied' : '')
-      badge.innerHTML = applied ? `<i class="fa fa-check"></i> ${tUI('statusApplied')}` : tUI('statusDefault')
-    }
-  })
-  const btn = document.getElementById('qw-apply-btn')
-  if (btn) {
-    const remaining = QW_IDS.filter(id => settings[`tweak_${id}`] !== 'applied').length
-    btn.textContent = remaining === 0 ? tUI('genQuickWinApplied') : tUI('genQuickWinApplyAll')
-    btn.disabled = remaining === 0
-  }
-}
-
-async function genApplyQuickWins() {
-  const QW_IDS = ['game-dvr','disable-fso','disable-mouse-accel','disable-background-apps','vrr-borderless']
-  const toApply = QW_IDS.filter(id => settings[`tweak_${id}`] !== 'applied')
-  if (!toApply.length) return
-  await applyTweakBatch(toApply, 'apply')
-}
 
 // ─── Tweak Info Popover ────────────────────────────────────────────────────────
 const GEN_TIP_DATA = {
@@ -5755,20 +5730,12 @@ function genRefreshAllCounters() {
       }
     }
   })
-  const counter = _genCounterEl || document.getElementById('gen-applied-counter')
-  if (counter) {
-    const textEl = counter.querySelector('#gen-counter-text') || counter
-    const label = tUI('genTweaksActive') || 'tweaks active'
-    textEl.textContent = `${totalApplied} ${label}`
-    const isFull = totalCards > 0 && totalApplied === totalCards
-    const isPartial = totalApplied > 0 && !isFull
-    counter.classList.toggle('all-applied', isFull)
-    counter.classList.toggle('has-applied', isPartial)
+  if (window._winHero) {
+    document.querySelectorAll('#page-content .tweak-card[id^="tcw-"]').forEach(card => { card.dataset.applied = tweakState(card.id.slice(4)) === 'applied' ? '1' : '0' })
+    window._winHero.refresh()
+    if (window._winFilter) window._winFilter.refresh()
   }
-  const restoreBtn = _genRestoreBtnEl || document.getElementById('gen-restore-all-btn')
-  if (restoreBtn) restoreBtn.style.display = totalApplied > 0 ? '' : 'none'
   genUpdateRebootBar()
-  genRefreshQuickWinStrip()
   if (typeof hwRefreshCounters === 'function') hwRefreshCounters()
 }
 
@@ -7439,32 +7406,13 @@ function buildWindowsOpti(c, mode) {
   const si = sysInfo
   const isLaptop = si.isLaptop
 
-  // Tip banner
-  c.appendChild(makeTip(tUI('genTipTitle'), 'info'))
-
-  // Search + Safe Defaults bar
-  const toolbar = document.createElement('div')
-  toolbar.className = 'gen-toolbar'
-  toolbar.innerHTML = `
-    <div class="search-bar-wrap jx-2" data-tour="windows-search">
-      <i class="fa fa-magnifying-glass"></i>
-      <input id="gen-search" type="text" placeholder="${tUI('genSearchPlaceholder')}"
-        class="search-bar-input"
-        oninput="genFilterTweaks(this.value);document.getElementById('gen-search-clear').style.display=this.value?'flex':'none'">
-      <button id="gen-search-clear" onclick="const s=document.getElementById('gen-search');s.value='';genFilterTweaks('');this.style.display='none';s.focus()"
-        style="display:none;position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--c-text-tertiary);font-size:13px;padding:2px 4px;line-height:1;align-items:center;justify-content:center" title="Clear search">
-        <i class="fa fa-xmark"></i>
-      </button>
-    </div>
-    <button onclick="genApplySafeDefaults()" class="gen-safe-btn">
-      <i class="fa fa-wand-magic-sparkles"></i> ${tUI('genSafeDefaults')}
-    </button>
-    <button onclick="genRestoreAllApplied()" id="gen-restore-all-btn" data-tour="windows-undo" class="gen-restore-btn">
-      <i class="fa fa-rotate-left"></i> ${tUI('genRestoreAll')}
-    </button>
-    <span id="gen-applied-counter" class="gen-counter"><i class="fa fa-circle-check"></i> <span id="gen-counter-text">0 ${tUI('genTweaksActive')}</span></span>
-  `
-  c.appendChild(toolbar)
+  // Hero (js/pages/windows-hero.js) + shared search/chips toolbar (js/ui/tab-kit.js, js/ui/filter.js); both are mounted after the sections exist
+  const winHeroHost = document.createElement('div')
+  winHeroHost.className = 'tk-hero'
+  c.appendChild(winHeroHost)
+  const winTb = JylliTab.toolbar({ placeholder: tUI('genSearchPlaceholder') })
+  winTb.el.querySelector('.tk-search').dataset.tour = 'windows-search'
+  c.appendChild(winTb.el)
 
   let SECTIONS = [
     { id:'game-overlays', get title() { return tUI('genSecGameOverlays') }, icon:'<i class="fa fa-gamepad"></i>', cards:[
@@ -7516,7 +7464,7 @@ function buildWindowsOpti(c, mode) {
       { id:'ntfs',       name:'NTFS: Disable 8.3 Names + Timestamps', desc:'Reduces metadata overhead on every file read/write. Measurable improvement on busy SSDs.', icon:'<i class="fa fa-hard-drive"></i>' },
       { id:'memory-compression', name:'Disable Memory Compression', desc:'Stops compressing RAM contents. Reduces CPU overhead, may increase pagefile use.', icon:'<i class="fa fa-compress"></i>', danger:true, dangerLabel:'Confirm', warning: si.ramGB > 0 && si.ramGB < 16 ? tUI('warnLowRamCompression').replace('{n}', si.ramGB) : '' },
     ]},
-    { id:'advanced', get title() { return `${tUI('genSecAdvanced')} (<i class="fa fa-triangle-exclamation"></i> Security)` }, cards:[
+    { id:'advanced', get title() { return tG('winHero', 'secAdvanced') }, cards:[
       { id:'spectre-meltdown', name:'Disable Spectre/Meltdown Mitigations', desc:'WARNING: Removes kernel mitigations for Spectre v1/v2 and Meltdown. Measured FPS gain: 2–10% on older Intel CPUs (Skylake/Kaby Lake); negligible on AMD Zen 3+. ONLY on a dedicated single-user gaming PC with no sensitive data.', icon:'<i class="fa fa-triangle-exclamation"></i>', danger:true, dangerLabel:'I accept the risk', warning:'Disables kernel-level CPU security. Never on a shared PC.', reboot:true },
       { id:'bcd-tweaks',       name:'BCDEdit Boot Tweaks', desc:'Sets boot menu timeout to 0 for instant OS selection and disables boot logging (ntbtlog.txt). Reduces POST-to-desktop time by 2–8s on fast NVMe SSDs. Reboot required.', icon:'<i class="fa fa-terminal"></i>', danger:true, dangerLabel:'Confirm BCD', reboot:true },
     ]},
@@ -7565,87 +7513,9 @@ function buildWindowsOpti(c, mode) {
   const qolSection = { id:'qol', get title() { return tUI('genSecQoL') }, cards: qolCards }
   SECTIONS = (mode === 'qol' ? [qolSection] : SECTIONS).filter(s => s.cards.length)
 
-  // Quick Win strip — curated top section
-  const QUICK_WIN_IDS = ['game-dvr','disable-fso','disable-mouse-accel','disable-background-apps','vrr-borderless']
-  const QUICK_WIN_META = {
-    'game-dvr':               { get benefit() { return tUI('qwBenefitGameDvr') } },
-    'disable-fso':            { get benefit() { return tUI('qwBenefitFso') } },
-    'disable-mouse-accel':    { get benefit() { return tUI('qwBenefitMouseAccel') } },
-    'mmcss':                  { get benefit() { return tUI('qwBenefitMmcss') } },
-    'priority-sep':           { get benefit() { return tUI('qwBenefitPriority') } },
-    'disable-background-apps':{ get benefit() { return tUI('qwBenefitBgApps') } },
-    'defender-idle-priority': { get benefit() { return tUI('qwBenefitDefenderIdle') } },
-    'vrr-borderless':         { get benefit() { return tUI('qwBenefitVrrBorderless') } },
-  }
-
-  const qwSection = document.createElement('div')
-  qwSection.className = 'section-card'
-  qwSection.id = 'qw-section'
-  qwSection.innerHTML = `
-    <div class="section-header">
-      <div class="section-accent"></div>
-      <div class="section-title"><i class="fa fa-bolt jx-144"></i>${tUI('genQuickWinTitle')}</div>
-    </div>
-  `
-  const _allCards = SECTIONS.flatMap(s => s.cards)
-  const qwAppliedCount = QUICK_WIN_IDS.filter(id => settings[`tweak_${id}`] === 'applied').length
-  const qwTotal = QUICK_WIN_IDS.length
-  const qwCirc = 220
-  const qwOffset = qwCirc - (qwCirc * qwAppliedCount / qwTotal)
-  const qwLayout = document.createElement('div')
-  qwLayout.className = 'qw-layout'
-
-  // Header row: ring + info + apply button
-  const qwHeaderRow = document.createElement('div')
-  qwHeaderRow.className = 'qw-header-row'
-  qwHeaderRow.innerHTML = `
-    <div class="qw-ring-col">
-      <div class="qw-ring-wrap">
-        <svg width="80" height="80" viewBox="0 0 80 80">
-          <circle class="qw-ring-track" cx="40" cy="40" r="35"/>
-          <circle class="qw-ring-fill${qwAppliedCount === qwTotal ? ' all-done' : ''}" id="qw-ring-fill" cx="40" cy="40" r="35" style="stroke-dashoffset:${qwOffset.toFixed(1)}"/>
-        </svg>
-        <div class="qw-ring-num${qwAppliedCount === qwTotal ? ' all-done' : ''}" id="qw-ring-num">${qwAppliedCount}/${qwTotal}</div>
-      </div>
-      <div class="qw-ring-info">
-        <div class="qw-ring-label">${tUI('genQuickWinTitle')}</div>
-        <div class="qw-ring-sub">${tUI('genQuickWinSub')}</div>
-      </div>
-    </div>
-    <button onclick="genApplyQuickWins()" id="qw-apply-btn" class="qw-apply-btn">
-      <i class="fa fa-wand-magic-sparkles jx-19"></i>${tUI('genQuickWinApplyAll')}
-    </button>
-  `
-  qwLayout.appendChild(qwHeaderRow)
-
-  // Card grid (3 columns)
-  const qwStrip = document.createElement('div')
-  qwStrip.className = 'qw-strip'
-  qwStrip.id = 'qw-strip'
-  QUICK_WIN_IDS.forEach(id => {
-    const meta = QUICK_WIN_META[id]
-    const tw = _allCards.find(c => c.id === id)
-    if (!tw) return
-    const applied = settings[`tweak_${id}`] === 'applied'
-    const div = document.createElement('div')
-    div.className = 'qw-card' + (applied ? ' qw-done' : '')
-    div.id = 'qwc-' + id
-    div.innerHTML = `
-      <div class="qw-icon">${tw.icon}</div>
-      <div class="qw-name">${tw.name.split('(')[0].split('→')[0].trim()}</div>
-      <div class="qw-benefit">${meta ? meta.benefit : ''}</div>
-      <span class="qw-badge${applied ? ' applied' : ''}" id="qws-badge-${id}">${applied ? `<i class="fa fa-check"></i> ${tUI('statusApplied')}` : tUI('statusDefault')}</span>
-    `
-    qwStrip.appendChild(div)
-  })
-  qwLayout.appendChild(qwStrip)
-  qwSection.appendChild(qwLayout)
-  if (mode !== 'qol') c.appendChild(qwSection)
 
   _genSections = SECTIONS
   _genBadgeCache.clear()
-  _genCounterEl = toolbar.querySelector('#gen-applied-counter') || null
-  _genRestoreBtnEl = toolbar.querySelector('#gen-restore-all-btn') || null
   SECTIONS.forEach(sec => {
     const secId = sec.id || ''
     const card = makeSection(sec.title, '', secId)
@@ -7668,8 +7538,28 @@ function buildWindowsOpti(c, mode) {
       } catch {}
     }
   })
-  _genCounterEl = document.getElementById('gen-applied-counter')
-  _genRestoreBtnEl = document.getElementById('gen-restore-all-btn')
+  const winT = (k, v) => tG('winHero', k, v)
+  window._winHero = JylliWindowsHero.mount(winHeroHost, {
+    mode, t: winT,
+    getSections: () => _genSections || [],
+    stateOf: tweakState,
+    visible: id => !(window._tweakMeta?.[id]?.retired && tweakState(id) !== 'applied'),
+    applicOf: id => window._applic && window._applic[id],
+    reboot: REBOOT_TWEAK_IDS,
+    onApply: ids => genApplyRecommended(ids),
+    onRestoreAll: () => genRestoreAllApplied(),
+  })
+  window._winFilter = JylliFilter.mount(c, {
+    item: '.tweak-card', section: '.section-card[data-sec-id]', input: winTb.input, chipsEl: winTb.chipsEl,
+    onResult: r => {
+      let nm = c.querySelector('.tk-nomatch')
+      if (r.total > 0 && r.shown === 0) {
+        if (!nm) { nm = JylliTab.noMatch(r.q, () => window._winFilter.set({ q: '', chip: 'all' })); c.appendChild(nm) }
+        else nm.querySelector('.j-empty-sub').textContent = tG('tab', 'noMatchSub', { q: r.q })
+      } else if (nm) nm.remove()
+    },
+  })
+  registerPageCleanup('windows-opti', () => { if (window._winFilter) window._winFilter.destroy(); window._winFilter = null; if (window._winHero) window._winHero.destroy(); window._winHero = null })
   genRefreshAllCounters()
 
 }
@@ -7800,20 +7690,12 @@ async function applyTweakBatch(ids, action = 'apply') {
   return { applied, failed }
 }
 
-async function genApplySafeDefaults() {
-  const SAFE_DEFAULTS = [
-    'game-dvr','disable-fso','win-tips','explorer-perf','disable-mouse-accel',
-    'disable-background-apps','disable-auto-maintenance','disable-delivery-opt',
-    'mmcss','priority-sep','raw-aim-curve','proximity-deny','nudge-blocker',
-    'sticky-keys-guard','search-box-local','search-cloud-off','do-solo-mode',
-    'security-quiet','security-toast-off','boot-sound-off','compat-scanner-off',
-    'defender-quiet','diag-tasks-off'
-  ]
+async function genApplyRecommended(ids) {
+  const toApply = (ids || []).filter(id => tweakState(id) !== 'applied' && tweakState(id) !== 'pre-applied')
+  if (!toApply.length) { toast(tG('winHero', 'cta'), tG('winHero', 'confirmNone'), 'ok'); return }
   try {
-    await showConfirm({ title: tUI('genSafeDefaults'), body: tUI('genSafeDefaultsConfirm'), okText: 'Apply', okStyle: 'primary', icon: 'fa-wand-magic-sparkles' })
+    await showConfirm({ title: tG('winHero', 'cta'), body: tG('winHero', 'confirmBody', { n: toApply.length }), okText: tUI('apply'), okStyle: 'primary', icon: 'fa-wand-magic-sparkles' })
   } catch { return }
-  const toApply = SAFE_DEFAULTS.filter(id => tweakState(id) !== 'applied' && tweakState(id) !== 'pre-applied')
-  if (!toApply.length) { toast(tUI('genSafeDefaults'), tUI('genSafeDefaultsAlreadyDone'), 'ok'); return }
   const { applied, failed } = await applyTweakBatch(toApply, 'apply')
   const msg = tUI('batchDone').replace('{applied}', applied) + (failed ? ' · ' + tUI('batchFailed').replace('{failed}', failed) : '')
   toast(tUI('genSafeDefaultsDone'), msg, applied > 0 ? 'ok' : 'warn')
@@ -9755,6 +9637,10 @@ function makeCard({ id, name, desc, icon = '<i class="fa fa-gear"></i>', danger 
   d.id = `tcw-${id}`
   d.dataset.tour = 'tweak-card'
   d.dataset.search = `${name} ${desc} ${id}`.toLowerCase()
+  d.dataset.applied = applied ? '1' : '0'
+  d.dataset.risk = String(danger ? 3 : (safetyTier || 1))
+  d.dataset.reboot = (reboot || REBOOT_TWEAK_IDS.has(id)) ? '1' : '0'
+  d.dataset.recommended = ((window.JylliWindowsHero && JylliWindowsHero.SAFE_DEFAULTS.includes(id)) || (ap && ap.state === 'recommended')) ? '1' : '0'
   const tierNum = danger ? 3 : (safetyTier || 1)
   const tierIcon = tierNum === 1 ? '●' : tierNum === 2 ? '▲' : '⚠'
   d.innerHTML = `

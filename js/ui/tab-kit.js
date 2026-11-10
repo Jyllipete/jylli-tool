@@ -60,7 +60,7 @@
     const q = s => node.querySelector(s)
     const numEl = q('.jh-n'), arc = q('.jh-arc'), ledgerEl = q('.jh-ledger'), statsEl = q('.jh-stats'), actions = q('.jh-actions')
     const tickEls = [...node.querySelectorAll('.jh-tick')]
-    let shown = 0, raf = 0, lastPct = null, ctaBtn = null
+    let shown = 0, raf = 0, lastPct = null, ctaBtn = null, secBtn = null
 
     statsEl.innerHTML = (cfg.stats || []).map(s => `<div data-k="${esc(s.k)}" data-zero="1"><dt>${esc(s.label)}</dt><dd>–</dd></div>`).join('')
     statsEl.hidden = !(cfg.stats && cfg.stats.length)
@@ -70,12 +70,25 @@
       actions.appendChild(ctaBtn)
     }
     if (cfg.secondary) {
-      const b = el('button', 'jh-sec'); b.type = 'button'; if (cfg.secondary.id) b.id = cfg.secondary.id
+      const b = el('button', 'jh-sec'); secBtn = b; b.type = 'button'; if (cfg.secondary.id) b.id = cfg.secondary.id; if (cfg.secondary.tour) b.dataset.tour = cfg.secondary.tour
       b.innerHTML = `${cfg.secondary.icon ? `<i class="fa fa-${esc(cfg.secondary.icon)}" aria-hidden="true"></i>` : ''}<span>${esc(cfg.secondary.label)}</span>`
       b.addEventListener('click', () => cfg.secondary.onClick && cfg.secondary.onClick())
       actions.appendChild(b)
     }
     ledgerEl.addEventListener('click', e => { const b = e.target.closest('[data-id]'); if (b && cfg.onLedger) cfg.onLedger(b.dataset.id) })
+
+    // Long ledgers show the first `ledgerMax` rows and a Show all / Show less toggle (the hero stays one screen tall)
+    let expanded = false
+    function applyMore(n) {
+      const max = cfg.ledgerMax || 6
+      const rows = [...ledgerEl.querySelectorAll('.jh-row')]
+      rows.forEach((r, i) => { r.hidden = !expanded && i >= max })
+      let more = ledgerEl.querySelector('.jh-more')
+      if (n <= max) { if (more) more.remove(); return }
+      if (!more) { more = el('button', 'jh-more'); more.type = 'button'; ledgerEl.appendChild(more) }
+      more.textContent = expanded ? g('showLess') : g('showAll', { n })
+    }
+    ledgerEl.addEventListener('click', e => { if (e.target.closest('.jh-more')) { expanded = !expanded; applyMore(ledgerEl.querySelectorAll('.jh-row').length) } })
 
     function countTo(n) {
       cancelAnimationFrame(raf)
@@ -124,9 +137,10 @@
           ledgerEl.innerHTML = s.ledger.map(r => {
             const hasTotal = r.total != null
             const full = hasTotal && r.total > 0 && r.n >= r.total, w = hasTotal && r.total > 0 ? Math.round(r.n / r.total * 100) : 0
-            return `<button type="button" class="jh-row" data-id="${esc(r.id)}" data-full="${full ? 1 : 0}">
+            return `<button type="button" class="jh-row" data-id="${esc(r.id)}" data-full="${full ? 1 : 0}" title="${esc(r.label)}">
               <span class="jh-row-name">${esc(r.label)}</span><span class="jh-bar" aria-hidden="true"><i style="width:${w}%"></i></span><span class="jh-row-n">${hasTotal ? `${r.n}/${r.total}` : esc(r.n)}</span></button>`
           }).join('')
+          applyMore(s.ledger.length)
         }
         if (s.stats) for (const k of Object.keys(s.stats)) {
           const row = statsEl.querySelector(`[data-k="${k}"]`); if (!row) continue
@@ -135,6 +149,7 @@
           row.dataset.zero = (v === 0 || v == null || v === '–') ? '1' : '0'
         }
         if (s.cta) paintCta(s.cta)
+        if (s.secondary && secBtn) { secBtn.hidden = !!s.secondary.hidden; if (s.secondary.label != null) secBtn.querySelector('span').textContent = s.secondary.label }
       },
       destroy() { cancelAnimationFrame(raf); node.remove() },
     }
