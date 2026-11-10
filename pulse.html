@@ -75,7 +75,7 @@ html, body {
   font-size: 0.8rem;
   font-weight: 700;
   color: var(--text-primary);
-  letter-spacing: 0.08em;
+  letter-spacing:0.02em;
   flex: 1;
 }
 #titlebar .title i { color: var(--accent); font-size: 14px; }
@@ -84,7 +84,7 @@ html, body {
   border-radius: 12px;
   font-size: 11px;
   font-weight: 700;
-  letter-spacing: 0.08em;
+  letter-spacing:0.02em;
   background: var(--bg-raised);
   border: 1px solid var(--border-dim);
   color: var(--text-dim);
@@ -162,10 +162,10 @@ html, body {
 
 .card-label {
   font-family: var(--font-display);
-  font-size: 0.6rem;
+  font-size:0.7rem;
   font-weight: 700;
   letter-spacing: 0.14em;
-  text-transform: uppercase;
+  text-transform:none;
   color: var(--accent);
   margin-bottom: 10px;
   display: flex;
@@ -208,7 +208,7 @@ html, body {
 }
 .preset-card.selected i, .preset-card.selected .pname { color: var(--accent); }
 .preset-card i { font-size: 1rem; color: var(--text-dim); }
-.preset-card .pname { font-size: 0.6rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: var(--text-dim); }
+.preset-card .pname { font-size:0.7rem; font-weight: 700; letter-spacing:0.02em; text-transform:none; color: var(--text-dim); }
 
 /* ── Options ── */
 .opt-row {
@@ -256,9 +256,9 @@ html, body {
 .core-pe-divider { width:1px; background:rgba(var(--fx),0.15); border-radius:1px; margin: 0 2px; }
 @keyframes corePulse { 0%,100% { filter:brightness(1); } 50% { filter:brightness(1.6); } }
 .metric-head { display: flex; justify-content: space-between; margin-bottom: 3px; align-items: baseline; }
-.metric-label { font-family: var(--font-display); font-size: 0.6rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-dim); }
+.metric-label { font-family: var(--font-display); font-size:0.7rem; font-weight: 700; letter-spacing:0.02em; text-transform:none; color: var(--text-dim); }
 .metric-val { font-family: var(--font-mono); font-size: 0.75rem; color: var(--text-primary); font-weight: 500; }
-.metric-sub { font-size: 0.6rem; color: var(--text-dim); margin-left: 6px; }
+.metric-sub { font-size:0.7rem; color: var(--text-dim); margin-left: 6px; }
 .metric-track {
   height: 3px;
   background: var(--border-dim);
@@ -283,7 +283,7 @@ html, body {
 .btn {
   border: none; border-radius: 8px;
   font-family: var(--font-display); font-size: 0.75rem; font-weight: 700;
-  letter-spacing: 0.06em; text-transform: uppercase;
+  letter-spacing:0.02em; text-transform:none;
   cursor: pointer; padding: 9px 18px;
   display: inline-flex; align-items: center; gap: 7px;
   transition: all var(--dur-fast) var(--ease-smooth);
@@ -310,7 +310,7 @@ html, body {
 .proc-table { width: 100%; border-collapse: collapse; font-size: 0.7rem; }
 .proc-table th {
   text-align: left; padding: 8px 10px;
-  color: var(--accent); font-family: var(--font-display); font-size: 0.55rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase;
+  color: var(--accent); font-family: var(--font-display); font-size:0.7rem; font-weight: 700; letter-spacing:0.02em; text-transform:none;
   border-bottom: 1px solid var(--border-dim);
   cursor: pointer; white-space: nowrap;
   position: sticky; top: 0;
@@ -408,8 +408,8 @@ body.pulse-active-bg {
   text-align: center;
 }
 .fps-tile-label {
-  font-family: var(--font-display); font-size: 0.55rem; font-weight: 700;
-  letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-dim);
+  font-family: var(--font-display); font-size:0.7rem; font-weight: 700;
+  letter-spacing:0.02em; text-transform:none; color: var(--text-dim);
   margin-bottom: 4px;
 }
 .fps-tile-val {
@@ -419,8 +419,8 @@ body.pulse-active-bg {
 }
 .fps-tile-val.warn { color: var(--warning); }
 .fps-tile-val.danger { color: var(--danger); }
-.fps-tile-unit { font-size: 0.55rem; font-weight: 700; letter-spacing: 0.08em; color: var(--text-dim); display: block; margin-top: 1px; text-transform: uppercase; }
-.fps-tile-hint { font-size: 0.5rem; color: var(--text-dim); margin-top: 2px; }
+.fps-tile-unit { font-size:0.7rem; font-weight: 700; letter-spacing:0.02em; color: var(--text-dim); display: block; margin-top: 1px; text-transform:none; }
+.fps-tile-hint { font-size:0.7rem; color: var(--text-dim); margin-top: 2px; }
 #fps-spark {
   display: block; width: 100%; height: 40px;
   border-radius: 6px; background: var(--bg-raised);
@@ -451,8 +451,8 @@ body.pulse-active-bg {
   50%       { filter: brightness(1.8) saturate(2); }
 }
 .threat-head { display: flex; justify-content: space-between; align-items: center; }
-.threat-label { font-family: var(--font-display); font-size: 0.55rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-dim); }
-.threat-zone { font-family: var(--font-mono); font-size: 0.6rem; font-weight: 700; }
+.threat-label { font-family: var(--font-display); font-size:0.7rem; font-weight: 700; letter-spacing:0.02em; text-transform:none; color: var(--text-dim); }
+.threat-zone { font-family: var(--font-mono); font-size:0.7rem; font-weight: 700; }
 .threat-diag { font-size: 0.62rem; color: var(--text-dim); margin-top: 2px; font-style: italic; transition: opacity 0.25s ease; }
 .threat-zone { transition: color 400ms ease; }
 
@@ -474,7 +474,7 @@ body.pulse-active-bg {
 
 /* ── GAME process badge ── */
 .game-proc-badge {
-  display: inline-block; font-size: 0.5rem; font-weight: 800; letter-spacing: 0.1em;
+  display: inline-block; font-size:0.7rem; font-weight: 800; letter-spacing:0.02em;
   padding: 1px 5px; border-radius: 4px;
   background: rgba(0,212,180,0.15); color: var(--accent);
   border: 1px solid rgba(0,212,180,0.3); margin-right: 4px; vertical-align: middle;
@@ -498,11 +498,11 @@ tr.game-proc-row td { background: rgba(0,212,180,0.04) !important; }
 #active-game-hero.visible { display: flex; }
 .hero-game-name {
   font-size: 0.9rem; font-weight: 800; color: var(--accent);
-  letter-spacing: 0.05em;
+  letter-spacing:0.02em;
 }
 .hero-timer {
   font-family: var(--font-mono); font-size: 0.8rem; font-weight: 500;
-  color: var(--text-dim); letter-spacing: 0.05em;
+  color: var(--text-dim); letter-spacing:0.02em;
 }
 /* L-4: live dot pulse animation */
 .hero-live-dot {
@@ -528,7 +528,7 @@ tr.game-proc-row td { background: rgba(0,212,180,0.04) !important; }
 }
 .debrief-tile-label {
   font-family: var(--font-display); font-size: 0.52rem; font-weight: 700;
-  letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-dim);
+  letter-spacing:0.02em; text-transform:none; color: var(--text-dim);
   margin-bottom: 3px;
 }
 .debrief-tile-val {
@@ -552,8 +552,8 @@ tr.game-proc-row td { background: rgba(0,212,180,0.04) !important; }
   font-size: 0.67rem;
 }
 .hist-row:last-child { border-bottom: none; }
-.hist-game { font-weight: 700; color: var(--accent); flex: 1; font-family: var(--font-display); letter-spacing: 0.05em; }
-.hist-meta { color: var(--text-dim); font-family: var(--font-mono); font-size: 0.6rem; }
+.hist-game { font-weight: 700; color: var(--accent); flex: 1; font-family: var(--font-display); letter-spacing:0.02em; }
+.hist-meta { color: var(--text-dim); font-family: var(--font-mono); font-size:0.7rem; }
 .hist-fps  { color: var(--ok); font-family: var(--font-mono); font-size: 0.67rem; font-weight: 700; white-space: nowrap; }
 
 /* ── Anti-Stutter Pre-Arm ── */
@@ -574,8 +574,8 @@ tr.game-proc-row td { background: rgba(0,212,180,0.04) !important; }
 .prearm-time { font-family: var(--font-mono); font-size: 0.62rem; color: var(--text-dim); white-space: nowrap; }
 .prearm-defer-btn {
   border: 1px solid var(--border-active); background: transparent; color: var(--text-dim);
-  border-radius: 5px; padding: 2px 7px; font-size: 0.6rem; font-weight: 700; cursor: pointer;
-  letter-spacing: 0.05em; transition: all var(--dur-fast); white-space: nowrap;
+  border-radius: 5px; padding: 2px 7px; font-size:0.7rem; font-weight: 700; cursor: pointer;
+  letter-spacing:0.02em; transition: all var(--dur-fast); white-space: nowrap;
 }
 .prearm-defer-btn:hover { border-color: var(--accent); color: var(--accent); }
 .prearm-defer-btn.done { border-color: var(--ok); color: var(--ok); cursor: default; }
@@ -603,7 +603,7 @@ tr.game-proc-row td { background: rgba(0,212,180,0.04) !important; }
 }
 #sf-deviation-banner.visible { display: flex; gap: 8px; align-items: flex-start; }
 .sf-badge {
-  display: inline-block; font-size: 0.52rem; font-weight: 800; letter-spacing: 0.08em;
+  display: inline-block; font-size: 0.52rem; font-weight: 800; letter-spacing:0.02em;
   padding: 2px 6px; border-radius: 10px; background: rgba(0,212,180,0.15);
   color: var(--accent); border: 1px solid rgba(0,212,180,0.3); margin-left: 4px;
   vertical-align: middle; white-space: nowrap;
@@ -619,8 +619,8 @@ tr.game-proc-row td { background: rgba(0,212,180,0.04) !important; }
 .thermal-audit-result.visible { display: block; }
 .thermal-col { flex: 1; }
 .thermal-col-center { flex: 1; text-align: center; }
-.thermal-col-label { font-family: var(--font-display); font-size: 0.55rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-dim); margin-bottom: 4px; }
-.thermal-col-sub { font-size: 0.6rem; color: var(--text-dim); margin-top: 2px; }
+.thermal-col-label { font-family: var(--font-display); font-size:0.7rem; font-weight: 700; letter-spacing:0.02em; text-transform:none; color: var(--text-dim); margin-bottom: 4px; }
+.thermal-col-sub { font-size:0.7rem; color: var(--text-dim); margin-top: 2px; }
 .thermal-severity-none     { border-color: rgba(46,204,113,0.4);  background: rgba(46,204,113,0.05); }
 .thermal-severity-light    { border-color: rgba(58,158,255,0.4);  background: rgba(58,158,255,0.05); }
 .thermal-severity-moderate { border-color: rgba(255,181,71,0.4);  background: rgba(255,181,71,0.05); }
@@ -630,11 +630,11 @@ tr.game-proc-row td { background: rgba(0,212,180,0.04) !important; }
 /* Progress bar shown during scan */
 .thermal-progress-wrap { margin-top: 6px; height: 4px; border-radius: 2px; background: var(--border-dim); overflow: hidden; }
 .thermal-progress-bar  { height: 100%; width: 0%; border-radius: 2px; background: var(--accent); transition: width 0.4s var(--ease-snap); box-shadow: 0 0 6px var(--accent); }
-.thermal-progress-live { font-size: 0.6rem; color: var(--text-dim); margin-top: 4px; font-family: var(--font-mono); min-height: 1em; }
+.thermal-progress-live { font-size:0.7rem; color: var(--text-dim); margin-top: 4px; font-family: var(--font-mono); min-height: 1em; }
 /* Sparkline waveform */
 .thermal-sparkline { display: flex; align-items: flex-end; gap: 2px; height: 28px; margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--border-dim); }
 .thermal-spark-dot { flex: 1; border-radius: 2px 2px 0 0; min-height: 3px; transition: height 0.3s var(--ease-snap); position: relative; cursor: default; }
-.thermal-spark-dot:hover::after { content: attr(data-tip); position: absolute; bottom: calc(100% + 4px); left: 50%; transform: translateX(-50%); background: var(--bg-overlay); border: 1px solid var(--border-dim); border-radius: 4px; padding: 2px 5px; font-size: 0.55rem; white-space: nowrap; pointer-events: none; z-index: 10; }
+.thermal-spark-dot:hover::after { content: attr(data-tip); position: absolute; bottom: calc(100% + 4px); left: 50%; transform: translateX(-50%); background: var(--bg-overlay); border: 1px solid var(--border-dim); border-radius: 4px; padding: 2px 5px; font-size:0.7rem; white-space: nowrap; pointer-events: none; z-index: 10; }
 /* Per-core grid */
 .thermal-cores { display: flex; flex-wrap: wrap; gap: 3px; margin-top: 6px; }
 .thermal-core-cell { width: 22px; height: 22px; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-family: var(--font-mono); font-size: 0.45rem; font-weight: 700; border: 1px solid transparent; }
@@ -646,17 +646,17 @@ tr.game-proc-row td { background: rgba(0,212,180,0.04) !important; }
 .thermal-boost-ring svg { transform: rotate(-90deg); }
 .thermal-boost-ring-num { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-family: var(--font-mono); font-size: 0.65rem; font-weight: 800; }
 /* Cause badge */
-.thermal-cause-badge { display: inline-flex; align-items: center; gap: 4px; font-family: var(--font-display); font-size: 0.5rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; padding: 2px 6px; border-radius: 4px; margin-left: 6px; }
+.thermal-cause-badge { display: inline-flex; align-items: center; gap: 4px; font-family: var(--font-display); font-size:0.7rem; font-weight: 700; letter-spacing:0.02em; text-transform:none; padding: 2px 6px; border-radius: 4px; margin-left: 6px; }
 .thermal-cause-thermal   { background: rgba(255,58,58,0.15);  color: var(--danger); }
 .thermal-cause-powerLimit{ background: rgba(255,181,71,0.15); color: var(--warning); }
 .thermal-cause-vrm       { background: rgba(155,89,182,0.15); color: var(--purple, var(--c-accent-fg)); }
 .thermal-cause-coreImbalance { background: rgba(58,158,255,0.15); color: var(--info); }
 /* Game FPS gain chips */
 .thermal-game-chips { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
-.thermal-game-chip  { font-size: 0.55rem; padding: 2px 6px; border-radius: 10px; background: var(--bg-overlay); border: 1px solid var(--border-dim); white-space: nowrap; }
+.thermal-game-chip  { font-size:0.7rem; padding: 2px 6px; border-radius: 10px; background: var(--bg-overlay); border: 1px solid var(--border-dim); white-space: nowrap; }
 .thermal-game-chip strong { color: var(--warning); font-family: var(--font-mono); }
 /* Trend delta */
-.thermal-trend { font-size: 0.6rem; margin-top: 6px; display: flex; gap: 8px; flex-wrap: wrap; }
+.thermal-trend { font-size:0.7rem; margin-top: 6px; display: flex; gap: 8px; flex-wrap: wrap; }
 .thermal-trend-up   { color: var(--danger); }
 .thermal-trend-down { color: var(--ok); }
 .thermal-trend-flat { color: var(--text-dim); }
@@ -707,7 +707,7 @@ tr.game-proc-row td { background: rgba(0,212,180,0.04) !important; }
       <i id="hero-game-icon" class="fa fa-gamepad" style="font-size:1.2rem;color:var(--accent)"></i>
       <div>
         <span class="hero-game-name" id="hero-game-name">—</span>
-        <div style="font-size:0.55rem;color:var(--text-dim);letter-spacing:0.08em;margin-top:1px;text-transform:uppercase">LIVE SESSION</div>
+        <div style="font-size:0.7rem;color:var(--text-dim);letter-spacing:0.02em;margin-top:1px;text-transform:none">LIVE SESSION</div>
       </div>
     </div>
     <div style="display:flex;align-items:center">
@@ -753,7 +753,7 @@ tr.game-proc-row td { background: rgba(0,212,180,0.04) !important; }
     <div id="debrief-elapsed" style="font-size:0.65rem;color:var(--text-dim);margin-bottom:8px"></div>
     <div class="debrief-grid" id="debrief-grid"></div>
     <div id="debrief-activation-log" style="display:none;margin-top:8px;padding:7px 10px;background:rgba(99,110,114,0.07);border:1px solid rgba(99,110,114,0.18);border-radius:7px">
-      <div style="font-size:0.5rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-dim);margin-bottom:5px">OPTIMIZATIONS APPLIED</div>
+      <div style="font-size:0.7rem;font-weight:700;letter-spacing:0.02em;text-transform:none;color:var(--text-dim);margin-bottom:5px">OPTIMIZATIONS APPLIED</div>
       <ul id="debrief-log-list" style="margin:0;padding:0;list-style:none;display:flex;flex-wrap:wrap;gap:4px"></ul>
     </div>
 
@@ -766,7 +766,7 @@ tr.game-proc-row td { background: rgba(0,212,180,0.04) !important; }
 
     <!-- Bottleneck Shift Tracker -->
     <div id="bst-panel" style="margin-top:10px">
-      <div style="font-size:0.55rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--text-dim);margin-bottom:6px" id="lbl-bst">BOTTLENECK ANALYSIS</div>
+      <div style="font-size:0.7rem;font-weight:700;letter-spacing:0.02em;text-transform:none;color:var(--text-dim);margin-bottom:6px" id="lbl-bst">BOTTLENECK ANALYSIS</div>
       <div class="bst-bar-wrap" id="bst-bar">
         <div class="bst-seg" id="bst-cpu-seg"  style="background:var(--cpu-color);width:0%"></div>
         <div class="bst-seg" id="bst-gpu-seg"  style="background:var(--gpu-color);width:0%"></div>
@@ -785,10 +785,10 @@ tr.game-proc-row td { background: rgba(0,212,180,0.04) !important; }
 
     <!-- Frame Grief Detector -->
     <div id="fgd-panel" style="margin-top:10px">
-      <div style="font-size:0.55rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--text-dim);margin-bottom:4px" id="lbl-fgd">FRAME GRIEF DETECTOR</div>
+      <div style="font-size:0.7rem;font-weight:700;letter-spacing:0.02em;text-transform:none;color:var(--text-dim);margin-bottom:4px" id="lbl-fgd">FRAME GRIEF DETECTOR</div>
       <div style="font-size:0.62rem;color:var(--text-dim);margin-bottom:4px" id="lbl-fgd-sub">Click a red mark to see what killed that frame.</div>
       <div class="fgd-timeline" id="fgd-timeline"></div>
-      <div id="fgd-count" style="font-size:0.6rem;color:var(--text-dim)"></div>
+      <div id="fgd-count" style="font-size:0.7rem;color:var(--text-dim)"></div>
     </div>
     <div class="fgd-tooltip" id="fgd-tooltip"></div>
   </div>
@@ -832,7 +832,7 @@ tr.game-proc-row td { background: rgba(0,212,180,0.04) !important; }
         <div style="padding:8px 0 4px">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
             <div id="prearm-status" style="font-size:0.62rem;color:var(--text-dim);flex:1">Scan for scheduled tasks before launching your game.</div>
-            <button class="btn btn-ghost" id="prearm-scan-btn" onclick="doPrearmScan()" style="padding:3px 8px;font-size:0.6rem;gap:4px;flex-shrink:0;margin-left:8px">
+            <button class="btn btn-ghost" id="prearm-scan-btn" onclick="doPrearmScan()" style="padding:3px 8px;font-size:0.7rem;gap:4px;flex-shrink:0;margin-left:8px">
               <i class="fa fa-radar"></i> <span id="lbl-prearm-scan">Scan</span>
             </button>
           </div>
@@ -861,7 +861,7 @@ tr.game-proc-row td { background: rgba(0,212,180,0.04) !important; }
           <div class="metric-track"><div class="metric-fill" id="cpu-bar" style="background:var(--cpu-color)"></div></div>
         </div>
         <div id="core-heatmap-wrap" style="display:none;margin-bottom:6px">
-          <div class="metric-label" id="lbl-core-heatmap" style="font-size:0.55rem;margin-bottom:3px;opacity:0.6">PER-CORE LOAD</div>
+          <div class="metric-label" id="lbl-core-heatmap" style="font-size:0.7rem;margin-bottom:3px;opacity:0.6">PER-CORE LOAD</div>
           <div class="core-heatmap-grid" id="core-heatmap-grid"></div>
         </div>
         <div class="metric-row">
@@ -922,12 +922,12 @@ tr.game-proc-row td { background: rgba(0,212,180,0.04) !important; }
         <!-- Thermal Budget Advisor (inside monitor, visible when expanded) -->
         <div style="margin-top:10px;padding-top:8px;border-top:1px solid var(--border-dim)">
           <div style="display:flex;align-items:center;justify-content:space-between">
-            <span style="font-family:var(--font-display);font-size:0.55rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--text-dim)" id="lbl-thermal">THERMAL AUDIT</span>
-            <button class="btn btn-ghost" id="thermal-btn" onclick="doThermalAudit()" style="padding:3px 10px;font-size:0.6rem;gap:4px">
+            <span style="font-family:var(--font-display);font-size:0.7rem;font-weight:700;letter-spacing:0.02em;text-transform:none;color:var(--text-dim)" id="lbl-thermal">THERMAL AUDIT</span>
+            <button class="btn btn-ghost" id="thermal-btn" onclick="doThermalAudit()" style="padding:3px 10px;font-size:0.7rem;gap:4px">
               <i class="fa fa-temperature-half"></i> <span id="lbl-thermal-run">Run Audit</span>
             </button>
           </div>
-          <div style="font-size:0.6rem;color:var(--text-dim);margin-top:3px" id="lbl-thermal-desc">Detects CPU thermal throttling and estimates lost FPS.</div>
+          <div style="font-size:0.7rem;color:var(--text-dim);margin-top:3px" id="lbl-thermal-desc">Detects CPU thermal throttling and estimates lost FPS.</div>
           <div class="thermal-audit-result" id="thermal-result"></div>
         </div>
       </div>
@@ -951,13 +951,13 @@ tr.game-proc-row td { background: rgba(0,212,180,0.04) !important; }
   <!-- Process table -->
   <div class="card" style="--i:3;padding:0;overflow:hidden;flex:1">
     <div style="display:flex;align-items:center;gap:8px;padding:10px 14px;border-bottom:1px solid var(--border-dim)">
-      <span id="lbl-running-processes" style="font-family:var(--font-display);font-size:0.55rem;font-weight:700;color:var(--accent);letter-spacing:0.14em;text-transform:uppercase;flex:1">RUNNING PROCESSES</span>
+      <span id="lbl-running-processes" style="font-family:var(--font-display);font-size:0.7rem;font-weight:700;color:var(--accent);letter-spacing:0.14em;text-transform:none;flex:1">RUNNING PROCESSES</span>
       <input id="proc-filter" type="text" placeholder="Filter…" oninput="filterProcs(this.value)"
         style="background:var(--bg-raised);border:none;border-bottom:2px solid transparent;border-radius:5px;padding:3px 9px;color:var(--text-primary);font-size:0.7rem;font-family:var(--font-mono);outline:none;width:120px;transition:border-color var(--dur-fast)" onfocus="this.style.borderBottomColor='var(--accent)'" onblur="this.style.borderBottomColor='transparent'">
       <button class="btn btn-ghost" onclick="loadProcs(this)" style="padding:4px 10px;font-size:0.65rem;gap:5px">
         <i class="fa fa-arrows-rotate"></i> <span id="lbl-refresh">Refresh</span>
       </button>
-      <span id="proc-count" style="font-size:0.6rem;color:var(--text-dim)"></span>
+      <span id="proc-count" style="font-size:0.7rem;color:var(--text-dim)"></span>
     </div>
     <div style="max-height:480px;overflow-y:auto">
       <table class="proc-table" id="proc-table">
@@ -1862,11 +1862,11 @@ function addAriaChip(evt) {
       .replace('{metric}', label)
       .replace('{val}', evt.projected ?? '?')
       .replace('{secs}', evt.secsAway ?? '?')
-    chip.innerHTML = `<i class="fa fa-chart-line"></i><span>${fmt}</span><span style="margin-left:auto;font-size:0.55rem;opacity:0.55;white-space:nowrap">${now}</span>`
+    chip.innerHTML = `<i class="fa fa-chart-line"></i><span>${fmt}</span><span style="margin-left:auto;font-size:0.7rem;opacity:0.55;white-space:nowrap">${now}</span>`
   } else {
     const cls = delta >= 30 ? 'chip-danger' : delta >= 15 ? 'chip-warn' : 'chip-info'
     chip.className = `aria-chip ${cls}`
-    chip.innerHTML = `<i class="fa fa-triangle-exclamation"></i><span>${label} spike: ${evt.value != null ? Math.round(evt.value) : '?'}% (+${delta}%)</span><span style="margin-left:auto;font-size:0.55rem;opacity:0.55;white-space:nowrap">${now}</span>`
+    chip.innerHTML = `<i class="fa fa-triangle-exclamation"></i><span>${label} spike: ${evt.value != null ? Math.round(evt.value) : '?'}% (+${delta}%)</span><span style="margin-left:auto;font-size:0.7rem;opacity:0.55;white-space:nowrap">${now}</span>`
   }
 
   feed.appendChild(chip)
@@ -2001,7 +2001,7 @@ let showSessionDebrief = function(data) {
   const logList  = document.getElementById('debrief-log-list')
   if (logPanel && logList && data.activationLog?.length) {
     logList.innerHTML = data.activationLog.map(entry =>
-      `<li style="font-size:0.6rem;color:var(--ok);background:rgba(46,204,113,0.1);border:1px solid rgba(46,204,113,0.25);border-radius:10px;padding:1px 7px;white-space:nowrap">✓ ${entry}</li>`
+      `<li style="font-size:0.7rem;color:var(--ok);background:rgba(46,204,113,0.1);border:1px solid rgba(46,204,113,0.25);border-radius:10px;padding:1px 7px;white-space:nowrap">✓ ${entry}</li>`
     ).join('')
     logPanel.style.display = 'block'
   } else if (logPanel) {
@@ -2476,7 +2476,7 @@ async function doThermalAudit() {
   const tempStr = r.avgTempC ? ` · ${r.avgTempC}°C` : ''
   const fanStr  = r.avgFanRpm ? ` · ${tP('thermalFanRpm').replace('{rpm}', r.avgFanRpm)}` : ''
   const fanWarnHtml = (r.avgFanRpm !== undefined && r.avgFanRpm < 1200 && r.avgTempC !== undefined && r.avgTempC >= 75)
-    ? `<span style="color:var(--warning);margin-left:6px;font-size:0.55rem"><i class="fa fa-fan"></i> ${tP('thermalFanLow')}</span>`
+    ? `<span style="color:var(--warning);margin-left:6px;font-size:0.7rem"><i class="fa fa-fan"></i> ${tP('thermalFanLow')}</span>`
     : ''
 
   const recoMap = {
