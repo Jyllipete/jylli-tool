@@ -3402,6 +3402,12 @@ aoHeroEyebrow:'Sovellusskanneri', aoHeroDetected:'{n} sovellusta tunnistettu', a
       daysAgo:'{n} pv sitten', hoursAgo:'{n} h sitten', minsAgo:'{n} min sitten', justNow:'juuri nyt',
       confirmWindows:'Windows palautuu tähän pisteeseen ja <strong>käynnistyy automaattisesti uudelleen</strong>.', confirmTweaks:'Säätöjen tilat nollataan vastaamaan palautettua järjestelmää.',
     },
+    cx: {
+      scanning:'Mitataan vapautettavaa tilaa', dial:'vapautettavissa', statCats:'Luokkia, joissa tiedostoja', statBig:'Suurin',
+      eyebrowFound:'Valmis siivoukseen', eyebrowClean:'Ei siivottavaa', failed:'Kokojen mittaus epäonnistui',
+      confirmTitle:'Pikasiivous', confirmBody:'Siivotaanko turvalliset luokat nyt? Roskakori tyhjennetään pysyvästi; välimuistit rakennetaan tarvittaessa uudelleen.',
+      confirmBodySize:'Vapautetaanko noin {size} nyt? Roskakori tyhjennetään pysyvästi; välimuistit rakennetaan tarvittaessa uudelleen.',
+    },
     tab: {
       showAll:'Näytä kaikki {n}', showLess:'Näytä vähemmän', 
       chipAll:'Kaikki', chipRecommended:'Suositellut', chipApplied:'Käytössä', chipReboot:'Vaatii käynnistyksen', chipRisky:'Riskialttiit',

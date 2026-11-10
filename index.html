@@ -10843,27 +10843,41 @@ function buildCleanup(c) {
   c.appendChild(regretSlot)
   _loadCleanupRegrets()
 
-  // ── Premium Quick Clean hero ───────────────────────────────────────────────
-  const hero = document.createElement('div')
-  hero.className = 'cleanup-hero-card'
-  hero.innerHTML = `
-    <div class="cleanup-hero-icon"><i class="fa fa-broom"></i></div>
-    <div class="cleanup-hero-body">
-      <div class="cleanup-hero-title">${tUI('cleanupQuickCleanTitle')}</div>
-      <div class="cleanup-hero-sub">${tUI('cleanupQuickCleanDesc')}</div>
-    </div>
-    <div class="cleanup-hero-size-wrap" id="cleanup-size-est-wrap" style="display:none">
-      <span class="cleanup-hero-size" id="cleanup-size-est"></span>
-      <span class="cleanup-hero-size-label">${tUI('cleanupFreeable') || 'freeable'}</span>
-    </div>
-    <div class="cleanup-hero-actions">
-      ${ui.button({ label: tUI('cleanupQuickCleanBtn'), icon: 'broom', variant: 'primary', size: 'sm', id: 'cleanup-run-btn', onclick: 'doQuickClean()' })}
-      ${ui.button({ label: tUI('cleanupScanSizesBtn'), icon: 'ruler', variant: 'ghost', size: 'sm', id: 'cleanup-scan-sizes-btn', onclick: 'scanCleanupSizes()' })}
-      ${ui.button({ label: tUI('cleanupEstimateBtn'), icon: 'calculator', variant: 'ghost', size: 'sm', onclick: 'estimateCleanupSize()' })}
-    </div>
-  `
-  c.appendChild(hero)
-  try { JylliWorld.driveBar(hero) } catch {}
+  // ── Hero (js/ui/tab-kit.js): what can be freed, per category, and one Quick clean action ──
+  const cxT = (k2, v) => tG('cx', k2, v)
+  const heroHost = document.createElement('div')
+  heroHost.className = 'tk-hero'
+  c.appendChild(heroHost)
+  const heroCtl = JylliHero.mount(heroHost, {
+    id: 'cleanup-hero', cls: 'cleanup-hero-card', eyebrow: cxT('scanning'), title: tUI('cleanupQuickCleanTitle'), lead: tUI('cleanupQuickCleanDesc'),
+    dial: { label: cxT('dial'), unit: '' },
+    stats: [{ k: 'cats', label: cxT('statCats') }, { k: 'big', label: cxT('statBig') }],
+    cta: { id: 'cleanup-run-btn', icon: 'broom', label: tUI('cleanupQuickCleanBtn'), onClick: () => doQuickClean() },
+    onLedger: id => { const el = c.querySelector('[data-clean-sec="' + id + '"]'); if (el) { el.scrollIntoView({ behavior: document.documentElement.classList.contains('motion-reduced') ? 'auto' : 'smooth', block: 'start' }); el.classList.remove('jh-flash'); void el.offsetWidth; el.classList.add('jh-flash'); setTimeout(() => el.classList.remove('jh-flash'), 1400) } },
+  })
+  heroCtl.scanning(true)
+  heroCtl.update({ pct: null, value: '–', cta: {} })
+  const hero = heroCtl.el
+  // #cleanup-size-est is watched by JylliWorld.driveBar (the drive bar's removable part); keep a hidden node that carries the total text
+  const sizeEst = document.createElement('span'); sizeEst.id = 'cleanup-size-est'; sizeEst.hidden = true; hero.appendChild(sizeEst)
+  const numSum = o => Object.values(o || {}).reduce((a, b2) => a + (typeof b2 === 'number' && b2 > 0 ? b2 : 0), 0)
+  window._cleanupHeroFail = () => { heroCtl.scanning(false); heroCtl.update({ value: '–', unit: '', tone: 'idle', eyebrow: cxT('failed'), ledger: [], stats: { cats: null, big: null } }) }
+  window._cleanupHeroSet = sizes => {
+    const total = numSum(sizes)
+    const parts = _cleanFmtParts(total)
+    const rows = sections.map((sec, i) => ({ id: String(i), label: sec.title, n: _cleanFmt(sec.rows.reduce((a, r) => a + (typeof (sizes || {})[r.id] === 'number' ? sizes[r.id] : 0), 0)) || '–', bytes: sec.rows.reduce((a, r) => a + (typeof (sizes || {})[r.id] === 'number' ? sizes[r.id] : 0), 0) }))
+    const big = rows.slice().sort((a, b2) => b2.bytes - a.bytes)[0]
+    sizeEst.textContent = parts ? parts.val + ' ' + parts.unit : ''
+    heroCtl.scanning(false)
+    heroCtl.update({
+      value: parts ? parts.val : '0', unit: parts ? parts.unit : '', tone: total > 0 ? 'accent' : 'ok',
+      eyebrow: total > 0 ? cxT('eyebrowFound') : cxT('eyebrowClean'),
+      ledger: rows.filter(r => r.bytes > 0).map(r => ({ id: r.id, label: r.label, n: r.n })),
+      stats: { cats: rows.filter(r => r.bytes > 0).length, big: big && big.bytes > 0 ? big.label : '–' },
+      cta: { done: false, label: tUI('cleanupQuickCleanBtn'), badge: null },
+    })
+  }
+  if (window._cleanupSizes) window._cleanupHeroSet(window._cleanupSizes)
 
   // ── Two-column grid layout ─────────────────────────────────────────────────
   const layout = document.createElement('div')
@@ -10876,8 +10890,9 @@ function buildCleanup(c) {
   aside.className = 'cleanup-aside'
 
   // Section cards → left column
-  sections.forEach(sec => {
+  sections.forEach((sec, secIdx) => {
     const card = makeSection(sec.title)
+    card.dataset.cleanSec = String(secIdx)
     sec.rows.forEach(row => {
       const el = makeRow(row)
       _enhanceCleanupRow(el, row)
@@ -10897,6 +10912,8 @@ function buildCleanup(c) {
 
   c.appendChild(makeTip(tUI('cleanupTip'), 'info'))
 
+  // Sizes are measured as soon as the tab opens (cached for the session), so nothing needs a Scan button
+  scanCleanupSizes()
   // Auto-load timeline on tab open
   setTimeout(() => { const btn = document.getElementById('timeline-refresh-btn'); if (btn) loadCleanupTimeline(btn) }, 100)
 }
@@ -11100,6 +11117,10 @@ async function loadCleanupTimeline(btn) {
 }
 
 async function doQuickClean() {
+  {
+    const total0 = Object.values(window._cleanupSizes || {}).reduce((a, b2) => a + (typeof b2 === 'number' ? b2 : 0), 0)
+    try { await showConfirm({ title: tG('cx', 'confirmTitle'), body: total0 > 0 ? tG('cx', 'confirmBodySize', { size: _cleanFmt(total0) }) : tG('cx', 'confirmBody'), okText: tUI('cleanupQuickCleanBtn'), okStyle: 'warning', icon: 'fa-broom' }) } catch { return }
+  }
   const safeIds = ['clean-recycle','clean-temp','clean-browsers','clean-discord','clean-nvidia','clean-steam','clean-gameservices','clean-spotify','clean-xbox','clean-msstore','clean-roblox','clean-thumbnails','clean-fontcache','clean-errorlogs','clean-eventlogs']
   const total = safeIds.length
   let done = 0, failed = 0
@@ -11184,6 +11205,13 @@ async function doQuickClean() {
   }, 2200)
 }
 
+function _cleanFmtParts(b) {
+  if (b >= 1073741824) return { val: (b / 1073741824).toFixed(1), unit: 'GB' }
+  if (b >= 1048576) return { val: String(Math.round(b / 1048576)), unit: 'MB' }
+  if (b > 0) return { val: String(Math.round(b / 1024)), unit: 'KB' }
+  return null
+}
+function _cleanFmt(b) { const p = _cleanFmtParts(b); return p ? p.val + ' ' + p.unit : '' }
 async function estimateCleanupSize() {
   const btn = document.querySelector('#cleanup-size-est')
   if (btn) { btn.style.display = 'inline'; btn.textContent = `${tUI('pfScanning').replace('…','')}…` }
@@ -11198,8 +11226,9 @@ async function scanCleanupSizes() {
   const scanBtn = document.getElementById('cleanup-scan-sizes-btn')
   if (scanBtn) { scanBtn.disabled = true; scanBtn.innerHTML = `<i class="fa fa-spinner fa-spin"></i> ${tUI('cleanupScanning')}` }
 
-  const sizes = await api.getCleanupSizes().catch(() => ({}))
-  window._cleanupSizes = sizes || {}
+  const sizes = await api.getCleanupSizes().catch(() => null)
+  if (!sizes || sizes.ok === false) { if (window._cleanupHeroFail) window._cleanupHeroFail(); if (scanBtn) { scanBtn.disabled = false } return }
+  window._cleanupSizes = sizes
 
   // Format bytes into value + unit separately for the size badge
   const fmtParts = b => {
@@ -11233,13 +11262,7 @@ async function scanCleanupSizes() {
 
   // Update hero size display with total
   const total = Object.values(window._cleanupSizes).reduce((s, b) => s + b, 0)
-  const est = document.getElementById('cleanup-size-est')
-  const estWrap = document.getElementById('cleanup-size-est-wrap')
-  if (est && total > 0) {
-    const p = fmtParts(total)
-    est.textContent = p ? `${p.val} ${p.unit}` : ''
-    if (estWrap) estWrap.style.display = 'block'
-  }
+  if (window._cleanupHeroSet) window._cleanupHeroSet(window._cleanupSizes)
 
   if (scanBtn) { scanBtn.disabled = false; scanBtn.innerHTML = `<i class="fa fa-ruler"></i> ${tUI('cleanupScanSizesBtn')}` }
 

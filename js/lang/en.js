@@ -3219,6 +3219,12 @@ aoHeroEyebrow:'App scanner', aoHeroDetected:'{n} apps detected', aoHeroScanning:
       daysAgo:'{n}d ago', hoursAgo:'{n}h ago', minsAgo:'{n}m ago', justNow:'just now',
       confirmWindows:'Windows will restore to this point and <strong>restart automatically</strong>.', confirmTweaks:'Tweak states will be reset to match the restored system.',
     },
+    cx: {
+      scanning:'Measuring what can be freed', dial:'can be freed', statCats:'Categories with files', statBig:'Largest',
+      eyebrowFound:'Ready to clean', eyebrowClean:'Nothing to clean', failed:'Could not measure the sizes',
+      confirmTitle:'Quick clean', confirmBody:'Clean the safe categories now? The Recycle Bin is emptied for good; caches are rebuilt when needed.',
+      confirmBodySize:'Free about {size} now? The Recycle Bin is emptied for good; caches are rebuilt when needed.',
+    },
     tab: {
       showAll:'Show all {n}', showLess:'Show less', 
       chipAll:'All', chipRecommended:'Recommended', chipApplied:'Applied', chipReboot:'Needs restart', chipRisky:'Risky',

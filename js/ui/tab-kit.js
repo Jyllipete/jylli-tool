@@ -58,6 +58,7 @@
       </div>`
     host.appendChild(node)
     const q = s => node.querySelector(s)
+    const unitEl = q('.jh-unit'), lblEl = q('.jh-lbl')
     const numEl = q('.jh-n'), arc = q('.jh-arc'), ledgerEl = q('.jh-ledger'), statsEl = q('.jh-stats'), actions = q('.jh-actions')
     const tickEls = [...node.querySelectorAll('.jh-tick')]
     let shown = 0, raf = 0, lastPct = null, ctaBtn = null, secBtn = null
@@ -126,6 +127,8 @@
           if (lastPct != null && p != null && p > lastPct) ripple()
           lastPct = p
         }
+        if ('value' in s) { cancelAnimationFrame(raf); numEl.textContent = s.value == null ? '–' : s.value; if (s.unit != null) unitEl.textContent = s.unit }
+        if (s.label != null) lblEl.textContent = s.label
         if ('tone' in s) node.dataset.tone = s.tone || 'idle'
         if ('scanning' in s) ctl.scanning(s.scanning)
         if ('empty' in s) node.dataset.empty = s.empty ? '1' : '0'
