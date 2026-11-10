@@ -3450,6 +3450,9 @@ aoHeroEyebrow:'Sovellusskanneri', aoHeroDetected:'{n} sovellusta tunnistettu', a
     netx: {
       dial:'määritetty', segTweaks:'Säädöt', segMeasure:'Mittaa',
     },
+    pulsex: {
+      dial:'Pulse-pisteet', statGame:'Peli', statRules:'Käynnistyssääntöjä päällä', ready:'Valmis', active:'Pulse on käynnissä',
+    },
     tab: {
       showAll:'Näytä kaikki {n}', showLess:'Näytä vähemmän', 
       chipAll:'Kaikki', chipRecommended:'Suositellut', chipApplied:'Käytössä', chipReboot:'Vaatii käynnistyksen', chipRisky:'Riskialttiit',

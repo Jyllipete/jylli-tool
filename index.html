@@ -2788,6 +2788,7 @@ function _pulseFeedAppendChip(msg, level, ts) {
 
 function syncPulseUIState() {
   Shell.state(pulseIsActive ? 'pulse' : (window._gameRunning ? 'game' : 'idle'))
+  if (window._pulseHeroRefresh) setTimeout(window._pulseHeroRefresh, 0)
   // Restore button visibility to match pulseIsActive on page re-enter
   const startBtn = document.getElementById('pulse-start-btn')
   const stopBtn  = document.getElementById('pulse-stop-btn')

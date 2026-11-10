@@ -11,7 +11,8 @@
 ### Välilehdet
 - **Windows / Elämänlaatu**: hero kattavuusmittarilla, osioiden rivistö (klikkaus vierittää ja korostaa), Suositellut-painike rajattuna avoimeen välilehteen; Pikavoitot-nauha yhdistettiin heroon; suodatinchipit (Kaikki, Suositellut, Käytössä, Vaatii käynnistyksen, Riskialttiit)
 - **CPU & Muisti / GPU / Virta**: työkalupaneelit omilla välilehdillään (Topologia ja Latenssibudjetti → CPU & Muisti, Thermal → GPU, Tehokkuus → Virta); tyhjät osiot (Audio) piilossa; haku ja laskurit vain avoimelle välilehdelle
-- **Verkko, FiveM**: sama suodatin; FiveM:n **Käytä kaikki turvalliset** toimii nyt (se ei tehnyt mitään) ja pisteet voivat nousta 100 %:iin
+- **Verkko**: yksi pistehero (DNS-palvelimet lasketaan yhtenä, vain tarjotut säädöt lasketaan) ja Säädöt | Mittaa -kytkin; **Pulse**: hero ja DOM-järjestys vastaa näkyvää järjestystä (CSS-order-kikka poistettu)
+- **FiveM**: sama suodatin; FiveM:n **Käytä kaikki turvalliset** toimii nyt (se ei tehnyt mitään) ja pisteet voivat nousta 100 %:iin
 - **Korjaukset**: hero ja "Suositeltu tälle koneelle" -osio ylhäällä
 - **Pikasiivous**: hero mittaa vapautettavan koon heti avattaessa, osiokohtainen rivistö, vahvistus ennen siivousta (Roskakori tyhjenee pysyvästi), epäonnistunut mittaus ei enää näytä "ei siivottavaa"
 - **Latenssi, Pelit, Toisto, Diagnostiikka, Ajastin, Historia**: heroon nostettu olennainen luku (DPC+ISR, optimoidut pelit, tallenteet, turvapisteet viime skannauksesta, seuraava ajo, kirjatut muutokset)

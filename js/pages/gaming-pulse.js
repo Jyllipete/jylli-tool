@@ -68,15 +68,27 @@ async function buildPulse(c) {
 
   c.innerHTML = String(html`
   <div id="pulse-panel" class="j-pu">
-    <div id="pulse-hero" class="pulse-hero j-pu-hero">
-      <div class="pulse-hero-badge"><i class="fa fa-bolt" aria-hidden="true"></i></div>
-      <div class="j-pu-grow">
-        <div class="j-pu-title">Pulse</div>
-        <div class="j-muted">${tUI('pulseSubtitle')}</div>
+    <div class="tk-hero" id="pulse-hero-host"></div>
+
+    <div class="j-pu-section">
+      <div class="pulse-section-label j-pu-mb">${tUI('pulseSelectGame')}</div>
+      <div id="pulse-selected-hero" class="pulse-selected-hero hero-empty">
+        <span class="pulse-hero-empty-icon"><i class="fa fa-gamepad" aria-hidden="true"></i></span>
+        <span class="pulse-hero-empty-text">${tUI('pulseChooseGame')}</span>
       </div>
-      <span id="pulse-status-badge" class="pulse-status-badge j-badge j-badge-ok" style="display:none">${tUI('pulseActive')}</span>
-      ${ui.button({ label: tUI('pulseLiveMonitor'), icon: 'arrow-up-right-from-square', variant: 'ghost', size: 'sm', onclick: 'openPulseLive()' })}
+      <div id="pulse-preset-grid" class="j-pu-grid">
+        ${PULSE_PRESET_LIST.map(p => html`<button type="button" class="pulse-preset-card" id="pp-${p.id}" onclick="selectPulsePreset('${p.id}')" title="${p.name}"><i class="fa ${p.icon}" aria-hidden="true"></i><div>${p.name}</div></button>`)}
+      </div>
     </div>
+
+    <div class="j-pu-actions">
+      <label class="j-pu-check"><input type="checkbox" id="pulse-kill-bg" checked> ${tUI('pulseKillBg')}</label>
+      <div class="j-pu-grow"></div>
+      <div id="pulse-active-label" class="j-muted" style="display:none">${tUI('pulseActiveLabel')} <strong id="pulse-active-name"></strong></div>
+      <button type="button" id="pulse-start-btn" class="j-btn j-btn-primary j-btn-sm" onclick="doPulseStart(this)" disabled><i class="fa fa-bolt" aria-hidden="true"></i> ${tUI('pulseActivate')}</button>
+      <button type="button" id="pulse-stop-btn" class="j-btn j-btn-ghost j-btn-sm" onclick="doPulseStop(this)" disabled style="display:none"><i class="fa fa-stop" aria-hidden="true"></i> ${tUI('pulseDeactivate')}</button>
+    </div>
+
 
     <div id="pulse-score-row" class="j-pu-score" style="display:none">
       <div class="j-pu-score-top">
@@ -130,31 +142,34 @@ async function buildPulse(c) {
       </div>
     </div>
 
-    <div class="j-pu-section">
-      <div class="pulse-section-label j-pu-mb">${tUI('pulseSelectGame')}</div>
-      <div id="pulse-selected-hero" class="pulse-selected-hero hero-empty">
-        <span class="pulse-hero-empty-icon"><i class="fa fa-gamepad" aria-hidden="true"></i></span>
-        <span class="pulse-hero-empty-text">${tUI('pulseChooseGame')}</span>
-      </div>
-      <div id="pulse-preset-grid" class="j-pu-grid">
-        ${PULSE_PRESET_LIST.map(p => html`<button type="button" class="pulse-preset-card" id="pp-${p.id}" onclick="selectPulsePreset('${p.id}')" title="${p.name}"><i class="fa ${p.icon}" aria-hidden="true"></i><div>${p.name}</div></button>`)}
-      </div>
-    </div>
-
-    <div class="j-pu-actions">
-      <label class="j-pu-check"><input type="checkbox" id="pulse-kill-bg" checked> ${tUI('pulseKillBg')}</label>
-      <div class="j-pu-grow"></div>
-      <div id="pulse-active-label" class="j-muted" style="display:none">${tUI('pulseActiveLabel')} <strong id="pulse-active-name"></strong></div>
-      <button type="button" id="pulse-start-btn" class="j-btn j-btn-primary j-btn-sm" onclick="doPulseStart(this)" disabled><i class="fa fa-bolt" aria-hidden="true"></i> ${tUI('pulseActivate')}</button>
-      <button type="button" id="pulse-stop-btn" class="j-btn j-btn-ghost j-btn-sm" onclick="doPulseStop(this)" disabled style="display:none"><i class="fa fa-stop" aria-hidden="true"></i> ${tUI('pulseDeactivate')}</button>
-    </div>
-
     <div id="pulse-log" class="j-pu-log" style="display:none" role="log">
       <div id="pulse-feed-chips" class="jx-49"></div>
     </div>
   </div>`)
 
+  const T = (k, v) => tG('pulsex', k, v)
+  const hero = JylliHero.mount(c.querySelector('#pulse-hero-host'), {
+    id: 'pulse-hero', eyebrow: '', title: 'Pulse', lead: tUI('pulseSubtitle'), dial: { label: T('dial'), unit: '/1000' },
+    stats: [{ k: 'game', label: T('statGame') }, { k: 'rules', label: T('statRules') }],
+    secondary: { id: 'pulse-live-btn', icon: 'arrow-up-right-from-square', label: tUI('pulseLiveMonitor'), onClick: () => openPulseLive() },
+  })
+  window._pulseHeroRefresh = () => {
+    const active = !!pulseIsActive
+    const score = parseInt((document.getElementById('pulse-score-val') || {}).textContent, 10)
+    const preset = pulseSelectedPreset && PULSE_PRESET_LIST.find(x => x.id === pulseSelectedPreset)
+    const armed = ['pulse-ug-check', 'pulse-gs-check', 'pulse-gw-check', 'pulse-ap-check'].filter(id => (document.getElementById(id) || {}).checked).length
+    hero.scanning(false)
+    hero.update({
+      value: active && !Number.isNaN(score) ? String(score) : '–', tone: active ? 'ok' : 'idle',
+      eyebrow: active ? T('active') : T('ready'),
+      stats: { game: preset ? preset.name : '–', rules: armed },
+    })
+  }
+  const heroTimer = setInterval(() => { if (window._pulseHeroRefresh) window._pulseHeroRefresh() }, 2000)
+  registerPageCleanup('pulse', () => { clearInterval(heroTimer); window._pulseHeroRefresh = null; hero.destroy() })
+
   syncPulseUIState()
+  window._pulseHeroRefresh()
   syncLaunchRuleChecks()
   gsExclusionInit()
   loadGameHistory()
