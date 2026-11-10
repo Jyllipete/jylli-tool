@@ -7236,12 +7236,13 @@ function buildSpecWarnings() {
   const el = document.getElementById('spec-warnings')
   if (!el) return
   const warns = []
-  if (!si.isAdmin) warns.push({ type:'danger', text:'<strong>Not running as Administrator.</strong> Registry, service, and system tweaks will fail. Click "Relaunch as Admin" above.' })
-  if (si.ramGB > 0 && si.ramGB < 8) warns.push({ type:'danger', text:`Only ${si.ramGB}GB RAM detected. Tweaks that disable memory compression or SysMain may WORSEN performance on low-RAM systems.` })
-  else if (si.ramGB > 0 && si.ramGB < 16) warns.push({ type:'warning', text:`${si.ramGB}GB RAM: consider NOT disabling SysMain — it helps with caching when you have less than 16GB.` })
-  if (si.isWifi) warns.push({ type:'warning', text:`Wi-Fi adapter detected. NIC offload tweaks, jumbo frames, and MTU changes may disconnect a wireless adapter. Ethernet tweaks may not apply.` })
-  if (si.isLaptop) warns.push({ type:'warning', text:`Laptop detected. Disabling C-States, CPU parking, or switching to Ultimate Performance will increase heat and drain battery significantly faster.` })
-  if (!si.nvme) warns.push({ type:'info', text:`No NVMe SSD detected. The NVMe StorPort latency tweak won't apply to your drive configuration.` })
+  const w = (k, v) => tG('specWarn', k, v)
+  if (!si.isAdmin) warns.push({ type:'danger', text: w('admin') })
+  if (si.ramGB > 0 && si.ramGB < 8) warns.push({ type:'danger', text: w('ramLow', { n: si.ramGB }) })
+  else if (si.ramGB > 0 && si.ramGB < 16) warns.push({ type:'warning', text: w('ramMid', { n: si.ramGB }) })
+  if (si.isWifi) warns.push({ type:'warning', text: w('wifi') })
+  if (si.isLaptop) warns.push({ type:'warning', text: w('laptop') })
+  if (!si.nvme) warns.push({ type:'info', text: w('noNvme') })
   el.innerHTML = warns.map(w => `<div class="tip ${w.type}"><span class="tip-icon">${{danger:'<i class="fa fa-triangle-exclamation"></i>',warning:'<i class="fa fa-triangle-exclamation"></i>',info:'<i class="fa fa-circle-info"></i>'}[w.type]}</span><span>${w.text}</span></div>`).join('')
 }
 

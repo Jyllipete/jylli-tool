@@ -3237,6 +3237,14 @@ aoHeroEyebrow:'App scanner', aoHeroDetected:'{n} apps detected', aoHeroScanning:
     pfHero: {
       title:'System check', dial:'safety', statOs:'Windows type', statConf:'Conflicts', statActive:'Already active', never:'Not scanned yet', last:'Last scan {t}',
     },
+    specWarn: {
+      admin:'<strong>Not running as Administrator.</strong> Registry, service and system tweaks will fail. Use Relaunch as Admin at the bottom of Home.',
+      ramLow:'Only {n} GB RAM detected. Tweaks that disable memory compression or SysMain may make performance worse on low-RAM systems.',
+      ramMid:'{n} GB RAM: consider not disabling SysMain. It helps with caching when you have less than 16 GB.',
+      wifi:'Wi-Fi adapter detected. NIC offload tweaks, jumbo frames and MTU changes may disconnect a wireless adapter. Ethernet tweaks may not apply.',
+      laptop:'Laptop detected. Disabling C-States or CPU parking, or switching to Ultimate Performance, raises heat and drains the battery much faster.',
+      noNvme:'No NVMe SSD detected. The NVMe StorPort latency tweak will not apply to your drive setup.',
+    },
     tab: {
       showAll:'Show all {n}', showLess:'Show less', 
       chipAll:'All', chipRecommended:'Recommended', chipApplied:'Applied', chipReboot:'Needs restart', chipRisky:'Risky',

@@ -3420,6 +3420,14 @@ aoHeroEyebrow:'Sovellusskanneri', aoHeroDetected:'{n} sovellusta tunnistettu', a
     pfHero: {
       title:'Järjestelmän tarkistus', dial:'turvallisuus', statOs:'Windows-tyyppi', statConf:'Ristiriidat', statActive:'Jo käytössä', never:'Ei vielä skannattu', last:'Viimeisin skannaus {t}',
     },
+    specWarn: {
+      admin:'<strong>Ei ajeta järjestelmänvalvojana.</strong> Rekisteri-, palvelu- ja järjestelmäsäädöt epäonnistuvat. Käytä Home-sivun alareunan toimintoa Käynnistä järjestelmänvalvojana.',
+      ramLow:'Vain {n} GB RAM-muistia havaittu. Muistin pakkauksen tai SysMainin poistaminen voi heikentää suorituskykyä vähäisellä RAM-muistilla.',
+      ramMid:'{n} GB RAM: harkitse, ettet poista SysMainia käytöstä. Se auttaa välimuistissa, kun muistia on alle 16 GB.',
+      wifi:'Wi-Fi-sovitin havaittu. NIC-offload-säädöt, jumbo-kehykset ja MTU-muutokset voivat katkaista langattoman yhteyden. Ethernet-säädöt eivät välttämättä toimi.',
+      laptop:'Kannettava havaittu. C-tilojen tai CPU-parkkauksen poistaminen tai Ultimate Performance -tila lisää lämpöä ja tyhjentää akun paljon nopeammin.',
+      noNvme:'NVMe SSD:tä ei havaittu. NVMe StorPort -viivesäätö ei sovellu levyjärjestelyysi.',
+    },
     tab: {
       showAll:'Näytä kaikki {n}', showLess:'Näytä vähemmän', 
       chipAll:'Kaikki', chipRecommended:'Suositellut', chipApplied:'Käytössä', chipReboot:'Vaatii käynnistyksen', chipRisky:'Riskialttiit',
