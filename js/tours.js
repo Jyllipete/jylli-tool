@@ -67,9 +67,9 @@
       T('replay-timeline', ['Past sessions', 'Each gaming session is saved here. Choose one to look back at it.'], ['Aiemmat istunnot', 'Jokainen pelisessio tallentuu tänne. Valitse yksi katsoaksesi sitä.']),
       T('replay-compare', ['Look at one session', 'Scrub through frame rate, temperatures and load, and read what we noticed.'], ['Tarkastele yhtä istuntoa', 'Selaa kuvataajuutta, lämpötiloja ja kuormaa, ja lue havaintomme.']),
     ] },
-    cleanup: { v: 1, tag: { 'cleanup-hero': '.cleanup-hero-card', 'cleanup-categories': '.cleanup-main-col' }, stops: [
-      T('cleanup-hero', ['How much can go', 'An estimate of what cleaning would free. Nothing is deleted until you start.'], ['Kuinka paljon voi poistua', 'Arvio siitä, kuinka paljon siivous vapauttaisi. Mitään ei poisteta ennen kuin aloitat.']),
-      T('cleanup-categories', ['Choose what to clean', 'Pick categories, then clean. Temporary files and caches only; your documents are never touched.'], ['Valitse siivottava', 'Valitse luokat ja siivoa. Vain väliaikaistiedostoja ja välimuisteja; asiakirjoihisi ei koskaan kosketa.']),
+    cleanup: { v: 2, tag: { 'cleanup-hero': '.cleanup-hero-card', 'cleanup-categories': '.cleanup-main-col' }, stops: [
+      T('cleanup-hero', ['How much can go', 'Measured as soon as you open the tab. Nothing is deleted until you start Quick Clean, and it asks first.'], ['Kuinka paljon voi poistua', 'Mitataan heti, kun avaat välilehden. Mitään ei poisteta ennen kuin aloitat Pikasiivouksen, ja se kysyy ensin.']),
+      T('cleanup-categories', ['Clean one thing at a time', 'Every row shows its size. Apply a row to clean just that, or use Quick Clean for the safe ones. Temporary files and caches only; your documents are never touched.'], ['Siivoa yksi asia kerrallaan', 'Jokainen rivi näyttää kokonsa. Käytä riviä siivotaksesi vain sen, tai Pikasiivousta turvallisille. Vain väliaikaistiedostoja ja välimuisteja; asiakirjoihisi ei koskaan kosketa.']),
     ] },
     debloat: { v: 1, tag: { 'debloat-list': '.bloat-tier-hero', 'debloat-shield': '#uwp-keep-xbox-store' }, stops: [
       T('debloat-list', ['Apps Windows added', 'The list of pre-installed apps and how lean your Windows is today.'], ['Windowsin lisäämät sovellukset', 'Esiasennetut sovellukset ja se, kuinka kevyt Windowsisi on nyt.']),
@@ -77,7 +77,7 @@
     ] },
     startup: { v: 1, tag: { 'startup-impact': '#startup-hero', 'startup-list': '#startup-list', 'startup-search': '#startup-search-wrap' }, stops: [
       T('startup-impact', ['Startup impact', 'How much your startup items slow down boot, in one number.'], ['Käynnistyksen vaikutus', 'Kuinka paljon käynnistyskohteet hidastavat käynnistystä, yhtenä lukuna.']),
-      T('startup-search', ['Find an item', 'Search by name. Items we recommend turning off are marked.'], ['Etsi kohde', 'Hae nimellä. Suosittelemamme pois kytkettävät kohteet on merkitty.']),
+      T('startup-search', ['Find an item', 'Search by name. Use Recommended in the header to turn off the items that cost the most.'], ['Etsi kohde', 'Hae nimellä. Käytä otsikon Suositellut-toimintoa kytkeäksesi pois eniten kuluttavat kohteet.']),
       T('startup-list', ['Switch items off', 'Turn an item off with its toggle. It stays installed and can be turned on again.'], ['Kytke kohteita pois', 'Kytke kohde pois sen kytkimestä. Se pysyy asennettuna ja sen voi kytkeä takaisin.']),
     ] },
     diagnostics: { v: 1, stops: [
@@ -85,9 +85,9 @@
       T('diagnostics-results', ['Score and recommendations', 'Your safety score and what we found appear here, with the tweaks already active on your system.'], ['Pisteet ja suositukset', 'Turvapisteet ja löydökset näkyvät tässä, samoin jo käytössä olevat säädöt.']),
       T('diagnostics-drivers', ['Drivers', 'Check for outdated drivers. We only list them; installing is up to you.'], ['Ajurit', 'Tarkista vanhentuneet ajurit. Listaamme ne vain; asennus on sinun päätettävissäsi.']),
     ] },
-    processes: { v: 1, tag: { 'processes-hogs': '#pf-hog-cards', 'processes-list': '#proc-table', 'processes-filter': '#proc-filter' }, stops: [
+    processes: { v: 2, tag: { 'processes-hogs': '#pf-hog-cards', 'processes-list': '#proc-table', 'processes-filter': '#proc-filter' }, stops: [
       T('processes-hogs', ['Heavy hitters', 'Processes using unusual amounts of CPU or memory right now.'], ['Raskaat prosessit', 'Prosessit, jotka käyttävät juuri nyt poikkeuksellisen paljon suoritinta tai muistia.']),
-      T('processes-filter', ['Find a process', 'Filter by name. Priority can be changed per process from its row.'], ['Etsi prosessi', 'Suodata nimellä. Prioriteetin voi muuttaa prosessin riviltä.']),
+      T('processes-filter', ['Find a process', 'Filter by name. Freeze a heavy process from the rail above, or end it from its row.'], ['Etsi prosessi', 'Suodata nimellä. Jäädytä raskas prosessi yllä olevasta palkista tai lopeta se sen riviltä.']),
       T('processes-list', ['Take care here', 'Ending a system process can make Windows unstable. If you are unsure, leave it alone.'], ['Varovaisuutta', 'Järjestelmäprosessin lopettaminen voi tehdä Windowsista epävakaan. Jos olet epävarma, jätä se rauhaan.']),
     ] },
     bios: { v: 1, tag: { 'bios-board': '.bw-strip', 'bios-scan': '#bw-grid' }, stops: [
@@ -102,9 +102,9 @@
       T('restore-create', ['Create a restore point', 'A snapshot of Windows you can return to. Windows allows one per day.'], ['Luo palautuspiste', 'Tilannevedos Windowsista, johon voit palata. Windows sallii yhden päivässä.']),
       T('restore-list', ['Roll back', 'Choose a point and restore it if something goes wrong. Your files stay as they are.'], ['Palaa takaisin', 'Valitse piste ja palauta se, jos jokin menee pieleen. Tiedostosi pysyvät ennallaan.']),
     ] },
-    history: { v: 1, tag: { 'history-journal': '#journal-box', 'history-list': '#changelog-list' }, stops: [
+    history: { v: 2, tag: { 'history-journal': '#journal-box', 'history-list': '#changelog-list' }, stops: [
       T('history-journal', ['Everything we changed', 'A journal of every change, with the option to undo it.'], ['Kaikki muuttamamme', 'Loki jokaisesta muutoksesta, ja mahdollisuus perua se.']),
-      T('history-list', ['Applied tweaks', 'The list of tweaks currently applied, newest first.'], ['Käytössä olevat säädöt', 'Tällä hetkellä käytössä olevat säädöt, uusin ensin.']),
+      T('history-list', ['Every apply and restore', 'The plain event log of what was applied or restored, newest first.'], ['Jokainen käyttöönotto ja palautus', 'Selkeä tapahtumaloki siitä, mitä otettiin käyttöön tai palautettiin, uusin ensin.']),
     ] },
     settings: { v: 1, stops: [
       T('settings-general', ['Sounds and startup', 'Quiet chimes, advanced mode and when the app starts are all here.'], ['Äänet ja käynnistys', 'Hiljaiset äänet, edistynyt tila ja sovelluksen käynnistys löytyvät täältä.']),
