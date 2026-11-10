@@ -3225,6 +3225,11 @@ aoHeroEyebrow:'App scanner', aoHeroDetected:'{n} apps detected', aoHeroScanning:
       confirmTitle:'Quick clean', confirmBody:'Clean the safe categories now? The Recycle Bin is emptied for good; caches are rebuilt when needed.',
       confirmBodySize:'Free about {size} now? The Recycle Bin is emptied for good; caches are rebuilt when needed.',
     },
+    latHero: {
+      title:'Interrupt latency',
+      waiting:'Sampling', waitingLead:'Reading the DPC and ISR counters.', statDpc:'DPC peak', statIsr:'ISR peak', statTimer:'Timer',
+      failed:'Could not read the counters', failedLead:'Windows did not return latency counters. Open this tab again or run the app as administrator.',
+    },
     tab: {
       showAll:'Show all {n}', showLess:'Show less', 
       chipAll:'All', chipRecommended:'Recommended', chipApplied:'Applied', chipReboot:'Needs restart', chipRisky:'Risky',

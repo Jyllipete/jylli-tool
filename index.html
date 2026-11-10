@@ -4863,6 +4863,7 @@ async function pollLatency() {
     else { statusText = tUI('latencyStatusHigh'); statusSub = tUI('latencyStatusSubHigh'); statusColor = 'var(--danger)' }
     if (statusEl) { statusEl.textContent = statusText; statusEl.style.color = statusColor }
     if (statusSubEl) statusSubEl.textContent = statusSub
+    if (window._latHero) window._latHero(dpc, isr, dpcPeak, isrPeak, timerUs, statusText, statusSub, combined)
 
     drawLatencyCanvas('dpc', _latencyHistory.dpc, dpcColor)
     drawLatencyCanvas('isr', _latencyHistory.isr, isrColor)
@@ -4875,7 +4876,7 @@ async function pollLatency() {
       if (_dpcSpikeLog.length > 100) _dpcSpikeLog.shift()
       renderSpikeLog()
     }
-  } catch { /* silent */ }
+  } catch { if (window._latHeroFail) window._latHeroFail() }
 }
 
 function renderSpikeLog() {

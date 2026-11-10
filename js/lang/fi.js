@@ -3408,6 +3408,11 @@ aoHeroEyebrow:'Sovellusskanneri', aoHeroDetected:'{n} sovellusta tunnistettu', a
       confirmTitle:'Pikasiivous', confirmBody:'Siivotaanko turvalliset luokat nyt? Roskakori tyhjennetään pysyvästi; välimuistit rakennetaan tarvittaessa uudelleen.',
       confirmBodySize:'Vapautetaanko noin {size} nyt? Roskakori tyhjennetään pysyvästi; välimuistit rakennetaan tarvittaessa uudelleen.',
     },
+    latHero: {
+      title:'Keskeytysviive',
+      waiting:'Mitataan', waitingLead:'Luetaan DPC- ja ISR-laskureita.', statDpc:'DPC-huippu', statIsr:'ISR-huippu', statTimer:'Ajastin',
+      failed:'Laskureita ei voitu lukea', failedLead:'Windows ei palauttanut viivelaskureita. Avaa välilehti uudelleen tai käynnistä sovellus järjestelmänvalvojana.',
+    },
     tab: {
       showAll:'Näytä kaikki {n}', showLess:'Näytä vähemmän', 
       chipAll:'Kaikki', chipRecommended:'Suositellut', chipApplied:'Käytössä', chipReboot:'Vaatii käynnistyksen', chipRisky:'Riskialttiit',
