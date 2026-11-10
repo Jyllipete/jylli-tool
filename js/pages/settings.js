@@ -23,7 +23,7 @@ function buildSettings(c) {
   const motionBtns = ['snappy', 'default', 'smooth', 'reduced'].map(m => html`<button id="motion-${m}-btn" type="button" class="${ui.cls('j-seg-item', (settings.motionMode || 'default') === m && 'j-seg-active')}" onclick="settingsSetMotionMode('${m}')">${tUI('motion' + m.charAt(0).toUpperCase() + m.slice(1))}</button>`)
 
   const out = html`<div class="j-settings">
-    <nav class="j-settings-nav" aria-label="Settings">${CATS.map(([id, key, ic]) => html`<button class="j-nav-item" type="button" onclick="document.getElementById('set-sec-${id}').scrollIntoView({behavior:'smooth',block:'start'})"><i class="fa fa-${ic}" aria-hidden="true"></i><span>${tUI(key)}</span></button>`)}</nav>
+    <nav class="j-settings-nav" aria-label="Settings">${CATS.map(([id, key, ic]) => html`<button class="j-nav-item" type="button" data-sec="${id}" onclick="document.getElementById('set-sec-${id}').scrollIntoView({behavior:'smooth',block:'start'})"><i class="fa fa-${ic}" aria-hidden="true"></i><span>${tUI(key)}</span></button>`)}</nav>
     <div class="j-settings-main">
 
     <div id="fingerprint-banner" class="j-callout j-callout-warn" style="display:none">
@@ -130,6 +130,19 @@ function buildSettings(c) {
     })
     grid.appendChild(card)
   })
+
+  // Scroll-spy: the rail marks the section that is in view (and exposes it to assistive tech)
+  const navBtns = [...c.querySelectorAll('.j-settings-nav [data-sec]')]
+  const setActive = id => navBtns.forEach(b => { const on = b.dataset.sec === id; b.classList.toggle('j-nav-active', on); if (on) b.setAttribute('aria-current', 'true'); else b.removeAttribute('aria-current') })
+  if (navBtns.length) {
+    setActive(navBtns[0].dataset.sec)
+    if (typeof IntersectionObserver === 'function') {
+      const io = new IntersectionObserver(entries => { for (const e of entries) if (e.isIntersecting) setActive(e.target.id.replace('set-sec-', '')) }, { rootMargin: '-15% 0px -75% 0px' })
+      c.querySelectorAll('.j-settings-sec').forEach(sec => io.observe(sec))
+      registerPageCleanup('settings', () => io.disconnect())
+    }
+    navBtns.forEach(b => b.addEventListener('click', () => setActive(b.dataset.sec)))
+  }
 
   // Accent picker — syncs hidden input + visible swatch circle
   const picker = document.getElementById('accent-color-picker')
