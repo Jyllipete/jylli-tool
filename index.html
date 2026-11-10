@@ -3707,6 +3707,7 @@ async function runFix(id, btn) {
           badge.className = 'j-badge j-badge-ok fix-applied-badge'
           badge.textContent = `✓ ${tUI('fixApplied')}`
           slot.appendChild(badge)
+          if (window._fixesRefresh) window._fixesRefresh()
         }
         setTimeout(() => { btn.className = 'j-btn j-btn-sm j-btn-ghost fix-run-btn' }, 1500)
       }

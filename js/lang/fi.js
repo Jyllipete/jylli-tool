@@ -3395,6 +3395,9 @@ aoHeroEyebrow:'Sovellusskanneri', aoHeroDetected:'{n} sovellusta tunnistettu', a
       dial:'valmis', statLeft:'Ei käytössä', statSafe:'Turvallisia jäljellä', ctaDone:'Turvalliset käytössä',
       confirmBody:'Otetaanko käyttöön {n} turvallista FiveM-oletusta? Mikään niistä ei ole riskialtis eikä vaadi uudelleenkäynnistystä.', confirmNone:'Kaikki turvalliset oletukset ovat jo käytössä.',
     },
+    fixHero: {
+      title:'Korjaukset', dial:'käytössä', statApplied:'Käytössä', statRec:'Suositeltu sinulle', cta:'Näytä suositellut', recTitle:'Suositeltu tälle koneelle', eyebrow:'{a} / {n} korjausta käytössä',
+    },
     tab: {
       showAll:'Näytä kaikki {n}', showLess:'Näytä vähemmän', 
       chipAll:'Kaikki', chipRecommended:'Suositellut', chipApplied:'Käytössä', chipReboot:'Vaatii käynnistyksen', chipRisky:'Riskialttiit',

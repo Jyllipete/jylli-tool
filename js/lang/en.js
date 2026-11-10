@@ -3212,6 +3212,9 @@ aoHeroEyebrow:'App scanner', aoHeroDetected:'{n} apps detected', aoHeroScanning:
       dial:'ready', statLeft:'Not applied', statSafe:'Safe defaults left', ctaDone:'Safe defaults applied',
       confirmBody:'Apply {n} safe defaults for FiveM? None of them is flagged risky or needs a restart.', confirmNone:'All safe defaults are already applied.',
     },
+    fixHero: {
+      title:'Fixes', dial:'applied', statApplied:'Applied', statRec:'Recommended for you', cta:'Show recommended', recTitle:'Recommended for this PC', eyebrow:'{a} of {n} fixes applied',
+    },
     tab: {
       showAll:'Show all {n}', showLess:'Show less', 
       chipAll:'All', chipRecommended:'Recommended', chipApplied:'Applied', chipReboot:'Needs restart', chipRisky:'Risky',
