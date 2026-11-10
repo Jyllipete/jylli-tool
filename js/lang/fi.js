@@ -3398,6 +3398,10 @@ aoHeroEyebrow:'Sovellusskanneri', aoHeroDetected:'{n} sovellusta tunnistettu', a
     fixHero: {
       title:'Korjaukset', dial:'käytössä', statApplied:'Käytössä', statRec:'Suositeltu sinulle', cta:'Näytä suositellut', recTitle:'Suositeltu tälle koneelle', eyebrow:'{a} / {n} korjausta käytössä',
     },
+    rpx: {
+      daysAgo:'{n} pv sitten', hoursAgo:'{n} h sitten', minsAgo:'{n} min sitten', justNow:'juuri nyt',
+      confirmWindows:'Windows palautuu tähän pisteeseen ja <strong>käynnistyy automaattisesti uudelleen</strong>.', confirmTweaks:'Säätöjen tilat nollataan vastaamaan palautettua järjestelmää.',
+    },
     tab: {
       showAll:'Näytä kaikki {n}', showLess:'Näytä vähemmän', 
       chipAll:'Kaikki', chipRecommended:'Suositellut', chipApplied:'Käytössä', chipReboot:'Vaatii käynnistyksen', chipRisky:'Riskialttiit',

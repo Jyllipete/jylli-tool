@@ -284,7 +284,7 @@ function startupFilter(query) {
   let none = list.querySelector('.startup-no-results')
   if (q && visible === 0) {
     if (!none) { none = document.createElement('div'); none.className = 'startup-no-results'; list.appendChild(none) }
-    none.innerHTML = String(ui.empty({ icon: 'magnifying-glass', title: tUI('emptySearch'), sub: tUI('emptySearchSub') }))
+    none.innerHTML = String(ui.empty({ icon: 'magnifying-glass', title: tWizard('emptySearch'), sub: tWizard('emptySearchSub') }))
     none.hidden = false
   } else if (none) none.hidden = true
 }

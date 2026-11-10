@@ -3215,6 +3215,10 @@ aoHeroEyebrow:'App scanner', aoHeroDetected:'{n} apps detected', aoHeroScanning:
     fixHero: {
       title:'Fixes', dial:'applied', statApplied:'Applied', statRec:'Recommended for you', cta:'Show recommended', recTitle:'Recommended for this PC', eyebrow:'{a} of {n} fixes applied',
     },
+    rpx: {
+      daysAgo:'{n}d ago', hoursAgo:'{n}h ago', minsAgo:'{n}m ago', justNow:'just now',
+      confirmWindows:'Windows will restore to this point and <strong>restart automatically</strong>.', confirmTweaks:'Tweak states will be reset to match the restored system.',
+    },
     tab: {
       showAll:'Show all {n}', showLess:'Show less', 
       chipAll:'All', chipRecommended:'Recommended', chipApplied:'Applied', chipReboot:'Needs restart', chipRisky:'Risky',

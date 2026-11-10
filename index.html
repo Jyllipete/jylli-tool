@@ -13123,10 +13123,10 @@ function _rpParseDate(wmiFmt) {
 
 function _rpRelAge(ms) {
   const m = Math.floor(ms / 60000), h = Math.floor(m / 60), d = Math.floor(h / 24)
-  if (d > 0) return `${d}d ago`
-  if (h > 0) return `${h}h ago`
-  if (m > 0) return `${m}m ago`
-  return 'just now'
+  if (d > 0) return tG('rpx', 'daysAgo', { n: d })
+  if (h > 0) return tG('rpx', 'hoursAgo', { n: h })
+  if (m > 0) return tG('rpx', 'minsAgo', { n: m })
+  return tG('rpx', 'justNow')
 }
 
 function _rpTypeClass(desc) {
@@ -13229,7 +13229,7 @@ async function loadRPList() {
     const typePill = `<span class="rp-v2-type rp-v2-type--${typeClass}"><i class="fa ${typeIcons[typeClass] || 'fa-circle-dot'}"></i> ${_rpTypeLabel(typeClass)}</span>`
     return `<tr data-seq="${seq}" data-rp-seq="${seq}" data-rp-ts="${dateObj ? dateObj.getTime() : 0}" onclick="rpSelectRow(${seq})">
       <td>${seq}</td>
-      <td>${desc}${ageBadge}${typePill}</td>
+      <td>${escHtml(desc)}${ageBadge}${typePill}</td>
       <td>${dateStr}${ageMs > 0 ? `<span class="rp-v2-age-hint">${_rpRelAge(ageMs)}</span>` : ''}</td>
       <td><button class="rp-v2-del-btn" title="${tUI('rpDeleteTitle')}" onclick="event.stopPropagation();doDeleteRP(${seq})"><i class="fa fa-trash"></i></button></td>
     </tr>`
@@ -13306,7 +13306,7 @@ async function doRestoreToPoint() {
     }
   } catch {}
 
-  try { await showConfirm({ title: `${tUI('restoreConfirmTitle')} #${seq}`, body: `<strong class="jx-11">${tUI('restoreConfirmBody')}</strong><br><br>Windows will restore to this point and <strong class="jx-9">restart automatically</strong>.${diffHtml}<br><br><span class="jx-150">Tweak states will be reset to match the restored system.</span>`, okText: tUI('restoreConfirmOk'), okStyle: 'danger', icon: 'fa-triangle-exclamation' }) } catch { return }
+  try { await showConfirm({ title: `${tUI('restoreConfirmTitle')} #${seq}`, body: `<strong class="jx-11">${tUI('restoreConfirmBody')}</strong><br><br>${tG('rpx', 'confirmWindows')}${diffHtml}<br><br><span class="jx-150">${tG('rpx', 'confirmTweaks')}</span>`, okText: tUI('restoreConfirmOk'), okStyle: 'danger', icon: 'fa-triangle-exclamation' }) } catch { return }
   const r = await api.restoreToPoint(seq)
   if (!r.ok) {
     if (r.fallback) {
