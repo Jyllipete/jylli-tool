@@ -3,6 +3,7 @@
 function buildChangelog(c) {
   const { html } = ui
   c.innerHTML = String(html`
+    <div class="tk-hero" id="hist-hero-host"></div>
     ${ui.card({
       title: tUI('journalTitle'),
       sub: tUI('journalSub'),
@@ -15,14 +16,33 @@ function buildChangelog(c) {
       flush: true,
       body: html`<div id="changelog-list" class="j-history">${ui.empty({ icon: 'clock-rotate-left', title: tUI('historyLoading') })}</div>`,
     })}`)
-  c.appendChild(makeTip(`${tUI('historyStoragePath')}: %APPDATA%\petes-tweaking-utility\ptu_changelog.json`, 'info'))
+  const T = (k, v) => tG('histx', k, v)
+  const hero = JylliHero.mount(c.querySelector('#hist-hero-host'), {
+    id: 'hist-hero', eyebrow: T('loading'), title: tUI('historyTitle'), lead: tUI('journalSub'), dial: { label: T('dial'), unit: '' },
+    stats: [{ k: 'today', label: T('statToday') }, { k: 'applied', label: T('statApplied') }, { k: 'restored', label: T('statRestored') }],
+  })
+  hero.scanning(true); hero.update({ value: '–', tone: 'idle' })
+  window._histHero = entries => {
+    hero.scanning(false)
+    if (!Array.isArray(entries)) { hero.update({ value: '–', tone: 'idle', eyebrow: T('failed'), stats: { today: '–', applied: '–', restored: '–' } }); return }
+    const day = Date.now() - 86400000
+    hero.update({
+      value: String(entries.length), tone: 'accent',
+      eyebrow: entries.length ? T('last', { t: _rpRelAge(Math.max(0, Date.now() - entries[0].ts)) }) : T('none'),
+      stats: { today: entries.filter(e => e.ts > day).length, applied: entries.filter(e => e.action === 'apply').length, restored: entries.filter(e => e.action !== 'apply').length },
+    })
+  }
+  registerPageCleanup('changelog', () => { window._histHero = null; hero.destroy() })
+  c.appendChild(makeTip(`${tUI('historyStoragePath')}: %APPDATA%\\petes-tweaking-utility\\ptu_changelog.json`, 'info'))
   loadChangelogPage()
   try { JylliJournalView.render(document.getElementById('journal-box')) } catch {}
 }
 
 async function loadChangelogPage() {
   const { html } = ui
-  const entries = await api.getChangelog()
+  const entries = await api.getChangelog().catch(() => null)
+  if (window._histHero) window._histHero(entries)
+  if (!Array.isArray(entries)) { const l0 = document.getElementById('changelog-list'); if (l0) l0.innerHTML = String(ui.error({ title: tG('histx', 'failed'), sub: tG('tab', 'loadFailSub'), action: ui.button({ label: tG('tab', 'retry'), variant: 'secondary', onclick: 'loadChangelogPage()' }) })); return }
   const list = document.getElementById('changelog-list')
   const count = document.getElementById('cl-count')
   if (!list) return

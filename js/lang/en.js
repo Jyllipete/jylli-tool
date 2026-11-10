@@ -3245,6 +3245,11 @@ aoHeroEyebrow:'App scanner', aoHeroDetected:'{n} apps detected', aoHeroScanning:
       laptop:'Laptop detected. Disabling C-States or CPU parking, or switching to Ultimate Performance, raises heat and drains the battery much faster.',
       noNvme:'No NVMe SSD detected. The NVMe StorPort latency tweak will not apply to your drive setup.',
     },
+    histx: {
+      dial:'changes recorded', statToday:'Last 24 hours', statApplied:'Applied', statRestored:'Restored', loading:'Reading the journal', none:'Nothing recorded yet', last:'Latest change {t}', failed:'Could not read the history',
+      undoBatchTitle:'Undo this batch?', undoBatchBody:'Every change in this batch is put back to what it was before. You can apply them again later.',
+      undoSessionTitle:'Undo this whole session?', undoSessionBody:'Every change made in this session is put back to what it was before. Changes that were already undone are skipped.',
+    },
     tab: {
       showAll:'Show all {n}', showLess:'Show less', 
       chipAll:'All', chipRecommended:'Recommended', chipApplied:'Applied', chipReboot:'Needs restart', chipRisky:'Risky',

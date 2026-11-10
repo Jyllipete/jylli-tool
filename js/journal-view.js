@@ -82,8 +82,9 @@
   function wire(box) {
     const f = box.querySelector('#journal-filter'); if (f) f.onchange = () => { filterVia = f.value; render(box) }
     box.querySelectorAll('[data-undo-entry]').forEach(b => { b.onclick = e => { e.preventDefault(); e.stopPropagation(); undo({ entryId: b.dataset.undoEntry }, box) } })
-    box.querySelectorAll('[data-undo-batch]').forEach(b => { b.onclick = () => undo({ batchId: b.dataset.undoBatch }, box) })
-    box.querySelectorAll('[data-undo-session]').forEach(b => { b.onclick = () => undo({ sessionId: b.dataset.undoSession }, box) })
+    const ask = async (title, body) => { try { await showConfirm({ title, body: esc(body), okText: tUI('journalUndo'), okStyle: 'warning', icon: 'fa-rotate-left' }); return true } catch { return false } }
+    box.querySelectorAll('[data-undo-batch]').forEach(b => { b.onclick = async () => { if (await ask(tG('histx', 'undoBatchTitle'), tG('histx', 'undoBatchBody'))) undo({ batchId: b.dataset.undoBatch }, box) } })
+    box.querySelectorAll('[data-undo-session]').forEach(b => { b.onclick = async () => { if (await ask(tG('histx', 'undoSessionTitle'), tG('histx', 'undoSessionBody'))) undo({ sessionId: b.dataset.undoSession }, box) } })
   }
 
   async function undo(target, box) {

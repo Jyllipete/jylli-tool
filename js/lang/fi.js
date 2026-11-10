@@ -3428,6 +3428,11 @@ aoHeroEyebrow:'Sovellusskanneri', aoHeroDetected:'{n} sovellusta tunnistettu', a
       laptop:'Kannettava havaittu. C-tilojen tai CPU-parkkauksen poistaminen tai Ultimate Performance -tila lisää lämpöä ja tyhjentää akun paljon nopeammin.',
       noNvme:'NVMe SSD:tä ei havaittu. NVMe StorPort -viivesäätö ei sovellu levyjärjestelyysi.',
     },
+    histx: {
+      dial:'kirjattua muutosta', statToday:'Viimeiset 24 tuntia', statApplied:'Otettu käyttöön', statRestored:'Palautettu', loading:'Luetaan lokia', none:'Ei vielä kirjauksia', last:'Viimeisin muutos {t}', failed:'Historiaa ei voitu lukea',
+      undoBatchTitle:'Perutaanko tämä erä?', undoBatchBody:'Jokainen tämän erän muutos palautetaan siihen, mitä se oli ennen. Voit ottaa ne käyttöön myöhemmin uudelleen.',
+      undoSessionTitle:'Perutaanko koko istunto?', undoSessionBody:'Jokainen tässä istunnossa tehty muutos palautetaan siihen, mitä se oli ennen. Jo perutut muutokset ohitetaan.',
+    },
     tab: {
       showAll:'Näytä kaikki {n}', showLess:'Näytä vähemmän', 
       chipAll:'Kaikki', chipRecommended:'Suositellut', chipApplied:'Käytössä', chipReboot:'Vaatii käynnistyksen', chipRisky:'Riskialttiit',
