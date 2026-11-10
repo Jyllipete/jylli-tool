@@ -3453,6 +3453,9 @@ aoHeroEyebrow:'Sovellusskanneri', aoHeroDetected:'{n} sovellusta tunnistettu', a
     pulsex: {
       dial:'Pulse-pisteet', statGame:'Peli', statRules:'Käynnistyssääntöjä päällä', ready:'Valmis', active:'Pulse on käynnissä',
     },
+    fvws: {
+      tweaks:'Säädöt', server:'Palvelimen tila', cache:'Välimuisti', ini:'CitizenFX.ini', bookmarks:'Kirjanmerkit', diag:'Diagnostiikka',
+    },
     tab: {
       showAll:'Näytä kaikki {n}', showLess:'Näytä vähemmän', 
       chipAll:'Kaikki', chipRecommended:'Suositellut', chipApplied:'Käytössä', chipReboot:'Vaatii käynnistyksen', chipRisky:'Riskialttiit',

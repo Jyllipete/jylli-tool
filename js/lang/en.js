@@ -3270,6 +3270,9 @@ aoHeroEyebrow:'App scanner', aoHeroDetected:'{n} apps detected', aoHeroScanning:
     pulsex: {
       dial:'Pulse score', statGame:'Game', statRules:'Launch rules on', ready:'Ready', active:'Pulse is active',
     },
+    fvws: {
+      tweaks:'Tweaks', server:'Server health', cache:'Cache', ini:'CitizenFX.ini', bookmarks:'Bookmarks', diag:'Diagnostics',
+    },
     tab: {
       showAll:'Show all {n}', showLess:'Show less', 
       chipAll:'All', chipRecommended:'Recommended', chipApplied:'Applied', chipReboot:'Needs restart', chipRisky:'Risky',

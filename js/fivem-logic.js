@@ -420,6 +420,44 @@ async function buildFiveM(c) {
     }
   })
 
+  // ── Workspace: one segmented switch instead of four hidden panels. Tweaks | Server | Cache | INI | Bookmarks | Diagnostics ──
+  {
+    const wsT = (k) => tG('fvws', k)
+    // the four panel cards are replaced by the switch; Graphics (opens its own window) and the HUD toggle stay as actions
+    ;['fhc-health', 'fhc-cache', 'fhc-ini', 'fhc-bookmarks'].forEach(k => { const el = hero.querySelector('.' + k); if (el) el.remove() })
+    hero.classList.add('fivem-hero-actions')
+    const panels = { server: healthPanel, cache: cachePanel, ini: iniEditorPanel, bookmarks: bookmarksPanel }
+    const panes = {}
+    const mk = id => { const d = document.createElement('div'); d.className = 'tk-body'; d.id = 'fivem-pane-' + id; d.hidden = id !== 'tweaks'; panes[id] = d; return d }
+    ;['tweaks', 'server', 'cache', 'ini', 'bookmarks', 'diag'].forEach(mk)
+    const kids = [...c.children]
+    const start = kids.indexOf(hero) + 1
+    for (const k of kids.slice(start)) {
+      if (k === healthPanel) panes.server.appendChild(k)
+      else if (k === cachePanel) panes.cache.appendChild(k)
+      else if (k === iniEditorPanel) panes.ini.appendChild(k)
+      else if (k === bookmarksPanel) panes.bookmarks.appendChild(k)
+      else if (k === fvTb.el || k === sectionLabel || (k.classList && k.classList.contains('section-card') && k.querySelector('.tweak-row'))) panes.tweaks.appendChild(k)
+      else panes.diag.appendChild(k)
+    }
+    Object.values(panels).forEach(p => { p.style.display = '' })
+    const openers = { server: () => {}, cache: () => fivemRefreshCacheInfo(), ini: () => fivemIniEditorLoad(), bookmarks: () => fivemOpenBookmarks() }
+    let loaded = {}
+    const seg = JylliTab.seg([
+      { id: 'tweaks', label: wsT('tweaks'), icon: 'sliders' }, { id: 'server', label: wsT('server'), icon: 'tower-broadcast' },
+      { id: 'cache', label: wsT('cache'), icon: 'database' }, { id: 'ini', label: wsT('ini'), icon: 'file-pen' },
+      { id: 'bookmarks', label: wsT('bookmarks'), icon: 'bookmark' }, { id: 'diag', label: wsT('diag'), icon: 'stethoscope' },
+    ], 'tweaks', id => {
+      Object.entries(panes).forEach(([k, el]) => { el.hidden = k !== id })
+      if (id !== 'bookmarks' && typeof fivemBookmarksClearRefresh === 'function') fivemBookmarksClearRefresh()
+      if (openers[id] && !loaded[id]) { loaded[id] = true; openers[id]() }
+      else if (id === 'bookmarks') fivemOpenBookmarks()
+    })
+    hero.after(seg.el)
+    let anchor = seg.el
+    for (const id of ['tweaks', 'server', 'cache', 'ini', 'bookmarks', 'diag']) { anchor.after(panes[id]); anchor = panes[id] }
+  }
+
   window._fvFilter = JylliFilter.mount(c, {
     item: '.tweak-row', section: '.section-card', input: fvTb.input, chipsEl: fvTb.chipsEl,
     onResult: r => {

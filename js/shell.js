@@ -32,7 +32,7 @@
     cpumem: c => hardwareTab(c, 'cpumem'),
     gpu: c => hardwareTab(c, 'gpu'),
     power: c => hardwareTab(c, 'power'),
-    network: async c => { await buildNetwork(c); buildNetworkHero(c) },
+    network: async c => { await buildNetwork(c); const live = buildNetworkHero(c); const host = c.querySelector('.tk-hero'); if (host) host.after(live) },   // score hero first, the live scene under it
     fixes: c => buildFixes(c),
     pulse: c => buildPulse(c),
     games: async c => { if (!settings.isPremium) await JylliPremium.build(c, 'games'); else await buildGameOpti(c) },
