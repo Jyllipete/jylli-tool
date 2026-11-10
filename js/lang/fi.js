@@ -3433,6 +3433,13 @@ aoHeroEyebrow:'Sovellusskanneri', aoHeroDetected:'{n} sovellusta tunnistettu', a
       undoBatchTitle:'Perutaanko tämä erä?', undoBatchBody:'Jokainen tämän erän muutos palautetaan siihen, mitä se oli ennen. Voit ottaa ne käyttöön myöhemmin uudelleen.',
       undoSessionTitle:'Perutaanko koko istunto?', undoSessionBody:'Jokainen tässä istunnossa tehty muutos palautetaan siihen, mitä se oli ennen. Jo perutut muutokset ohitetaan.',
     },
+    gpHero: {
+      title:'Pelien profiilit', lead:'Viritetty profiili jokaiselle pelille. Jokaisen profiilin voi palauttaa sen omalta sivulta.', dial:'optimoitu', statFound:'Asennettu', statOpt:'Optimoitu', statRun:'Käynnissä nyt',
+      scanning:'Etsitään asennettuja pelejä', found:'{n} asennettua peliä', none:'Tuettuja pelejä ei löytynyt', cta:'Optimoi loput', ctaDone:'Kaikki asennetut pelit optimoitu',
+      confirmBody:'Otetaanko profiili käyttöön {n} asennetulle pelille? Jokainen kirjataan ja voidaan palauttaa.',
+      errAdmin:'Vaatii järjestelmänvalvojan oikeudet', errPath:'Pelin polkua ei löytynyt. Kokeile skannata uudelleen.', errUnknown:'Tuntematon virhe', errPerm:'Käyttö estetty. Kokeile ajaa järjestelmänvalvojana.', errScan:'Skannaus epäonnistui',
+      bundleHint:'Valitse Luo paketti tallentaaksesi nykyisen esiasetuksen.', bundleEmpty:'Tyhjä paketti',
+    },
     tab: {
       showAll:'Näytä kaikki {n}', showLess:'Näytä vähemmän', 
       chipAll:'Kaikki', chipRecommended:'Suositellut', chipApplied:'Käytössä', chipReboot:'Vaatii käynnistyksen', chipRisky:'Riskialttiit',

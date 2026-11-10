@@ -3250,6 +3250,13 @@ aoHeroEyebrow:'App scanner', aoHeroDetected:'{n} apps detected', aoHeroScanning:
       undoBatchTitle:'Undo this batch?', undoBatchBody:'Every change in this batch is put back to what it was before. You can apply them again later.',
       undoSessionTitle:'Undo this whole session?', undoSessionBody:'Every change made in this session is put back to what it was before. Changes that were already undone are skipped.',
     },
+    gpHero: {
+      title:'Game profiles', lead:'A tuned profile per game. Every profile can be restored from its own page.', dial:'optimized', statFound:'Installed', statOpt:'Optimized', statRun:'Running now',
+      scanning:'Looking for installed games', found:'{n} installed games', none:'No supported games found', cta:'Optimize remaining', ctaDone:'All installed games optimized',
+      confirmBody:'Apply the profile to {n} installed games? Each one is journaled and can be restored.',
+      errAdmin:'Administrator rights required', errPath:'Game path not found. Try scanning again.', errUnknown:'Unknown error', errPerm:'Permission denied. Try running as administrator.', errScan:'Scan failed',
+      bundleHint:'Choose Create bundle to snapshot your current preset.', bundleEmpty:'Empty bundle',
+    },
     tab: {
       showAll:'Show all {n}', showLess:'Show less', 
       chipAll:'All', chipRecommended:'Recommended', chipApplied:'Applied', chipReboot:'Needs restart', chipRisky:'Risky',

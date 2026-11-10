@@ -9736,7 +9736,31 @@ let _gpScanRunning = false
 
 async function buildGameOpti(c) {
   if (!settings.isPremium) { await JylliPremium.build(c, 'games'); return }
-  c.appendChild(makeTip(tUI('gpTipTitle'), 'info'))
+  // Hero (js/ui/tab-kit.js): how many installed games have their profile applied, and one action for the rest
+  const gpHost = document.createElement('div')
+  gpHost.className = 'tk-hero'
+  c.appendChild(gpHost)
+  const gpT = (k, v) => tG('gpHero', k, v)
+  const gpHero = JylliHero.mount(gpHost, {
+    id: 'gp-hero', eyebrow: gpT('scanning'), title: gpT('title'), lead: gpT('lead'), dial: { label: gpT('dial') },
+    stats: [{ k: 'found', label: gpT('statFound') }, { k: 'opt', label: gpT('statOpt') }, { k: 'run', label: gpT('statRun') }],
+    cta: { id: 'gp-optimize-all', icon: 'bolt', label: gpT('cta'), onClick: () => gpOptimizeAll() },
+  })
+  gpHero.scanning(!gpScanned)
+  window._gpHeroRefresh = () => {
+    const inst = GAME_LIST.filter(g => g.installed)
+    const opt = inst.filter(g => settings['tweak_game-' + g.id] === 'applied')
+    const left = inst.length - opt.length
+    gpHero.scanning(_gpScanRunning)
+    gpHero.update({
+      pct: inst.length ? Math.round(opt.length / inst.length * 100) : null, tone: 'accent',
+      eyebrow: !gpScanned ? gpT('scanning') : inst.length ? gpT('found', { n: inst.length }) : gpT('none'),
+      stats: { found: gpScanned ? inst.length : '–', opt: gpScanned ? opt.length : '–', run: GAME_LIST.filter(g => g.running).length },
+      cta: { hidden: !inst.length, done: inst.length > 0 && left === 0, badge: left, label: left === 0 ? gpT('ctaDone') : gpT('cta') },
+    })
+  }
+  registerPageCleanup('game-opti', () => { window._gpHeroRefresh = null; gpHero.destroy() })
+  window._gpHeroRefresh()
   // Auto-profile watcher strip
   const watchStrip = document.createElement('div')
   watchStrip.id = 'gp-watcher-card'
@@ -9947,10 +9971,10 @@ async function doGPApply(gameId, action) {
   const r = await api.applyGameTweak(gameId, action, g.installPath).catch(e => ({ ok: false, error: e.message }))
   if (!r?.ok) {
     const errMsg = r?.error?.includes('admin') || r?.error?.includes('Access')
-      ? 'Administrator rights required'
+      ? tG('gpHero', 'errAdmin')
       : r?.error?.includes('path') || r?.error?.includes('not found')
-      ? 'Game path not found — try re-scanning'
-      : r?.error || 'Unknown error'
+      ? tG('gpHero', 'errPath')
+      : r?.error || tG('gpHero', 'errUnknown')
     toast(tUI('tkProfileFailed'), errMsg, 'err')
     return
   }
@@ -9959,6 +9983,24 @@ async function doGPApply(gameId, action) {
   await api.addChangelogEntry({ id: `game-${gameId}`, action }).catch(() => {})
   toast(action === 'apply' ? tUI('gpProfileApplied') : tUI('gpProfileRestored'), g.name, action === 'apply' ? 'ok' : 'info')
   renderGPDetail(g)
+  if (window._gpHeroRefresh) window._gpHeroRefresh()
+}
+
+// One action for every installed game that has no profile yet (asks first; each game is journaled like a single apply)
+async function gpOptimizeAll() {
+  const todo = GAME_LIST.filter(g => g.installed && settings['tweak_game-' + g.id] !== 'applied')
+  if (!todo.length) return
+  try { await showConfirm({ title: tG('gpHero', 'cta'), body: tG('gpHero', 'confirmBody', { n: todo.length }), okText: tUI('apply'), okStyle: 'primary', icon: 'fa-bolt' }) } catch { return }
+  let ok = 0, failed = 0
+  for (const g of todo) {
+    const r = await api.applyGameTweak(g.id, 'apply', g.installPath).catch(() => null)
+    if (r && r.ok) { settings['tweak_game-' + g.id] = 'applied'; ok++; await api.addChangelogEntry({ id: 'game-' + g.id, action: 'apply' }).catch(() => {}) } else failed++
+  }
+  await api.saveSettings(settings).catch(() => {})
+  toast(tG('gpHero', 'cta'), tUI('batchDone').replace('{applied}', ok) + (failed ? ' · ' + tUI('batchFailed').replace('{failed}', failed) : ''), ok > 0 ? 'ok' : 'warn')
+  renderGPList(GAME_LIST)
+  const sel = GAME_LIST.find(g => g.id === selectedGameId); if (sel) renderGPDetail(sel)
+  if (window._gpHeroRefresh) window._gpHeroRefresh()
 }
 
 // ── Game Bundles ─────────────────────────────────────────────────────────────
@@ -9972,7 +10014,7 @@ async function gpRenderBundles() {
       <span style="font-size:16px;opacity:0.4"><i class="fa fa-layer-group"></i></span>
       <div>
         <div class="jx-626">${tUI('gpBundleEmpty')}</div>
-        <div class="jx-33">Click + Create Bundle to snapshot your current preset</div>
+        <div class="jx-33">${tG('gpHero', 'bundleHint')}</div>
       </div>
     </div>`
     return
@@ -9987,7 +10029,7 @@ async function gpRenderBundles() {
     return `<div class="gp-bundle-card gp-bundle-card-v2">
       <div class="gp-bundle-name">${b.name}</div>
       <div class="gp-bundle-game">${gameName}</div>
-      <div class="jx-630">${tags || '<span class="jx-7">Empty bundle</span>'}</div>
+      <div class="jx-630">${tags || `<span class="jx-7">${tG('gpHero', 'bundleEmpty')}</span>`}</div>
       <div class="jx-631">
         <button class="btn btn-ghost btn-sm" style="font-size:11px;flex:1" onclick="gpActivateBundleBtn(this,${jsArg(b.name)})"><i class="fa fa-play"></i> ${tUI('gpBundleActivate')}</button>
         <button class="btn btn-ghost btn-sm" style="font-size:11px;color:var(--danger);border-color:rgba(var(--c-danger-rgb),0.3)" onclick="gpDeleteBundle(${jsArg(b.name)})"><i class="fa fa-trash"></i></button>
@@ -10101,17 +10143,19 @@ async function doGPScan(btn, auto = false) {
     if (!auto) toast(tUI('gpScanComplete'), `${count} ${tUI('gpScanFound')}`, 'ok')
   } catch (e) {
     api.startupTrace?.(`[gameScan] failed: ${e}`)
-    const msg = e?.code === 'EACCES' ? 'Permission denied — try running as administrator'
-      : e?.message || 'Scan failed'
+    const msg = e?.code === 'EACCES' ? tG('gpHero', 'errPerm')
+      : e?.message || tG('gpHero', 'errScan')
     toast(tUI('gpScanBtn'), msg, 'err')
     _gpScanRunning = false
     if (btn) { btn.innerHTML = `<i class="fa fa-magnifying-glass"></i> ${tUI('gpScanBtn')}`; btn.disabled = false }
     renderGPList(GAME_LIST)
+    if (window._gpHeroRefresh) window._gpHeroRefresh()
     return
   }
   if (btn) { btn.innerHTML = `<i class="fa fa-magnifying-glass"></i> ${tUI('gpScanBtn')}`; btn.disabled = false }
   _gpScanRunning = false
   renderGPList(GAME_LIST)
+  if (window._gpHeroRefresh) window._gpHeroRefresh()
   const sel = GAME_LIST.find(g => g.id === selectedGameId)
   if (sel) renderGPDetail(sel)
 }
