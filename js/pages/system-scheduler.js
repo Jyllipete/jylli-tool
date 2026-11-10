@@ -1,5 +1,19 @@
 'use strict'
-// System > Scheduler: create scheduled maintenance tasks and manage the active ones (list rendering lives in index.html).
+// System > Scheduler: hero (task count, paused, next run), the create form and the active tasks (list rendering lives in index.html).
+
+/** tasks: [{ TaskName, Description, State, NextRunTime }] -> { total, active, paused, next: { name, at } | null }. Disabled tasks never count as "next". */
+function schedSummary(tasks, now = Date.now()) {
+  const list = Array.isArray(tasks) ? tasks : []
+  const isOff = t => String(t.State || '').toLowerCase() === 'disabled'
+  const active = list.filter(t => !isOff(t))
+  let next = null
+  for (const t of active) {
+    const at = t.NextRunTime ? new Date(t.NextRunTime).getTime() : NaN
+    if (Number.isNaN(at)) continue
+    if (!next || at < next.at) next = { name: (t.Description && String(t.Description).trim()) || String(t.TaskName || '').replace(/^JT_/, ''), at }
+  }
+  return { total: list.length, active: active.length, paused: list.length - active.length, next, overdue: !!(next && next.at <= now) }
+}
 async function buildScheduler(c) {
   if (!settings.isPremium) { await JylliPremium.build(c, 'scheduler'); return }
   const { html } = ui
@@ -9,6 +23,7 @@ async function buildScheduler(c) {
   const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 
   c.innerHTML = String(html`
+    <div class="tk-hero" id="sched-hero-host"></div>
     ${ui.card({
       title: html`<i class="fa fa-clock" aria-hidden="true"></i> ${tUI('schedHeroTitle')}`,
       sub: tUI('schedHeroSub'),
@@ -42,9 +57,29 @@ async function buildScheduler(c) {
 
   c.appendChild(makeTip(tUI('schedTip'), 'info'))
 
+  const T = (k, v) => tG('schedx', k, v)
+  const hero = JylliHero.mount(c.querySelector('#sched-hero-host'), {
+    id: 'sched-hero', eyebrow: T('loading'), title: tUI('schedHeroTitle'), lead: tUI('schedHeroSub'), dial: { label: T('dial'), unit: '' },
+    stats: [{ k: 'active', label: T('statActive') }, { k: 'paused', label: T('statPaused') }, { k: 'next', label: T('statNext') }],
+  })
+  hero.scanning(true); hero.update({ value: '–', tone: 'idle' })
+  window._schedHero = tasks => {
+    hero.scanning(false)
+    if (!Array.isArray(tasks)) { hero.update({ value: '–', tone: 'idle', eyebrow: T('failed'), stats: { active: '–', paused: '–', next: '–' } }); return }
+    const s = schedSummary(tasks)
+    hero.update({
+      value: String(s.total), tone: s.total ? 'accent' : 'idle',
+      eyebrow: s.total === 0 ? T('none') : s.next ? T('nextUp', { name: s.next.name }) : T('noneActive'),
+      stats: { active: s.active, paused: s.paused, next: s.next ? (schedFormatCountdown(new Date(s.next.at).toISOString()) || '–') : '–' },
+    })
+  }
+
   schedUpdateActionDesc()
   loadScheduledTasks()
   registerPageCleanup('scheduler', () => {
+    window._schedHero = null; hero.destroy()
     if (window._schedTicker) { clearInterval(window._schedTicker); window._schedTicker = null }
   })
 }
+
+if (typeof module !== 'undefined' && module.exports) module.exports = { schedSummary }

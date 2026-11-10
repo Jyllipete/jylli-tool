@@ -3398,9 +3398,13 @@ function schedUpdateCountdowns(tasks) {
 async function loadScheduledTasks() {
   if (window._schedTicker) { clearInterval(window._schedTicker); window._schedTicker = null }
   let tasks
-  try { tasks = await api.listScheduledTweaks() } catch { tasks = [] }
+  try { tasks = await api.listScheduledTweaks() } catch { tasks = null }
+  if (tasks && tasks.ok === false) tasks = null
   const list = document.getElementById('sched-task-list')
   if (!list) return
+  if (window._schedHero) window._schedHero(tasks)
+  // a failed read is an error with Retry, never "no tasks"
+  if (!Array.isArray(tasks)) { list.innerHTML = String(ui.error({ title: tG('schedx', 'failed'), sub: tG('tab', 'loadFailSub'), action: ui.button({ label: tG('tab', 'retry'), variant: 'secondary', onclick: 'loadScheduledTasks()' }) })); const bk = document.getElementById('sched-bulk-bar'); if (bk) bk.style.display = 'none'; return }
   window._schedTasksCache = tasks
   const bulk = document.getElementById('sched-bulk-bar')
   if (bulk) bulk.style.display = tasks.length ? 'flex' : 'none'
@@ -3411,7 +3415,7 @@ async function loadScheduledTasks() {
   try {
     list.innerHTML = `<div class="sched-grid">${tasks.map(renderSchedTaskCard).join('')}</div>`
   } catch(e) {
-    list.innerHTML = `<div class="jx-237">Render error: ${e.message}</div>`
+    list.innerHTML = `<div class="jx-237">${escHtml(tG('schedx', 'renderError'))}: ${escHtml(e.message)}</div>`
     return
   }
   window._schedTicker = setInterval(() => schedUpdateCountdowns(window._schedTasksCache || []), 30000)
@@ -3463,6 +3467,7 @@ async function doToggleHistory(name) {
 }
 
 async function schedBulkToggle(enable) {
+  try { await showConfirm({ title: enable ? tUI('schedBulkEnableAll') : tUI('schedBulkDisableAll'), body: tG('schedx', enable ? 'enableBody' : 'disableBody', { n: (window._schedTasksCache || []).length }), okText: enable ? tUI('schedBulkEnableAll') : tUI('schedBulkDisableAll'), okStyle: 'warning', icon: enable ? 'fa-circle-check' : 'fa-ban' }) } catch { return }
   const bar = document.getElementById('sched-bulk-bar')
   const btns = bar ? [...bar.querySelectorAll('button')] : []
   btns.forEach(b => b.disabled = true)

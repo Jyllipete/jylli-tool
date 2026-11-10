@@ -3443,6 +3443,10 @@ aoHeroEyebrow:'Sovellusskanneri', aoHeroDetected:'{n} sovellusta tunnistettu', a
     procx: {
       hogTitle:'CPU-syöpöt', hogSub:'Jäädytä mikä tahansa prosessi. Se palautuu automaattisesti, kun pelisi sulkeutuu.', kill:'Lopeta prosessi', saved:'säästetty {n} s CPU:ta', freezeErr:'Prosessia ei voitu jäädyttää', ipcFailed:'Pyyntö epäonnistui',
     },
+    schedx: {
+      dial:'ajastettua tehtävää', statActive:'Aktiivisia', statPaused:'Keskeytetty', statNext:'Seuraava ajo', loading:'Luetaan tehtävälistaa', none:'Ei vielä tehtäviä', noneActive:'Kaikki tehtävät on keskeytetty', nextUp:'Seuraava: {name}', failed:'Ajastettuja tehtäviä ei voitu lukea',
+      renderError:'Tehtäviä ei voitu näyttää', enableBody:'Otetaanko kaikki {n} ajastettua tehtävää käyttöön?', disableBody:'Keskeytetäänkö kaikki {n} ajastettua tehtävää? Ne pysyvät listassa ja ne voi ottaa uudelleen käyttöön.',
+    },
     tab: {
       showAll:'Näytä kaikki {n}', showLess:'Näytä vähemmän', 
       chipAll:'Kaikki', chipRecommended:'Suositellut', chipApplied:'Käytössä', chipReboot:'Vaatii käynnistyksen', chipRisky:'Riskialttiit',

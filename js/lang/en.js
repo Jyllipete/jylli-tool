@@ -3260,6 +3260,10 @@ aoHeroEyebrow:'App scanner', aoHeroDetected:'{n} apps detected', aoHeroScanning:
     procx: {
       hogTitle:'CPU hog rail', hogSub:'Freeze any process. It is restored automatically when your game exits.', kill:'End process', saved:'saved {n}s of CPU', freezeErr:'Could not freeze the process', ipcFailed:'The request failed',
     },
+    schedx: {
+      dial:'scheduled tasks', statActive:'Active', statPaused:'Paused', statNext:'Next run in', loading:'Reading the task list', none:'No tasks yet', noneActive:'All tasks are paused', nextUp:'Next: {name}', failed:'Could not read the scheduled tasks',
+      renderError:'Could not show the tasks', enableBody:'Turn on all {n} scheduled tasks?', disableBody:'Pause all {n} scheduled tasks? They stay in the list and can be turned on again.',
+    },
     tab: {
       showAll:'Show all {n}', showLess:'Show less', 
       chipAll:'All', chipRecommended:'Recommended', chipApplied:'Applied', chipReboot:'Needs restart', chipRisky:'Risky',
