@@ -54,7 +54,7 @@
       T('apps-hero', ['Tuning for your apps', 'Optimize all applies the recommended changes for the apps we detected.'], ['Sovellusten viritys', 'Optimoi kaikki ottaa käyttöön suositellut muutokset tunnistetuille sovelluksille.']),
       T('apps-list', ['Apps and priority', 'Each app shows what will change, including process priority, before you apply it.'], ['Sovellukset ja prioriteetti', 'Jokainen sovellus näyttää, mitä muuttuu, myös prosessin prioriteetti, ennen käyttöönottoa.']),
     ] },
-    fivem: { v: 1, tag: { 'fivem-score': '#fivem-opti-ring', 'fivem-tweaks': '.tweak-card-grid' }, stops: [
+    fivem: { v: 1, tag: { 'fivem-score': '#fivem-hero', 'fivem-tweaks': '.section-card' }, stops: [
       T('fivem-score', ['FiveM at a glance', 'How many FiveM and GTA V tweaks are applied, and the current tier.'], ['FiveM yhdellä silmäyksellä', 'Kuinka monta FiveM- ja GTA V -säätöä on käytössä, ja nykyinen taso.']),
       T('fivem-tweaks', ['Cache and tweaks', 'Cache cleanup and settings for FiveM. Run them in the order shown.'], ['Välimuisti ja säädöt', 'FiveM:n välimuistin siivous ja asetukset. Aja ne esitetyssä järjestyksessä.']),
     ] },

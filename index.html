@@ -5487,6 +5487,11 @@ function makeRow({ id, name, desc, danger = false, dangerLabel = 'I understand t
   const bText  = applied ? `<i class="fa fa-check"></i> ${tUI('statusApplied')}` : preApplied ? `<i class="fa fa-lock"></i> ${tUI('statusPreApplied')}` : badgeText(id)
   const div = document.createElement('div')
   div.className = 'tweak-row' + (warning ? ' has-warning' : '') + (preApplied ? ' pf-preapplied' : '')
+  div.dataset.tweakId = id
+  div.dataset.search = `${name} ${desc} ${id}`.toLowerCase()
+  div.dataset.applied = applied ? '1' : '0'
+  div.dataset.risk = String(danger ? 3 : (window._tweakMeta?.[id]?.safetyTier || 1))
+  div.dataset.reboot = (reboot || REBOOT_TWEAK_IDS.has(id)) ? '1' : '0'
   div.innerHTML = `
     ${warning ? `<div class="spec-warning"><span><i class="fa fa-triangle-exclamation"></i></span>${warning}</div>` : ''}
     <div class="tweak-info">
@@ -5709,7 +5714,17 @@ document.addEventListener('click', e => {
 const _genBadgeCache = new Map()
 let _genCounterEl = null, _genRestoreBtnEl = null
 
+// Keeps the data-applied flag of every rendered tweak card/row in step with settings, then lets each tab's hero and filter catch up.
+function syncTweakFlags() {
+  document.querySelectorAll('#page-content .tweak-card[id^="tcw-"]').forEach(card => { card.dataset.applied = tweakState(card.id.slice(4)) === 'applied' ? '1' : '0' })
+  document.querySelectorAll('#page-content .tweak-row[data-tweak-id]').forEach(row => { row.dataset.applied = tweakState(row.dataset.tweakId) === 'applied' ? '1' : '0' })
+  if (window._winHero) window._winHero.refresh()
+  if (window._fvRefresh) window._fvRefresh()
+  for (const f of [window._winFilter, window._hwFilter, window._fvFilter, window._netFilter]) if (f) f.refresh()
+}
+
 function genRefreshAllCounters() {
+  syncTweakFlags()
   if (!_genSections) return
   let totalApplied = 0, totalCards = 0
   _genSections.forEach(sec => {
@@ -5730,11 +5745,6 @@ function genRefreshAllCounters() {
       }
     }
   })
-  if (window._winHero) {
-    document.querySelectorAll('#page-content .tweak-card[id^="tcw-"]').forEach(card => { card.dataset.applied = tweakState(card.id.slice(4)) === 'applied' ? '1' : '0' })
-    window._winHero.refresh()
-    if (window._winFilter) window._winFilter.refresh()
-  }
   genUpdateRebootBar()
   if (typeof hwRefreshCounters === 'function') hwRefreshCounters()
 }
@@ -7664,6 +7674,8 @@ async function applyTweakBatch(ids, action = 'apply') {
       // Update live badge if card is rendered
       const badge = document.getElementById(`tcb-${id}`)
       if (badge) { badge.className = 'tc-badge' + (action === 'apply' ? ' applied' : ' restored'); badge.innerHTML = action === 'apply' ? `<i class="fa fa-check"></i> ${tUI('statusApplied')}` : `<i class="fa fa-rotate-left"></i> ${tUI('statusRestored')}` }
+      const rowBadge = document.getElementById(`badge-${id}`)
+      if (rowBadge) { rowBadge.className = "tweak-badge " + badgeClass(id); rowBadge.innerHTML = badgeText(id) }
       const cardEl = document.getElementById(`tcw-${id}`)
       if (cardEl) cardEl.classList.toggle('tc-applied', action === 'apply')
       const toggle = document.getElementById(`tct-${id}`)
@@ -8465,8 +8477,6 @@ function hwRefreshCounters() {
     badge.classList.toggle('spb-full', isFull)
     badge.classList.toggle('spb-partial', applied > 0 && !isFull)
   })
-  document.querySelectorAll('#page-content .tweak-card[id^="tcw-"]').forEach(card => { card.dataset.applied = tweakState(card.id.slice(4)) === 'applied' ? '1' : '0' })
-  if (window._hwFilter) window._hwFilter.refresh()
 }
 
 // ─── CPU Topology Optimizer UI ────────────────────────────────────────────────
@@ -8925,21 +8935,9 @@ function buildNetwork(c) {
 
   if (si.isWifi) c.appendChild(makeTip(`<i class="fa fa-triangle-exclamation"></i> ${tUI('networkWifiTip').replace('{adapter}', si.wifiAdapter || tUI('netWirelessAdapter'))}`, 'warning'))
 
-  const searchWrap = document.createElement('div')
-  searchWrap.className = 'fivem-search-wrap'
-  searchWrap.id = 'net-search-wrap'
-  searchWrap.innerHTML = `
-    <i class="fa fa-magnifying-glass"></i>
-    <input class="fivem-search-input" id="net-search" type="text"
-      placeholder="${tUI('genSearchPlaceholder')}"
-      oninput="netSearchHandler(this)"
-      onkeydown="if(event.key==='Escape'){netSearchClear()}">
-    <span class="fivem-search-count" id="net-search-count"></span>
-    <button class="fivem-search-clear" onclick="netSearchClear()" title="Clear">
-      <i class="fa fa-xmark"></i>
-    </button>
-  `
-  c.appendChild(searchWrap)
+  const netTb = JylliTab.toolbar({ placeholder: tUI('genSearchPlaceholder'), chips: ['all', 'applied', 'reboot', 'risky'] })
+  netTb.el.id = 'net-search-wrap'
+  c.appendChild(netTb.el)
 
   const sections = [
     {
@@ -9071,6 +9069,18 @@ function buildNetwork(c) {
   buildLiveMonitor(c)
   buildNetHealthCheck(c)
   buildPingTest(c)
+
+  // The shared filter only ever touches tweak rows and the sections that hold them: Live monitor, Health and Ping stay put.
+  window._netFilter = JylliFilter.mount(c, {
+    item: '.tweak-row', section: '.section-card', input: netTb.input, chipsEl: netTb.chipsEl,
+    onResult: r => {
+      let nm = c.querySelector('.tk-nomatch')
+      if (r.total > 0 && r.shown === 0) { if (!nm) { nm = JylliTab.noMatch(r.q, () => window._netFilter.set({ q: '', chip: 'all' })); netTb.el.after(nm) } else nm.querySelector('.j-empty-sub').textContent = tG('tab', 'noMatchSub', { q: r.q }) }
+      else if (nm) nm.remove()
+    },
+  })
+  window._netFilter.refresh()
+  registerPageCleanup('network', () => { if (window._netFilter) window._netFilter.destroy(); window._netFilter = null })
 
   registerPageCleanup('network', () => {
     if (_livePingActive) {
@@ -9451,37 +9461,6 @@ async function netApplySafeDefaults(btn) {
   toast(tUI('netApplySafe'), msg, applied > 0 ? 'ok' : 'warn')
 }
 
-function netFilterTweaks(query) {
-  const q = query.trim().toLowerCase()
-  const content = document.getElementById('page-content')
-  if (!content) return
-  let visibleCount = 0
-  content.querySelectorAll('.tweak-row').forEach(row => {
-    const visible = !q || row.textContent.toLowerCase().includes(q)
-    row.style.display = visible ? '' : 'none'
-    if (visible) visibleCount++
-  })
-  content.querySelectorAll('.section-card').forEach(sec => {
-    const anyVisible = [...sec.querySelectorAll('.tweak-row')].some(r => r.style.display !== 'none')
-    sec.style.display = anyVisible ? '' : 'none'
-  })
-  const countEl = document.getElementById('net-search-count')
-  if (countEl) countEl.textContent = q ? visibleCount + ' results' : ''
-}
-
-function netSearchHandler(input) {
-  const wrap = document.getElementById('net-search-wrap')
-  if (wrap) wrap.classList.toggle('has-query', input.value.length > 0)
-  netFilterTweaks(input.value)
-}
-
-function netSearchClear() {
-  const input = document.getElementById('net-search')
-  const wrap  = document.getElementById('net-search-wrap')
-  if (input) { input.value = ''; input.focus() }
-  if (wrap)  wrap.classList.remove('has-query')
-  netFilterTweaks('')
-}
 
 // ─── Page: FiveM — see js/fivem-logic.js ───────────────────────────────────────
 

@@ -3208,6 +3208,10 @@ aoHeroEyebrow:'App scanner', aoHeroDetected:'{n} apps detected', aoHeroScanning:
       confirmNone:'All recommended tweaks are already applied.',
       secAdvanced:'Advanced (security)',
     },
+    fvHero: {
+      dial:'ready', statLeft:'Not applied', statSafe:'Safe defaults left', ctaDone:'Safe defaults applied',
+      confirmBody:'Apply {n} safe defaults for FiveM? None of them is flagged risky or needs a restart.', confirmNone:'All safe defaults are already applied.',
+    },
     tab: {
       showAll:'Show all {n}', showLess:'Show less', 
       chipAll:'All', chipRecommended:'Recommended', chipApplied:'Applied', chipReboot:'Needs restart', chipRisky:'Risky',

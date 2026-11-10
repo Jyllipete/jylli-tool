@@ -3,6 +3,15 @@
 let _fivemHudOpen = false
 
 // ─── Page: FiveM ──────────────────────────────────────────────────────────────
+// Safe, no-restart defaults that "Apply all safe" turns on (ids of the rows built in buildFiveM)
+const FIVEM_SAFE_IDS = [
+  'fivem-priority','fivem-io-priority','fivem-mmcss','fivem-fso','fivem-gamebar',
+  'fivem-network','fivem-vm','fivem-streaming-mem','fivem-commandline',
+  'fivem-worker-threads','fivem-disable-crash-reporter','fivem-disable-anticheat-upload',
+  'fivem-disable-update-checks','fivem-preload-ipl','fivem-reduce-draw-distance',
+  'fivem-defender','fivem-hang-fix',
+]
+
 async function buildFiveM(c) {
   if (!settings.isPremium) { await JylliPremium.build(c, 'fivem'); return }
   c.appendChild(makeTip(tUI('fivemTipTitle'), 'info'))
@@ -92,50 +101,31 @@ async function buildFiveM(c) {
       ]
     },
   ]
-  // ── Optimization Score card (full-width) ─────────────────────────────────
-  const optiCard = document.createElement('div')
-  optiCard.className = 'fivem-opti-card'
-  const totalTweaks = sections.reduce((n, s) => n + s.rows.length, 0)
-  optiCard.innerHTML = `
-    <div class="fivem-opti-score-ring">
-      <svg width="60" height="60" viewBox="0 0 60 60">
-        <circle class="fivem-opti-score-ring-track" cx="30" cy="30" r="26"/>
-        <circle class="fivem-opti-score-ring-fill" id="fivem-opti-ring" cx="30" cy="30" r="26"/>
-      </svg>
-      <div class="fivem-opti-score-num" id="fivem-opti-score-num">—</div>
-    </div>
-    <div class="fivem-opti-body">
-      <div class="fivem-opti-title">${tUI('fivemOptiCardTitle')}</div>
-      <div class="fivem-opti-tier" id="fivem-opti-tier">—</div>
-      <div class="fivem-opti-bar-track"><div class="fivem-opti-bar-fill" id="fivem-opti-bar"></div></div>
-      <div class="fivem-opti-subtitle" id="fivem-opti-subtitle">${tUI('fivemTweaksApplied').replace('{n}','—').replace('{total}',totalTweaks)}</div>
-    </div>
-    <button class="fivem-opti-cta" onclick="fivemApplyAllSafe(this)">${tUI('fivemApplyAllSafeBtn')}</button>
-  `
-  c.appendChild(optiCard)
-
-  // Animate score ring — read from settings (source of truth), not DOM
-  setTimeout(() => {
-    const allIds = sections.flatMap(s => s.rows.map(r => r.id)).filter(id => id !== 'fivem-clear-cache-btn')
-    const applied = allIds.filter(id => settings[`tweak_${id}`] === 'applied').length
-    const pct = totalTweaks > 0 ? Math.round(applied / totalTweaks * 100) : 0
-    const circ = 163.4
-    const ring = document.getElementById('fivem-opti-ring')
-    const num = document.getElementById('fivem-opti-score-num')
-    const bar = document.getElementById('fivem-opti-bar')
-    const tier = document.getElementById('fivem-opti-tier')
-    const sub = document.getElementById('fivem-opti-subtitle')
-    if (ring) ring.style.strokeDashoffset = circ - (circ * pct / 100)
-    if (num) num.textContent = pct + '%'
-    if (bar) bar.style.width = pct + '%'
-    if (tier) {
-      if (pct >= 90) tier.textContent = tUI('fivemOptiTierFull')
-      else if (pct >= 60) tier.textContent = tUI('fivemOptiTierGood')
-      else if (pct >= 30) tier.textContent = tUI('fivemOptiTierPartial')
-      else tier.textContent = tUI('fivemOptiTierNone')
-    }
-    if (sub) sub.textContent = tUI('fivemTweaksApplied').replace('{n}', applied).replace('{total}', totalTweaks)
-  }, 350)
+  // ── Readiness hero (js/ui/tab-kit.js): score of applied tweaks + the working "Apply all safe" action ──
+  const fvAllIds = sections.flatMap(sec => sec.rows.map(r => r.id)).filter(id => id !== 'fivem-clear-cache-btn')
+  const fvHost = document.createElement('div')
+  fvHost.className = 'tk-hero'
+  c.appendChild(fvHost)
+  const fvT = (k, v) => tG('fvHero', k, v)
+  const fvHero = JylliHero.mount(fvHost, {
+    id: 'fivem-hero', eyebrow: '', title: tUI('fivemOptiCardTitle'), lead: '', dial: { label: fvT('dial') },
+    stats: [{ k: 'left', label: fvT('statLeft') }, { k: 'safe', label: fvT('statSafe') }],
+    cta: { id: 'fivem-apply-safe', icon: 'wand-magic-sparkles', label: tUI('fivemApplyAllSafeBtn'), onClick: () => fivemApplyAllSafe() },
+  })
+  window._fvRefresh = function () {
+    const applied = fvAllIds.filter(id => tweakState(id) === 'applied').length
+    const total = fvAllIds.length
+    const pct = total > 0 ? Math.round(applied / total * 100) : 0
+    const safeLeft = fivemSafeTodo().length
+    fvHero.update({
+      pct, tone: pct >= 60 ? 'ok' : 'accent',
+      eyebrow: pct >= 90 ? tUI('fivemOptiTierFull') : pct >= 60 ? tUI('fivemOptiTierGood') : pct >= 30 ? tUI('fivemOptiTierPartial') : tUI('fivemOptiTierNone'),
+      lead: tUI('fivemTweaksApplied').replace('{n}', applied).replace('{total}', total),
+      stats: { left: total - applied, safe: safeLeft },
+      cta: { badge: safeLeft, done: safeLeft === 0, label: safeLeft === 0 ? fvT('ctaDone') : tUI('fivemApplyAllSafeBtn') },
+    })
+  }
+  setTimeout(() => { if (window._fvRefresh) window._fvRefresh() }, 0)
 
   // ── Feature Cards grid ────────────────────────────────────────────────────
   const hero = document.createElement('div')
@@ -291,17 +281,10 @@ async function buildFiveM(c) {
   `
   c.appendChild(bookmarksPanel)
 
-  // ── Search bar ────────────────────────────────────────────────────────────
-  const searchWrap = document.createElement('div')
-  searchWrap.className = 'fivem-search-wrap'
-  searchWrap.id = 'fivem-search-wrap'
-  searchWrap.innerHTML = `
-    <i class="fa fa-magnifying-glass"></i>
-    <input class="fivem-search-input" id="fivem-search-input" placeholder="${tUI('genSearchPlaceholder')}" oninput="fivemSearchHandler(this)">
-    <span class="fivem-search-count" id="fivem-search-count"></span>
-    <button class="fivem-search-clear" onclick="fivemSearchClear()" title="Clear"><i class="fa fa-xmark"></i></button>
-  `
-  c.appendChild(searchWrap)
+  // ── Search + chips (shared kit) ───────────────────────────────────────────
+  const fvTb = JylliTab.toolbar({ placeholder: tUI('genSearchPlaceholder'), chips: ['all', 'applied', 'reboot', 'risky'] })
+  fvTb.el.id = 'fivem-search-wrap'
+  c.appendChild(fvTb.el)
 
   // ── System Tweaks sections ─────────────────────────────────────────────────
   const sectionLabel = document.createElement('div')
@@ -437,6 +420,16 @@ async function buildFiveM(c) {
     }
   })
 
+  window._fvFilter = JylliFilter.mount(c, {
+    item: '.tweak-row', section: '.section-card', input: fvTb.input, chipsEl: fvTb.chipsEl,
+    onResult: r => {
+      let nm = c.querySelector('.tk-nomatch')
+      if (r.total > 0 && r.shown === 0) { if (!nm) { nm = JylliTab.noMatch(r.q, () => window._fvFilter.set({ q: '', chip: 'all' })); c.appendChild(nm) } else nm.querySelector('.j-empty-sub').textContent = tG('tab', 'noMatchSub', { q: r.q }) }
+      else if (nm) nm.remove()
+    },
+  })
+  registerPageCleanup('fivem', () => { if (window._fvFilter) window._fvFilter.destroy(); window._fvFilter = null; window._fvRefresh = null })
+  window._fvFilter.refresh()
   // ── Restore collapsed sections + initial progress ─────────────────────────
   const collapsed = JSON.parse(localStorage.getItem('fivem_sec_collapsed') || '[]')
   collapsed.forEach(idx => {
@@ -447,69 +440,21 @@ async function buildFiveM(c) {
   })
 }
 
-function fivemFilterTweaks(query) {
-  const q = query.trim().toLowerCase()
-  const content = document.getElementById('page-content')
-  if (!content) return
-  const esc = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-  let visibleCount = 0
-  content.querySelectorAll('.tweak-row').forEach(row => {
-    const visible = !q || row.textContent.toLowerCase().includes(q)
-    row.style.display = visible ? '' : 'none'
-    if (visible) {
-      visibleCount++
-      const nameEl = row.querySelector('.tweak-name')
-      const descEl = row.querySelector('.tweak-desc')
-      const highlight = el => {
-        if (!el) return
-        const text = el.textContent
-        if (!q) { el.innerHTML = text; return }
-        el.innerHTML = text.replace(new RegExp(`(${esc(q)})`, 'gi'), '<mark class="jx-715">$1</mark>')
-      }
-      highlight(nameEl)
-      highlight(descEl)
-    }
-  })
-  content.querySelectorAll('.section-card').forEach(sec => {
-    const anyVisible = [...sec.querySelectorAll('.tweak-row')].some(r => r.style.display !== 'none')
-    sec.style.display = anyVisible ? '' : 'none'
-  })
-  const countEl = document.getElementById('fivem-search-count')
-  if (countEl) countEl.textContent = q ? visibleCount + ' results' : ''
+// Safe defaults not yet on, and offered as a row on this PC (no danger confirmation, tier 1)
+function fivemSafeTodo() {
+  return FIVEM_SAFE_IDS.filter(id => document.querySelector('[data-tweak-apply="' + id + '"]') && !document.getElementById('tog-' + id)
+    && tweakState(id) !== 'applied' && tweakState(id) !== 'pre-applied' && !((window._tweakMeta && window._tweakMeta[id] && window._tweakMeta[id].safetyTier) >= 2) && !(window._tweakMeta && window._tweakMeta[id] && window._tweakMeta[id].retired))
 }
 
-function fivemSearchHandler(input) {
-  const wrap = document.getElementById('fivem-search-wrap')
-  if (wrap) wrap.classList.toggle('has-query', input.value.length > 0)
-  fivemFilterTweaks(input.value)
-}
-
-function fivemSearchClear() {
-  const input = document.getElementById('fivem-search-input')
-  const wrap = document.getElementById('fivem-search-wrap')
-  if (input) { input.value = ''; input.focus() }
-  if (wrap) wrap.classList.remove('has-query')
-  fivemFilterTweaks('')
-}
-
-function fivemApplyAllSafe(btn) {
-  const SAFE_IDS = [
-    'fivem-priority','fivem-io-priority','fivem-mmcss','fivem-fso','fivem-gamebar',
-    'fivem-network','fivem-vm','fivem-streaming-mem','fivem-commandline',
-    'fivem-worker-threads','fivem-disable-crash-reporter','fivem-disable-anticheat-upload',
-    'fivem-disable-update-checks','fivem-preload-ipl','fivem-reduce-draw-distance',
-    'fivem-defender','fivem-hang-fix',
-  ]
-  let applied = 0
-  SAFE_IDS.forEach(id => {
-    const toggle = document.querySelector(`#tweak-${id} input[type=checkbox], [data-id="${id}"] input[type=checkbox]`)
-    if (toggle && !toggle.checked) { toggle.click(); applied++ }
-  })
-  if (btn) {
-    btn.textContent = tUI('fivemApplyAllSafeDone').replace('{n}', applied)
-    btn.disabled = true
-    setTimeout(() => { btn.textContent = tUI('fivemApplyAllSafeBtn'); btn.disabled = false }, 3000)
-  }
+async function fivemApplyAllSafe() {
+  const ids = fivemSafeTodo()
+  if (!ids.length) { toast(tUI('fivemApplyAllSafe'), tG('fvHero', 'confirmNone'), 'ok'); return }
+  try {
+    await showConfirm({ title: tUI('fivemApplyAllSafeBtn'), body: tG('fvHero', 'confirmBody', { n: ids.length }), okText: tUI('apply'), okStyle: 'primary', icon: 'fa-wand-magic-sparkles' })
+  } catch { return }
+  const { applied, failed } = await applyTweakBatch(ids, 'apply')
+  const msg = tUI('fivemApplyAllSafeDone').replace('{n}', applied) + (failed ? ' · ' + tUI('batchFailed').replace('{failed}', failed) : '')
+  toast(tUI('fivemApplyAllSafe'), msg, applied > 0 ? 'ok' : 'warn')
 }
 
 function toggleFivemSection(idx) {
