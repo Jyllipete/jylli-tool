@@ -8224,19 +8224,6 @@ async function buildHardware(c) {
   const isAmd    = /amd|radeon|\brx\b/.test(gpu)
   const isIntel  = cpu.includes('intel')
 
-  // ── Sticky progress header ────────────────────────────────────────────
-  const hwProgHeader = document.createElement('div')
-  hwProgHeader.className = 'hw-progress-header'
-  hwProgHeader.id = 'hw-progress-header'
-  hwProgHeader.innerHTML = `
-    <i class="fa fa-microchip jx-565"></i>
-    <span id="hw-prog-label" class="jx-566">—</span>
-    <div class="fivem-progress-bar-track jx-2">
-      <div class="fivem-progress-bar-fill" id="hw-prog-fill" style="width:0%;background:linear-gradient(90deg,var(--c-accent),rgba(var(--pink-rgb),0.5))"></div>
-    </div>
-    <span id="hw-prog-pct" class="jx-567">0%</span>
-  `
-  c.appendChild(hwProgHeader)
 
   const warn = document.createElement('div')
   warn.className = 'hw-warn-banner'
@@ -8251,54 +8238,10 @@ async function buildHardware(c) {
   }
   c.appendChild(warn)
 
-  // ── Step guide ────────────────────────────────────────────────────────
-  const stepGuide = document.createElement('div')
-  stepGuide.className = 'hw-step-guide'
-  stepGuide.innerHTML = `
-    <span class="hw-step-chip">
-      <span class="hw-step-num">1</span>
-      <i class="fa fa-shield-halved jx-17"></i>
-      <span>${tUI('hwStep1')}</span>
-    </span>
-    <span class="hw-step-arrow"><i class="fa fa-chevron-right"></i></span>
-    <span class="hw-step-chip">
-      <span class="hw-step-num">2</span>
-      <i class="fa fa-bolt jx-11"></i>
-      <span>${tUI('hwStep2')}</span>
-    </span>
-    <span class="hw-step-arrow"><i class="fa fa-chevron-right"></i></span>
-    <span class="hw-step-chip">
-      <span class="hw-step-num">3</span>
-      <i class="fa fa-display jx-16"></i>
-      <span>${tUI('hwStep3')}</span>
-    </span>
-    <span class="hw-step-arrow"><i class="fa fa-chevron-right"></i></span>
-    <span class="hw-step-chip jx-569">
-      <i class="fa fa-rotate-right jx-17"></i>
-      <span>${tUI('hwStep4')}</span>
-    </span>
-  `
-  c.appendChild(stepGuide)
 
-  const hwtoolbar = document.createElement('div')
-  hwtoolbar.className = 'hw-search-wrap'
-  hwtoolbar.id = 'hw-search-wrap'
-  hwtoolbar.innerHTML = `
-    <i class="fa fa-magnifying-glass hw-search-icon"></i>
-    <input id="hw-search" type="text" class="hw-search-input"
-      placeholder="${tUI('genSearchPlaceholder')}"
-      oninput="hwFilterTweaks(this.value);document.getElementById('hw-search-wrap').classList.toggle('has-query',!!this.value)"
-      onkeydown="if(event.key==='Escape'){this.value='';hwFilterTweaks('');document.getElementById('hw-search-wrap').classList.remove('has-query')}">
-    <button id="hw-search-clear" class="hw-search-clear"
-      onclick="document.getElementById('hw-search').value='';hwFilterTweaks('');this.closest('.hw-search-wrap').classList.remove('has-query')">×</button>
-  `
-  c.appendChild(hwtoolbar)
-
-  const hwNoResults = document.createElement('div')
-  hwNoResults.id = 'hw-no-results'
-  hwNoResults.style.cssText = 'display:none;text-align:center;padding:40px 0;color:var(--c-text-tertiary)'
-  hwNoResults.innerHTML = '<i class="fa fa-magnifying-glass jx-570"></i><span id="hw-no-results-msg"></span>'
-  c.appendChild(hwNoResults)
+  const hwTb = JylliTab.toolbar({ placeholder: tUI('genSearchPlaceholder') })
+  hwTb.el.id = 'hw-search-wrap'
+  c.appendChild(hwTb.el)
 
   const SECTIONS = [
     ...(isNvidia ? [{ secId:'hw-nvidia', get title() { return tUI('hwSecNvidiaGpu') }, get sub() { return tUI('hwSecNvidiaGpuSub') }, cards:[
@@ -8392,6 +8335,7 @@ async function buildHardware(c) {
 
   // ── CPU Topology Optimizer panel ──────────────────────────────────────────
   const topoSec = makeSection(tUI('hwCpuTopoTitle'), tUI('hwCpuTopoSub'))
+  topoSec.dataset.secId = 'hw-tool-topo'
   const topoInner = document.createElement('div')
   topoInner.className = 'hw-tool-panel'
   topoInner.innerHTML = `
@@ -8423,6 +8367,7 @@ async function buildHardware(c) {
 
   // ── Thermal Throttle Detective panel ──────────────────────────────────────
   const thermalSec = makeSection(tUI('hwThermalTitle'), tUI('hwThermalSub'))
+  thermalSec.dataset.secId = 'hw-tool-thermal'
   const thermalInner = document.createElement('div')
   thermalInner.className = 'hw-tool-panel'
   thermalInner.innerHTML = `
@@ -8451,6 +8396,7 @@ async function buildHardware(c) {
 
   // ── Power Efficiency Tracker panel ────────────────────────────────────────
   const effSec = makeSection(tUI('hwEffTitle'), tUI('hwEffSub'))
+  effSec.dataset.secId = 'hw-tool-eff'
   const effInner = document.createElement('div')
   effInner.className = 'hw-tool-panel'
   effInner.innerHTML = `
@@ -8482,6 +8428,7 @@ async function buildHardware(c) {
 
   // ── Latency Budget Visualizer panel ──────────────────────────────────────
   const latSec = makeSection(tUI('hwLatTitle'), tUI('hwLatSub'))
+  latSec.dataset.secId = 'hw-tool-lat'
   const latInner = document.createElement('div')
   latInner.className = 'hw-tool-panel'
   latInner.innerHTML = `
@@ -8506,12 +8453,10 @@ async function buildHardware(c) {
 function hwRefreshCounters() {
   const secs = window._hwSections
   if (!secs) return
-  let totalApplied = 0, totalCards = 0
   secs.forEach(sec => {
     if (!sec.secId) return
     const ids = (sec.cards || []).map(c => c.id)
     const applied = ids.filter(id => settings[`tweak_${id}`] === 'applied').length
-    totalApplied += applied; totalCards += ids.length
     const badge = document.getElementById('spb-' + sec.secId)
     if (!badge) return
     const isFull = applied === ids.length && ids.length > 0
@@ -8520,13 +8465,8 @@ function hwRefreshCounters() {
     badge.classList.toggle('spb-full', isFull)
     badge.classList.toggle('spb-partial', applied > 0 && !isFull)
   })
-  const fill  = document.getElementById('hw-prog-fill')
-  const label = document.getElementById('hw-prog-label')
-  const pct   = document.getElementById('hw-prog-pct')
-  const pctVal = totalCards ? Math.round((totalApplied / totalCards) * 100) : 0
-  if (fill)  fill.style.width = pctVal + '%'
-  if (pct)   pct.textContent = pctVal + '%'
-  if (label) label.textContent = `${totalApplied} / ${totalCards} ${tUI('hwProgLabel') || 'tweaks applied'}`
+  document.querySelectorAll('#page-content .tweak-card[id^="tcw-"]').forEach(card => { card.dataset.applied = tweakState(card.id.slice(4)) === 'applied' ? '1' : '0' })
+  if (window._hwFilter) window._hwFilter.refresh()
 }
 
 // ─── CPU Topology Optimizer UI ────────────────────────────────────────────────
@@ -8892,55 +8832,6 @@ const HW_SEARCH_SYNONYMS = {
   overclock:'power plan boost cstate', crash:'mitigation vbs hvci cstate',
   anticheat:'vbs hvci', buffer:'wasapi audio exclusive pool latency',
   power:'efficiency watt tdp power plan', driver:'nvidia amd gpu profile',
-}
-
-function hwFilterTweaks(query) {
-  const q = query.trim().toLowerCase()
-  const content = document.getElementById('page-content')
-  if (!content) return
-  const synonymTerms = HW_SEARCH_SYNONYMS[q] || null
-  const sectionVisible = new Map()
-  let anyCardVisible = false
-
-  content.querySelectorAll('.tweak-card-grid .tweak-card').forEach(card => {
-    const haystack = (card.dataset.search || card.textContent).toLowerCase()
-    let visible = !q || haystack.includes(q)
-    if (!visible && synonymTerms) {
-      visible = synonymTerms.split(' ').some(t => haystack.includes(t))
-    }
-    card.style.display = visible ? '' : 'none'
-    if (visible) anyCardVisible = true
-    const sec = card.closest('.section-card')
-    if (sec) sectionVisible.set(sec, (sectionVisible.get(sec) || false) || visible)
-  })
-
-  // Show/hide tweak sections
-  sectionVisible.forEach((anyVisible, sec) => { sec.style.display = anyVisible ? '' : 'none' })
-
-  // Also filter advanced panel sections (no .tweak-card-grid) by their header text
-  if (q) {
-    content.querySelectorAll('.section-card').forEach(sec => {
-      if (sec.querySelector('.tweak-card-grid')) return // already handled
-      const headerText = (sec.querySelector('.section-title')?.textContent || '' +
-        sec.querySelector('.section-sub')?.textContent || '').toLowerCase()
-      const matches = headerText.includes(q) || (synonymTerms && synonymTerms.split(' ').some(t => headerText.includes(t)))
-      sec.style.display = matches ? '' : 'none'
-    })
-  } else {
-    content.querySelectorAll('.section-card').forEach(sec => { sec.style.display = '' })
-  }
-
-  // No-results empty state
-  const noRes = document.getElementById('hw-no-results')
-  if (noRes) {
-    const showEmpty = !!q && !anyCardVisible
-    noRes.style.display = showEmpty ? '' : 'none'
-    if (showEmpty) noRes.innerHTML = renderEmptyState('fa-magnifying-glass', 'emptySearch', 'emptySearchSub')
-  }
-
-  // Clear button visibility
-  const clearBtn = document.getElementById('hw-search-clear')
-  if (clearBtn) clearBtn.style.display = q ? '' : 'none'
 }
 
 // ─── Page: Network ────────────────────────────────────────────────────────────

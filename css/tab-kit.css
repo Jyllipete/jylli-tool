@@ -172,3 +172,8 @@ body.game-live .jh *, body.game-live .jh { animation: none !important; }
 .tk-hero:empty { display: none; }
 .win-toolbar { margin-bottom: 4px; }
 .section-card.jh-flash { animation: jh-flash calc(1200ms * var(--motion-scale, 1)) ease-out; }
+
+/* ───────── hardware tabs: restore-point notice as a calm callout ───────── */
+#page-content .hw-warn-banner { display: flex; align-items: center; gap: 12px; padding: 10px 14px; border-radius: var(--r-lg); background: var(--surface-1); border: 1px solid var(--hairline-strong); }
+#page-content .hw-warn-banner .hw-warn-text { font-size: var(--font-size-md); font-weight: 500; color: var(--c-text-secondary); }
+#page-content .hw-warn-banner > span:first-child { color: var(--c-warning); }

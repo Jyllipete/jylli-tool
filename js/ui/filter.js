@@ -7,9 +7,10 @@
   const CHIPS = ['all', 'recommended', 'applied', 'reboot', 'risky']
 
   // Pure: does an item with this meta pass the query and chip?
-  function matches(meta, q, chip) {
+  function matches(meta, q, chip, alts) {
     const s = String(q || '').trim().toLowerCase()
-    if (s && !String((meta && meta.search) || '').toLowerCase().includes(s)) return false
+    const hay = String((meta && meta.search) || '').toLowerCase()
+    if (s && !hay.includes(s) && !(alts || []).some(a => a && hay.includes(String(a).toLowerCase()))) return false
     switch (chip || 'all') {
       case 'recommended': return !!meta.recommended && !meta.applied
       case 'applied': return !!meta.applied
@@ -35,15 +36,17 @@
   if (typeof document === 'undefined') return
 
   // mount(rootEl, { item: '.x-row', section: '.x-sec', input: HTMLInputElement|null, chipsEl: Element|null,
+  //                 skip: selector of items/sections to ignore (e.g. '[data-tab-off]'), expand(q) -> extra search terms (synonyms),
   //                 onResult({shown,total,q,chip}), onChips(counts) })
   api.mount = function (rootEl, o) {
     let q = '', chip = 'all', timer = 0
-    const items = () => [...rootEl.querySelectorAll(o.item)]
-    const sections = () => o.section ? [...rootEl.querySelectorAll(o.section)] : []
+    const items = () => [...rootEl.querySelectorAll(o.item)].filter(el => !(o.skip && el.closest(o.skip)))
+    const sections = () => o.section ? [...rootEl.querySelectorAll(o.section)].filter(el => !(o.skip && el.matches(o.skip))) : []
     function run() {
       const all = items()
+      const alts = o.expand && q ? o.expand(q.trim().toLowerCase()) : null
       let shown = 0
-      for (const el of all) { const ok = matches(metaOf(el), q, chip); el.hidden = !ok; if (ok) shown++ }
+      for (const el of all) { const ok = matches(metaOf(el), q, chip, alts); el.hidden = !ok; if (ok) shown++ }
       for (const sec of sections()) {
         const own = [...sec.querySelectorAll(o.item)]
         if (!own.length) continue
