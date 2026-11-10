@@ -3380,6 +3380,12 @@ aoHeroEyebrow:'Sovellusskanneri', aoHeroDetected:'{n} sovellusta tunnistettu', a
       resumeCard:'Viimeistele asennus · 2 min',
       healthLate:'Windowsin kuntotarkistus valmistui. Tiedot ovat Kotinäkymässä.',
     },
+    tab: {
+      chipAll:'Kaikki', chipRecommended:'Suositellut', chipApplied:'Käytössä', chipReboot:'Vaatii uudelleenkäynnistyksen', chipRisky:'Riskialttiit',
+      searchTweaks:'Hae säätöjä', noMatchTitle:'Ei osumia', noMatchSub:'Mikään säätö ei vastaa hakua "{q}". Kokeile muita sanoja tai tyhjennä suodatin.', clearFilter:'Tyhjennä suodatin',
+      loadFailTitle:'Sivun lataus epäonnistui', loadFailSub:'Järjestelmän lukemisessa tapahtui virhe.', retry:'Yritä uudelleen',
+      loading:'Ladataan', collapse:'Pienennä osio', expand:'Laajenna osio', appliedOf:'{a} / {n} käytössä', more:'Lisää', filterBy:'Suodata tilan mukaan',
+    },
     tour: {
       of:'{i} / {n}', next:'Seuraava', back:'Takaisin', done:'Valmis', skip:'Ohita kierros', turnOff:'Poista kierrokset käytöstä', help:'Toista tämä kierros',
       label:'Opastettu kierros', toursOn:'Opastetut kierrokset', toursOnSub:'Näytä lyhyt kierros, kun avaat sivun ensimmäistä kertaa.',

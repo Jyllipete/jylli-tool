@@ -3197,6 +3197,12 @@ aoHeroEyebrow:'App scanner', aoHeroDetected:'{n} apps detected', aoHeroScanning:
       resumeCard:'Finish setting up · 2 min',
       healthLate:'Windows health check finished. Details are on Home.',
     },
+    tab: {
+      chipAll:'All', chipRecommended:'Recommended', chipApplied:'Applied', chipReboot:'Needs restart', chipRisky:'Risky',
+      searchTweaks:'Search tweaks', noMatchTitle:'Nothing matches', noMatchSub:'No tweaks match "{q}". Try different words or clear the filter.', clearFilter:'Clear filter',
+      loadFailTitle:'Could not load this page', loadFailSub:'Something went wrong while reading your system.', retry:'Retry',
+      loading:'Loading', collapse:'Collapse section', expand:'Expand section', appliedOf:'{a} of {n} applied', more:'More', filterBy:'Filter by status',
+    },
     tour: {
       of:'{i} of {n}', next:'Next', back:'Back', done:'Done', skip:'Skip tour', turnOff:'Turn off tours', help:'Replay this tour',
       label:'Guided tour', toursOn:'Guided tours', toursOnSub:'Show a short tour the first time you open each page.',

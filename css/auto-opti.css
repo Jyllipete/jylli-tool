@@ -219,7 +219,7 @@
 html.motion-reduced .ao-orbit, html.motion-reduced .ao-ring-dash, html.motion-reduced .ao-seg[data-state="running"], html.motion-reduced .ao-enter > *,
 html.motion-reduced .ao-chip, html.motion-reduced .ao-chg, html.motion-reduced .ao-probe[data-state="start"] .ao-pi, html.motion-reduced .ao-ripple.go { animation: none; }
 html.motion-reduced #auto-opti, html.motion-reduced .ao-core-c { transition: none; }
-body.game-running #auto-opti, body.game-running #auto-opti * { animation: none !important; transition: none !important; }
+body.game-live #auto-opti, body.game-live #auto-opti * { animation: none !important; transition: none !important; }
 @media (prefers-reduced-motion: reduce) { .ao-orbit, .ao-ring-dash { animation: none; } }
 
 /* Maximum mode */

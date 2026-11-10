@@ -60,7 +60,7 @@
   if (typeof document === 'undefined') return
 
   const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]))
-  const reduced = () => document.documentElement.classList.contains('motion-reduced') || document.body.classList.contains('game-running')
+  const reduced = () => document.documentElement.classList.contains('motion-reduced') || document.body.classList.contains('game-live')
 
   /** mount(container, { t(key, vars), catLabel(cat), appName(id) }) -> controller */
   function mount(container, opts) {

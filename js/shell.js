@@ -39,7 +39,7 @@
     apps: c => buildAppOptimizer(c),
     fivem: c => buildFiveM(c),
     latency: c => buildLatencyMonitor(c),
-    replay: c => { _pageCleanupFns['replay'] = replayClose; return buildReplay(c) },
+    replay: c => { registerPageCleanup('replay', replayClose); return buildReplay(c) },
     cleanup: c => buildCleanup(c),
     debloat: c => buildDebloater(c),
     startup: c => buildStartupManager(c),

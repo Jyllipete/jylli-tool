@@ -87,4 +87,4 @@
 @media (max-width: 760px) { .ar-split { grid-template-columns: 1fr; gap: 20px; } }
 html.motion-reduced .ar-enter, html.motion-reduced .ar-enter > * { animation: none; }
 html.motion-reduced #arrival, html.motion-reduced .ar-stage { transition: none; }
-body.game-running #arrival, body.game-running #arrival * { animation: none !important; transition: none !important; }
+body.game-live #arrival, body.game-live #arrival * { animation: none !important; transition: none !important; }

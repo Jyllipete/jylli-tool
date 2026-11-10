@@ -15,6 +15,7 @@
 <link rel="stylesheet" href="css/tour.css">
 <link rel="stylesheet" href="css/arrival.css">
 <link rel="stylesheet" href="css/auto-opti.css">
+<link rel="stylesheet" href="css/tab-kit.css">
 <link rel="stylesheet" href="css/app-hero.css">
 <link rel="stylesheet" href="css/bloat-hero.css">
 <link rel="stylesheet" href="css/bios.css">
@@ -537,6 +538,8 @@
 <script src="js/tour.js"></script>
 <script src="js/arrival.js"></script>
 <script src="js/auto-opti/reactor.js"></script>
+<script src="js/ui/filter.js"></script>
+<script src="js/ui/tab-kit.js"></script>
 <script src="js/pages/app-hero.js"></script>
 <script src="js/pages/bloat-hero.js"></script>
 <script src="js/auto-opti.js"></script>
@@ -602,7 +605,7 @@ let _recentPages = []
 let installedApps = new Set()
 let gameWatcherRunning = false
 const _pageCleanupFns = {}
-function registerPageCleanup(pageId, fn) { _pageCleanupFns[pageId] = fn }
+function registerPageCleanup(pageId, fn) { const prev = _pageCleanupFns[pageId]; _pageCleanupFns[pageId] = prev ? () => { try { prev() } catch {} ; fn() } : fn }   // additive: several modules can clean up one page
 const _tweakInflight = new Set()
 let autoPulseEnabled = false
 let autoPulseActive = false
@@ -12011,7 +12014,7 @@ function buildDebloater(c) {
   window._bloatRefresh = () => _bloatRefreshCard(heroCtl)
   _bloatScanStart = _visitStart
   const _heroGiveUp = setTimeout(() => window._bloatRefresh?.(), 45000)
-  _pageCleanupFns['debloater'] = () => { window._bloatRefresh = null; clearTimeout(_heroGiveUp) }
+  registerPageCleanup('debloater', () => { window._bloatRefresh = null; clearTimeout(_heroGiveUp) })
 
   // Sub-tab toggle (segmented control)
   const tabToggleWrap = document.createElement('div')

@@ -94,7 +94,7 @@
   .bh-cmd { flex-direction: column; width: 100%; } .bh-cta, .bh-rescan { width: 100%; }
 }
 html.motion-reduced .bh-enter > *, html.motion-reduced .bh-beam, html.motion-reduced .bh-status, html.motion-reduced .bh-track, html.motion-reduced .bh-pop .bh-n,
-body.game-running .bh *, body.game-running .bh { animation: none !important; }
+body.game-live .bh *, body.game-live .bh { animation: none !important; }
 @media (prefers-reduced-motion: reduce) { .bh-beam, .bh-status, .bh-track, .bh-enter > * { animation: none !important; } }
 
 /* section a hero row / ring click jumped to */

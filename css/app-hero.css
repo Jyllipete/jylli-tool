@@ -124,5 +124,5 @@
   .aoh-cmd { flex-direction: column; width: 100%; } .aoh-cta { width: 100%; }
 }
 html.motion-reduced .aoh-enter > *, html.motion-reduced .aoh-arc[data-state="live"], html.motion-reduced .aoh-beam, html.motion-reduced .aoh-ripple.go, html.motion-reduced .aoh-dot, html.motion-reduced .aoh-flash,
-body.game-running .aoh *, body.game-running .aoh { animation: none !important; }
+body.game-live .aoh *, body.game-live .aoh { animation: none !important; }
 @media (prefers-reduced-motion: reduce) { .aoh-beam, .aoh-arc[data-state="live"], .aoh-dot { animation: none !important; } }

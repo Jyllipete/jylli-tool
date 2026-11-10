@@ -40,6 +40,8 @@
 .j-badge-ok     { color: var(--c-success); background: var(--c-success-muted); border-color: transparent; }
 .j-badge-warn   { color: var(--c-warning); background: var(--c-warning-muted); border-color: transparent; }
 .j-badge-danger { color: var(--c-danger);  background: var(--c-danger-muted);  border-color: transparent; }
+.j-badge-warning { color: var(--c-warning); background: var(--c-warning-muted); border-color: transparent; }
+.j-badge-success { color: var(--c-success); background: var(--c-success-muted); border-color: transparent; }
 .j-badge-info   { color: var(--c-info);    background: var(--c-info-muted);    border-color: transparent; }
 .j-badge-accent { color: var(--c-accent-fg);  background: var(--c-accent-muted);  border-color: transparent; }
 .j-badge-pro    { color: var(--c-accent-fg); background: transparent; border: 1px solid var(--c-accent-ring); letter-spacing: .04em; text-transform: uppercase; font-size:11px; height: 16px; }
@@ -624,14 +626,14 @@ html #loading { flex-direction: row; justify-content: flex-start; padding-left: 
 * { scrollbar-width: thin; scrollbar-color: var(--hairline-strong) transparent; }
 
 /* ── Legacy page normalization (pages not yet rebuilt on ui.*): quiet buttons, no glow, no side rails, sentence-case labels ── */
-#page-content :where(button, .btn, .section-card, .pulse-hero, .pulse-hero-badge, .lr-card, .startup-summary-bar, .rp-v2-hero, [class*="-hero"], [class*="-badge"], .pill-slider) { box-shadow: none; }
+#page-content :where(button, .btn, .section-card, .pulse-hero, .pulse-hero-badge, .lr-card, .startup-summary-bar, .rp-v2-hero, [class*="-hero"], [class*="-badge"], .pill-slider):not(.jk, .jk *) { box-shadow: none; }
 #page-content .btn-primary { background: var(--c-accent-muted); color: var(--c-accent-fg); border: 1px solid var(--c-accent-ring); filter: none; font-weight: 500; }
 #page-content .btn-primary:hover:not(:disabled) { background: color-mix(in srgb, var(--c-accent) 22%, transparent); filter: none; }
 #page-content .btn-primary::after { display: none; }
 #page-content .btn-primary:disabled { background: var(--surface-2); color: var(--c-text-tertiary); border-color: var(--hairline); }
 #page-content :is(#pf-scan-btn, #rp-create-btn, #bios-scan-btn, #cleanup-run-btn, #net-apply-btn).btn-primary { background: var(--c-accent); color: var(--on-accent); border-color: transparent; font-weight: 600; }
-#page-content :where(*):not(.j-badge-pro) { text-transform: none; }
-#page-content :where([class*="label"], [class*="badge"], [class*="title"], th, [class*="stat"], [class*="pill"]) { letter-spacing: 0; }
+#page-content :where(*):not(.j-badge-pro, .jk, .jk *) { text-transform: none; }
+#page-content :where([class*="label"], [class*="badge"], [class*="title"], th, [class*="stat"], [class*="pill"]):not(.jk, .jk *) { letter-spacing: 0; }
 #page-content :is(.qh-row, .lr-card, .pulse-hero, .startup-summary-bar, .startup-warn-banner, [class*="lr-rail"], .section-header) { border-left-width: 1px; border-left-color: var(--hairline); }
 #page-content .qh-row { position: relative; padding-left: 28px; }
 #page-content .qh-row::before { content: ''; position: absolute; left: 12px; top: 50%; width: 6px; height: 6px; margin-top: -3px; border-radius: 50%; background: var(--c-text-tertiary); }

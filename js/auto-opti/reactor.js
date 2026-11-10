@@ -3,7 +3,7 @@
 //   outer ring   one arc per module (idle / planned / running / done / warn)
 //   satellites   one dot per detection probe: orbits while scanning, lights up as each probe really resolves
 //   core         brightness follows real progress; a ripple fires whenever a step really finishes
-// Animation is CSS only (transform/opacity) and stops under html.motion-reduced / body.game-running.
+// Animation is CSS only (transform/opacity) and stops under html.motion-reduced / body.game-live.
 ;(function (root) {
   const C = 150   // centre of the 300 x 300 viewBox
   const rad = d => (d - 90) * Math.PI / 180
