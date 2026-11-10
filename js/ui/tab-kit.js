@@ -127,7 +127,7 @@
           if (lastPct != null && p != null && p > lastPct) ripple()
           lastPct = p
         }
-        if ('value' in s) { cancelAnimationFrame(raf); numEl.textContent = s.value == null ? '–' : s.value; if (s.unit != null) unitEl.textContent = s.unit }
+        if ('value' in s) { cancelAnimationFrame(raf); numEl.textContent = s.value == null ? '–' : s.value; node.dataset.len = String(numEl.textContent.length); if (s.unit != null) unitEl.textContent = s.unit }
         if (s.label != null) lblEl.textContent = s.label
         if ('tone' in s) node.dataset.tone = s.tone || 'idle'
         if ('scanning' in s) ctl.scanning(s.scanning)
