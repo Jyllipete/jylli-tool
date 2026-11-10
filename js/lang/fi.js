@@ -3399,7 +3399,7 @@ aoHeroEyebrow:'Sovellusskanneri', aoHeroDetected:'{n} sovellusta tunnistettu', a
       title:'Korjaukset', dial:'käytössä', statApplied:'Käytössä', statRec:'Suositeltu sinulle', cta:'Näytä suositellut', recTitle:'Suositeltu tälle koneelle', eyebrow:'{a} / {n} korjausta käytössä',
     },
     rpx: {
-      daysAgo:'{n} pv sitten', hoursAgo:'{n} h sitten', minsAgo:'{n} min sitten', justNow:'juuri nyt',
+      today:'tänään', yesterday:'eilen', todayCap:'Tänään', yesterdayCap:'Eilen', daysAgo:'{n} pv sitten', hoursAgo:'{n} h sitten', minsAgo:'{n} min sitten', justNow:'juuri nyt',
       confirmWindows:'Windows palautuu tähän pisteeseen ja <strong>käynnistyy automaattisesti uudelleen</strong>.', confirmTweaks:'Säätöjen tilat nollataan vastaamaan palautettua järjestelmää.',
     },
     cx: {

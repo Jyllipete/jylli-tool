@@ -1044,56 +1044,7 @@ async function init(isPremium = false) {
 
   initUiSounds()
   showPage('dashboard')
-  // Populate AOM last-run badge + sparkline from changelog
-  api.getChangelog?.().then(cl => {
-    const allRuns = (cl || []).filter(e => e.type === 'aom-run')
-    const runs = allRuns.slice(0, 5)
-    if (!runs.length) return
-    const last = runs[0]
-    const el = document.getElementById('aom-last-run-badge')
-    if (el) {
-      const ageDays = Math.round((Date.now() - new Date(last.ts).getTime()) / 86400000)
-      const agoStr = ageDays === 0 ? 'today' : ageDays === 1 ? 'yesterday' : `${ageDays}d ago`
-      const dotColor = n => n >= 10 ? jStatus('ok') : n >= 5 ? jStatus('warn') : jStatus('err')
-      const dots = runs.slice().reverse().map((r, i) => {
-        const n = r.tweakCount || 0
-        const cx = 8 + i * 14
-        const date = new Date(r.ts).toLocaleDateString()
-        return `<circle cx="${cx}" cy="8" r="5" fill="${dotColor(n)}" opacity=".85"><title>${date} · ${n} tweaks</title></circle>`
-      }).join('')
-      const sparkline = runs.length >= 2 ? `<svg width="${8 + (runs.length-1)*14 + 8}" height="16" style="vertical-align:middle;margin-left:6px">${dots}</svg>` : ''
-      el.innerHTML = `<i class="fa fa-clock-rotate-left" style="margin-right:4px;opacity:.5"></i>${tWizard('aomLastRunBadge').replace('{ago}', agoStr).replace('{n}', last.tweakCount || 0)}${sparkline}`
-      el.style.display = 'block'
-    }
-
-    // Populate Last Optimized in identity card
-    const lastOptEl = document.getElementById('db-last-optimized')
-    if (lastOptEl && allRuns.length) {
-      const lastRun = allRuns[0]
-      const ageDays = Math.round((Date.now() - new Date(lastRun.ts).getTime()) / 86400000)
-      lastOptEl.textContent = ageDays === 0 ? 'Today' : ageDays === 1 ? 'Yesterday' : `${ageDays}d ago`
-      lastOptEl.style.color = ageDays === 0 ? 'var(--success)' : ageDays <= 7 ? 'var(--c-text-secondary)' : 'var(--c-text-tertiary)'
-    }
-
-    // Streak counter
-    const streakRow = document.getElementById('db-streak-row')
-    const streakChip = document.getElementById('db-streak-chip')
-    const lastRunChip = document.getElementById('db-lastrun-chip')
-    if (streakRow && streakChip && lastRunChip) {
-      // Compute streak: consecutive calendar days ending today with at least one aom-run
-      const today = new Date(); today.setHours(0,0,0,0)
-      const dayKeys = new Set(allRuns.map(r => { const d = new Date(r.ts); d.setHours(0,0,0,0); return d.getTime() }))
-      let streak = 0
-      let check = new Date(today)
-      while (dayKeys.has(check.getTime())) { streak++; check.setDate(check.getDate() - 1) }
-      const lastAgeDays = Math.round((Date.now() - new Date(last.ts).getTime()) / 86400000)
-      const lastAgoStr = lastAgeDays === 0 ? 'today' : lastAgeDays === 1 ? 'yesterday' : `${lastAgeDays}d ago`
-      streakChip.innerHTML = `<i class="fa fa-fire jx-198"></i>${tUI('dashStreakDays').replace('{n}', streak)}`
-      if (streak >= 3) streakChip.classList.add('db-streak-fire')
-      lastRunChip.innerHTML = `<i class="fa fa-clock-rotate-left" style="margin-right:5px;opacity:.5"></i>${tUI('dashStreakLastRun').replace('{ago}', lastAgoStr)}`
-      streakRow.style.display = 'flex'
-    }
-  }).catch(() => {})
+  refreshHomeChips()
   startMetrics()
 
   // Delegated toggle bounce — fires once on any .toggle-switch input change
@@ -5718,6 +5669,60 @@ document.addEventListener('click', e => {
 
 const _genBadgeCache = new Map()
 let _genCounterEl = null, _genRestoreBtnEl = null
+
+function _homeDayWord(d, cap) { return d === 0 ? tG('rpx', cap ? 'todayCap' : 'today') : d === 1 ? tG('rpx', cap ? 'yesterdayCap' : 'yesterday') : tG('rpx', 'daysAgo', { n: d }) }
+function refreshHomeChips() {
+  // Populate AOM last-run badge + sparkline + streak + last optimized from the changelog. Runs on every visit to Home (it used to run once at boot).
+  return api.getChangelog?.().then(cl => {
+    const allRuns = (cl || []).filter(e => e.type === 'aom-run')
+    const runs = allRuns.slice(0, 5)
+    if (!runs.length) return
+    const last = runs[0]
+    const el = document.getElementById('aom-last-run-badge')
+    if (el) {
+      const ageDays = Math.round((Date.now() - new Date(last.ts).getTime()) / 86400000)
+      const agoStr = _homeDayWord(ageDays)
+      const dotColor = n => n >= 10 ? jStatus('ok') : n >= 5 ? jStatus('warn') : jStatus('err')
+      const dots = runs.slice().reverse().map((r, i) => {
+        const n = r.tweakCount || 0
+        const cx = 8 + i * 14
+        const date = new Date(r.ts).toLocaleDateString()
+        return `<circle cx="${cx}" cy="8" r="5" fill="${dotColor(n)}" opacity=".85"><title>${date} · ${n} tweaks</title></circle>`
+      }).join('')
+      const sparkline = runs.length >= 2 ? `<svg width="${8 + (runs.length-1)*14 + 8}" height="16" style="vertical-align:middle;margin-left:6px">${dots}</svg>` : ''
+      el.innerHTML = `<i class="fa fa-clock-rotate-left" style="margin-right:4px;opacity:.5"></i>${tWizard('aomLastRunBadge').replace('{ago}', agoStr).replace('{n}', last.tweakCount || 0)}${sparkline}`
+      el.style.display = 'block'
+    }
+
+    // Populate Last Optimized in identity card
+    const lastOptEl = document.getElementById('db-last-optimized')
+    if (lastOptEl && allRuns.length) {
+      const lastRun = allRuns[0]
+      const ageDays = Math.round((Date.now() - new Date(lastRun.ts).getTime()) / 86400000)
+      lastOptEl.textContent = _homeDayWord(ageDays, true)
+      lastOptEl.style.color = ageDays === 0 ? 'var(--success)' : ageDays <= 7 ? 'var(--c-text-secondary)' : 'var(--c-text-tertiary)'
+    }
+
+    // Streak counter
+    const streakRow = document.getElementById('db-streak-row')
+    const streakChip = document.getElementById('db-streak-chip')
+    const lastRunChip = document.getElementById('db-lastrun-chip')
+    if (streakRow && streakChip && lastRunChip) {
+      // Compute streak: consecutive calendar days ending today with at least one aom-run
+      const today = new Date(); today.setHours(0,0,0,0)
+      const dayKeys = new Set(allRuns.map(r => { const d = new Date(r.ts); d.setHours(0,0,0,0); return d.getTime() }))
+      let streak = 0
+      let check = new Date(today)
+      while (dayKeys.has(check.getTime())) { streak++; check.setDate(check.getDate() - 1) }
+      const lastAgeDays = Math.round((Date.now() - new Date(last.ts).getTime()) / 86400000)
+      const lastAgoStr = _homeDayWord(lastAgeDays)
+      streakChip.innerHTML = `<i class="fa fa-fire jx-198"></i>${tUI('dashStreakDays').replace('{n}', streak)}`
+      if (streak >= 3) streakChip.classList.add('db-streak-fire')
+      lastRunChip.innerHTML = `<i class="fa fa-clock-rotate-left" style="margin-right:5px;opacity:.5"></i>${tUI('dashStreakLastRun').replace('{ago}', lastAgoStr)}`
+      streakRow.style.display = 'flex'
+    }
+  }).catch(() => {})
+}
 
 // Keeps the data-applied flag of every rendered tweak card/row in step with settings, then lets each tab's hero and filter catch up.
 function syncTweakFlags() {

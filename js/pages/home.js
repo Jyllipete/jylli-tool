@@ -231,8 +231,8 @@ function buildDashboard(c) {
 
   twinInit()
   buildSpecWarnings()
-  initRadar()
   initQuickHealth()
+  if (typeof refreshHomeChips === 'function') refreshHomeChips()
   initHealthScoreRing()
   showHealthNudgeIfNeeded()
   drawTempCanvas('cpu', [])
