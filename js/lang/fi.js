@@ -3417,6 +3417,9 @@ aoHeroEyebrow:'Sovellusskanneri', aoHeroDetected:'{n} sovellusta tunnistettu', a
       dial:'tallennetta', statGames:'Pelejä', statTime:'Tallennettu', statBest:'Paras keskiarvo', none:'Ei vielä tallenteita', latest:'Viimeisin: {game} · {when}',
       failed:'Tallenteita ei voitu lukea', failedLead:'Istuntolistaa ei voitu ladata. Yritä uudelleen.', openFailed:'Tallennetta ei voitu avata.',
     },
+    pfHero: {
+      title:'Järjestelmän tarkistus', dial:'turvallisuus', statOs:'Windows-tyyppi', statConf:'Ristiriidat', statActive:'Jo käytössä', never:'Ei vielä skannattu', last:'Viimeisin skannaus {t}',
+    },
     tab: {
       showAll:'Näytä kaikki {n}', showLess:'Näytä vähemmän', 
       chipAll:'Kaikki', chipRecommended:'Suositellut', chipApplied:'Käytössä', chipReboot:'Vaatii käynnistyksen', chipRisky:'Riskialttiit',

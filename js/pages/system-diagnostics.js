@@ -5,9 +5,8 @@
 function buildPreflight(c) {
   const { html, raw } = ui
   c.innerHTML = String(html`
-    <p class="j-lede">${tUI('preflightHeroSub')}</p>
+    <div class="tk-hero" id="pf-hero-host"></div>
     <div class="j-toolbar j-diag-bar" data-tour="diagnostics-scan">
-      ${ui.button({ label: tUI('preflightRunScan'), icon: 'magnifying-glass', variant: 'primary', id: 'pf-scan-btn', onclick: 'runPreflightScan(this)' })}
       <span id="pf-status" class="j-muted">${tUI('preflightReady')}</span>
     </div>
     <div class="pf-scan-bar-wrap"><div id="pf-scan-bar"></div></div>
@@ -28,6 +27,33 @@ function buildPreflight(c) {
       </div>
       <div id="bench-progress" style="display:none"><div class="j-meter"><span id="bench-bar" style="width:0%"></span></div></div>
       <div id="bench-results"></div>` })}`)
+
+  // ── Hero: the safety score of the last scan (kept between visits, with its age) and the one Scan action ──
+  const T = (k, v) => tG('pfHero', k, v)
+  const hero = JylliHero.mount(c.querySelector('#pf-hero-host'), {
+    id: 'pf-hero', eyebrow: '', title: T('title'), lead: tUI('preflightHeroSub'), dial: { label: T('dial'), unit: '/100' },
+    stats: [{ k: 'os', label: T('statOs') }, { k: 'conf', label: T('statConf') }, { k: 'active', label: T('statActive') }],
+    cta: { id: 'pf-scan-btn', icon: 'magnifying-glass', label: tUI('preflightRunScan'), onClick: () => runPreflightScan(document.getElementById('pf-scan-btn')) },
+  })
+  const paint = s => {
+    if (!s) { hero.update({ value: '–', tone: 'idle', eyebrow: T('never'), stats: { os: '–', conf: '–', active: '–' }, cta: { label: tUI('preflightRunScan') } }); return }
+    hero.update({
+      value: String(s.score), tone: JylliHero.tone(s.score),
+      eyebrow: T('last', { t: _rpRelAge(Math.max(0, Date.now() - s.ts)) }),
+      stats: { os: s.os, conf: s.conflicts, active: s.active },
+      cta: { label: tUI('pfBtnRerun'), icon: 'arrows-rotate' },
+    })
+  }
+  let saved = null
+  try { saved = JSON.parse(localStorage.getItem('pf_summary') || 'null') } catch { saved = null }
+  paint(saved && typeof saved.score === 'number' ? saved : null)
+  window._pfHero = result => {
+    const s = { score: result.safetyScore, os: result.osType, conflicts: (result.conflicts || []).length, active: Object.values(result.tweakStates || {}).filter(Boolean).length, ts: Date.now() }
+    try { localStorage.setItem('pf_summary', JSON.stringify(s)) } catch { /* storage blocked: the hero still updates */ }
+    hero.scanning(false); paint(s)
+  }
+  window._pfHeroScanning = on => hero.scanning(on)
+  registerPageCleanup('preflight', () => { window._pfHero = null; window._pfHeroScanning = null; hero.destroy() })
 
   // Pre-populate last-scan timestamp from localStorage if available
   const ts = parseInt(localStorage.getItem('pf_driver_scan_ts') || '0')

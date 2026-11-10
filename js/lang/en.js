@@ -3234,6 +3234,9 @@ aoHeroEyebrow:'App scanner', aoHeroDetected:'{n} apps detected', aoHeroScanning:
       dial:'recordings', statGames:'Games', statTime:'Recorded', statBest:'Best average', none:'No recordings yet', latest:'Latest: {game} · {when}',
       failed:'Could not read the recordings', failedLead:'The session list could not be loaded. Try again.', openFailed:'This recording could not be opened.',
     },
+    pfHero: {
+      title:'System check', dial:'safety', statOs:'Windows type', statConf:'Conflicts', statActive:'Already active', never:'Not scanned yet', last:'Last scan {t}',
+    },
     tab: {
       showAll:'Show all {n}', showLess:'Show less', 
       chipAll:'All', chipRecommended:'Recommended', chipApplied:'Applied', chipReboot:'Needs restart', chipRisky:'Risky',

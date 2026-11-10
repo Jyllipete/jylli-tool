@@ -3985,6 +3985,7 @@ async function runPreflightScan(btn) {
   const scanBar = document.getElementById('pf-scan-bar')
   if (scanBar) scanBar.style.width = '0%'
   try { JylliWorld.scanStart() } catch {}
+  if (window._pfHeroScanning) window._pfHeroScanning(true)
 
   // Capture previous states for diff view
   const prevStates = getPreflightStates()
@@ -4015,6 +4016,7 @@ async function runPreflightScan(btn) {
     if (scanBar) { scanBar.style.width = '100%'; setTimeout(() => { if (scanBar) scanBar.style.width = '0%' }, 800) }
     try { JylliWorld.scanProgress(100); setTimeout(() => JylliWorld.scanEnd(), 700) } catch {}
     renderPreflightResults(result)
+    if (window._pfHero) window._pfHero(result)
     if (prevTs > 0) renderPreflightDiff(prevStates, result.tweakStates, prevTs)
     statusEl.textContent = `${tUI('pfScanComplete')} ${result.safetyScore}/100`
     const badge = document.getElementById('badge-preflight')
@@ -4039,10 +4041,11 @@ async function runPreflightScan(btn) {
         </div>
       </div>`
     statusEl.textContent = tUI('pfScanFailed')
+    if (window._pfHeroScanning) window._pfHeroScanning(false)
   }
 
   btn.disabled = false
-  btn.innerHTML = `<i class="fa fa-magnifying-glass"></i> ${tUI('pfBtnRerun')}`
+  btn.innerHTML = `<i class="fa fa-magnifying-glass"></i><span>${tUI('pfBtnRerun')}</span>`
 }
 
 function renderPreflightResults(r) {
