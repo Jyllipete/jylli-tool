@@ -5735,6 +5735,7 @@ function syncTweakFlags() {
   document.querySelectorAll('#page-content .tweak-row[data-tweak-id]').forEach(row => { row.dataset.applied = tweakState(row.dataset.tweakId) === 'applied' ? '1' : '0' })
   if (window._winHero) window._winHero.refresh()
   if (window._fvRefresh) window._fvRefresh()
+  if (window._netRefresh) window._netRefresh()
   for (const f of [window._winFilter, window._hwFilter, window._fvFilter, window._netFilter]) if (f) f.refresh()
 }
 
@@ -8874,78 +8875,40 @@ function buildNetwork(c) {
     'nic-offloads','nic-interrupt-mod','nic-flow-control','nic-energy-efficient','nic-rss-affinity','nic-ndis-poll',
     'disable-netbios','disable-ipv6','disable-wpad','disable-autoproxy'
   ]
-  const netTotalTweaks  = NET_TWEAK_IDS.length
-  const netAppliedCount = NET_TWEAK_IDS.filter(id => settings[`tweak_${id}`] === 'applied').length
-  const netPendingCount = netTotalTweaks - netAppliedCount
-  const netScorePct     = netTotalTweaks > 0 ? Math.round(netAppliedCount / netTotalTweaks * 100) : 0
-
-  let adapterChipsHtml = '', adapterName = '', adapterIcon = 'fa-network-wired'
+  const DNS_ONE_OF = ['dns-cloudflare', 'dns-google', 'dns-quad9', 'dns-adguard', 'dns-custom']
+  let adapterName = '', adapterChips = ''
   if (si.isWifi) {
     adapterName = si.wifiSsid || si.wifiAdapter || 'Wi-Fi'
-    adapterIcon = 'fa-wifi'
-    const signalPct = parseInt((si.wifiSignal || '0').replace('%','').trim()) || 0
-    const sigClass  = signalPct >= 70 ? 'chip-signal-good' : signalPct >= 40 ? 'chip-signal-warn' : 'chip-signal-bad'
-    adapterChipsHtml = `${si.wifiBand ? `<span class="net-hero-chip">${si.wifiBand}</span>` : ''}<span class="net-hero-chip ${sigClass}">${si.wifiSignal || '—'}</span>`
+    adapterChips = [si.wifiBand, si.wifiSignal].filter(Boolean).join(' · ')
   } else {
     adapterName = si.nicName || tUI('netEthernetAdapter')
-    const speedGbps = si.nicSpeed ? (si.nicSpeed >= 1 ? `${si.nicSpeed} Gbps` : `${si.nicSpeed * 1000} Mbps`) : ''
-    adapterChipsHtml = `${speedGbps ? `<span class="net-hero-chip">${speedGbps}</span>` : ''}${si.nicDriver ? `<span class="net-hero-chip jx-603">${si.nicDriver}</span>` : ''}`
+    adapterChips = [si.nicSpeed ? (si.nicSpeed >= 1 ? si.nicSpeed + ' Gbps' : si.nicSpeed * 1000 + ' Mbps') : '', si.nicDriver].filter(Boolean).join(' · ')
   }
-
-  let netTierLabel
-  if (netScorePct >= 90)      netTierLabel = tUI('netOptiTierFull')
-  else if (netScorePct >= 60) netTierLabel = tUI('netOptiTierGood')
-  else if (netScorePct >= 30) netTierLabel = tUI('netOptiTierPartial')
-  else                        netTierLabel = tUI('netOptiTierNone')
-
-  const hero = document.createElement('div')
-  hero.className = 'net-hero'
-  hero.innerHTML = `
-    <div class="net-hero-adapter">
-      <div class="net-hero-adapter-icon"><i class="fa ${adapterIcon}"></i></div>
-      <div>
-        <div class="net-hero-adapter-name">${adapterName}</div>
-        <div class="net-hero-chips">${adapterChipsHtml}</div>
-      </div>
-    </div>
-    <div class="net-hero-score">
-      <div class="fivem-opti-score-ring">
-        <svg width="60" height="60" viewBox="0 0 60 60">
-          <circle class="fivem-opti-score-ring-track" cx="30" cy="30" r="26"/>
-          <circle class="fivem-opti-score-ring-fill" id="net-opti-ring" cx="30" cy="30" r="26"/>
-        </svg>
-        <div class="fivem-opti-score-num" id="net-opti-score-num">—</div>
-      </div>
-      <div class="net-hero-score-body">
-        <div class="net-hero-score-title">${tUI('netHeroScoreTitle')}</div>
-        <div class="net-hero-score-tier" id="net-opti-tier">—</div>
-        <div class="net-hero-score-bar-track"><div class="net-hero-score-bar-fill" id="net-opti-bar"></div></div>
-        <div class="net-hero-score-sub">${netAppliedCount} / ${netTotalTweaks} ${tUI('netTweaksActive')}</div>
-      </div>
-    </div>
-    <div class="net-hero-stats">
-      <div class="net-hero-stat-chips">
-        <span class="net-hero-stat-chip applied">${netAppliedCount} ${tUI('netHeroApplied')}</span>
-        <span class="net-hero-stat-chip pending">${netPendingCount} ${tUI('netHeroPending')}</span>
-      </div>
-      <button class="btn btn-primary btn-sm jx-604" onclick="netApplySafeDefaults(this)">
-        <i class="fa fa-bolt"></i> ${tUI('netApplySafe')}
-      </button>
-    </div>
-  `
-  c.appendChild(hero)
-
-  setTimeout(() => {
-    const circ = 163.4
-    const ring = document.getElementById('net-opti-ring')
-    const num  = document.getElementById('net-opti-score-num')
-    const bar  = document.getElementById('net-opti-bar')
-    const tier = document.getElementById('net-opti-tier')
-    if (ring) ring.style.strokeDashoffset = circ - (circ * netScorePct / 100)
-    if (num)  num.textContent  = netScorePct + '%'
-    if (bar)  bar.style.width  = netScorePct + '%'
-    if (tier) tier.textContent = netTierLabel
-  }, 350)
+  const netHeroHost = document.createElement('div')
+  netHeroHost.className = 'tk-hero'
+  c.appendChild(netHeroHost)
+  const nT = (k, v) => tG('netx', k, v)
+  const netHero = JylliHero.mount(netHeroHost, {
+    id: 'net-score-hero', cls: 'net-hero', eyebrow: adapterName, title: tUI('netHeroScoreTitle'), lead: adapterChips, dial: { label: nT('dial') },
+    stats: [{ k: 'applied', label: tUI('netHeroApplied') }, { k: 'pending', label: tUI('netHeroPending') }],
+    cta: { id: 'net-apply-btn', icon: 'bolt', label: tUI('netApplySafe'), onClick: () => netApplySafeDefaults(null) },
+  })
+  // computed from the rows that are actually on the page (hidden Wi-Fi/NIC tweaks never count)
+  window._netRefresh = function () {
+    const offered = NET_TWEAK_IDS.filter(id => document.querySelector('.tweak-row[data-tweak-id="' + id + '"]'))
+    const plain = offered.filter(id => !DNS_ONE_OF.includes(id))
+    const dnsOffered = offered.some(id => DNS_ONE_OF.includes(id))
+    const dnsOn = DNS_ONE_OF.some(id => settings['tweak_' + id] === 'applied')
+    const total = plain.length + (dnsOffered ? 1 : 0)
+    const applied = plain.filter(id => settings['tweak_' + id] === 'applied').length + (dnsOffered && dnsOn ? 1 : 0)
+    const pct = total ? Math.round(applied / total * 100) : null
+    netHero.update({
+      pct, tone: 'accent',
+      stats: { applied, pending: total - applied },
+      cta: { done: false },
+    })
+  }
+  registerPageCleanup('network', () => { window._netRefresh = null; netHero.destroy() })
 
   c.appendChild(makeTip(tUI('netTipTitle'), 'info'))
 
@@ -9086,6 +9049,23 @@ function buildNetwork(c) {
   buildNetHealthCheck(c)
   buildPingTest(c)
 
+  // Body: one segmented switch between the tweak list and the measuring tools (live ping, health check, ping test)
+  {
+    const div = c.querySelector('.net-diag-divider')
+    if (div) {
+      const kids = [...c.children]
+      const hostIdx = kids.indexOf(netHeroHost), divIdx = kids.indexOf(div)
+      const tweaksPane = document.createElement('div'), measurePane = document.createElement('div')
+      tweaksPane.id = 'net-pane-tweaks'; measurePane.id = 'net-pane-measure'; measurePane.hidden = true
+      tweaksPane.className = measurePane.className = 'tk-body'
+      kids.slice(hostIdx + 1, divIdx).forEach(k => tweaksPane.appendChild(k))
+      kids.slice(divIdx + 1).forEach(k => measurePane.appendChild(k))
+      div.remove()
+      const seg = JylliTab.seg([{ id: 'tweaks', label: nT('segTweaks'), icon: 'sliders' }, { id: 'measure', label: nT('segMeasure'), icon: 'stethoscope' }], 'tweaks', id => { tweaksPane.hidden = id !== 'tweaks'; measurePane.hidden = id !== 'measure' })
+      netHeroHost.after(seg.el); seg.el.after(tweaksPane); tweaksPane.after(measurePane)
+    }
+  }
+
   // The shared filter only ever touches tweak rows and the sections that hold them: Live monitor, Health and Ping stay put.
   window._netFilter = JylliFilter.mount(c, {
     item: '.tweak-row', section: '.section-card', input: netTb.input, chipsEl: netTb.chipsEl,
@@ -9096,6 +9076,7 @@ function buildNetwork(c) {
     },
   })
   window._netFilter.refresh()
+  if (window._netRefresh) window._netRefresh()
   registerPageCleanup('network', () => { if (window._netFilter) window._netFilter.destroy(); window._netFilter = null })
 
   registerPageCleanup('network', () => {
@@ -9467,13 +9448,13 @@ async function netApplySafeDefaults(btn) {
     'disable-netbios','disable-wpad','disable-autoproxy'
   ]
   try {
-    await showConfirm({ title: tUI('netApplySafe'), body: tUI('netApplySafeConfirm'), okText: 'Apply', okStyle: 'primary', icon: 'fa-bolt' })
+    await showConfirm({ title: tUI('netApplySafe'), body: tUI('netApplySafeConfirm'), okText: tUI('apply'), okStyle: 'primary', icon: 'fa-bolt' })
   } catch { return }
   const toApply = NET_SAFE_DEFAULTS.filter(id => tweakState(id) !== 'applied')
   if (btn) { btn.disabled = true; btn.innerHTML = `<i class="fa fa-spinner fa-spin"></i>` }
   const { applied, failed } = await applyTweakBatch(toApply, 'apply')
   if (btn) { btn.disabled = false; btn.innerHTML = `<i class="fa fa-bolt"></i> ${tUI('netApplySafe')}` }
-  const msg = tUI('netApplySafeDone').replace('{n}', applied) + (failed ? ` · ${failed} failed` : '')
+  const msg = tUI('netApplySafeDone').replace('{n}', applied) + (failed ? ' · ' + tUI('batchFailed').replace('{failed}', failed) : '')
   toast(tUI('netApplySafe'), msg, applied > 0 ? 'ok' : 'warn')
 }
 

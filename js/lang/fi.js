@@ -3447,6 +3447,9 @@ aoHeroEyebrow:'Sovellusskanneri', aoHeroDetected:'{n} sovellusta tunnistettu', a
       dial:'ajastettua tehtävää', statActive:'Aktiivisia', statPaused:'Keskeytetty', statNext:'Seuraava ajo', loading:'Luetaan tehtävälistaa', none:'Ei vielä tehtäviä', noneActive:'Kaikki tehtävät on keskeytetty', nextUp:'Seuraava: {name}', failed:'Ajastettuja tehtäviä ei voitu lukea',
       renderError:'Tehtäviä ei voitu näyttää', enableBody:'Otetaanko kaikki {n} ajastettua tehtävää käyttöön?', disableBody:'Keskeytetäänkö kaikki {n} ajastettua tehtävää? Ne pysyvät listassa ja ne voi ottaa uudelleen käyttöön.',
     },
+    netx: {
+      dial:'määritetty', segTweaks:'Säädöt', segMeasure:'Mittaa',
+    },
     tab: {
       showAll:'Näytä kaikki {n}', showLess:'Näytä vähemmän', 
       chipAll:'Kaikki', chipRecommended:'Suositellut', chipApplied:'Käytössä', chipReboot:'Vaatii käynnistyksen', chipRisky:'Riskialttiit',

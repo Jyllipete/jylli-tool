@@ -189,3 +189,5 @@ body.game-live .jh *, body.game-live .jh { animation: none !important; }
 
 /* Cleanup: below ~1180px the analysis cards go under the list instead of squeezing the row names into a sliver */
 @media (max-width: 1180px) { #page-content .cleanup-layout { grid-template-columns: minmax(0, 1fr); } }
+
+.tk-seg .j-seg-item { display: inline-flex; align-items: center; gap: 6px; }
