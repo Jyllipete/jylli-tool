@@ -8,18 +8,55 @@ const REPLAY_SERIES = [
 ]
 const REPLAY = { session: null, t: 0, series: new Set(['gpu0.load']) }
 
+// Pure: totals for the hero from the session list (unit-tested)
+function replaySummary(list) {
+  const n = list.length
+  const sec = list.reduce((a, s) => a + (Number(s.durationSec) || 0), 0)
+  const games = new Set(list.map(s => s.game && s.game.name).filter(Boolean)).size
+  const best = list.reduce((m, s) => Math.max(m, Number(s.summary && s.summary.avgFps) || 0), 0)
+  return { n, minutes: Math.round(sec / 60), games, bestAvg: best || null }
+}
+
 async function buildReplay(c) {
   const { html } = ui
+  const T = (k, v) => tG('repHero', k, v)
   c.innerHTML = String(html`
-    ${ui.card({ title: tUI('replayTitle'), sub: tUI('replaySub'), body: html`<div id="replay-list">${ui.empty({ icon: 'film', title: tUI('replayLoading') })}</div>` })}
-    <div id="replay-detail"></div>`)
-  let list = []
-  try { list = await api.listSessions() } catch {}
-  if (!Array.isArray(list)) list = []
+    <div class="tk-hero" id="rep-hero-host"></div>
+    <div class="tk-md-host"><div class="tk-md">
+      <div class="tk-md-list" id="replay-list-wrap">${ui.card({ title: tUI('replayTitle'), sub: tUI('replaySub'), body: html`<div id="replay-list">${ui.empty({ icon: 'film', title: tUI('replayLoading') })}</div>` })}</div>
+      <div class="tk-md-detail" id="replay-detail"></div>
+    </div></div>`)
+  const hero = JylliHero.mount(c.querySelector('#rep-hero-host'), {
+    id: 'replay-hero', eyebrow: '', title: tUI('replayTitle'), lead: tUI('replaySub'), dial: { label: T('dial'), unit: '' },
+    stats: [{ k: 'games', label: T('statGames') }, { k: 'time', label: T('statTime') }, { k: 'best', label: T('statBest') }],
+  })
+  hero.scanning(true)
+  hero.update({ value: '–', tone: 'idle', eyebrow: tUI('replayLoading') })
+  registerPageCleanup('replay', () => hero.destroy())
+
+  let list = null
+  try { list = await api.listSessions() } catch { list = null }
   const box = document.getElementById('replay-list')
   if (!box) return
-  if (!list.length) { box.innerHTML = String(ui.empty({ icon: 'film', title: tUI('replayEmpty') })); return }
+  hero.scanning(false)
+  // a failed read is an error with Retry, never "no recordings"
+  if (!Array.isArray(list)) {
+    hero.update({ value: '–', tone: 'idle', eyebrow: T('failed'), lead: T('failedLead') })
+    box.innerHTML = String(ui.error({ title: T('failed'), sub: T('failedLead'), action: ui.button({ label: tG('tab', 'retry'), variant: 'secondary', onclick: "showPage('replay')" }) }))
+    return
+  }
+  const sum = replaySummary(list)
+  if (!list.length) {
+    hero.update({ value: '0', tone: 'idle', eyebrow: T('none'), lead: tUI('replayEmpty'), stats: { games: '–', time: '–', best: '–' } })
+    box.innerHTML = String(ui.empty({ icon: 'film', title: tUI('replayEmpty') }))
+    return
+  }
+  hero.update({
+    value: String(sum.n), tone: 'accent', eyebrow: T('latest', { game: (list[0].game && list[0].game.name) || '?', when: new Date(list[0].startedAt).toLocaleDateString() }),
+    stats: { games: sum.games, time: sum.minutes >= 90 ? (sum.minutes / 60).toFixed(1) + ' h' : sum.minutes + ' min', best: sum.bestAvg ? sum.bestAvg + ' FPS' : '–' },
+  })
   box.innerHTML = String(list.map(s => ui.row({
+    id: 'rp-s-' + String(s.id).replace(/[^0-9a-f]/g, ''),
     title: html`${s.game && s.game.name || '?'} <span class="j-muted j-num">${Math.round(s.durationSec / 60)} min</span>`,
     sub: html`<span class="j-num">${new Date(s.startedAt).toLocaleString()} · ${s.summary.avgFps} FPS · <span title="${tUI('fpsLowTip')}">${tUI('replayLow1')} ${s.summary.low1Fps ?? '—'}</span></span>`,
     control: ui.button({ label: tUI('replayOpen'), size: 'sm', onclick: `replayOpen('${String(s.id).replace(/[^0-9a-f]/g, '')}')` }),
@@ -27,9 +64,11 @@ async function buildReplay(c) {
 }
 
 async function replayOpen(id) {
-  const r = await api.getSession(id)
+  const r = await api.getSession(id).catch(() => null)
   const el = document.getElementById('replay-detail')
-  if (!el || !r || !r.ok) return
+  if (!el) return
+  if (!r || !r.ok) { toast(tG('repHero', 'failed'), tG('repHero', 'openFailed'), 'err'); return }
+  document.querySelectorAll('#replay-list .j-row').forEach(x => x.classList.toggle('tk-active', x.id === 'rp-s-' + id))
   const s = r.session
   REPLAY.session = s; REPLAY.t = 0
   REPLAY.series = new Set(REPLAY_SERIES.filter(([k]) => s.series[k] && s.series[k].some(v => v != null)).map(x => x[0]).slice(0, 1))
@@ -60,7 +99,7 @@ async function replayOpen(id) {
   sc.oninput = () => { REPLAY.t = Number(sc.value); replayDraw() }
   const tw = el.querySelector('#replay-twin-slot'); if (tw && window.JylliTwin) JylliTwin.attach(tw)
   replayDraw()
-  el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  if (el.getBoundingClientRect().top > window.innerHeight * 0.6) el.scrollIntoView({ behavior: 'smooth', block: 'start' })   // stacked layout only; beside the list it is already in view
 }
 
 function replayValueAt(s, key, t) { const a = s.series[key]; return a && t < a.length ? a[t] : null }
@@ -105,3 +144,5 @@ function replayShareCard() {
   JylliShareCard.save(REPLAY.session, rig)
 }
 function replayClose() { try { JylliTelemetry.setOverride(null) } catch {} }
+
+if (typeof module !== 'undefined' && module.exports) module.exports = { replaySummary }

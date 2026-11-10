@@ -3230,6 +3230,10 @@ aoHeroEyebrow:'App scanner', aoHeroDetected:'{n} apps detected', aoHeroScanning:
       waiting:'Sampling', waitingLead:'Reading the DPC and ISR counters.', statDpc:'DPC peak', statIsr:'ISR peak', statTimer:'Timer',
       failed:'Could not read the counters', failedLead:'Windows did not return latency counters. Open this tab again or run the app as administrator.',
     },
+    repHero: {
+      dial:'recordings', statGames:'Games', statTime:'Recorded', statBest:'Best average', none:'No recordings yet', latest:'Latest: {game} · {when}',
+      failed:'Could not read the recordings', failedLead:'The session list could not be loaded. Try again.', openFailed:'This recording could not be opened.',
+    },
     tab: {
       showAll:'Show all {n}', showLess:'Show less', 
       chipAll:'All', chipRecommended:'Recommended', chipApplied:'Applied', chipReboot:'Needs restart', chipRisky:'Risky',

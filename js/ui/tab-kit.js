@@ -44,7 +44,7 @@
           <circle class="jh-ripple" cx="100" cy="100" r="74"/>
         </svg>
         <div class="jh-beam"></div>
-        <div class="jh-core"><div class="jh-num"><span class="jh-n">–</span><small class="jh-unit">${esc((cfg.dial && cfg.dial.unit) || '%')}</small></div><div class="jh-lbl">${esc((cfg.dial && cfg.dial.label) || '')}</div></div>
+        <div class="jh-core"><div class="jh-num"><span class="jh-n">–</span><small class="jh-unit">${esc(cfg.dial && cfg.dial.unit != null ? cfg.dial.unit : '%')}</small></div><div class="jh-lbl">${esc((cfg.dial && cfg.dial.label) || '')}</div></div>
       </div>
       <div class="jh-body">
         <div class="jh-eyebrow"><span class="jh-dot"></span><span class="jh-eyebrow-t">${esc(cfg.eyebrow || '')}</span></div>

@@ -3413,6 +3413,10 @@ aoHeroEyebrow:'Sovellusskanneri', aoHeroDetected:'{n} sovellusta tunnistettu', a
       waiting:'Mitataan', waitingLead:'Luetaan DPC- ja ISR-laskureita.', statDpc:'DPC-huippu', statIsr:'ISR-huippu', statTimer:'Ajastin',
       failed:'Laskureita ei voitu lukea', failedLead:'Windows ei palauttanut viivelaskureita. Avaa välilehti uudelleen tai käynnistä sovellus järjestelmänvalvojana.',
     },
+    repHero: {
+      dial:'tallennetta', statGames:'Pelejä', statTime:'Tallennettu', statBest:'Paras keskiarvo', none:'Ei vielä tallenteita', latest:'Viimeisin: {game} · {when}',
+      failed:'Tallenteita ei voitu lukea', failedLead:'Istuntolistaa ei voitu ladata. Yritä uudelleen.', openFailed:'Tallennetta ei voitu avata.',
+    },
     tab: {
       showAll:'Näytä kaikki {n}', showLess:'Näytä vähemmän', 
       chipAll:'Kaikki', chipRecommended:'Suositellut', chipApplied:'Käytössä', chipReboot:'Vaatii käynnistyksen', chipRisky:'Riskialttiit',
