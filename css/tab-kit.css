@@ -195,3 +195,5 @@ body.game-live .jh *, body.game-live .jh { animation: none !important; }
 /* FiveM workspace */
 .fivem-hero.fivem-hero-actions { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .tk-body > .fivem-panel { margin: 0; }
+
+.tk-seg { margin: 10px 0; }

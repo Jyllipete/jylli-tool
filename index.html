@@ -11837,21 +11837,10 @@ function buildDebloater(c) {
   const _heroGiveUp = setTimeout(() => window._bloatRefresh?.(), 45000)
   registerPageCleanup('debloater', () => { window._bloatRefresh = null; clearTimeout(_heroGiveUp) })
 
-  // Sub-tab toggle (segmented control)
-  const tabToggleWrap = document.createElement('div')
-  tabToggleWrap.style.cssText = 'padding:10px 18px 12px'
-  const tabToggle = document.createElement('div')
-  tabToggle.className = 'debloat-tab-toggle'
-  tabToggle.id = 'debloat-tab-toggle'
-  tabToggle.innerHTML = `
-    <div class="debloat-tab-slider" id="debloat-tab-slider"></div>
-    <button id="tab-btn-desktop" class="dtab-btn active" onclick="switchDebloatTab('desktop')">${tUI('desktopAppsTab')}</button>
-    <button id="tab-btn-store" class="dtab-btn" onclick="switchDebloatTab('store')">${tUI('storeAppsTab')}</button>
-  `
-  tabToggleWrap.appendChild(tabToggle)
-  c.appendChild(tabToggleWrap)
-  // Position slider on first render
-  requestAnimationFrame(() => updateDebloatSlider('desktop'))
+  // Sub-tab switch: the shared segmented control (arrow keys, aria-selected); switchDebloatTab still owns what is shown
+  const debSeg = JylliTab.seg([{ id: 'desktop', label: tUI('desktopAppsTab'), icon: 'desktop' }, { id: 'store', label: tUI('storeAppsTab'), icon: 'store' }], 'desktop', id => switchDebloatTab(id))
+  debSeg.el.id = 'debloat-tab-toggle'
+  c.appendChild(debSeg.el)
 
   // Desktop apps tab section
   const desktopSection = document.createElement('div')
