@@ -168,3 +168,17 @@ test('UI source: mode buttons are not caught by the use-case handler, every plan
   assert.ok(src.includes('!(f.risk >= 3)'), 'module toggle must skip expert rows')
   assert.ok(src.includes("root.confirmTier(f.steps[0].id)"), 'expert rows ask for the typed confirmation')
 })
+
+test('every Maximum row has a risk block: structured entry plus text in both languages', () => {
+  const vm = require('node:vm')
+  const { RISK } = require('../lib/tweak-risk')
+  const ctx = {}
+  vm.runInNewContext(['en', 'fi'].map(c => fs.readFileSync(path.join(__dirname, '..', 'js', 'lang', c + '.js'), 'utf8')).join('\n') + '\n;globalThis.__L = LANG', ctx)
+  for (const [fid, row] of Object.entries(cat.CATALOG)) {
+    if (row.intensity !== 'max') continue
+    for (const st of row.steps) {
+      assert.ok(RISK[st.id], fid + ': ' + st.id + ' has no lib/tweak-risk.js entry')
+      for (const l of ['en', 'fi']) assert.ok(ctx.__L[l].tweakRisk[st.id] && ctx.__L[l].tweakRisk[st.id].length, fid + ': ' + l + ' tweakRisk ' + st.id)
+    }
+  }
+})

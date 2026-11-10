@@ -2,7 +2,7 @@
 // Gaming > Latency: live DPC/ISR monitor, spike log and guidance. Element ids used by the polling code are kept:
 // #lat-{dpc,isr}-{card,val,peak}, #lat-timer-{val,sub}, #lat-status-{val,sub}, #canvas-dpc, #canvas-isr, #dpc-spike-log.
 async function buildLatencyMonitor(c) {
-  if (!settings.isPremium) { await buildPremiumBanner(c, 'latency-monitor'); return }
+  if (!settings.isPremium) { await JylliPremium.build(c, 'latency'); return }
   const { html, raw } = ui
   const tile = (label, valId, subId, sub, cardId, small) => html`<div class="j-stat j-lat-tile" ${raw(cardId ? `id="${cardId}"` : '')}>
     <div class="j-stat-label">${label}</div>

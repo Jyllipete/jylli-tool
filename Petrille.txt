@@ -1,0 +1,18 @@
+Continue the Jylli Tool release audit. First read HANDOFF_AUDIT.md and PLAN_RELEASE_AUDIT.md in the project root. The work so far is committed as cabb518 on main (nothing pushed).
+
+Start with the "Not done yet" lists at the end of HANDOFF_AUDIT.md and work through them until they're finished, with no approval questions between steps. Do these in order:
+1. Restore buttons that hardcode values instead of the original: mmcss, fivem-mmcss, fivem-vm, gpu-hwsch, gpu-hags-off, vbs-disable, hvci-offload, fix-valorant-hvci, full-mitigation-wipe, vrr-borderless, dns-doh, and the DNS tweaks. Use the journal's recorded originals.
+2. Route the DNS tweaks and fix-usb-ghosting through the journaled runners. Fix the manifest "exact" labels for full-mitigation-wipe and bcd-tweaks, and add the manifest entries missing from raw-aim-curve onward (check with node tools/journal-coverage.js --check).
+3. Add stronger confirmation plus a mandatory restore point for the tier-3 security-lowering tweaks (spectre-meltdown, full-mitigation-wipe, hvci-offload, vbs-disable, defender-core-off).
+4. Remaining fake-success handlers: saveChangelog, pulse-fix-mouse, toggle-game-shield, cpu-unpin-game, BIOS handlers, FiveM pack import, fivem-clear-cache, set-update-intercept (no snapshot), genRebootNow, Auto-Pulse override, sgmToggle.
+5. Dead-code sweep: orphan preload methods and their main.js handlers, dead listeners (budget-tick, budget-session-report, pulse-session-end, onPulseCooldownTick), the IRQ affinity stub panel, asarUnpack folders missing from the repo, the safeStorage async migration, and the raw alert() in index.html.
+6. Decide on the tweaks left unretired on purpose (see HANDOFF_AUDIT.md), including the Edge/Chrome tweaks that turn GPU acceleration off.
+7. Final check in the real app: launch it, apply and undo a tweak, force a failure (non-admin), create two restore points within 24h, open Pulse and check the thermal progress bar.
+
+Rules:
+- Follow CLAUDE.md: never Read index.html or main.js in full (Grep, then sed -n ranges); edit with small node scripts; every new UI string needs en and fi.
+- After each step run npm test, node tools/check.js, node tools/check-keys.js and node --check main.js, with the output filtered to errors.
+- The Bash tool halves backslashes in heredocs (see the gotchas in HANDOFF_AUDIT.md). Build regexes and Windows paths with String.fromCharCode(92) or use the Write tool.
+- Launch the app with node_modules\electron\dist\electron.exe . (npm start through a pipe exits immediately).
+- No push, version bump or release unless I ask.
+- Keep HANDOFF_AUDIT.md updated as you go, and commit when a coherent chunk is done.

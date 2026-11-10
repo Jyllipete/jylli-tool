@@ -310,6 +310,7 @@
     r.querySelectorAll('[data-hvci]').forEach(b => { b.onclick = () => hvciOptIn(b) })
     r.querySelector('#ao-rescan').onclick = () => startScan(true)
     const mg = r.querySelector('#ao-max-go'); if (mg) mg.onclick = () => setIntensity('max', showDiagnosis)
+    const mb = r.querySelector('#ao-max-buy'); if (mb) mb.onclick = () => { try { root.JylliPremium.open() } catch {} }
     r.querySelector('#ao-next').onclick = () => showPlan()
     const nx = r.querySelector('#ao-next'); if (!nx.disabled) nx.focus()
   }
@@ -333,7 +334,7 @@
       ...(withSelection ? { ...selection(A.findings, A.on), modules: A.modsOff, startupItems: A.startupOn ? [...A.startupOn] : undefined } : {}) }
   }
   async function setIntensity(mode, then) {
-    if (mode === 'max' && !premiumOn()) { root.toast(g('maxLockedT'), g('maxLockedM'), 'warn'); return }
+    if (mode === 'max' && !premiumOn()) { root.toast(g('maxLockedT'), g('maxLockedM'), 'warn', 8000, { action: { label: root.tUI('premiumLockCta'), run: () => root.JylliPremium && root.JylliPremium.open() } }); return }
     if (A.intensity === mode) return
     A.intensity = mode; A.expertOk.clear()
     const s = root.settings; if (s) { s.aom_intensity = mode; try { root.api.saveSettings(s) } catch {} }
@@ -357,7 +358,7 @@
   }
   function maxHintHtml() {
     if (A.intensity === 'max' || !(A.maxExtra > 0)) return ''
-    return `<aside class="ao-note"><i class="fa fa-gauge-high"></i><span>${esc(g(premiumOn() ? 'maxHint' : 'maxHintLocked', { n: A.maxExtra }))}</span>${premiumOn() ? `<button type="button" class="j-btn j-btn-ghost j-btn-sm" id="ao-max-go">${esc(g('maxHintBtn'))}</button>` : ''}</aside>`
+    return `<aside class="ao-note"><i class="fa fa-gauge-high"></i><span>${esc(g(premiumOn() ? 'maxHint' : 'maxHintLocked', { n: A.maxExtra }))}</span>${premiumOn() ? `<button type="button" class="j-btn j-btn-ghost j-btn-sm" id="ao-max-go">${esc(g('maxHintBtn'))}</button>` : `<button type="button" class="j-btn j-btn-primary j-btn-sm" id="ao-max-buy">${esc(g('maxBuyBtn'))}</button>`}</aside>`
   }
 
   // ── scene 3: plan ──
@@ -389,7 +390,7 @@
         <div class="ao-mod-h" data-toggle-open="${m.id}"><label class="j-switch" data-stop="1"><input type="checkbox" data-mod-on="${m.id}" ${m.on ? 'checked' : ''} aria-label="${esc(g('mod_' + m.id))}"><span class="j-switch-track"></span></label>
           <b>${esc(g('mod_' + m.id))}</b><span class="ao-count">${m.onCount}/${m.total}</span><i class="fa fa-chevron-right ao-chev"></i></div>
         ${A.expanded.has(m.id) ? `<div class="ao-mod-items">${m.items.map(f => `<div class="ao-item"><input type="checkbox" id="ao-i-${f.id}" data-find="${f.id}" ${f.on ? 'checked' : ''}>
-          <div><label for="ao-i-${f.id}" class="ao-item-t">${esc(g(f.titleKey, f.vars || {}))}</label><div class="ao-item-s">${esc(g(f.whyKey, f.vars || {}))}</div>${f.risk >= 2 ? riskBlock(f) : ''}${f.on || f.id === 'hibernate' ? itemSub(f) : ''}
+          <div><label for="ao-i-${f.id}" class="ao-item-t">${esc(g(f.titleKey, f.vars || {}))}</label><div class="ao-item-s">${esc(g(f.whyKey, f.vars || {}))}</div>${f.intensity === 'max' ? riskBlock(f) : ''}${f.on || f.id === 'hibernate' ? itemSub(f) : ''}
             ${f.undoable === false ? `<div class="ao-item-s">${esc(g('notUndoable'))}</div>` : ''}</div>${impactBadge(f)}</div>`).join('')}</div>` : ''}</div>`).join('')}
       ${expertHtml()}
       <div class="ao-summary"><span>${esc(g('sumSteps'))} <b>${p ? p.steps.length : 0}</b></span><span>${esc(g('sumTime'))} <b>${p ? fmtDuration(p.estSeconds) : '–'}</b></span>

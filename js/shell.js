@@ -35,7 +35,7 @@
     network: async c => { await buildNetwork(c); buildNetworkHero(c) },
     fixes: c => buildFixes(c),
     pulse: c => buildPulse(c),
-    games: async c => { if (!settings.isPremium) await _buildTabPremiumLock(c, 'game-opti'); else await buildGameOpti(c) },
+    games: async c => { if (!settings.isPremium) await JylliPremium.build(c, 'games'); else await buildGameOpti(c) },
     apps: c => buildAppOptimizer(c),
     fivem: c => buildFiveM(c),
     latency: c => buildLatencyMonitor(c),
@@ -45,7 +45,7 @@
     startup: c => buildStartupManager(c),
     diagnostics: c => buildPreflight(c),
     processes: c => buildProcessManager(c),
-    bios: async c => { if (!settings.isPremium) { await _buildTabPremiumLock(c, 'bios-tuner'); return } await JylliBios.build(c) },
+    bios: async c => { if (!settings.isPremium) { await JylliPremium.build(c, 'bios'); return } await JylliBios.build(c) },
     scheduler: c => buildScheduler(c),
     restore: c => buildRestorePoints(c),
     history: c => buildChangelog(c),
@@ -53,7 +53,7 @@
   }
 
   async function hardwareTab(c, tab) {
-    if (!settings.isPremium) { await _buildTabPremiumLock(c, 'hardware'); if (tab === 'gpu') buildGpuHero(c, { readOnly: true }); return }
+    if (!settings.isPremium) { await JylliPremium.build(c, tab); if (tab === 'gpu') { const h = buildGpuHero(c, { readOnly: true }); c.appendChild(h) } return }   // the live read-only hero sits below the pitch, so the offer stays above the fold
     await buildHardware(c)
     if (tab === 'gpu') buildGpuHero(c)
     else if (tab === 'cpumem') await buildCpuMemHero(c)
@@ -97,7 +97,7 @@
     if (!head) return
     const s = R.section(route.section)
     const single = s.tabs.length === 1
-    const tabs = single ? '' : root.ui.tabs(visibleTabs(s, route.tab).map(t => ({ id: t.id, label: tabLabel(t.id), pro: t.premium && !settings.isPremium })), route.tab, "Shell.tab('{id}')")
+    const tabs = single ? '' : root.ui.tabs(visibleTabs(s, route.tab).map(t => ({ id: t.id, label: tabLabel(t.id), pro: t.premium && !settings.isPremium && tG('premium', 'badge') })), route.tab, "Shell.tab('{id}')")
     const rp = route.section === 'home' ? root.ui.button({ label: tUI('createRp'), icon: 'shield-halved', variant: 'secondary', size: 'sm', id: 'create-rp-btn', onclick: 'quickCreateRP()' }) : ''
     const help = root.ui.button({ iconOnly: true, icon: 'circle-question', variant: 'ghost', size: 'sm', id: 'tour-help-btn', title: tG('tour', 'help') + ' (F1)', onclick: 'JylliTour.replay()' })
     const actions = root.ui.html`${rp}${help}`

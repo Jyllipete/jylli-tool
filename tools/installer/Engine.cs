@@ -110,6 +110,36 @@ namespace JylliSetup
             }
         }
 
+        // Anything still running from the install folder (helper processes, sensors, PowerShell children) makes the old NSIS uninstaller
+        // fail with exit code 2 in silent mode. Kill them all and wait until they are gone.
+        public static void CloseAppIn(string dir)
+        {
+            CloseApp();
+            if (string.IsNullOrEmpty(dir)) return;
+            string root = Path.GetFullPath(dir).TrimEnd('\\') + "\\";
+            int self = Process.GetCurrentProcess().Id;
+            for (int pass = 0; pass < 3; pass++)
+            {
+                bool any = false;
+                foreach (Process p in Process.GetProcesses())
+                {
+                    try
+                    {
+                        if (p.Id == self) continue;
+                        string path = p.MainModule.FileName;
+                        if (path == null || !path.StartsWith(root, StringComparison.OrdinalIgnoreCase)) continue;
+                        if (string.Equals(Path.GetFileName(path), CustomUninstaller, StringComparison.OrdinalIgnoreCase)) continue;
+                        any = true;
+                        p.Kill();
+                        p.WaitForExit(3000);
+                    }
+                    catch { }
+                }
+                if (!any) break;
+                System.Threading.Thread.Sleep(500);
+            }
+        }
+
         public static string ExtractPayload()
         {
             string dir = Path.Combine(Path.GetTempPath(), "JylliSetup-" + Guid.NewGuid().ToString("N"));

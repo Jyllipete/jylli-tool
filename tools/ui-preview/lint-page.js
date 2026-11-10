@@ -36,6 +36,8 @@ module.exports = String.raw`(() => {
     const bl = parseFloat(cs.borderLeftWidth)
     if (bl >= 2 && cs.borderLeftStyle === 'solid' && !el.matches('.j-tab,.j-nav-item')) add('left-accent-border', name(el))
     if (el.hasAttribute('style') && /#[0-9a-f]{3,6}|rgb\(/i.test(el.getAttribute('style'))) add('inline-colour', name(el))
+    // clamped text whose box is overflow:visible paints its hidden lines over the next sibling (the tweak-card hover bug)
+    if (cs.webkitLineClamp && cs.webkitLineClamp !== 'none' && cs.overflowY === 'visible' && el.scrollHeight > el.clientHeight + 1) add('clamp-paints-outside', name(el))
   }
   if (root.scrollWidth > root.clientWidth + 2) add('page-h-scroll', root.scrollWidth + '>' + root.clientWidth)
   if (primary > 1) add('multiple-primary', String(primary))

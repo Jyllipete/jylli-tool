@@ -1,7 +1,7 @@
 'use strict'
 // System > Scheduler: create scheduled maintenance tasks and manage the active ones (list rendering lives in index.html).
 async function buildScheduler(c) {
-  if (!settings.isPremium) { await buildPremiumBanner(c, 'scheduler'); return }
+  if (!settings.isPremium) { await JylliPremium.build(c, 'scheduler'); return }
   const { html } = ui
   const field = (labelKey, control, id) => html`<div class="j-field" ${ui.raw(id ? `id="${id}"` : '')}><label class="j-field-label">${tUI(labelKey)}</label>${control}</div>`
   const opt = (v, key) => html`<option value="${v}">${tUI(key)}</option>`

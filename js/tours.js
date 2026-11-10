@@ -111,9 +111,9 @@
       T('settings-appearance', ['Make it yours', 'Accent colour, light or dark, motion and how much 3D you would like.'], ['Tee siitä omasi', 'Korostusväri, vaalea tai tumma, liike ja 3D:n määrä.']),
       T('settings-tours', ['Tours and welcome', 'Turn guided tours off, show them again, or run the welcome from the beginning.'], ['Kierrokset ja tervetulo', 'Poista opastetut kierrokset käytöstä, näytä ne uudelleen tai aja tervetulo alusta.']),
     ] },
-    prolock: { v: 1, stops: [
-      T('prolock-card', ['This page is part of Pro', 'The rest of the app is fully yours. Pro adds this page and the advanced controls behind it.'], ['Tämä sivu kuuluu Prohon', 'Muu sovellus on täysin käytössäsi. Pro lisää tämän sivun ja sen taakse jäävät edistyneet säätimet.']),
-      T('prolock-cta', ['When you are ready', 'This opens the Pro page in your browser. Nothing is purchased here.'], ['Kun olet valmis', 'Tämä avaa Pro-sivun selaimessa. Mitään ei osteta täällä.']),
+    prolock: { v: 2, stops: [
+      T('prolock-card', ['This page is part of Premium', 'The rest of the app is fully yours. Premium adds this page and the advanced controls behind it, and one purchase covers all of them.'], ['Tämä sivu kuuluu Premiumiin', 'Muu sovellus on täysin käytössäsi. Premium lisää tämän sivun ja sen taakse jäävät edistyneet säätimet, ja yksi ostos kattaa ne kaikki.']),
+      T('prolock-cta', ['When you are ready', 'This opens the store in your browser. Nothing is purchased here.'], ['Kun olet valmis', 'Tämä avaa kaupan selaimessa. Mitään ei osteta täällä.']),
     ] },
   }
 })(typeof window !== 'undefined' ? window : globalThis)

@@ -1,0 +1,58 @@
+BIOS WORKSTATION - THINGS TO DO LATER
+=====================================
+Saved 2026-11-04. Companion to BIOS-TEST-MAIN-PC.txt (the step-by-step hardware test list).
+Code state: commits up to 982b952 (old BIOS tab removed).
+
+
+1. RYZEN, FAN CONTROL AND RAM STRESS SCREENS (deleted with the old tab)
+-----------------------------------------------------------------------
+Decision: rebuild only the safe part, and later.
+
+REBUILD AS "INSTRUMENTS" in the workstation:
+  - a live sensors and thermal view
+  - a RAM stress test
+  Both feed the Proof tab (measured before and after a change). They use things we own: the bundled
+  sensor tool (assets/sensor, JylliSensor) and Windows itself.
+
+DO NOT REBUILD FOR NOW: Ryzen tuning (RyzenAdj) and fan control (FanControl).
+  - Both depend on third-party tools. Their folders (assets/ryzenadj, assets/fancontrol) are
+    gitignored and not in this checkout, so they cannot be tested or shipped from here.
+  - Ryzen tuning is overclocking-class risk: it would belong in Workstation mode behind
+    Critical-level confirmation, never in Easy mode.
+  - Bring them back only once you have the binaries and are sure you may redistribute them.
+
+Where the old code is: git history, before commit 982b952 (index.html, main.js). Example:
+    git show 982b952^:index.html
+The backend handlers bios-ram-stress, bios-lhm-sensors, bios-intel-power, bios-cstates, bios-hyper-v,
+bios-boot-chronicle and bios-stability-check are still in main.js, waiting for the Instruments UI.
+
+
+2. LEFTOVER TRANSLATION KEYS
+----------------------------
+About 200 keys per language from the old tab are still in js/lang/en.js and js/lang/fi.js
+(mostly keys starting with "bios" in the "ui" group). Harmless dead text, no user-visible effect.
+
+Plan: delete them in a small cleanup commit AFTER your own uncommitted tweak-risk work
+(js/lang/*.js, lib/tweak-risk.js, js/auto-opti.js, test/auto-opti-max.test.js) is committed, so
+nothing has to be split by hand. The repo's key tool can list unused keys:
+    node tools/check-keys.js
+About ten minutes. No rush. Run npm run check and npm test afterwards.
+
+
+3. STILL UNPROVEN
+-----------------
+a) HP laptop (do first, it is available now):
+   - Run the real advisor on the laptop's actual 223 settings in a read-only script and look at
+     what it would suggest. This checks the setting-name matching against real data, which is
+     where the most surprises are expected. (Script not written yet: ask for it.)
+   - Then run Jylli Tool as administrator and try one Apply and one Undo from Easy mode.
+     Details: section 3c and 7 of BIOS-TEST-MAIN-PC.txt.
+   - Already proven by script (not through the app): read, write, read back, revert, survive a
+     restart, boot trial revert. Scripts: tools/bios-hp-test.js, tools/bios-trial-test.js.
+
+b) MAIN PC (matters most):
+   - The only way to find out whether the SCEWIN parser and the setting names hold up on a real
+     AMI board. Follow BIOS-TEST-MAIN-PC.txt from section 0. The key deliverable is the cleaned
+     nvram-read.txt from section 2c.
+   - SCEWIN writes stay locked until a real AMI board passes: that is a separate piece of work
+     after the read test.

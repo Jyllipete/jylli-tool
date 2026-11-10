@@ -377,21 +377,29 @@ namespace JylliSetup
         int RunInstall(string dir, bool desk, bool start)
         {
             Post(delegate { SetProgress(0.01, "st_close"); });
-            Engine.CloseApp();
+            Engine.CloseAppIn(dir);
             Post(delegate { SetProgress(0.03, "st_prep"); });
             string payload = Engine.ExtractPayload();
             string mode = (ex != null && ex.AllUsers) ? "/allusers" : "/currentuser";
-            Process p = Engine.Start(payload, "/S " + mode + " /D=" + dir);
-            Stopwatch sw = Stopwatch.StartNew();
-            while (!p.WaitForExit(300))
+            int code = -1;
+            // The old version's uninstaller can still fail on a lock that is released a moment later: close everything again and retry once.
+            for (int attempt = 0; attempt < 2; attempt++)
             {
-                double pr = ex == null
-                    ? Math.Min(0.95, (double)Engine.DirSize(dir) / Math.Max(1, BuildInfo.UnpackedSize))
-                    : 0.93 * (1 - Math.Exp(-sw.Elapsed.TotalSeconds / 18));
-                string key = pr < 0.04 ? "st_prep" : (pr < 0.9 ? "st_files" : "st_final");
-                Post(delegate { SetProgress(pr, key); });
+                Process p = Engine.Start(payload, "/S " + mode + " /D=" + dir);
+                Stopwatch sw = Stopwatch.StartNew();
+                while (!p.WaitForExit(300))
+                {
+                    double pr = ex == null
+                        ? Math.Min(0.95, (double)Engine.DirSize(dir) / Math.Max(1, BuildInfo.UnpackedSize))
+                        : 0.93 * (1 - Math.Exp(-sw.Elapsed.TotalSeconds / 18));
+                    string key = pr < 0.04 ? "st_prep" : (pr < 0.9 ? "st_files" : "st_final");
+                    Post(delegate { SetProgress(pr, key); });
+                }
+                code = p.ExitCode;
+                if (code == 0) break;
+                Engine.CloseAppIn(dir);
+                System.Threading.Thread.Sleep(2000);
             }
-            int code = p.ExitCode;
             try { Directory.Delete(Path.GetDirectoryName(payload), true); } catch { }
             if (code == 0 && ex == null) Engine.RemoveShortcuts(desk, start);
             return code;

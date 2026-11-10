@@ -29,7 +29,7 @@ function _puSlider({ id, valId, label, hint, min, max, value, kind, tone }) {
 }
 
 async function buildPulse(c) {
-  if (!settings.isPremium) { await buildPremiumBanner(c, 'pulse'); return }
+  if (!settings.isPremium) { await JylliPremium.build(c, 'pulse'); return }
   const { html, raw } = ui
   const t3 = settings.gameShieldTier3Threshold ?? 70
   const t2 = settings.gameShieldMidSessionThreshold ?? 80

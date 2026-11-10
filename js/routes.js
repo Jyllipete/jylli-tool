@@ -16,11 +16,11 @@
       { id: 'fixes', page: 'fixes' },
     ] },
     { id: 'gaming', icon: 'gamepad', tabs: [
-      { id: 'pulse', page: 'pulse' },
-      { id: 'games', page: 'game-opti' },
+      { id: 'pulse', page: 'pulse', premium: true },
+      { id: 'games', page: 'game-opti', premium: true },
       { id: 'apps', page: 'app-optimizer' },
-      { id: 'fivem', page: 'fivem' },
-      { id: 'latency', page: 'latency-monitor' },
+      { id: 'fivem', page: 'fivem', premium: true },
+      { id: 'latency', page: 'latency-monitor', premium: true },
       { id: 'replay', page: 'replay' },
     ] },
     { id: 'clean', icon: 'broom', tabs: [
@@ -31,8 +31,8 @@
     { id: 'system', icon: 'sliders', tabs: [
       { id: 'diagnostics', page: 'preflight' },
       { id: 'processes', page: 'process-manager' },
-      { id: 'bios', page: 'bios-tuner' },
-      { id: 'scheduler', page: 'scheduler' },
+      { id: 'bios', page: 'bios-tuner', premium: true },
+      { id: 'scheduler', page: 'scheduler', premium: true },
       { id: 'restore', page: 'restore-points' },
       { id: 'history', page: 'changelog' },
     ] },

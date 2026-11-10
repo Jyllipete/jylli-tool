@@ -40,9 +40,18 @@ namespace JylliSetup
                 string dir = ui >= 0 ? raw.Substring(ui + 3).Trim().Trim('"') : installDir;
                 string nsis = Path.Combine(dir, Engine.NsisUninstaller);
                 if (!File.Exists(nsis)) return 2;
-                Process p = Engine.Start(nsis, raw);
-                p.WaitForExit();
-                return p.ExitCode;
+                // Run a temp copy (like electron-builder does) so the NSIS uninstaller is not running from the folder it removes.
+                string tmpDir = Path.Combine(Path.GetTempPath(), "JylliUn-" + Guid.NewGuid().ToString("N"));
+                try
+                {
+                    Directory.CreateDirectory(tmpDir);
+                    string copy = Path.Combine(tmpDir, Engine.NsisUninstaller);
+                    File.Copy(nsis, copy, true);
+                    Process p = Engine.Start(copy, raw);
+                    p.WaitForExit();
+                    return p.ExitCode;
+                }
+                finally { try { Directory.Delete(tmpDir, true); } catch { } }
             }
 
             // Interactive: run from a temp copy so the install folder can be deleted.

@@ -74,5 +74,5 @@ Sentence case. Verb-first buttons ("Apply", "Create restore point"). No "please"
 - Desktop Electron app: the responsive matrix is 1060×660 (minimum), 1280×820 and 1920×1080 plus 150% zoom, not 390px mobile.
 - Click targets: 32px minimum for pointer controls, 36px for primary actions.
 - Theme: System / Dark / Light in Settings › Appearance; default Dark so existing users see no change. The game HUDs stay dark, since they sit over games.
-- Premium: a small outlined "Pro" badge on tabs and nav items, and one lock panel; no crowns or extra colours.
+- Premium: a small outlined "Premium" badge on locked tabs and a lock on nav items. A free user who opens a locked tab sees one pitch (`js/premium.js`, `css/premium.css`): a headline written for that feature, three benefits, facts read from this PC (omitted when unknown), an animated example labelled "Example", the price (10 €, one-time) and chips for the rest of Premium. One accent, no glow on text, cards or badges; no performance numbers, reviews or counts in the copy (`test/premium.test.js` enforces it).
 - Behaviour is unchanged. The flagged exceptions: the `colorScheme` setting, scheme passed to secondary windows plus window background, optimistic switch flips with rollback on error, removal of provably unused code.

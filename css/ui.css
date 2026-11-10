@@ -315,16 +315,41 @@
    Cards keep their markup (ids, handlers, progress bar); only the layout changes. Scoped by #page-content so they beat the
    three stacked .tweak-card definitions in css/style.css regardless of load order. */
 #page-content .tweak-card-grid { display: flex; flex-direction: column; gap: 0; padding: 0; }
-#page-content .tweak-card { position: relative; flex-direction: row; align-items: center; gap: 16px; min-height: 56px; padding: 10px 16px; border: 0; border-bottom: 1px solid var(--hairline); border-radius: 0; background: transparent; box-shadow: none; transform: none; animation: none; }
+#page-content .tweak-card { position: relative; flex-direction: row; align-items: flex-start; gap: 16px; min-height: 56px; padding: 10px 16px; border: 0; border-bottom: 1px solid var(--hairline); border-radius: 0; background: transparent; box-shadow: none; transform: none; animation: none; }
 #page-content .tweak-card:last-child { border-bottom: 0; }
 #page-content .tweak-card:hover { background: var(--c-bg-hover); border-bottom-color: var(--hairline); box-shadow: none; transform: none; }
 #page-content .tweak-card.tc-applied { background: transparent; border-bottom-color: var(--hairline); }
 #page-content .tweak-card::before, #page-content .tweak-card::after { display: none; }
-#page-content .tc-top { flex: 1; min-width: 0; align-items: center; gap: 0; }
+#page-content .tc-top { flex: 1; min-width: 0; align-items: flex-start; gap: 0; }
+#page-content .tc-meta { min-width: 0; }
 #page-content .tc-icon { display: none; }
 #page-content .tc-name { display: flex; align-items: center; gap: 8px; margin: 0 0 2px; font: 500 var(--fs-3)/1.35 var(--font); letter-spacing: 0; color: var(--c-text-primary); }
-#page-content .tc-desc { font-size: var(--fs-2); line-height: 1.45; -webkit-line-clamp: 2; color: var(--c-text-tertiary); }
-#page-content .tc-foot { flex: none; margin: 0; gap: 14px; }
+/* Description: ONE clamp rule per state. Collapsed = 2 lines + overflow hidden; .tc-open = full text. Never unclamp on :hover:
+   the old hover rule left overflow:visible while this rule kept the clamp, so hidden lines painted over the risk box (tools/check-ui.js guards it). */
+#page-content .tc-desc { font-size: var(--fs-2); line-height: 1.45; color: var(--c-text-tertiary); max-width: 76ch; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
+#page-content .tweak-card.tc-open .tc-desc { display: block; -webkit-line-clamp: none; overflow: visible; }
+#page-content .tweak-card.tc-expandable .tc-desc { cursor: pointer; }
+#page-content .tc-warn, #page-content .tc-conflict-warn, #page-content .tc-rec, #page-content .tc-risk-avoid { margin-top: 6px; max-width: 76ch; line-height: 1.45; font-size: var(--fs-2); }
+#page-content .tc-risk-avoid { color: var(--c-danger); }
+#page-content .tc-chips { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; margin-top: 6px; }
+#page-content .tc-chips:empty { display: none; }
+#page-content .tc-chips .reboot-badge, #page-content .tc-chips .tc-rec { margin-top: 0; }
+#page-content .tc-more { display: inline-flex; align-items: center; gap: 6px; min-height: 24px; padding: 2px 6px; margin-left: -6px; border: 0; border-radius: var(--r-sm); background: transparent; color: var(--c-text-secondary); font: 500 var(--fs-2)/1.3 var(--font); cursor: pointer; transition: background var(--dur-fast), color var(--dur-fast); }
+#page-content .tc-more[hidden] { display: none; }
+#page-content .tc-more:hover { background: var(--c-bg-hover); color: var(--c-text-primary); }
+#page-content .tc-more:focus-visible { outline: 2px solid var(--c-accent); outline-offset: 1px; }
+#page-content .tc-more.tc-more-risk { color: var(--c-warning); }
+#page-content .tc-more .fa-chevron-down { font-size: 9px; transition: transform var(--dur-fast) var(--ease-out); }
+#page-content .tc-open .tc-more .fa-chevron-down { transform: rotate(180deg); }
+#page-content .tc-details { display: none; max-width: 76ch; }
+#page-content .tc-open .tc-details { display: block; animation: tc-details-in var(--dur-base) var(--ease-out); }
+@keyframes tc-details-in { from { opacity: 0; transform: translateY(-3px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { #page-content .tc-open .tc-details { animation: none; } #page-content .tc-more .fa-chevron-down { transition: none; } }
+#page-content .tc-risk { margin-top: 8px; padding: 8px 10px; font-size: var(--fs-2); line-height: 1.45; color: var(--c-text-secondary); background: rgba(var(--c-warning-rgb), 0.06); border: 0; border-left: 2px solid var(--c-warning); border-radius: var(--r-sm); }
+#page-content .tc-risk > b { color: var(--c-text-primary); font-weight: 600; }
+#page-content .tc-risk ul { margin: 4px 0 6px 16px; }
+#page-content .tc-risk-caution, #page-content .tc-risk-rev { margin-top: 4px; opacity: 1; color: var(--c-text-tertiary); }
+#page-content .tc-foot { flex: none; margin: 0; gap: 14px; padding-top: 2px; }
 #page-content .tc-info-btn { position: static; order: 2; }
 #page-content .tc-badge { font-size: var(--fs-1); }
 

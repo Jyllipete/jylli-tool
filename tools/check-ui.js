@@ -33,6 +33,22 @@ for (const f of files) {
   })
 }
 
+// ── 1b. line-clamp safety: never changed on :hover/:focus, always paired with overflow:hidden ──
+// (a hover rule with overflow:visible plus a clamp kept by a higher-specificity rule painted hidden lines over the card's risk box)
+{
+  const cssDir = path.join(root, 'css')
+  const hov = /:(hover|focus|focus-within)\b/
+  for (const f of fs.readdirSync(cssDir).filter(n => n.endsWith('.css'))) {
+    const src = fs.readFileSync(path.join(cssDir, f), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '')
+    const rules = [...src.matchAll(/([^{}]+)\{([^{}]*)\}/g)].map(r => [r[1].trim(), r[2]])
+    for (const [sel, body] of rules) {
+      if (hov.test(sel) && /-webkit-line-clamp\s*:/.test(body)) fail(`css/${f}: "${sel.slice(0, 60)}" changes line-clamp on hover/focus (use a state class like .tc-open)`)
+      if (hov.test(sel) && /(^|[;\s])overflow(-y)?\s*:\s*visible/.test(body) && /desc|clamp/.test(sel)) fail(`css/${f}: "${sel.slice(0, 60)}" sets overflow:visible on hover for text that may be clamped`)
+      if (/-webkit-line-clamp\s*:\s*[1-9]/.test(body) && !rules.some(([s2, b2]) => s2 === sel && /overflow(-y)?\s*:\s*hidden/.test(b2))) fail(`css/${f}: "${sel.slice(0, 60)}" sets -webkit-line-clamp without overflow:hidden`)
+    }
+  }
+}
+
 // ── 2. LANG parity ──
 function loadLang() {
   const split = [path.join(root, 'js', 'lang', 'en.js'), path.join(root, 'js', 'lang', 'fi.js')]
@@ -79,7 +95,7 @@ else {
 {
   const tp = path.join(root, 'js', 'tours.js')
   if (fs.existsSync(tp)) {
-    const srcFiles = [path.join(root, 'index.html'), path.join(root, 'js', 'shell.js'), path.join(root, 'js', 'fivem-logic.js'), path.join(root, 'js', 'bios', 'workstation.js'), ...walk(path.join(root, 'js', 'pages'))].filter(f => fs.existsSync(f))
+    const srcFiles = [path.join(root, 'index.html'), path.join(root, 'js', 'shell.js'), path.join(root, 'js', 'premium.js'), path.join(root, 'js', 'fivem-logic.js'), path.join(root, 'js', 'bios', 'workstation.js'), ...walk(path.join(root, 'js', 'pages'))].filter(f => fs.existsSync(f))
     const src = srcFiles.map(f => fs.readFileSync(f, 'utf8')).join('\n')
     const ctx = { window: null }; ctx.window = ctx; vm.createContext(ctx)
     vm.runInContext(fs.readFileSync(tp, 'utf8'), ctx, { filename: tp })

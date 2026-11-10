@@ -4,7 +4,7 @@ let _fivemHudOpen = false
 
 // ─── Page: FiveM ──────────────────────────────────────────────────────────────
 async function buildFiveM(c) {
-  if (!settings.isPremium) { await buildPremiumBanner(c, 'fivem'); return }
+  if (!settings.isPremium) { await JylliPremium.build(c, 'fivem'); return }
   c.appendChild(makeTip(tUI('fivemTipTitle'), 'info'))
   // ── Not-detected banner ────────────────────────────────────────────────────
   if (!sysInfo?.fivemInstalled) {

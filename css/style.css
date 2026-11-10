@@ -2786,62 +2786,10 @@ input[type="time"].styled-select { color-scheme: dark; }
 .ao-conflict-body    { font-size:11px; color:var(--c-text-tertiary,rgba(var(--fx),0.32)); line-height:1.5; }
 .ao-conflict-impact  { font-size:11px; font-weight:700; padding:1px 6px; border-radius:3px; background:rgba(var(--c-warning-rgb),0.15); border:1px solid rgba(var(--c-warning-rgb),0.3); color:var(--c-warning); }
 
-/* ─── Premium Lock ──────────────────────────────────────────────────────────── */
-.premium-lock-banner {
-  display:flex; align-items:center; gap:14px;
-  background:linear-gradient(135deg,#130a1c,#1a0d28);
-  border:1px solid rgba(var(--c-accent-rgb),.4);
-  border-radius:var(--radius); padding:14px 18px;
-  position:fixed; z-index:1001;
-  top:50%; left:50%; transform:translate(-50%,-50%);
-  width:min(480px,90%);
-  pointer-events:all; cursor:default;
-}
-.plb-icon {
-  width:36px; height:36px; border-radius:9px;
-  background:rgba(var(--c-accent-rgb),.15); border:1px solid rgba(var(--c-accent-rgb),.35);
-  display:flex; align-items:center; justify-content:center;
-  color:var(--c-accent-fg); font-size:16px; flex-shrink:0;
-}
-.plb-text { flex:1; }
-.plb-title { font-size:13px; font-weight:700; color:var(--white); margin-bottom:3px; }
-.plb-desc  { font-size:11px; color:var(--gray); line-height:1.5; }
-.plb-cta   { background:var(--c-accent)!important; flex-shrink:0; pointer-events:all; cursor:pointer; }
-.plb-cta:hover { background:var(--c-accent)!important; }
-.premium-lock-scrim {
-  position:absolute; inset:0; z-index:1000;
-  background:rgba(10,10,10,.45);
-  backdrop-filter:blur(4px);
-  -webkit-backdrop-filter:blur(4px);
-  pointer-events:all; cursor:not-allowed;
-}
+/* ─── Premium ───  the locked-tab pitch lives in css/premium.css */
 #page-content { position:relative; }
 .nav-premium-lock { font-size:11px; color:var(--c-accent-fg); margin-left:auto; opacity:.8; }
 
-/* ── Tab-scoped inline premium lock (stays inside content area, tab bar remains active) ── */
-.tab-premium-lock {
-  display: flex; flex-direction: column; align-items: center; justify-content: center;
-  padding: 48px 24px; text-align: center; gap: 14px;
-  background: linear-gradient(158deg, rgba(var(--pink-rgb),0.05) 0%, rgba(var(--pink-rgb),0.03) 100%);
-  border: 1px solid rgba(var(--pink-rgb),0.18);
-  border-radius: var(--r-lg); margin: 8px 0;
-  min-height: 220px;
-}
-.tab-premium-lock-icon {
-  width: 52px; height: 52px; border-radius: 50%;
-  background: rgba(var(--c-accent-rgb),0.12); border: 1px solid rgba(var(--c-accent-rgb),0.30);
-  display: flex; align-items: center; justify-content: center;
-  font-size: 20px; color: var(--c-accent-fg);
-  box-shadow: none;
-}
-.tab-premium-lock-title {
-  font-size: var(--font-size-lg); font-weight: 800;
-  color: var(--c-text-primary); letter-spacing: -0.02em;
-}
-.tab-premium-lock-sub {
-  font-size: var(--font-size-sm); color: var(--c-text-secondary);
-  max-width: 320px; line-height: 1.55;
-}
 /* Lock icon badge on premium tabs in tab bar */
 
 /* ─── Typography utilities ────────────────────────────────────────────────── */
@@ -3729,13 +3677,7 @@ body::before {
   opacity: 1;
 }
 
-/* Description — 3-line clamp for consistent card height */
-.tc-desc {
-  font-size: 11px; color: var(--c-text-tertiary); line-height: 1.55;
-  display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-.tweak-card:hover .tc-desc { -webkit-line-clamp: unset; overflow: visible; }
+/* Description clamp: base .tc-desc below + .tc-open in css/ui.css. Never unclamp on :hover (guarded by tools/check-ui.js) */
 
 /* Icon — slightly larger, more presence */
 .tc-icon {
@@ -4064,7 +4006,6 @@ body::before {
 /* ── Typography ───────────────────────────────────────────────────────────── */
 .tc-name { font-size: 13px; font-weight: 800; color: var(--c-text-primary); line-height: 1.25; margin-bottom: 4px; letter-spacing: -0.03em; }
 .tc-desc { font-size: 11px; color: var(--c-text-tertiary); line-height: 1.55; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
-.tweak-card:hover .tc-desc { -webkit-line-clamp: unset; overflow: visible; }
 
 /* ── Icon — 40×40 ─────────────────────────────────────────────────────────── */
 .tc-icon { width: 40px; height: 40px; background: rgba(var(--pink-rgb),0.10); border: 1px solid rgba(var(--pink-rgb),0.22); border-radius: var(--r-md); display: flex; align-items: center; justify-content: center; font-size: 16px; color: var(--c-accent-fg); flex-shrink: 0; transition: background var(--motion-hover),border-color var(--motion-hover),box-shadow var(--motion-hover); }

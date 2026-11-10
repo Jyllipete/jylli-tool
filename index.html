@@ -16,6 +16,7 @@
 <link rel="stylesheet" href="css/arrival.css">
 <link rel="stylesheet" href="css/auto-opti.css">
 <link rel="stylesheet" href="css/bios.css">
+<link rel="stylesheet" href="css/premium.css">
 </head>
 <body>
 
@@ -509,6 +510,7 @@
 <script src="js/twin/host.js"></script>
 <script src="js/boot-stage.js"></script>
 <script src="js/shell.js"></script>
+<script src="js/premium.js"></script>
 <script src="js/concierge.js"></script>
 <script src="js/pages/home.js"></script>
 <script src="js/pages/home-concierge.js"></script>
@@ -552,12 +554,16 @@ function tDesc(id)    { return (LANG[currentLang]?.tweakDescs?.[id]  ?? LANG.en.
 function tName(id)    { return (LANG[currentLang]?.tweakNames?.[id]    ?? LANG.en.tweakNames?.[id])    ?? null }
 function tWarn(id)    { return (LANG[currentLang]?.tweakWarnings?.[id] ?? LANG.en.tweakWarnings?.[id]) ?? null }
 function tRiskLines(id) { return (LANG[currentLang]?.tweakRisk?.[id] ?? LANG.en.tweakRisk?.[id]) ?? [] }
-function tRisk(id) {
-  const lines = tRiskLines(id), r = window._tweakMeta?.[id]?.risk
+function tRiskAvoid(id) {   // the standalone 'do not apply on' line (cards keep it visible while the rest of the risk box folds)
+  const r = window._tweakMeta?.[id]?.risk
+  return r && r.avoid.length ? `<div class="tc-risk-avoid"><b>${tUI('riskAvoid')}:</b> ${r.avoid.map(t => tG('riskTag', t)).join(', ')}</div>` : ''
+}
+function tRisk(id, opts) {
+  const lines = tRiskLines(id), r = window._tweakMeta?.[id]?.risk, withAvoid = !(opts && opts.avoid === false)
   if (!lines.length && !r) return ''
   const tags = a => (a || []).map(t => tG('riskTag', t)).join(', ')
   const rev = r ? tUI(r.revert === 'manual' ? 'riskRevertManual' : r.revert === 'none' ? 'riskRevertNone' : 'riskRevertJournal') : ''
-  return `<div class="tc-risk"><b>${tUI('riskWhat')}</b><ul>${lines.map(l => `<li>${l}</li>`).join('')}</ul>${r && r.avoid.length ? `<div class="tc-risk-avoid"><b>${tUI('riskAvoid')}:</b> ${tags(r.avoid)}</div>` : ''}${r && r.caution.length ? `<div class="tc-risk-caution"><b>${tUI('riskCaution')}:</b> ${tags(r.caution)}</div>` : ''}${rev ? `<div class="tc-risk-rev">${rev}</div>` : ''}</div>`
+  return `<div class="tc-risk"><b>${tUI('riskWhat')}</b><ul>${lines.map(l => `<li>${l}</li>`).join('')}</ul>${withAvoid && r && r.avoid.length ? `<div class="tc-risk-avoid"><b>${tUI('riskAvoid')}:</b> ${tags(r.avoid)}</div>` : ''}${r && r.caution.length ? `<div class="tc-risk-caution"><b>${tUI('riskCaution')}:</b> ${tags(r.caution)}</div>` : ''}${rev ? `<div class="tc-risk-rev">${rev}</div>` : ''}</div>`
 }
 function tFixDesc(id) { return (LANG[currentLang]?.fixDescs?.[id]      ?? LANG.en.fixDescs?.[id])      ?? null }
 function tWizard(key) { return (LANG[currentLang]?.wizard?.[key]     ?? LANG.en.wizard?.[key])   ?? key }
@@ -1593,11 +1599,6 @@ document.addEventListener('keydown', e => {
 // ─── Premium tier helpers ──────────────────────────────────────────────────────
 const PREMIUM_PAGES = ['hardware','fivem','pulse','latency-monitor','game-opti','scheduler','bios-tuner']
 
-const PREMIUM_TAB_NAMES = {
-  en: { hardware:'Advanced', fivem:'FiveM', cs2:'Counter-Strike 2', pulse:'Pulse', 'latency-monitor':'Latency Monitor', 'game-opti':'Game Profiles', scheduler:'Scheduler' },
-  fi: { hardware:'Lisäasetukset', fivem:'FiveM', cs2:'Counter-Strike 2', pulse:'Pulse', 'latency-monitor':'Latency Monitor', 'game-opti':'Peliprofiilit', scheduler:'Ajastin' }
-}
-
 function applyTierToNav() {
   PREMIUM_PAGES.forEach(page => {
     const btn = document.querySelector(`[data-page="${page}"]`)
@@ -1614,48 +1615,8 @@ function applyTierToNav() {
   })
 }
 
-async function buildPremiumBanner(c, tabKey) {
-  const url     = await api.getPremiumUrl().catch(() => 'https://jyllitool.netlify.app/')
-  const tabName = (PREMIUM_TAB_NAMES[currentLang] || PREMIUM_TAB_NAMES.en)[tabKey] || tabKey
-  // Telemetry: log which locked tab STANDARD user attempted to open
-  // Scrim: position:absolute inset:0 on #page-content (position:relative).
-  // Disable scroll on #page-content so inset:0 covers the full visible area.
-  const scrim = document.createElement('div')
-  scrim.className = 'premium-lock-scrim'
-  c.appendChild(scrim)
-  // Banner: position:fixed centered in viewport (set in CSS)
-  const banner = document.createElement('div')
-  banner.className = 'premium-lock-banner'
-  banner.innerHTML = `
-    <div class="plb-icon"><i class="fa fa-lock"></i></div>
-    <div class="plb-text">
-      <div class="plb-title"><i class="fa fa-crown jx-201"></i>${tabName} — ${tUI('premiumLockTitle')}</div>
-      <div class="plb-desc">${tUI('premiumLockDesc')}</div>
-    </div>
-    <a href="#" class="btn btn-primary btn-sm plb-cta" onclick="api.openExternal('${url}');return false">
-      <i class="fa fa-crown"></i> ${tUI('premiumLockCta')}
-    </a>`
-  c.appendChild(banner)
-  // Disable scrolling — scrim (inset:0 absolute) now covers the entire visible area
-  c.style.overflow = 'hidden'
-}
-
-// Inline tab-scoped premium lock — tab bar stays active, only content area is locked
-async function _buildTabPremiumLock(c, tabKey) {
-  const url = await api.getPremiumUrl().catch(() => 'https://jyllitool.netlify.app/')
-  const tabName = (PREMIUM_TAB_NAMES[currentLang] || PREMIUM_TAB_NAMES.en)[tabKey] || tabKey
-  const lock = document.createElement('div')
-  lock.className = 'tab-premium-lock'
-  lock.dataset.tour = 'prolock-card'
-  lock.innerHTML = `
-    <div class="tab-premium-lock-icon"><i class="fa fa-lock"></i></div>
-    <div class="tab-premium-lock-title"><i class="fa fa-crown jx-48"></i>${tabName} — ${tUI('premiumLockTitle')}</div>
-    <div class="tab-premium-lock-sub">${tUI('premiumLockDesc')}</div>
-    <a href="#" data-tour="prolock-cta" class="btn btn-primary btn-sm" style="background:var(--c-accent);margin-top:4px" onclick="api.openExternal('${url}');return false">
-      <i class="fa fa-crown"></i> ${tUI('premiumLockCta')}
-    </a>`
-  c.appendChild(lock)
-}
+// The pitch for locked tabs lives in js/premium.js (JylliPremium.build(c, tabId)); this opens the store from toasts.
+function premiumStoreAction() { return { label: tUI('premiumLockCta'), run: () => JylliPremium.open() } }
 
 // ─── Navigation ───────────────────────────────────────────────────────────────
 const _NAV_ORDER = [
@@ -1702,6 +1663,11 @@ function showPage(page, tabId) {
   const navToken = (window._navToken = (window._navToken || 0) + 1)
   window._navTimeout = setTimeout(async () => {
     if (window._navToken !== navToken) return
+    // A previous tab's async builder may still be writing into #page-content; let it finish first or its cards land on this tab.
+    if (window._navBuilding) {
+      try { await window._navBuilding } catch {}
+      if (window._navToken !== navToken) return
+    }
     c.classList.remove('page-exit')
     try { JylliTwin.park() } catch {}   // move the persistent 3D canvas out before this page's DOM is replaced
     // Run any registered cleanup for the page we just left
@@ -1731,7 +1697,9 @@ function showPage(page, tabId) {
       if (page === 'startup-manager') _startupRewireAfterCacheRestore(c)
     } else {
       try {
-        await (route && Shell.TAB_BUILDERS[route.tab])?.(c)
+        const building = Promise.resolve((route && Shell.TAB_BUILDERS[route.tab])?.(c))
+        window._navBuilding = building.catch(() => {})
+        await building
       } catch (e) {
         if (window._navToken !== navToken) return   // the user already moved on; don't paint an error onto another page
         c.innerHTML = `<div class="empty-state"><i class="fa fa-triangle-exclamation jx-202"></i><p class="jx-3">${escHtml(e.message || tUI('pageLoadFailed'))}</p><button class="btn btn-ghost btn-sm" onclick="showPage(${jsArg(page)})"><i class="fa fa-rotate-right"></i> ${tUI('pageRetry')}</button></div>`
@@ -1904,7 +1872,7 @@ async function launchRuleCommit(call, on, flag, cardId, okKey, offKey) {
 // Opens the Pulse live window; a refusal (premium) is shown instead of silently doing nothing.
 async function openPulseLive() {
   const r = await api.openPulseWindow().catch(() => null)
-  if (r && r.ok === false) toast(tUI('premiumLockTitle'), tUI('premiumLockDesc'), 'warn', 6000)
+  if (r && r.ok === false) toast(tUI('premiumLockTitle'), tUI('premiumLockDesc'), 'warn', 8000, { action: premiumStoreAction() })
 }
 
 function launchRuleToggle(rule, on) {
@@ -5275,7 +5243,7 @@ async function confirmTier(id) {
 
 async function applyTweak(id, action = 'apply') {
   if (id.startsWith('fivem-') && !settings.isPremium) {
-    toast(tUI('premiumLockTitle'), tUI('aomFivemLockedDesc'), 'warn')
+    toast(tUI('premiumLockTitle'), tUI('aomFivemLockedDesc'), 'warn', 8000, { action: premiumStoreAction() })
     return { ok: false, skipped: true }
   }
   if (_tweakInflight.has(id)) return { ok: false, skipped: true }
@@ -8343,7 +8311,7 @@ function spwBuildTweakList() {
 
 // ─── Page: Hardware ───────────────────────────────────────────────────────────
 async function buildHardware(c) {
-  if (!settings.isPremium) { await buildPremiumBanner(c, 'hardware'); return }
+  if (!settings.isPremium) { await JylliPremium.build(c, 'cpumem'); return }
   const si = sysInfo
   if (!si || (!si.gpu && !si.cpu)) {
     c.innerHTML = '<div class="jx-563"><i class="fa fa-spinner fa-spin jx-564"></i>Loading hardware info…</div>'
@@ -9763,7 +9731,8 @@ function makeCard({ id, name, desc, icon = '<i class="fa fa-gear"></i>', danger 
   warning = tWarn(id) || warning
   safetyTier = window._tweakMeta?.[id]?.safetyTier ?? safetyTier   // main's tier wins over the literal on the card
   if (safetyTier >= 3) danger = true
-  const riskHtml = safetyTier >= 2 ? tRisk(id) : ''
+  const riskHtml = safetyTier >= 2 ? tRisk(id, { avoid: false }) : ''
+  const avoidHtml = safetyTier >= 2 ? tRiskAvoid(id) : ''
   const ap = window._applic && window._applic[id]
   const apHtml = ap && ap.state === 'caution' && ap.why ? `<div class="tc-conflict-warn"><i class="fa fa-triangle-exclamation jx-155"></i>${tUI('applic_' + ap.why)}</div>` : ap && ap.state === 'recommended' ? `<span class="tc-rec"><i class="fa fa-thumbs-up"></i> ${tUI('applicRecommended')}</span>` : ''
   const applied = tweakState(id) === 'applied'
@@ -9775,7 +9744,7 @@ function makeCard({ id, name, desc, icon = '<i class="fa fa-gear"></i>', danger 
   const d = document.createElement('div')
   if (!applied && window._tweakMeta?.[id]?.retired) d.style.display = 'none'   // retired and never applied: nothing to offer (an applied one keeps its card so it can be restored)
   const _tierClass = danger ? 'tier-risk' : (safetyTier === 2 ? 'tier-caution' : 'tier-safe')
-  d.className = 'tweak-card ' + _tierClass + (danger ? ' tc-danger' : '') + (applied ? ' tc-applied' : '') + (preApplied ? ' tc-preapplied' : '') + (hasConflict ? ' tc-conflict' : '')
+  d.className = 'tweak-card ' + _tierClass + (riskHtml ? ' tc-has-details tc-expandable' : '') + (danger ? ' tc-danger' : '') + (applied ? ' tc-applied' : '') + (preApplied ? ' tc-preapplied' : '') + (hasConflict ? ' tc-conflict' : '')
   d.id = `tcw-${id}`
   d.dataset.tour = 'tweak-card'
   d.dataset.search = `${name} ${desc} ${id}`.toLowerCase()
@@ -9788,14 +9757,18 @@ function makeCard({ id, name, desc, icon = '<i class="fa fa-gear"></i>', danger 
       <div class="tc-icon">${icon}</div>
       <div class="tc-meta">
         <div class="tc-name"><span class="tc-risk-badge tier-${tierNum}" title="Safety tier ${tierNum}">${tierIcon}</span>${name}${newBadge(sinceVersion)}</div>
-        <div class="tc-desc">${desc}</div>
+        <div class="tc-desc" id="tcd-${id}">${desc}</div>
         ${preApplied ? `<div class="tc-warn jx-39"><i class="fa fa-lock"></i> Already active on your system — applying again is safe but redundant.</div>` : ''}
         ${warning ? `<div class="tc-warn"><i class="fa fa-triangle-exclamation"></i> ${warning}</div>` : ''}
-        ${riskHtml}
-        ${apHtml}
         ${warnMsg ? `<div class="tc-conflict-warn"><i class="fa fa-triangle-exclamation jx-155"></i>${warnMsg}</div>` : ''}
         ${ethernetSpike ? `<div class="tc-conflict-warn jx-17"><i class="fa fa-wave-square jx-155"></i>${tUI('warnEthernetSpike')}</div>` : ''}
-        ${reboot ? `<span class="reboot-badge"><i class="fa fa-rotate-right"></i> ${tUI('genRebootBadge')}</span>` : ''}
+        ${avoidHtml}
+        <div class="tc-chips">
+          <button type="button" class="tc-more${riskHtml ? ' tc-more-risk' : ''}" aria-expanded="false" aria-controls="tcd-${id}${riskHtml ? ' tcx-' + id : ''}" data-more="${riskHtml ? tUI('riskWhat') : tUI('tcMore')}" data-less="${tUI('tcLess')}"${riskHtml ? '' : ' hidden'}>${riskHtml ? '<i class="fa fa-triangle-exclamation"></i>' : ''}<span class="tc-more-label">${riskHtml ? tUI('riskWhat') : tUI('tcMore')}</span><i class="fa fa-chevron-down"></i></button>
+          ${apHtml}
+          ${reboot ? `<span class="reboot-badge"><i class="fa fa-rotate-right"></i> ${tUI('genRebootBadge')}</span>` : ''}
+        </div>
+        ${riskHtml ? `<div class="tc-details" id="tcx-${id}">${riskHtml}</div>` : ''}
       </div>
     </div>
     <div class="tc-foot">
@@ -9812,8 +9785,36 @@ function makeCard({ id, name, desc, icon = '<i class="fa fa-gear"></i>', danger 
       </div>
     </div>
     <div class="tc-prog"><div class="tc-bar" id="tcpb-${id}"></div></div>`
+  const descEl = d.querySelector('.tc-desc')
+  if (descEl && typeof ResizeObserver === 'function') (window._tcClampRO || (window._tcClampRO = new ResizeObserver(entries => entries.forEach(e => tcMeasure(e.target.closest('.tweak-card'))))) ).observe(descEl)
   return d
 }
+
+// Expand/collapse for tweak cards. Text can only be 'more' when it is clamped (measured) or when the card has a risk box.
+function tcMeasure(card) {
+  if (!card || card.classList.contains('tc-open')) return
+  const el = card.querySelector('.tc-desc')
+  if (!el || !el.clientHeight) return   // not laid out yet (hidden page): the observer fires again when it is
+  const clamped = el.scrollHeight > el.clientHeight + 1
+  card.classList.toggle('tc-clamped', clamped)
+  card.classList.toggle('tc-expandable', clamped || card.classList.contains('tc-has-details'))
+  const btn = card.querySelector('.tc-more')
+  if (btn) btn.hidden = !card.classList.contains('tc-expandable')
+}
+function tcToggle(card) {
+  const open = card.classList.toggle('tc-open')
+  const btn = card.querySelector('.tc-more')
+  if (btn) { btn.setAttribute('aria-expanded', String(open)); const l = btn.querySelector('.tc-more-label'); if (l) l.textContent = open ? btn.dataset.less : btn.dataset.more }
+  if (!open) tcMeasure(card)
+}
+document.addEventListener('click', e => {
+  const more = e.target.closest && e.target.closest('.tc-more')
+  const desc = !more && e.target.closest && e.target.closest('.tc-desc')
+  const card = (more || desc) && (more || desc).closest('.tweak-card')
+  if (!card || (desc && !card.classList.contains('tc-expandable'))) return
+  if (desc && window.getSelection && String(window.getSelection())) return   // selecting text must not collapse it
+  tcToggle(card)
+})
 
 async function applyTweakCard(id, checked, isDanger = false) {
   if (isDanger && checked) {
@@ -9960,7 +9961,7 @@ let gpScanned = false
 let _gpScanRunning = false
 
 async function buildGameOpti(c) {
-  if (!settings.isPremium) { await buildPremiumBanner(c, 'game-opti'); return }
+  if (!settings.isPremium) { await JylliPremium.build(c, 'games'); return }
   c.appendChild(makeTip(tUI('gpTipTitle'), 'info'))
   // Auto-profile watcher strip
   const watchStrip = document.createElement('div')
