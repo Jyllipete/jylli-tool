@@ -2,6 +2,18 @@
 
 ## Julkaisematon (Välilehtien uudistus)
 
+### Pulse 2.0 (Flow)
+- Pulse-välilehti, ohjaamoikkuna ja uusi pelinaikainen HUD on rakennettu yhden moottorin (lib/pulse) päälle. Kaikki kolme näyttävät saman tilan, myös silloin kun tehostus käynnistetään tehtäväpalkin valikosta tai Auto-Pulsella.
+- Uusi **ruutuvirta**: viimeinen minuutti ruutuaikoja jokaisesta pelin piirtämästä ruudusta (PresentMon), mediaani, hitaimpien ruutujen reunat ja jokainen pätkiminen merkittynä todennäköisellä syyllään (lämpö, VRAM, RAM, taustasovellus, GPU, CPU, kellon lasku). Vie hiiri päälle, niin näet hetken luvut.
+- Uusi **Rajoittaja**: yksi lause siitä, mikä FPS:ää juuri nyt rajoittaa, luvuilla perusteltuna ja yhdellä oikotiellä korjaukseen. Mikä ei ole mitattu, näkyy viivana, ei koskaan nollana.
+- Uusi **istuntoyhteenveto**: pelin sulkeuduttua pisteet 0–1000 osineen, pätkimiset syineen, tila ennen ja jälkeen tehostuksen, vertailu edelliseen saman pelin istuntoon ja merkitsemäsi hetket (pikanäppäin).
+- Uusi **tehostuskuitti**: jokainen kahdeksasta vaiheesta näkyy livenä (tehty, ohitettu, epäonnistui) ja kaikki peruutetaan kun lopetat.
+- Uusi **ennakkotarkistus**: lämpötila, muisti, taustakuorma, Windows Update, virrankäyttösuunnitelma ja odottava uudelleenkäynnistys; korjaus tarjotaan vain, jos Pulsella on siihen toiminto.
+- Uusi **pelinaikainen HUD** (minimaalinen, vakio ja täysi asettelu): läpinäkyvä, ei ota klikkauksia vastaan, kulma ja läpinäkyvyys valittavissa, pikanäppäimet vain kun HUD, ohjaamo tai tehostus on auki.
+- Ohjaamoikkuna kirjoitettu uusiksi: ylläpidetään koko ja paikka, pienennetty ikkuna palautuu tehtäväpalkista (aiemmin ei), valinnainen "päällimmäisenä", ytimien kuorma, lämpötarkastus ja prosessinäkymä.
+- Korjattu: kaksi ReferenceErroria Games-välilehdellä (PULSE_PRESETS, pulseActivePreset), pyörö ei täyttynyt, "null FPS" pelin sulkeuduttua, ohjaamo ei tiennyt tehostuksen tilaa, kuolleet paneelit (istuntoyhteenveto, ennakkotarkistuslista, ennustechipit, tarttumattomat valintaruudut).
+- Poistettu: lämpötarkastuksen keksityt pelikohtaiset FPS-hyödyt, ennakkotarkistuksen "lykkää"-nappi (ei lykännyt mitään) sekä käyttämättömät pulse-prearm-, pulse-baseline- ja pulse-get-history-kutsut. Perustelut: docs/PULSE_EVIDENCE.md.
+
 ### FiveM 2.0 (Uplink)
 - FiveM-välilehti on rakennettu uudelleen oman moottorin (lib/fivem) päälle viidellä näkymällä: **Yhteys**, **Istunnot**, **Grafiikka**, **Asiakasohjelma** ja **Kaatumislaboratorio**. Lähtökohta: jokainen näytetty luku on mitattu tai luettu tiedostosta, eikä mitään arvata (docs/FIVEM_EVIDENCE.md)
 - Uusi **reittitutka**: oikea reitti tietokoneelta valitsemallesi palvelimelle (cfx.re/join-linkki tai IP:portti), yksi piste per reititin, hyppykohtainen viive, vaihtelu ja häviö kerran sekunnissa sekä ICMP- ja TCP-mittaus palvelimelle. Tulos nimeää, mistä ongelma alkaa (oma verkko, operaattori, internet vai palvelin). Reitittimen vastausten rajoitus ei näy pakettihäviönä, koska häviö lasketaan vain, jos se jatkuu palvelimelle asti. Lisäksi MTU-testi

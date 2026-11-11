@@ -2997,17 +2997,6 @@ ipcMain.handle('pulse-get-core-loads', async () => {
   } catch { return {} }
 })
 
-// Pulse: recent sessions for the history card (written by pulse-save-session).
-ipcMain.handle('pulse-get-history', async () => {
-  if (!requiresPremium('pulse-get-history')) return []
-  try {
-    const h = JSON.parse(fs.readFileSync(path.join(app.getPath('userData'), 'game-history.json'), 'utf8'))
-    return (Array.isArray(h) ? h : []).slice(0, 10).map(x => ({
-      ts: x.ts, presetName: x.displayName || x.game || null, elapsedMs: x.durationMs || 0, avgFps: x.avgFps || null, smoothness: null,
-    }))
-  } catch { return [] }
-})
-
 ipcMain.handle('check-lghub', async () => {
   const r = await runPS(`
     $s = Get-Service -Name LGHUBUpdaterService -EA SilentlyContinue
@@ -3277,6 +3266,9 @@ function sessionRecStart(gameId) {
   try {
     _sessionRec = SessionRec.createRecorder()
     _sessionRec.start({ gameId, gameName: gameId })
+    _puGameExe = String((PULSE_PRESETS[gameId] && PULSE_PRESETS[gameId].exe) || '').replace(/\*$/, '').replace(/\.exe$/i, '') || null
+    pulseSvc().gameStarted(gameId, PULSE_PRESETS[gameId] && PULSE_PRESETS[gameId].name)
+    puBgEnsure()
     clearInterval(_sessionTimer)
     _sessionTimer = setInterval(() => {
       const v = {}; for (const k of SessionRec.TELEMETRY_KEYS) v[k] = _hub.value(k)
@@ -3289,7 +3281,9 @@ function sessionRecFinish() {
   try {
     const s = _sessionRec && _sessionRec.finish(); _sessionRec = null
     if (s) { SessionRec.save(SESSIONS_DIR(), s, fs, path); mainWindow?.webContents.send('session-saved', { id: s.id, game: s.game, summary: s.summary }) }
+    if (_pulse2) _pulse2.gameEnded(s || null)
   } catch {}
+  _puGameExe = null
 }
 ipcMain.handle('list-sessions', () => SessionRec.list(SESSIONS_DIR(), fs, path))
 ipcMain.handle('get-session', (_, id) => { const s = SessionRec.load(SESSIONS_DIR(), id, fs, path); return s ? { ok: true, session: s, advice: SessionRec.advice(s) } : { ok: false } })
@@ -9941,36 +9935,10 @@ Stop-Process -Id ${n} -Force -ErrorAction SilentlyContinue
 
 let _boostDeprioritised = []
 // ─── Pulse Window ─────────────────────────────────────────────────────────────
+// The Cockpit window lives in the Pulse 2.0 block (puOpenCockpit); these keep the old channel names working.
 ipcMain.handle('open-pulse-window', () => {
   if (!requiresPremium('open-pulse-window')) return { ok: false, reason: 'premium_required' }
-  if (pulseWindow && !pulseWindow.isDestroyed()) {
-    pulseWindow.focus()
-    return
-  }
-  pulseWindow = new BrowserWindow({
-    width: 520,
-    height: 780,
-    minWidth: 480,
-    minHeight: 600,
-    frame: false,
-    transparent: false,
-    backgroundColor: windowBg(),
-    show: false,
-    focusable: true,
-    skipTaskbar: true,
-    title: 'Pulse',
-    icon: path.join(__dirname, 'assets', 'icon.png'),
-    webPreferences: {
-      preload: path.join(__dirname, 'preload.js'),
-      nodeIntegration: false,
-      contextIsolation: true,
-      sandbox: true,
-      devTools: false
-    }
-  })
-  pulseWindow.loadFile('pulse.html', { query: { lang: windowLang(), accent: windowAccent(), theme: windowTheme(), scheme: windowScheme() } })
-  pulseWindow.once('ready-to-show', () => pulseWindow.show())
-  pulseWindow.on('closed', () => { pulseWindow = null })
+  return puOpenCockpit()
 })
 
 ipcMain.handle('close-pulse-window', () => {
@@ -10364,6 +10332,8 @@ async function activatePulse(presetId, killBg, send) {
   const delay = ms => new Promise(r => setTimeout(r, ms))
   const preset = PULSE_PRESETS[presetId]
   if (!preset) return { ok: false, error: 'Unknown preset' }
+  { const rawSend = send; send = (msg, level) => { rawSend(msg, level); const st = Pu2Steps.stepOf(msg, level); if (st) pulseSvc().report(st.id, st.state, st.detail) } }
+  pulseSvc().beginBoost(presetId, preset.name)
   if (pulseActivePreset) await pulseRestoreAll(() => {})
 
   send(`◆ Pulse activating — ${preset.name}`, 'head')
@@ -10557,17 +10527,20 @@ public class TimerRes { [DllImport("ntdll.dll")] public static extern int NtSetT
   updateDiscordPresence()
   mainWindow?.webContents.send('pulse-tick', { preset: presetId, active: true })
   updateTrayMenu()
+  pulseSvc().syncBoost(true, presetId, preset.name)
+  puKeysSync()
   return { ok: true }
 }
 
 async function deactivatePulse(send) {
   pulseActivePreset = null
   discordPulseGame = null
-  _pulseBaselineSnapshot = null
   updateDiscordPresence()
   await pulseRestoreAll(send)
   mainWindow?.webContents.send('pulse-tick', { active: false })
   updateTrayMenu()
+  pulseSvc().syncBoost(false)
+  puKeysSync()
   return { ok: true }
 }
 
@@ -10582,19 +10555,6 @@ ipcMain.handle('pulse-stop', async () => {
   const send = (msg, level) => mainWindow?.webContents.send('log', { msg, level, ts: new Date().toLocaleTimeString() })
   autoPulseTriggeredPreset = null  // clear auto-pulse state on manual stop too
   return deactivatePulse(send)
-})
-
-let _pulseBaselineSnapshot = null
-
-ipcMain.handle('pulse-baseline-capture', () => {
-  if (!requiresPremium('pulse-baseline-capture')) return { ok: false }
-  _pulseBaselineSnapshot = ariaSnapshot()
-  return { ok: true, baseline: _pulseBaselineSnapshot }
-})
-
-ipcMain.handle('pulse-baseline-get', () => {
-  if (!requiresPremium('pulse-baseline-get')) return { ok: false }
-  return { ok: true, baseline: _pulseBaselineSnapshot, current: ariaSnapshot() }
 })
 
 ipcMain.handle('pulse-fix-mouse', async () => {
@@ -10640,31 +10600,6 @@ ipcMain.handle('pulse-detect-game', async () => {
     if (match) return { found: true, id, name: p.name }
   }
   return { found: false }
-})
-
-ipcMain.handle('pulse-prearm-scan', async () => {
-  if (!requiresPremium('pulse-prearm-scan')) return { ok: false, reason: 'premium_required' }
-  // Returns thermal card data for the Pulse pre-arm thermal indicator
-  const r = await runPS(`
-$ns = 'root\\LibreHardwareMonitor'
-$s = try { Get-WmiObject -Namespace $ns -Class Sensor -EA Stop } catch { $null }
-if (-not $s) { Write-Output "LHM_UNAVAILABLE=1"; exit }
-$cpuTemp = ($s | Where-Object { $_.SensorType -eq 'Temperature' -and $_.Name -match 'CPU Package|Core Average|CPU' } | Sort-Object Value -Desc | Select-Object -First 1).Value
-Write-Output "CPU_TEMP=$cpuTemp"
-  `, 6000)
-  let tier = 'safe', suggestion = ''
-  if (!r.out.includes('LHM_UNAVAILABLE')) {
-    const cpuTemp = parseFloat(r.out.match(/CPU_TEMP=([\d.]+)/)?.[1] || '0')
-    if (cpuTemp >= 90) { tier = 'risk'; suggestion = `CPU at ${Math.round(cpuTemp)}°C — thermal throttling likely during Pulse session` }
-    else if (cpuTemp >= 75) { tier = 'marginal'; suggestion = `CPU at ${Math.round(cpuTemp)}°C — monitor during session` }
-  }
-  return { ok: true, thermal: { tier, suggestion } }
-})
-
-ipcMain.handle('pulse-prearm-defer', async (_, opts = {}) => {
-  if (!requiresPremium('pulse-prearm-defer')) return { ok: false, reason: 'premium_required' }
-  const { skipChecks = [] } = opts || {}
-  return { ok: true, deferred: true, skipChecks }
 })
 
 async function pulseThermalAuditCore() {
@@ -10758,18 +10693,6 @@ Write-Output "CORES=$coreStr"
   else if (throttlePct >= 10) severity = 'moderate'
   else if (throttlePct >=  3) severity = 'light'
 
-  // Game-specific FPS gain estimates (CPU sensitivity profiles)
-  const GAME_PROFILES = [
-    { name: 'GTA V',    sens: 0.70 },
-    { name: 'FiveM',    sens: 0.55 },
-    { name: 'Valorant', sens: 0.80 },
-    { name: 'CS2',      sens: 0.75 },
-    { name: 'Apex',     sens: 0.65 },
-  ]
-  const BASE_FPS = 120
-  const gameFpsGains = throttlePct > 0
-    ? GAME_PROFILES.map(g => ({ name: g.name, fps: Math.round(throttlePct * 0.01 * BASE_FPS * g.sens) })).filter(g => g.fps > 0)
-    : []
   const estimatedFpsGain = throttlePct > 0 ? Math.round(throttlePct * 0.6) : 0
 
   // Sparkline: per-sample average MHz for waveform rendering
@@ -10792,7 +10715,7 @@ Write-Output "CORES=$coreStr"
     ok: true, severity, throttlePct, estimatedFpsGain,
     avgCurMhz, maxMhz, avgTempC, avgFanRpm,
     recommendation, throttleCause,
-    boostScore, coreClocks, sparkline, gameFpsGains, trend,
+    boostScore, coreClocks, sparkline, trend,
   }
 }
 ipcMain.handle('pulse-thermal-audit', (_, ...a) => pulseThermalAuditCore(...a))
@@ -11534,6 +11457,7 @@ ipcMain.handle('start-game-watcher', async () => {
           }
         } catch {}
         _pmSessionProc = spawnPresentMon(null, gamePid)
+        if (_pmSessionProc) _pmSessionProc._pulseTap = true
         if (_pmSessionProc) sessionRecStart(detectedGame)
         if (_pmSessionProc) {
           _pmSessionFile = null
@@ -12192,6 +12116,206 @@ ipcMain.handle('diag2-export-save', async (_, req) => {
   try { fs.writeFileSync(r.filePath, html, 'utf8'); return { ok: true, path: r.filePath } } catch (e) { return { ok: false, error: 'write-failed' } }
 })
 
+
+// ─── Pulse 2.0 (lib/pulse): Flow. One engine behind the tab, the Cockpit window and the in-game HUD ─────────────
+// docs/PULSE_EVIDENCE.md. Frames come from the PresentMon tap in spawnPresentMon; window prefs live in jt_pulse.json;
+// one small debrief per recorded session lives in userData/pulse-debriefs. The boost itself is still activatePulse().
+const Pulse2 = require('./lib/pulse')
+const Pu2Steps = require('./lib/pulse/steps')
+const { screen: puScreen, globalShortcut: puKeys, webContents: puContents } = require('electron')
+let _pulse2 = null
+let _puHud = null
+let _puBg = { name: null, cpu: null }
+let _puBgTimer = null
+let _puGameExe = null
+const PU_DEBRIEF_DIR = () => path.join(app.getPath('userData'), 'pulse-debriefs')
+const PU_MAX_DEBRIEFS = 50
+const puLog = (msg, level) => mainWindow?.webContents.send('log', { msg, level, ts: new Date().toLocaleTimeString() })
+
+function puDebriefs() {
+  const file = id => path.join(PU_DEBRIEF_DIR(), id + '.json')
+  return {
+    save(id, d) {
+      if (!/^[0-9a-f]{12}$/.test(String(id))) return
+      fs.mkdirSync(PU_DEBRIEF_DIR(), { recursive: true })
+      fs.writeFileSync(file(id), JSON.stringify(d))
+      const rows = fs.readdirSync(PU_DEBRIEF_DIR()).filter(f => f.endsWith('.json')).map(f => ({ f, t: fs.statSync(path.join(PU_DEBRIEF_DIR(), f)).mtimeMs })).sort((a, b) => b.t - a.t)
+      for (const old of rows.slice(PU_MAX_DEBRIEFS)) { try { fs.unlinkSync(path.join(PU_DEBRIEF_DIR(), old.f)) } catch {} }
+    },
+    load(id) { if (!/^[0-9a-f]{12}$/.test(String(id))) return null; try { return JSON.parse(fs.readFileSync(file(id), 'utf8')) } catch { return null } },
+    list() {
+      try { return fs.readdirSync(PU_DEBRIEF_DIR()).filter(f => f.endsWith('.json')).map(f => { try { return JSON.parse(fs.readFileSync(path.join(PU_DEBRIEF_DIR(), f), 'utf8')) } catch { return null } }).filter(Boolean) } catch { return [] }
+    },
+  }
+}
+
+function pulseSvc() {
+  if (!_pulse2) {
+    _pulse2 = Pulse2.create({
+      hub: _hub,
+      send: (id, ch, p) => { const wc = puContents.fromId(id); if (!wc || wc.isDestroyed()) return false; wc.send(ch, p); return true },
+      state: { read: () => cuRead('jt_pulse.json', null), write: v => cuWrite('jt_pulse.json', v) },
+      sessions: { list: () => SessionRec.list(SESSIONS_DIR(), fs, path), get: id => SessionRec.load(SESSIONS_DIR(), id, fs, path) },
+      debriefs: puDebriefs(),
+      activate: ({ presetId, killBg }) => activatePulse(presetId, killBg, puLog),
+      deactivate: () => deactivatePulse(puLog),
+      // how the PC looked before the boost; unmeasured stays null (ariaSnapshot() would report 0)
+      baseline: () => ({ cpu: _hub.value('cpu.load'), gpu: _hub.value('gpu0.load'), ram: _hub.value('ram.load'), cpuTemp: _hub.value('cpu.temp.package') }),
+      bgCpu: () => _puBg.cpu,
+      probe: puProbe,
+    })
+  }
+  return _pulse2
+}
+
+// Heaviest non-game process, as a share of the whole CPU. Runs only while a Pulse surface is open or a session is recording.
+async function puBgOnce() {
+  const exclude = _puGameExe ? _puGameExe.toLowerCase() : null
+  const r = await runPS(`$n=[Environment]::ProcessorCount; Get-CimInstance Win32_PerfFormattedData_PerfProc_Process -EA SilentlyContinue | Where-Object { $_.Name -notin '_Total','Idle','System','Memory Compression' } | Sort-Object PercentProcessorTime -Descending | Select-Object -First 4 | ForEach-Object { "$($_.Name)|$([math]::Round($_.PercentProcessorTime / $n, 1))" }`, 8000)
+  if (!r.ok) return null
+  for (const line of String(r.out || '').split(/\r?\n/)) {
+    const [raw, pct] = line.split('|')
+    const name = String(raw || '').replace(/#\d+$/, '').trim()
+    const cpu = parseFloat(pct)
+    if (!name || !Number.isFinite(cpu)) continue
+    if (exclude && name.toLowerCase().startsWith(exclude)) continue
+    _puBg = { name, cpu }
+    _hub.ingest('pulse', { 'bg.cpu': cpu }, { rateHz: 0.2 })
+    return _puBg
+  }
+  return null
+}
+function puBgEnsure() {
+  if (_puBgTimer) return
+  _puBgTimer = setInterval(() => {
+    const need = _pulse2 && (_pulse2.subscribers > 0 || (_sessionRec && _sessionRec.active))
+    if (!need) { clearInterval(_puBgTimer); _puBgTimer = null; return }
+    puBgOnce().catch(() => {})
+  }, 5000)
+  if (_puBgTimer.unref) _puBgTimer.unref()
+  puBgOnce().catch(() => {})
+}
+
+// One probe of the PC for the pre-flight checklist. Anything that cannot be read is null (shown as "not measured").
+async function puProbe() {
+  const top = await puBgOnce().catch(() => null)
+  const r = await runPS(`$o=@{}
+$o.updateActive=[bool](Get-Process -Name TiWorker,MoUsoCoreWorker -EA SilentlyContinue)
+$o.pendingReboot=[bool]((Test-Path 'HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Component Based Servicing\\RebootPending') -or (Test-Path 'HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\WindowsUpdate\\Auto Update\\RebootRequired'))
+$o.plan=((powercfg /getactivescheme) -join ' ')
+$o | ConvertTo-Json -Compress`, 10000)
+  let j = null
+  try { j = JSON.parse(String(r.out || '').trim()) } catch { j = null }
+  const m = j && /([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\s*(?:\((.*?)\))?/i.exec(String(j.plan || ''))
+  return {
+    cpuTemp: _hub.value('cpu.temp.package'), ramPct: _hub.value('ram.load'),
+    topProc: top ? { name: top.name, cpu: top.cpu } : null,
+    updateActive: j && typeof j.updateActive === 'boolean' ? j.updateActive : null,
+    pendingReboot: j && typeof j.pendingReboot === 'boolean' ? j.pendingReboot : null,
+    powerPlan: m ? { name: m[2] || m[1], high: /^(8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c|e9a42b02-d5df-448d-aa00-03f14749eb61)$/i.test(m[1]) } : null,
+  }
+}
+
+// ── windows ───────────────────────────────────────────────────────────────────────
+const PU_HUD_SIZE = { minimal: [176, 64], standard: [288, 136], full: [304, 212] }
+const puWinQuery = () => ({ lang: windowLang(), accent: windowAccent(), theme: windowTheme(), scheme: windowScheme() })
+
+function puOpenCockpit() {
+  if (pulseWindow && !pulseWindow.isDestroyed()) {
+    if (pulseWindow.isMinimized()) pulseWindow.restore()
+    pulseWindow.show(); pulseWindow.focus()
+    return { ok: true }
+  }
+  const prefs = pulseSvc().prefs().prefs
+  const b = prefs.bounds
+  const onScreen = b && puScreen.getAllDisplays().some(d => b.x + 80 >= d.bounds.x && b.x + 80 <= d.bounds.x + d.bounds.width && b.y + 40 >= d.bounds.y && b.y + 40 <= d.bounds.y + d.bounds.height)
+  pulseWindow = new BrowserWindow({
+    width: onScreen ? Math.max(560, b.width) : 1000, height: onScreen ? Math.max(640, b.height) : 720,
+    ...(onScreen ? { x: b.x, y: b.y } : {}),
+    minWidth: 560, minHeight: 640,
+    frame: false, transparent: false, backgroundColor: windowBg(), show: false, title: 'Pulse',
+    icon: path.join(__dirname, 'assets', 'icon.png'),
+    webPreferences: { preload: path.join(__dirname, 'preload.js'), nodeIntegration: false, contextIsolation: true, sandbox: true, devTools: false },
+  })
+  const win = pulseWindow
+  const wcId = win.webContents.id
+  win.loadFile('pulse.html', { query: puWinQuery() })
+  win.once('ready-to-show', () => { win.show(); if (prefs.pin) win.setAlwaysOnTop(true, 'floating') })
+  let saveT = null
+  const saveBounds = () => { clearTimeout(saveT); saveT = setTimeout(() => { if (!win.isDestroyed() && !win.isMinimized() && !win.isMaximized()) pulseSvc().setPrefs({ bounds: win.getBounds() }) }, 500) }
+  win.on('resize', saveBounds); win.on('move', saveBounds)
+  win.on('closed', () => { clearTimeout(saveT); pulseSvc().unsubscribe(wcId); if (pulseWindow === win) pulseWindow = null; puKeysSync() })
+  return { ok: true }
+}
+
+function puHudPlace(win, layout, corner) {
+  const [w, h] = PU_HUD_SIZE[layout] || PU_HUD_SIZE.standard
+  const wa = puScreen.getPrimaryDisplay().workArea
+  const right = corner === 'tr' || corner === 'br', bottom = corner === 'bl' || corner === 'br'
+  win.setBounds({ x: right ? wa.x + wa.width - w - 16 : wa.x + 16, y: bottom ? wa.y + wa.height - h - 16 : wa.y + 16, width: w, height: h })
+}
+
+function puHudApply() {
+  if (!_puHud || _puHud.isDestroyed()) return
+  const p = pulseSvc().prefs().prefs
+  puHudPlace(_puHud, p.hud.layout, p.hud.corner)
+  _puHud.setOpacity(p.hud.opacity)
+  _puHud.webContents.send('pulse2-event', { type: 'prefs', prefs: p })
+}
+
+function puOpenHud() {
+  if (_puHud && !_puHud.isDestroyed()) return { ok: true }
+  destroyFpsHud()                                   // only one overlay at a time
+  const p = pulseSvc().prefs().prefs
+  const [w, h] = PU_HUD_SIZE[p.hud.layout] || PU_HUD_SIZE.standard
+  const win = new BrowserWindow({
+    width: w, height: h, frame: false, transparent: true, alwaysOnTop: true, skipTaskbar: true, resizable: false, focusable: false, show: false, hasShadow: false,
+    webPreferences: { preload: path.join(__dirname, 'preload-overlay.js'), contextIsolation: true, nodeIntegration: false, sandbox: true, devTools: false },
+  })
+  _puHud = win
+  const wcId = win.webContents.id
+  puHudPlace(win, p.hud.layout, p.hud.corner)
+  win.setAlwaysOnTop(true, 'screen-saver')
+  win.setOpacity(p.hud.opacity)
+  win.loadFile(path.join(__dirname, 'pulse-hud.html'), { query: puWinQuery() })
+  win.once('ready-to-show', () => { win.showInactive(); win.setIgnoreMouseEvents(true, { forward: true }) })
+  win.on('closed', () => { pulseSvc().unsubscribe(wcId); if (_puHud === win) _puHud = null; puKeysSync() })
+  puKeysSync()
+  return { ok: true }
+}
+function puCloseHud() { if (_puHud && !_puHud.isDestroyed()) _puHud.close(); _puHud = null; return { ok: true } }
+function puToggleHud() { return _puHud && !_puHud.isDestroyed() ? puCloseHud() : puOpenHud() }
+
+// Global hotkeys exist only while a HUD, the Cockpit or a boost is up, so Pulse never holds keys it is not using.
+function puKeysSync() {
+  try { puKeys.unregisterAll() } catch {}
+  const live = (_puHud && !_puHud.isDestroyed()) || (pulseWindow && !pulseWindow.isDestroyed()) || (_pulse2 && _pulse2.status().boost.active)
+  if (!live) return
+  const k = pulseSvc().prefs().prefs.keys
+  try { puKeys.register(k.hud, () => { puToggleHud() }) } catch {}
+  try { puKeys.register(k.mark, () => { pulseSvc().mark('') }) } catch {}
+}
+
+const pu2Handle = (name, fn) => ipcMain.handle(name, async (e, a) => {
+  if (!requiresPremium(name)) return { ok: false, reason: 'premium_required' }
+  try { return await fn(a && typeof a === 'object' ? a : {}, pulseSvc(), e) } catch (err) { return { ok: false, error: String((err && err.message) || err).slice(0, 160) } }
+})
+pu2Handle('pulse2-status', (a, s) => s.status())
+pu2Handle('pulse2-subscribe', (a, s, e) => { puBgEnsure(); return s.subscribe(e.sender.id) })
+pu2Handle('pulse2-unsubscribe', (a, s, e) => s.unsubscribe(e.sender.id))
+pu2Handle('pulse2-boost', async (a, s) => { const r = await s.startBoost({ presetId: typeof a.presetId === 'string' ? a.presetId.slice(0, 40) : '', name: typeof a.name === 'string' ? a.name.slice(0, 60) : '', killBg: !!a.killBg }); puKeysSync(); return r })
+pu2Handle('pulse2-unboost', async (a, s) => { autoPulseTriggeredPreset = null; const r = await s.stopBoost(); puKeysSync(); return r })
+pu2Handle('pulse2-preflight', (a, s) => s.preflight())
+pu2Handle('pulse2-sessions', (a, s) => s.sessions())
+pu2Handle('pulse2-session', (a, s) => s.session(typeof a.id === 'string' ? a.id : ''))
+pu2Handle('pulse2-mark', (a, s) => s.mark(typeof a.label === 'string' ? a.label : ''))
+pu2Handle('pulse2-prefs', (a, s) => s.prefs())
+pu2Handle('pulse2-set-prefs', (a, s) => { const r = s.setPrefs(a); puHudApply(); if (pulseWindow && !pulseWindow.isDestroyed()) pulseWindow.setAlwaysOnTop(!!r.prefs.pin, 'floating'); puKeysSync(); return r })
+pu2Handle('pulse2-open-cockpit', () => puOpenCockpit())
+pu2Handle('pulse2-hud', (a) => (a.on === false ? puCloseHud() : a.on === true ? puOpenHud() : puToggleHud()))
+pu2Handle('pulse2-close-cockpit', () => { if (pulseWindow && !pulseWindow.isDestroyed()) pulseWindow.close(); return { ok: true } })
+
+app.on('will-quit', () => { try { puKeys.unregisterAll() } catch {} })
 
 // ─── FiveM 2.0 (lib/fivem): Uplink route radar, session recorder, graphics, client changes, crash lab ──────────────
 // docs/FIVEM_EVIDENCE.md. Every change goes through the change journal (control `fivem2:<id>`); state lives in jt_fivem.json.
@@ -13063,7 +13187,10 @@ function spawnPresentMon(outputFile, gamePid) {
           continue
         }
         _pmFrameBuffer.push(t)
-        if (_sessionRec && _sessionRec.active && proc._msIdx >= 0) { const v = parseFloat(t.split(',')[proc._msIdx]); if (v > 0) _sessionRec.onFrame(v) }
+        if (proc._msIdx >= 0 && (proc._pulseTap || (_sessionRec && _sessionRec.active))) {
+          const v = parseFloat(t.split(',')[proc._msIdx])
+          if (v > 0) { if (_sessionRec && _sessionRec.active) _sessionRec.onFrame(v); if (proc._pulseTap && _pulse2) _pulse2.onFrame(v) }
+        }
         if (_pmFrameBuffer.length > PM_FRAME_BUF_MAX + 1) _pmFrameBuffer.splice(1, 1)
       }
     })

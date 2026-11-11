@@ -41,10 +41,10 @@
       T('fixes-search', ['Describe the problem', 'Search the fixes by what you are seeing, such as slow updates or a broken search.'], ['Kuvaile ongelma', 'Hae korjauksia näkemäsi perusteella, esimerkiksi hitaat päivitykset tai rikkinäinen haku.']),
       T('fixes-list', ['Repairs, one at a time', 'Fixes such as SFC and DISM repair Windows files. They can take several minutes; you can keep using the PC meanwhile.'], ['Korjaukset yksi kerrallaan', 'Korjaukset, kuten SFC ja DISM, korjaavat Windowsin tiedostoja. Ne voivat kestää useita minuutteja; konetta voi käyttää sillä aikaa.']),
     ] },
-    pulse: { v: 1, tag: { 'pulse-hero': '#pulse-hero', 'pulse-score': '#pulse-score-row', 'pulse-session': '#gw-session-strip' }, stops: [
-      T('pulse-hero', ['Pulse is a gaming mode', 'Pick a preset and Pulse tunes timers and cores for your session, then restores everything when it ends.'], ['Pulse on pelitila', 'Valitse esiasetus, ja Pulse virittää ajastimet ja ytimet istuntoa varten ja palauttaa kaiken lopuksi.']),
-      T('pulse-session', ['Your session', 'While a game runs we show what Pulse is doing right now.'], ['Istuntosi', 'Pelin ollessa käynnissä näytämme, mitä Pulse tekee juuri nyt.']),
-      T('pulse-score', ['Before and after', 'The score compares your session with the state before Pulse.'], ['Ennen ja jälkeen', 'Pisteet vertaavat istuntoasi tilaan ennen Pulsea.']),
+    pulse: { v: 2, tag: { 'pulse-hero': '#pulse-hero', 'pulse-river': '#pu-river', 'pulse-limiter': '#pu-limiter' }, stops: [
+      T('pulse-hero', ['Pulse is a gaming mode', 'Pick a game and boost it. Pulse tunes timers and cores for the session, lists every step it took and restores everything when you end it.'], ['Pulse on pelitila', 'Valitse peli ja tehosta se. Pulse virittää ajastimet ja ytimet istuntoa varten, listaa jokaisen askeleensa ja palauttaa kaiken, kun lopetat.']),
+      T('pulse-river', ['Every frame, measured', 'This river is the last minute of frame times. A hitch is marked with its likely cause. Hover to read a moment.'], ['Jokainen ruutu mitattuna', 'Tämä virta on viimeisen minuutin ruutuajat. Pätkiminen merkitään todennäköisellä syyllään. Vie hiiri päälle, niin näet hetken tiedot.']),
+      T('pulse-limiter', ['What is holding you back', 'The Limiter says in one sentence what limits your FPS right now, with the numbers behind it.'], ['Mikä sinua hidastaa', 'Rajoittaja kertoo yhdellä lauseella, mikä rajoittaa FPS:ääsi juuri nyt, ja näyttää luvut sen takana.']),
     ] },
     games: { v: 1, tag: { 'games-carousel': '#game-row', 'games-profile': '.tweak-card' }, stops: [
       T('games-carousel', ['Your games', 'Games we found on this PC. Choose one to open its profile.'], ['Pelisi', 'Koneelta löytyneet pelit. Valitse peli avataksesi sen profiilin.']),

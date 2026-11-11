@@ -18,6 +18,12 @@ contextBridge.exposeInMainWorld('api', {
   onFpsHudCornerChanged:  cb   => on('fps-hud-corner-changed', cb),
   onLivePingTick:         cb   => on('live-ping-tick', cb),
 
+  // Pulse HUD (lib/pulse): live frames and display prefs, nothing that changes the PC
+  pulse2Subscribe:        ()   => ipcRenderer.invoke('pulse2-subscribe'),
+  pulse2Unsubscribe:      ()   => ipcRenderer.invoke('pulse2-unsubscribe'),
+  onPulse2Live:           cb   => on('pulse2-live', cb),
+  onPulse2Event:          cb   => on('pulse2-event', cb),
+
   // FPS HUD settings window only
   loadSettings:           ()   => ipcRenderer.invoke('get-fps-hud-config'),
   setFpsHudColor:         hex  => ipcRenderer.invoke('set-fps-hud-color', hex),

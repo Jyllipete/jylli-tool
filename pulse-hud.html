@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en" data-scheme-lock>
+<head>
+<meta charset="UTF-8">
+<link rel="stylesheet" href="css/fonts.css">
+<link rel="stylesheet" href="css/tokens.css">
+<link rel="stylesheet" href="css/pulse-hud.css">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-src 'none'; img-src 'self' data:; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self';">
+<title>Pulse HUD</title>
+</head>
+<body>
+<div class="ph" id="ph" data-layout="standard" data-tone="idle">
+  <div class="ph-main"><div class="ph-fps"><b id="ph-fps">–</b><small>FPS</small></div><div class="ph-low"><span id="ph-low1"></span><span id="ph-lim"></span></div></div>
+  <div class="ph-ribbon" id="ph-ribbon" aria-hidden="true"></div>
+  <div class="ph-vit" id="ph-vit"></div>
+</div>
+<script src="js/lang/pulse-en.js"></script>
+<script src="js/lang/pulse-fi.js"></script>
+<script src="js/theme-sync.js"></script>
+<script src="lib/pulse/attribution.js"></script>
+<script src="lib/pulse/frames.js"></script>
+<script src="lib/pulse/river.js"></script>
+<script src="js/pulse/river-view.js"></script>
+<script src="js/pulse/hud.js"></script>
+</body>
+</html>

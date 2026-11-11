@@ -55,7 +55,7 @@ LANG.en.fivem2 = {
   ss_dur: 'Length', ss_avg: 'Average', ss_low1: '1% low', ss_hitches: 'Hitches',
   hitches: 'Hitches', noHitches: 'No hitches in this session.', noTelemetry: 'No hardware readings were recorded for this session, so causes cannot be named.', netEvents: 'Network events', noNetEvents: 'No latency spikes or loss runs.', noNet: 'No server was selected while you played, so there is no network track.',
   netNote: 'Network events are shown beside the frame hitches and are never blamed for them.',
-  cause_thermal: 'Heat', 'cause_vram-full': 'Video memory full', 'cause_ram-pressure': 'Low free RAM', 'cause_gpu-bound': 'GPU at its limit', 'cause_cpu-bound': 'CPU at its limit', 'cause_clock-drop': 'GPU clock dropped', cause_unknown: 'Unknown',
+  cause_thermal: 'Heat', 'cause_vram-full': 'Video memory full', 'cause_ram-pressure': 'Low free RAM', 'cause_background-spike': 'Busy background app', 'cause_gpu-bound': 'GPU at its limit', 'cause_cpu-bound': 'CPU at its limit', 'cause_clock-drop': 'GPU clock dropped', cause_unknown: 'Unknown',
   net_spike: 'Latency spike', net_loss: 'No replies', net_down: 'Server unreachable',
 
   // graphics

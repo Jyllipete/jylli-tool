@@ -49,7 +49,7 @@ LANG.fi.fivem2 = {
   ss_dur: 'Kesto', ss_avg: 'Keskiarvo', ss_low1: '1 % alin', ss_hitches: 'Nykäisyt',
   hitches: 'Nykäisyt', noHitches: 'Tässä istunnossa ei ollut nykäisyjä.', noTelemetry: 'Tästä istunnosta ei tallennettu laitteiston lukemia, joten syitä ei voida nimetä.', netEvents: 'Verkkotapahtumat', noNetEvents: 'Ei viivepiikkejä eikä vastaamattomia jaksoja.', noNet: 'Palvelinta ei ollut valittuna pelatessasi, joten verkkoraitaa ei ole.',
   netNote: 'Verkkotapahtumat näytetään kuvan nykäisyjen vieressä, eikä niitä koskaan syytetä nykäisyistä.',
-  cause_thermal: 'Kuumuus', 'cause_vram-full': 'Näytönohjaimen muisti täynnä', 'cause_ram-pressure': 'Vähän vapaata RAM-muistia', 'cause_gpu-bound': 'GPU rajallaan', 'cause_cpu-bound': 'CPU rajallaan', 'cause_clock-drop': 'GPU:n kellotaajuus laski', cause_unknown: 'Tuntematon',
+  cause_thermal: 'Kuumuus', 'cause_vram-full': 'Näytönohjaimen muisti täynnä', 'cause_ram-pressure': 'Vähän vapaata RAM-muistia', 'cause_background-spike': 'Taustasovellus kuormittaa', 'cause_gpu-bound': 'GPU rajallaan', 'cause_cpu-bound': 'CPU rajallaan', 'cause_clock-drop': 'GPU:n kellotaajuus laski', cause_unknown: 'Tuntematon',
   net_spike: 'Viivepiikki', net_loss: 'Ei vastauksia', net_down: 'Palvelin ei tavoitettavissa',
 
   gg_textures: 'Tekstuurit', gg_lighting: 'Valaistus ja varjot', gg_world: 'Maailma ja tiheys', gg_effects: 'Tehosteet', gg_aa: 'Reunojen tasoitus',

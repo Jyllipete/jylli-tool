@@ -21,6 +21,7 @@
 <link rel="stylesheet" href="css/cleanup.css">
 <link rel="stylesheet" href="css/diagnostics.css">
 <link rel="stylesheet" href="css/fivem.css">
+<link rel="stylesheet" href="css/pulse.css">
 <link rel="stylesheet" href="css/bios.css">
 <link rel="stylesheet" href="css/premium.css">
 </head>
@@ -493,6 +494,8 @@
 <script src="js/lang/diagnostics-fi.js"></script>
 <script src="js/lang/fivem-en.js"></script>
 <script src="js/lang/fivem-fi.js"></script>
+<script src="js/lang/pulse-en.js"></script>
+<script src="js/lang/pulse-fi.js"></script>
 <script src="js/esc.js"></script>
 <script src="js/theme-sync.js"></script>
 <script src="js/ui.js"></script>
@@ -571,6 +574,14 @@
 <script src="js/fivem/radar.js"></script>
 <script src="js/fivem/page.js"></script>
 <script src="js/fivem/views.js"></script>
+<script src="lib/pulse/attribution.js"></script>
+<script src="lib/pulse/frames.js"></script>
+<script src="lib/pulse/river.js"></script>
+<script src="lib/pulse/score.js"></script>
+<script src="lib/pulse/steps.js"></script>
+<script src="js/pulse/ui.js"></script>
+<script src="js/pulse/river-view.js"></script>
+<script src="js/pulse/page.js"></script>
 <script>
 'use strict'
 // ─── Language ─────────────────────────────────────────────────────────────────
@@ -735,7 +746,7 @@ async function init(isPremium = false) {
   window._tweakMetaReady = (api.getTweakMeta?.() || Promise.resolve(null)).then(list => { if (Array.isArray(list)) window._tweakMeta = Object.fromEntries(list.map(m => [m.id, m])); return !!window._tweakMeta }).catch(() => false)
   try { JylliTelemetry.start() } catch {}
   api.onSettingsPatch?.(p => { if (p && typeof p === 'object') Object.assign(settings, p) })
-  api.onThermalTick(d => { updateThermalGuardBadge(d); if (d?.cpuTemp != null) _lastSensorCpuTemp = parseFloat(d.cpuTemp) || 0 })
+  api.onThermalTick(d => { updateThermalGuardBadge(d) })
   if (settings.thermalGuardEnabled) {
     document.getElementById('sidebar-thermal-badge').style.display = 'inline'
     api.thermalStart()
@@ -744,10 +755,6 @@ async function init(isPremium = false) {
   api.onLog(({ msg, level, ts, source }) => {
     appendLog(msg, level, ts)
     if (level === 'err') logDebugError(source || 'tweak', msg)
-    if (pulseIsActive && document.getElementById('pulse-feed-chips')) {
-      _pulseFeedAppendChip(msg, level, ts)
-      if (level === 'ok' && !msg.startsWith('◆')) _pulseOptStepsOk++
-    }
   })
 
   api.onLhmStatus(status => {
@@ -1128,7 +1135,6 @@ async function init(isPremium = false) {
       const lbl = document.getElementById('watcher-active-game')
       const gameLabelName = displayName || gameId
       if (lbl) lbl.textContent = tUI('watcherGameRunning').replace('{game}', gameLabelName + (isDbOnly ? ' (no Pulse preset)' : ''))
-      _gwStripShow(gameLabelName)
       // Pause metrics polling while game is running — prevents PowerShell spawns every 3s
       if (metricsInterval) { clearInterval(metricsInterval); metricsInterval = null }
       // Silent Mode: silence Jylli's own overhead during gaming
@@ -1146,8 +1152,6 @@ async function init(isPremium = false) {
     } else if (event === 'game-closed') {
       const lbl = document.getElementById('watcher-active-game')
       if (lbl) lbl.textContent = tUI('watcherWatchingLabel')
-      _gwStripHide()
-      setTimeout(() => loadGameHistory(), 3000)  // refresh after session data is saved
       // Resume metrics polling when game closes
       if (!metricsInterval) { metricsInterval = setInterval(updateMetrics, 3000) }
       // Silent Mode: restore Jylli's overhead after gaming
@@ -1801,12 +1805,6 @@ async function launchRuleCommit(call, on, flag, cardId, okKey, offKey) {
   return true
 }
 
-// Opens the Pulse live window; a refusal (premium) is shown instead of silently doing nothing.
-async function openPulseLive() {
-  const r = await api.openPulseWindow().catch(() => null)
-  if (r && r.ok === false) toast(tUI('premiumLockTitle'), tUI('premiumLockDesc'), 'warn', 8000, { action: premiumStoreAction() })
-}
-
 function launchRuleToggle(rule, on) {
   if (rule === 'updateGuard') {
     settings.updateGuardEnabled = on
@@ -1881,40 +1879,6 @@ function setLaunchRuleDots(active) {
     const sub = document.getElementById('ug-status-sub')
     if (sub) sub.textContent = tUI('settingsUpdateGuardDesc')
   }
-}
-
-function _gwStripShow(gameName) {
-  const strip = document.getElementById('gw-session-strip')
-  const gameEl = document.getElementById('gw-strip-game')
-  const timerEl = document.getElementById('gw-strip-timer')
-  if (!strip) return
-  if (gameEl) gameEl.textContent = gameName || ''
-  if (timerEl) timerEl.textContent = '0:00'
-  strip.style.display = 'flex'
-  _gwStripStart = Date.now()
-  if (_gwStripInterval) clearInterval(_gwStripInterval)
-  _gwStripInterval = setInterval(() => {
-    const sec = Math.floor((Date.now() - _gwStripStart) / 1000)
-    const h = Math.floor(sec / 3600)
-    const m = Math.floor((sec % 3600) / 60)
-    const s = sec % 60
-    if (timerEl) timerEl.textContent = h > 0 ? `${h}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}` : `${m}:${String(s).padStart(2,'0')}`
-  }, 1000)
-}
-
-function _gwStripHide() {
-  const strip = document.getElementById('gw-session-strip')
-  if (strip) strip.style.display = 'none'
-  const fpsEl = document.getElementById('gw-strip-fps')
-  if (fpsEl) { fpsEl.style.display = 'none'; fpsEl.textContent = '' }
-  if (_gwStripInterval) { clearInterval(_gwStripInterval); _gwStripInterval = null }
-}
-
-function gwStripStopAll() {
-  api.pulseStop?.().catch(() => {})
-  api.toggleUpdateGuard?.(false).catch(() => {})
-  api.toggleGameShield?.(false).catch(() => {}); settings.gameShieldEnabled = false
-  toast(tUI('nowGamingStopAll'), '', 'info', 3000)
 }
 
 // Telemetry is opt-in: nothing is sent until the user says yes (first run, or once for existing installs).
@@ -2369,420 +2333,32 @@ const SEARCH_INDEX = [
 // The first-launch flow is js/arrival.js; this keeps the old entry point (Settings, Home resume card) working.
 function startOnboarding() { JylliArrival.start({ rerun: true }) }
 
-// ─── Page: Pulse ─────────────────────────────────────────────────────────────
+// ─── Page: Pulse ─────────────────────────────────────────────
+// Pulse 2.0 lives in js/pulse/* (the tab) and pulse.html / pulse-hud.html (Cockpit and HUD). What stays here is the little the rest of the
+// app reads: whether a boost is running (status pill, tray, game events), the game Auto-Pulse picked, and the preset names.
 const PULSE_PRESET_LIST = [
-  { id:'fortnite',     name:'Fortnite',           icon:'fa-gamepad' },
-  { id:'valorant',     name:'Valorant',            icon:'fa-crosshairs' },
-  { id:'csgo',         name:'CS2 / CS:GO',         icon:'fa-crosshairs' },
-  { id:'fivem',        name:'FiveM',               icon:'fa-car' },
-  { id:'warzone',      name:'Warzone',             icon:'fa-skull' },
-  { id:'apex',         name:'Apex Legends',        icon:'fa-shield' },
-  { id:'minecraft',    name:'Minecraft',           icon:'fa-cube' },
-  { id:'arma',         name:'Arma Reforger',       icon:'fa-helmet-safety' },
-  { id:'tarkov',       name:'Escape from Tarkov',  icon:'fa-suitcase' },
-  { id:'rocketleague', name:'Rocket League',       icon:'fa-futbol' },
-  { id:'rust',         name:'Rust',                icon:'fa-fire' },
-  { id:'r6',           name:'Rainbow Six Siege',   icon:'fa-shield-halved' },
-  { id:'overwatch',    name:'Overwatch 2',         icon:'fa-bolt' },
+  { id:'fortnite',     name:'Fortnite' },
+  { id:'valorant',     name:'Valorant' },
+  { id:'csgo',         name:'CS2 / CS:GO' },
+  { id:'fivem',        name:'FiveM' },
+  { id:'warzone',      name:'Warzone' },
+  { id:'apex',         name:'Apex Legends' },
+  { id:'minecraft',    name:'Minecraft' },
+  { id:'arma',         name:'Arma Reforger' },
+  { id:'tarkov',       name:'Escape from Tarkov' },
+  { id:'rocketleague', name:'Rocket League' },
+  { id:'rust',         name:'Rust' },
+  { id:'r6',           name:'Rainbow Six Siege' },
+  { id:'overwatch',    name:'Overwatch 2' },
 ]
-
-async function togglePulseBeforeAfter(btn) {
-  const panel = document.getElementById('pulse-ba-panel')
-  if (!panel) return
-  if (panel.style.display !== 'none') { panel.style.display = 'none'; return }
-  panel.innerHTML = `<div class="jx-217"><i class="fa fa-spinner fa-spin"></i></div>`
-  panel.style.display = ''
-  const res = await api.pulseBaselineGet().catch(() => ({}))
-  if (!res?.ok || !res.baseline || !res.current) {
-    panel.innerHTML = `<div class="jx-7">${tUI('pulseBeforeAfterNA')}</div>`
-    return
-  }
-  const { baseline, current } = res
-  const metrics = [
-    { key: 'cpu',     label: 'CPU',     unit: '%',  lowerIsBetter: true },
-    { key: 'gpu',     label: 'GPU',     unit: '%',  lowerIsBetter: false },
-    { key: 'ram',     label: 'RAM',     unit: '%',  lowerIsBetter: true },
-    { key: 'cpuTemp', label: 'CPU Temp',unit: '°C', lowerIsBetter: true },
-  ]
-  const rows = metrics.map(({ key, label, unit, lowerIsBetter }) => {
-    const before = baseline[key] != null ? Math.round(baseline[key]) : null
-    const after  = current[key]  != null ? Math.round(current[key])  : null
-    if (before == null || after == null) return ''
-    const delta = after - before
-    const improved = lowerIsBetter ? delta < 0 : delta > 0
-    const neutral  = Math.abs(delta) < 1
-    const color = neutral ? 'rgba(255,255,255,0.4)' : improved ? jStatus('ok') : jStatus('err')
-    const sign  = delta > 0 ? '+' : ''
-    return `<div class="jx-218">
-      <span class="jx-219">${label}</span>
-      <span class="jx-220">${before}${unit}</span>
-      <span class="jx-221">→</span>
-      <span class="jx-18">${after}${unit}</span>
-      <span style="font-size:11px;color:${color};min-width:36px;text-align:right">(${sign}${delta}${unit})</span>
-    </div>`
-  }).join('')
-  panel.innerHTML = `
-    <div class="jx-222"><i class="fa fa-chart-column jx-223"></i>${tUI('pulseBeforeAfterTitle')}</div>
-    ${rows}
-    <div class="jx-224">${tUI('pulseBeforeAfterNote')}</div>`
-  // Close on next outside click
-  setTimeout(() => {
-    document.addEventListener('click', function _closeBA(e) {
-      const toggle = document.getElementById('pulse-ba-toggle')
-      if (!panel.contains(e.target) && e.target !== toggle) {
-        panel.style.display = 'none'
-        document.removeEventListener('click', _closeBA)
-      }
-    })
-  }, 0)
-}
-
-function _pulseThermalUpdate() {
-  api.pulsePrearmScan().then(result => {
-    const card  = document.getElementById('pulse-thermal-card')
-    const label = document.getElementById('pulse-thermal-label')
-    const sub   = document.getElementById('pulse-thermal-sub')
-    if (!card || !result?.thermal) return
-    const { tier, suggestion } = result.thermal
-    card.classList.remove('pulse-thermal-safe', 'pulse-thermal-marginal', 'pulse-thermal-risk')
-    if (tier === 'safe') {
-      card.classList.add('pulse-thermal-safe')
-      label.textContent = tUI('pulseThermalOk')
-      sub.textContent = ''
-    } else if (tier === 'marginal') {
-      card.classList.add('pulse-thermal-marginal')
-      label.textContent = tUI('pulseThermalMarginal')
-      sub.textContent = suggestion
-    } else {
-      card.classList.add('pulse-thermal-risk')
-      label.textContent = tUI('pulseThermalRisk')
-      sub.textContent = suggestion
-    }
-    card.style.display = 'flex'
-  }).catch(() => {})
-}
-
-// ─── Page: Process Manager ────────────────────────────────────────────────────
-let boostActive = false
-
-
-// ─── ProcessFreeze: CPU Hog Rail logic ───────────────────────────────────────
-let _pfHogInterval = null
-let _pfFrozenLocal = {}  // pid → { name, frozenAt, lastCpu }
-let _pfFrozenSavings = {} // pid → savedMs (populated on defrost)
-
-function startPfHogRail() {
-  if (_pfHogInterval) return
-  _pfUpdateHogRail()
-  _pfHogInterval = setInterval(_pfUpdateHogRail, 3000)
-}
-
-function stopPfHogRail() {
-  if (_pfHogInterval) { clearInterval(_pfHogInterval); _pfHogInterval = null }
-}
-
-let _pfHogBusy = false
-async function _pfUpdateHogRail() {
-  const container = document.getElementById('pf-hog-cards')
-  if (!container) { stopPfHogRail(); return }
-  if (_pfHogBusy || document.hidden) return   // never stack process scans; skip while the window is hidden
-  _pfHogBusy = true
-  try {
-    const procs = await api.getProcesses()
-    if (!Array.isArray(procs)) return
-    const [fInfo] = await Promise.all([api.freezeGetPids()])
-    const frozenPids = new Set(fInfo?.frozenPids || [])
-    const hogs = procs
-      .filter(p => (p.CPU > 1 || frozenPids.has(p.Id)) && p.Name)
-      .sort((a, b) => (frozenPids.has(b.Id) ? 1 : b.CPU) - (frozenPids.has(a.Id) ? 1 : a.CPU))
-      .slice(0, 6)
-    if (hogs.length === 0) {
-      container.innerHTML = `<div class="j-muted">${tUI('pmNoHogs')}</div>`
-      return
-    }
-    container.innerHTML = hogs.map(p => {
-      const frozen = frozenPids.has(p.Id)
-      const savings = _pfFrozenSavings[p.Id] ? ` · ${tG('procx', 'saved', { n: Math.round(_pfFrozenSavings[p.Id] / 1000) })}` : ''
-      return pfHogCardHtml(p, frozen, savings)
-    }).join('')
-  } catch {} finally { _pfHogBusy = false }
-}
-
-async function pfToggleFreeze(pid, name, cpuPct) {
-  try {
-    const fInfo = await api.freezeGetPids()
-    const frozen = (fInfo?.frozenPids || []).includes(pid)
-    if (frozen) {
-      const r = await api.defrostProcess(pid)
-      if (r?.savedMs) _pfFrozenSavings[pid] = r.savedMs
-      delete _pfFrozenLocal[pid]
-      toast(tUI('pmDefrostedToast').replace('{name}', name), '', 'info')
-    } else {
-      await api.freezeProcess(pid)
-      await api.freezeSetStat({ pid, name, cpuPct })
-      _pfFrozenLocal[pid] = { name, frozenAt: Date.now(), lastCpu: cpuPct }
-      toast(tUI('pmFrozeToast').replace('{name}', name), '', 'ok')
-    }
-    _pfUpdateHogRail()
-  } catch (e) {
-    toast(tG('procx', 'freezeErr'), e?.message || tG('procx', 'ipcFailed'), 'err')
-  }
-}
-
-// Show session report after game exit
-function pfShowSessionReport(frozenStats) {
-  const el = document.getElementById('pf-session-report')
-  if (!el || !frozenStats || Object.keys(frozenStats).length === 0) return
-  const lines = Object.entries(frozenStats).map(([n, ms]) => `${n}: ${tUI('pmCpuFreed').replace('{s}', Math.round(ms/1000))}`)
-  el.innerHTML = `<i class="fa fa-check-circle" aria-hidden="true"></i><div><strong>${tUI('pmSessionSavings')}</strong> ${lines.map(escHtml).join(' · ')}</div>`
-  el.style.display = 'block'
-}
-
+const PULSE_PRESETS = Object.fromEntries(PULSE_PRESET_LIST.map(p => [p.id, { name: p.name }]))
 let pulseSelectedPreset = null
 let pulseIsActive = false
-let _pulseScoreTimer = null
-let _pulseOptStepsOk = 0
-let _lastPulseScore = 0
-let _lastSensorCpuTemp = 0
-let _ariaFpsAvg = 0
-let _ariaFpsLow1 = 0
 
-function selectPulsePreset(id) {
-  pulseSelectedPreset = id
-  document.querySelectorAll('.pulse-preset-card').forEach(el => el.classList.remove('selected'))
-  const card = document.getElementById(`pp-${id}`)
-  if (card) {
-    card.classList.add('selected')
-    const icon = card.querySelector('i')
-    const label = card.querySelector('div')
-    if (icon) icon.style.color = 'var(--pink)'
-    if (label) label.style.color = 'var(--pink)'
-  }
-  const hero = document.getElementById('pulse-selected-hero')
-  if (hero) {
-    const preset = PULSE_PRESET_LIST.find(p => p.id === id)
-    if (preset) {
-      hero.classList.remove('hero-empty')
-      hero.innerHTML = `<span class="pulse-hero-game-icon"><i class="fa ${preset.icon}"></i></span><div><div class="pulse-hero-game-name">${preset.name}</div><div class="pulse-hero-game-hint">${tUI('pulseReadyToActivate')}</div></div>`
-    }
-  }
-  const startBtn = document.getElementById('pulse-start-btn')
-  if (startBtn && !pulseIsActive) startBtn.disabled = false
-}
-
-async function doPulseStart(btn) {
-  if (!pulseSelectedPreset) return
-  const killBg = document.getElementById('pulse-kill-bg')?.checked ?? true
-
-  btn.disabled = true
-  btn.innerHTML = `<i class="fa fa-spinner fa-spin"></i> ${tUI('pulseActivating')}`
-
-  const logEl = document.getElementById('pulse-log')
-  if (logEl) { logEl.style.display = 'block'; logEl.innerHTML = '<div id="pulse-feed-chips" class="jx-49"></div>' }
-
-  // Listen for log events streamed from main process
-  let r
-  try {
-    r = await api.pulseStart({ presetId: pulseSelectedPreset, killBg })
-  } catch {
-    btn.disabled = false
-    btn.innerHTML = `<i class="fa fa-bolt"></i> ${tUI('pulseActivate')}`
-    toast(tUI('pulseFailedTitle'), tUI('pulseFailedBody'), 'err')
-    return
-  }
-
-  if (r?.ok) {
-    pulseIsActive = true
-    btn.style.display = 'none'
-    const stopBtn = document.getElementById('pulse-stop-btn')
-    if (stopBtn) { stopBtn.style.display = ''; stopBtn.disabled = false }
-    const badge = document.getElementById('pulse-status-badge')
-    if (badge) badge.style.display = ''
-    const activeLabel = document.getElementById('pulse-active-label')
-    const activeName  = document.getElementById('pulse-active-name')
-    const presetName  = document.getElementById(`pp-${pulseSelectedPreset}`)?.querySelector('div')?.textContent || pulseSelectedPreset
-    if (activeLabel) activeLabel.style.display = ''
-    if (activeName)  activeName.textContent = presetName
-    api.discordSetPulseGame(presetName).catch(() => {})
-    startPulseScoreTimer()
-    api.pulseBaselineCapture().catch(() => {})
-    const baToggle = document.getElementById('pulse-ba-toggle')
-    if (baToggle) baToggle.style.display = ''
-  } else {
-    btn.disabled = false
-    btn.innerHTML = `<i class="fa fa-bolt"></i> ${tUI('pulseActivate')}`
-    toast(tUI('pulseFailedTitle'), tUI('pulseFailedBody'), 'err')
-  }
-}
-
-async function doPulseStop(btn) {
-  stopPulseScoreTimer()
-  const baToggle = document.getElementById('pulse-ba-toggle')
-  const baPanel  = document.getElementById('pulse-ba-panel')
-  if (baToggle) baToggle.style.display = 'none'
-  if (baPanel)  baPanel.style.display  = 'none'
-  btn.disabled = true
-  btn.innerHTML = `<i class="fa fa-spinner fa-spin"></i> ${tUI('pulseRestoring')}`
-  try {
-    await api.pulseStop()
-  } finally {
-    pulseIsActive = false
-    api.discordSetPulseGame(null).catch(() => {})
-    btn.style.display = 'none'
-    const startBtn = document.getElementById('pulse-start-btn')
-    if (startBtn) { startBtn.style.display = ''; startBtn.disabled = !pulseSelectedPreset; startBtn.innerHTML = `<i class="fa fa-bolt"></i> ${tUI('pulseActivate')}` }
-    const badge = document.getElementById('pulse-status-badge')
-    if (badge) badge.style.display = 'none'
-    const activeLabel = document.getElementById('pulse-active-label')
-    if (activeLabel) activeLabel.style.display = 'none'
-    // Show Fix Mouse button in case interrupt affinity caused issues
-    const logEl = document.getElementById('pulse-log')
-    if (logEl) {
-      const fixRow = document.createElement('div')
-      fixRow.style.cssText = 'margin-top:8px;padding-top:8px;border-top:1px solid var(--border2)'
-      fixRow.innerHTML = `<button class="btn btn-ghost btn-sm jx-225" onclick="doPulseFixMouse(this)"><i class="fa fa-mouse"></i> Fix Mouse (clear interrupt affinity)</button>`
-      logEl.appendChild(fixRow)
-      logEl.style.display = ''
-    }
-  }
-}
-
-async function doPulseFixMouse(btn) {
-  btn.disabled = true
-  btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Fixing…'
-  const r = await api.pulseFixMouse().catch(() => null)
-  if (!r || r.ok === false) {
-    toast(tUI('mouseFixTitle'), tUI('tkOpFailed'), 'err')
-    btn.disabled = false
-    btn.innerHTML = '<i class="fa fa-triangle-exclamation"></i> ' + tUI('tkFailed')
-    return
-  }
-  toast(tUI('mouseFixTitle'), tUI('mouseFixBody'), 'ok')
-  btn.innerHTML = '<i class="fa fa-check"></i> Done'
-}
-
-
-function computePulseScore() {
-  // Thermal component: (1 - cpuTemp/100) * 100, clamped 0–100. Unknown without a CPU temperature reading.
-  const thermalRoom = _lastSensorCpuTemp > 0 ? Math.min(100, Math.max(0, (1 - _lastSensorCpuTemp / 100) * 100)) : null
-
-  // FPS stability: (1 - (avg-low1)/avg), clamped 0–100. Unknown without FPS data.
-  let fpsStability = null
-  if (_ariaFpsAvg > 0 && _ariaFpsLow1 > 0) {
-    fpsStability = Math.min(100, Math.max(0, (1 - (_ariaFpsAvg - _ariaFpsLow1) / _ariaFpsAvg) * 100))
-  }
-
-  // Optimizations applied: steps that returned 'ok' (max 8 expected steps)
-  const optiApplied = Math.min(100, (_pulseOptStepsOk / 8) * 100)
-
-  // Unmeasured components are left out and the weights renormalised (js/score.js), never scored as a neutral guess.
-  const blended = JylliScore.blend([
-    { key: 'thermal', value: thermalRoom == null ? null : thermalRoom / 100, weight: 0.40 },
-    { key: 'fps',     value: fpsStability == null ? null : fpsStability / 100, weight: 0.35 },
-    { key: 'opti',    value: optiApplied / 100, weight: 0.25 },
-  ])
-  const score = (blended.score ?? 0) * 10  // scale 0–100 → 0–1000
-
-  _lastPulseScore = score
-  window._lastPulseScore = score
-
-  const valEl = document.getElementById('pulse-score-val')
-  const barEl = document.getElementById('pulse-score-bar')
-  const bdEl  = document.getElementById('pulse-score-breakdown')
-  if (!valEl) return
-
-  valEl.textContent = score
-  // Color: green ≥800, yellow 600–799, red <600
-  const scoreColor = score >= 800 ? jStatus('ok') : score >= 600 ? jStatus('warn') : jStatus('err')
-  valEl.style.color = scoreColor
-  if (barEl) { barEl.style.width = `${score / 10}%`; barEl.style.background = scoreColor }
-
-  if (bdEl) {
-    const chips = [
-      [tUI('pulseScoreThermal'), thermalRoom  == null ? null : Math.round(thermalRoom  * 4)],
-      [tUI('pulseScoreFps'),     fpsStability == null ? null : Math.round(fpsStability * 3.5)],
-      [tUI('pulseScoreOpti'),    Math.round(optiApplied  * 2.5)],
-    ]
-    bdEl.innerHTML = chips.map(([label, val]) => {
-      if (val == null) return `<div class="pulse-score-chip"><span class="psc-label">${label}</span><span class="psc-val">—</span></div>`
-      const c = val >= 280 ? jStatus('ok') : val >= 175 ? jStatus('warn') : jStatus('err')
-      return `<div class="pulse-score-chip"><span class="psc-label">${label}</span><span class="psc-val" style="color:${c}">${val}</span></div>`
-    }).join('')
-  }
-}
-
-function startPulseScoreTimer() {
-  const row = document.getElementById('pulse-score-row')
-  if (row) row.style.display = ''
-  _pulseOptStepsOk = 0
-  computePulseScore()
-  _pulseScoreTimer = setInterval(computePulseScore, 2000)
-}
-
-function stopPulseScoreTimer() {
-  if (_pulseScoreTimer) { clearInterval(_pulseScoreTimer); _pulseScoreTimer = null }
-  window._lastPulseScore = _lastPulseScore
-  const row = document.getElementById('pulse-score-row')
-  if (row) row.style.display = 'none'
-}
-
-function _pulseFeedAppendChip(msg, level, ts) {
-  const feed = document.getElementById('pulse-feed-chips')
-  if (!feed) return
-  const icons  = { ok: 'fa-check', head: 'fa-bolt', info: 'fa-circle-info', warn: 'fa-triangle-exclamation', err: 'fa-xmark' }
-  const colors = { ok: jStatus('ok'), head: 'var(--c-accent)', info: jStatus('info'), warn: jStatus('warn'), err: jStatus('err') }
-  const icon  = icons[level]  || icons.info
-  const color = colors[level] || colors.info
-  const chip = document.createElement('div')
-  chip.className = 'pulse-feed-chip'
-  chip.style.borderLeftColor = color
-  chip.innerHTML = `<i class="fa ${icon}" style="color:${color};font-size:11px;flex-shrink:0;width:12px;margin-top:1px"></i><span class="pfc-msg">${msg}</span><span class="pfc-ts">${ts || ''}</span>`
-  feed.prepend(chip)
-  // Keep max 30 chips
-  while (feed.children.length > 30) feed.removeChild(feed.lastChild)
-}
+function selectPulsePreset(id) { pulseSelectedPreset = id }
 
 function syncPulseUIState() {
   Shell.state(pulseIsActive ? 'pulse' : (window._gameRunning ? 'game' : 'idle'))
-  if (window._pulseHeroRefresh) setTimeout(window._pulseHeroRefresh, 0)
-  // Restore button visibility to match pulseIsActive on page re-enter
-  const startBtn = document.getElementById('pulse-start-btn')
-  const stopBtn  = document.getElementById('pulse-stop-btn')
-  const badge    = document.getElementById('pulse-status-badge')
-  const activeLabel = document.getElementById('pulse-active-label')
-  if (!startBtn) return
-  const heroEl = document.getElementById('pulse-hero')
-  const scoreRow = document.getElementById('pulse-score-row')
-  const baToggle = document.getElementById('pulse-ba-toggle')
-  if (pulseIsActive) {
-    startBtn.style.display = 'none'
-    if (stopBtn) { stopBtn.style.display = ''; stopBtn.disabled = false }
-    if (badge) badge.style.display = ''
-    if (activeLabel) activeLabel.style.display = ''
-    if (heroEl) heroEl.classList.add('pulse-hero--active')
-    if (scoreRow) scoreRow.style.display = ''
-    if (baToggle) baToggle.style.display = ''
-  } else {
-    startBtn.style.display = ''
-    startBtn.disabled = !pulseSelectedPreset
-    if (stopBtn) stopBtn.style.display = 'none'
-    if (badge) badge.style.display = 'none'
-    if (activeLabel) activeLabel.style.display = 'none'
-    if (heroEl) heroEl.classList.remove('pulse-hero--active')
-    if (scoreRow) scoreRow.style.display = 'none'
-    if (baToggle) baToggle.style.display = 'none'
-  }
-  if (pulseSelectedPreset) {
-    document.querySelectorAll('.pulse-preset-card').forEach(el => el.classList.remove('selected'))
-    const card = document.getElementById(`pp-${pulseSelectedPreset}`)
-    if (card) {
-      card.classList.add('selected')
-      const icon = card.querySelector('i')
-      const label = card.querySelector('div')
-      if (icon) icon.style.color = 'var(--pink)'
-      if (label) label.style.color = 'var(--pink)'
-    }
-  }
 }
 
 let procData = [], procSort = { key: 'ram', dir: -1 }
@@ -3868,39 +3444,6 @@ async function blacklistUnknownGame(exe) {
 }
 
 let _gsExclusions = []
-
-async function loadGameHistory() {
-  if (!api.getGameHistory) return
-  const { history } = await api.getGameHistory().catch(() => ({ history: [] }))
-  const panel = document.getElementById('game-history-panel')
-  const table = document.getElementById('game-history-table')
-  if (!panel || !table || !history?.length) return
-  const rows = history.slice(0, 5).map(e => {
-    const sec = Math.floor(e.durationMs / 1000)
-    const h = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60), s = sec % 60
-    const dur = h > 0 ? `${h}h ${m}m` : m > 0 ? `${m}m` : `${s}s`
-    const fps = e.avgFps ? `${e.avgFps} FPS` : '—'
-    const shield = e.shieldKills > 0 ? `<span class="jx-11">×${e.shieldKills}</span>` : '—'
-    const ug = e.updateBlocks > 0 ? `<span class="jx-21">×${e.updateBlocks}</span>` : '—'
-    const d = new Date(e.ts)
-    const date = `${d.getMonth()+1}/${d.getDate()} ${d.getHours()}:${String(d.getMinutes()).padStart(2,'0')}`
-    const scoreVal = e.pulseScore != null ? e.pulseScore : null
-    const scoreColor = scoreVal == null ? 'rgba(255,255,255,0.25)' : scoreVal >= 800 ? jStatus('ok') : scoreVal >= 600 ? jStatus('warn') : jStatus('err')
-    const scoreStr = scoreVal != null ? `<span style="color:${scoreColor};font-weight:700">${scoreVal}</span>` : `<span class="jx-110">—</span>`
-    const tempStr = e.peakCpuTemp != null ? `<span style="color:${e.peakCpuTemp > 90 ? 'var(--c-danger)' : e.peakCpuTemp > 75 ? 'var(--c-warning)' : 'rgba(var(--fx),0.4)'}">${Math.round(e.peakCpuTemp)}°</span>` : `<span class="jx-110">—</span>`
-    return `<div class="jx-283">
-      <span class="jx-284">${e.displayName || e.game}</span>
-      <span class="jx-3">${dur}</span>
-      <span class="jx-8">${fps}</span>
-      ${scoreStr}
-      ${tempStr}
-      <span>${shield}</span>
-      <span class="jx-28">${date}</span>
-    </div>`
-  }).join('')
-  table.innerHTML = rows
-  panel.style.display = 'block'
-}
 
 function gsUpdateThreshold(type, value) {
   const v = parseInt(value, 10)
@@ -6065,7 +5608,6 @@ function showAriaSessionSummary(data) {
       anomalyCount:  anomalyTotal,
     }
     api.pulseSaveSession(sessionRecord).catch(() => {})
-    setTimeout(() => loadGameHistory(), 600)
   }
 
   panel.style.display = ''
@@ -6193,12 +5735,6 @@ function ariaOnTick(evt) {
   _ariaAnomalyFeed.unshift(evt)
   if (_ariaAnomalyFeed.length > 8) _ariaAnomalyFeed.pop()
   ariaRefreshAnomalyFeed()
-  if (pulseIsActive && document.getElementById('pulse-feed-chips')) {
-    const label = (ARIA_METRIC_LABEL?.[evt.metric] || (() => evt.metric))()
-    const unit  = ARIA_METRIC_UNIT?.[evt.metric] || ''
-    const val   = evt.value != null ? ` — ${Math.round(evt.value)}${unit}` : ''
-    _pulseFeedAppendChip(`ARIA: ${label} spike${val}`, 'warn', new Date().toLocaleTimeString())
-  }
   const now = Date.now()
   const key = `_ariaLastToast_${evt.metric}`
   if (!window[key] || now - window[key] > 60000) {
@@ -6219,8 +5755,6 @@ function ariaOnTick(evt) {
 const _ariaFpsHistory = []
 
 function ariaOnFpsTick({ avgFps, low1Fps }) {
-  if (avgFps  != null) _ariaFpsAvg  = avgFps
-  if (low1Fps != null) _ariaFpsLow1 = low1Fps
   const ctr    = document.getElementById('aria-fps-counter')
   const avgEl  = document.getElementById('aria-fps-avg')
   const low1El = document.getElementById('aria-fps-low1')
@@ -6230,20 +5764,12 @@ function ariaOnFpsTick({ avgFps, low1Fps }) {
     ctr.style.display = 'none'
     _ariaFpsHistory.length = 0
     ariaFpsSparklineClear()
-    const stripFps = document.getElementById('gw-strip-fps')
-    if (stripFps) stripFps.style.display = 'none'
     return
   }
   _ariaFpsHistory.push({ avgFps, low1Fps })
   if (_ariaFpsHistory.length > 18) _ariaFpsHistory.shift()
   ctr.style.display = 'flex'
   if (avgEl) avgEl.textContent = avgFps
-  // Mirror FPS to Now Gaming strip
-  const stripFps = document.getElementById('gw-strip-fps')
-  if (stripFps && document.getElementById('gw-session-strip')?.style.display !== 'none') {
-    stripFps.textContent = `${avgFps} FPS`
-    stripFps.style.display = 'inline'
-  }
   if (low1El) {
     low1El.textContent = low1Fps
     low1El.style.color = low1Fps >= 60 ? 'var(--c-success)' : low1Fps >= 30 ? 'var(--c-warning)' : 'var(--c-danger)'
@@ -9275,7 +8801,7 @@ async function gpCreateBundle() {
 
   // Snapshot current state
   const curSettings = settings
-  const pulsePreset = typeof pulseActivePreset !== 'undefined' ? pulseActivePreset : null
+  const pulsePreset = pulseIsActive ? pulseSelectedPreset : null
 
   // Get assigned tweak profile for selected game
   const tweakProfileName = curSettings[`gameProfile_${selectedGameId}`] || null
@@ -9306,7 +8832,7 @@ async function gpActivateBundle(name) {
   const tpFailed = r.results?.tweakProfile?.failed || []
   if (tpFailed.length) toast(tUI('gpBundleActivated'), tUIf('gpBundleTweaksFailed', { n: tpFailed.length, ids: tpFailed.map(f => f.id).join(', ') }).slice(0, 300), 'warn', 8000)
   else toast(tUI('gpBundleActivated'), name, 'ok')
-  if (r.bundle?.pulsePreset && !pulseActivePreset) {
+  if (r.bundle?.pulsePreset && !pulseIsActive) {
     const pr = await api.pulseStart({ presetId: r.bundle.pulsePreset }).catch(e => ({ ok: false, error: String((e && e.message) || e) }))   // main reads presetId, not preset
     if (pr && pr.ok === false) toast(tUI('launchRuleFailed'), String(pr.error || pr.reason || '').slice(0, 200), 'warn')
   }
