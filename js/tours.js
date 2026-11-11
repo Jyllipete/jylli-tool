@@ -81,10 +81,10 @@
       T('startup-search', ['Find an item', 'Search by name. Use Recommended in the header to turn off the items that cost the most.'], ['Etsi kohde', 'Hae nimellä. Käytä otsikon Suositellut-toimintoa kytkeäksesi pois eniten kuluttavat kohteet.']),
       T('startup-list', ['Switch items off', 'Turn an item off with its toggle. It stays installed and can be turned on again.'], ['Kytke kohteita pois', 'Kytke kohde pois sen kytkimestä. Se pysyy asennettuna ja sen voi kytkeä takaisin.']),
     ] },
-    diagnostics: { v: 1, stops: [
-      T('diagnostics-scan', ['Start with a scan', 'The scan reads your system and does not change anything. It takes about a minute.'], ['Aloita tarkistuksella', 'Tarkistus lukee järjestelmän eikä muuta mitään. Siihen menee noin minuutti.']),
-      T('diagnostics-results', ['Score and recommendations', 'Your safety score and what we found appear here, with the tweaks already active on your system.'], ['Pisteet ja suositukset', 'Turvapisteet ja löydökset näkyvät tässä, samoin jo käytössä olevat säädöt.']),
-      T('diagnostics-drivers', ['Drivers', 'Check for outdated drivers. We only list them; installing is up to you.'], ['Ajurit', 'Tarkista vanhentuneet ajurit. Listaamme ne vain; asennus on sinun päätettävissäsi.']),
+    diagnostics: { v: 2, stops: [
+      T('diagnostics-scan', ['Run a checkup', 'A quick checkup reads your system and changes nothing. A deep one also verifies Windows files and tests thermals and memory.'], ['Aja tarkistus', 'Nopea tarkistus lukee järjestelmän eikä muuta mitään. Syvä tarkistus varmistaa myös Windowsin tiedostot ja testaa lämpötilat ja muistin.']),
+      T('diagnostics-results', ['Findings with evidence', 'Every problem shows what was measured and where it came from, and offers a fix or a shortcut to the right tab.'], ['Löydökset todisteineen', 'Jokaisesta ongelmasta näkyy, mitä mitattiin ja mistä tieto tuli, sekä korjaus tai oikotie oikealle välilehdelle.']),
+      T('diagnostics-drivers', ['Drivers and devices', 'Devices with errors and outdated drivers. We only list them; installing is up to you.'], ['Ajurit ja laitteet', 'Virheelliset laitteet ja vanhentuneet ajurit. Listaamme ne vain; asennus on sinun päätettävissäsi.']),
     ] },
     processes: { v: 2, tag: { 'processes-hogs': '#pf-hog-cards', 'processes-list': '#proc-table', 'processes-filter': '#proc-filter' }, stops: [
       T('processes-hogs', ['Heavy hitters', 'Processes using unusual amounts of CPU or memory right now.'], ['Raskaat prosessit', 'Prosessit, jotka käyttävät juuri nyt poikkeuksellisen paljon suoritinta tai muistia.']),

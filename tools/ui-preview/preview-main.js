@@ -27,6 +27,7 @@ const SCALE = Number(arg('scale', 1)) || 1        // <1 shrinks screenshots (che
 const LINT = !!arg('lint', false)                 // run tools/ui-preview/lint-page.js on every page and put the text report in report.txt
 const NOSHOT = !!arg('noshot', false)             // skip PNGs (use with --lint)
 const AUTO_OPTI = !!arg('auto-opti', false)   // --auto-opti: shoot every Auto-Optimize scene (--ao-profile <fixture>)
+const DIAG = !!arg('diagnostics', false)   // --diagnostics: shoot every Diagnostics scene (--dx-state clean|first|fail)
 const DEBLOAT = !!arg('debloat', false)   // --debloat: shoot every Debloat scene (--db-state drift|empty|fail for the other states)
 const GALLERY = !!arg('gallery', false)   // shoot tools/ui-preview/gallery.html (every component) instead of the app
 
@@ -51,6 +52,23 @@ ipcMain.handle('mock', async (e, name, args) => {
   return r
 })
 
+
+// Diagnostics 2.0: idle/cached state, the scan, the result, every view.
+async function diagShots(win, dir, logs, report) {
+  const js = c => win.webContents.executeJavaScript(c)
+  const until = async (cond, ms = 15000) => { const t0 = Date.now(); while (Date.now() - t0 < ms) { if (await js(cond).catch(() => false)) return true; await sleep(150) } report.push('timeout: ' + cond); return false }
+  await js("showPage('preflight')").catch(e => logs.push('[showPage] ' + e.message))
+  await sleep(900)
+  await shot(win, path.join(dir, 'dx-1-start.png'))
+  await js("document.querySelector('.dx [data-act=scan]')?.click()"); await sleep(700)
+  await shot(win, path.join(dir, 'dx-2-scanning.png'))
+  await until("document.querySelector('.dx-verdict')?.dataset.tone !== 'idle' || !!document.querySelector('.dx-f')"); await sleep(1400)
+  await shot(win, path.join(dir, 'dx-3-result.png'))
+  await js("document.querySelector('.dx-f [data-ev]')?.click()"); await js("document.querySelector('.dx-findings')?.scrollIntoView({ block: 'start' })"); await sleep(400)
+  await shot(win, path.join(dir, 'dx-4-findings.png'))
+  for (const [i, v] of ['timeline', 'drivers', 'bench', 'report'].entries()) { await js("document.querySelector('.dx .j-seg-item[data-id=\"" + v + "\"]')?.click()"); await sleep(700); await shot(win, path.join(dir, 'dx-' + (5 + i) + '-' + v + '.png')) }
+  if (LINT) { const r = await js(require('./lint-page')).catch(e => 'lint failed: ' + e.message); report.push('LINT diagnostics: ' + r) }
+}
 
 // Debloat 2.0: every view of the tab, plus the run and the receipt (the mock run answers instantly; the real timing is only visible in the app).
 async function debloatShots(win, dir, logs, report) {
@@ -172,12 +190,13 @@ async function main() {
   }
   for (const lang of LANGS) for (const tier of TIERS) for (const size of SIZES) {
     const name = `${TAG}/${lang}-${tier}-${size.join('x')}`
-    const ctx = { lang, premium: tier === 'premium', accent: ACCENT && ACCENT !== true ? ACCENT : null, arrival: !!arg('arrival', false), tours: !!arg('tours', false), debloat: arg('db-state', null) }   // --arrival: first-launch flow; --tours: guided tours on (off by default so shots stay clean)
+    const ctx = { lang, premium: tier === 'premium', accent: ACCENT && ACCENT !== true ? ACCENT : null, arrival: !!arg('arrival', false), tours: !!arg('tours', false), debloat: arg('db-state', null), dx: arg('dx-state', null) }   // --arrival: first-launch flow; --tours: guided tours on (off by default so shots stay clean)
     const { win, logs } = await makeWindow('index.html', ctx, size)
     const ready = await appReady(win)
     if (!ready) { report.push(`${name}: APP NEVER BECAME READY`); logs.forEach(l => report.push('   ' + l)); win.destroy(); continue }
     await sleep(1800)   // boot animation + first metrics
     if (SCHEME !== 'dark') await win.webContents.executeJavaScript(`JylliTheme.applyScheme(${JSON.stringify(SCHEME)})`).catch(() => {})
+    if (DIAG) { await diagShots(win, path.join(OUT, name), logs, report); win.destroy(); continue }
     if (DEBLOAT) { await debloatShots(win, path.join(OUT, name), logs, report); win.destroy(); continue }
     if (AUTO_OPTI) { await (arg('ao-max', false) ? autoOptiMaxShots : autoOptiShots)(win, path.join(OUT, name), logs, report); win.destroy(); continue }
     for (const page of (ONLY_PAGES || PAGES)) {

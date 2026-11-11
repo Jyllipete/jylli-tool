@@ -2,6 +2,24 @@
 
 ## Julkaisematon (Välilehtien uudistus)
 
+### Diagnostiikka 2.0 (Vitals)
+- Diagnostiikka-välilehti on rakennettu uudelleen oman moottorin (lib/diagnostics) päälle: oikea terveystarkistus vanhan "turvapisteen" tilalle. Jokainen tulos näyttää mitatun arvon, rajan ja lähteen; mittaamatonta aluetta ei koskaan pisteytetä arvauksella
+- Uusi **Vitals-rengas**: kymmenen osaa (vakaus, tallennus, muisti, CPU ja lämpötilat, GPU ja näyttö, ajurit, Windowsin eheys, tietoturva, verkko, asetukset), jotka täyttyvät vain kun niiden oikeat tarkistukset valmistuvat
+- Nopea ja syvä tarkistus; syvä lisää SFC/DISM-varmistuksen sekä lämpö- ja muistitestit kuormituksessa (Pro)
+- Uusi **aikajana**: 30 päivän kaatumiset (sininen ruutu, Kernel-Power 41, WHEA, näytönohjaimen nollaus, levyvirheet) pysäytyskoodeineen selitettynä, sekä ajuri-, päivitys- ja viritysmuutokset samalla janalla. **Todennäköinen syy** yhdistää kaatumiset sitä edeltäneeseen muutokseen
+- Noin 50 todisteellista löydöstä, joista jokaisessa on korjaus tai oikotie oikealle välilehdelle. Korjaukset kulkevat muutospäiväkirjan kautta (näkyvät Historiassa) ja luovat tarvittaessa palautuspisteen
+- Ajurit: virheelliset laitteet ja vanhat ajurit (tyhjäksi jäänyt lista korjattu) sekä puuttuvat ajoympäristöt. Suorituskykytestit: oikeat CPU-, muisti- ja levytestit pisteinä, vertailukohta ja historia. Raportti: terveyshistoria sekä vienti HTML:nä ja yhteenveto leikepöydälle
+- Vanha pre-flight-skannaus (run-preflight-scan) palauttaa saman rakenteen kuin ennen, joten viritysten "jo käytössä" -merkintä, Auto-Optimize ja Arrival toimivat ennallaan
+
+### Diagnostiikka 2.0 (Vitals)
+- Diagnostiikka-välilehti on rakennettu uudelleen oman moottorin (lib/diagnostics) päälle: oikea terveystarkistus vanhan "turvapisteen" tilalle. Jokainen tulos näyttää mitatun arvon, rajan ja lähteen; mittaamatonta aluetta ei koskaan pisteytetä arvauksella
+- Uusi **Vitals-rengas**: kymmenen osaa (vakaus, tallennus, muisti, CPU ja lämpötilat, GPU ja näyttö, ajurit, Windowsin eheys, tietoturva, verkko, asetukset), jotka täyttyvät vain kun niiden oikeat tarkistukset valmistuvat
+- Nopea ja syvä tarkistus; syvä lisää SFC/DISM-varmistuksen sekä lämpö- ja muistitestit kuormituksessa (Pro)
+- Uusi **aikajana**: 30 päivän kaatumiset (sininen ruutu, Kernel-Power 41, WHEA, näytönohjaimen nollaus, levyvirheet) pysäytyskoodeineen selitettynä, sekä ajuri-, päivitys- ja viritysmuutokset samalla janalla. **Todennäköinen syy** yhdistää kaatumiset sitä edeltäneeseen muutokseen
+- Noin 50 todisteellista löydöstä, joista jokaisessa on korjaus tai oikotie oikealle välilehdelle. Korjaukset kulkevat muutospäiväkirjan kautta (näkyvät Historiassa), ja vaativat palautuspisteen tarvittaessa
+- Ajurit: virheelliset laitteet ja vanhat ajurit (korjattu tyhjäksi jäänyt lista), puuttuvat ajoympäristöt. Suorituskykytestit: oikeat CPU-, muisti- ja levytestit pisteinä, vertailukohta ja historia. Raportti: terveyshistoria sekä vienti HTML:nä ja yhteenveto leikepöydälle
+- Vanha  palauttaa saman rakenteen kuin ennen, joten viritysten "jo käytössä" -merkintä, Auto-Optimize ja Arrival toimivat ennallaan
+
 ### Yhteinen pohja
 - Uusi **välilehtipohja** (`js/ui/tab-kit.js`, `js/ui/filter.js`, `css/tab-kit.css`): sama hero (mittari, otsikko, rivistö, yksi pääpainike), sama haku ja suodatinchipit, osiot, kehys sekä lataus-, tyhjä- ja virhetila Yritä uudelleen -painikkeella
 - Yksi hakusuodatin korvasi neljä erillistä; se koskee vain omaa listaansa eikä piilota Live-monitoria, työkaluja tai muita osioita

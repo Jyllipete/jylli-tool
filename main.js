@@ -2321,7 +2321,7 @@ ipcMain.handle('load-game-bundle', async (_, name) => {
   return { ok: true, bundle, results }
 })
 
-const ALLOWED_EXTERNAL_PROTOCOLS = new Set(['https:', 'http:', 'discord:', 'steam:', 'fivem:'])
+const ALLOWED_EXTERNAL_PROTOCOLS = new Set(['https:', 'http:', 'discord:', 'steam:', 'fivem:', 'ms-settings:', 'windowsdefender:'])
 ipcMain.handle('open-external', (_, url) => {
   // rstrui.exe is passed as a special token by the restore-to-point handler fallback.
   if (url === 'rstrui.exe') { shell.openPath('rstrui.exe'); return }
@@ -8733,7 +8733,7 @@ ipcMain.handle('run-windows-health', async () => {
 })
 
 // ─── Pre-Flight Diagnostic ────────────────────────────────────────────────────
-ipcMain.handle('run-preflight-scan', async () => {
+async function runPreflightCore() {
   setDiscordOverride(SCAN_PHRASES, 'Scanning system…')
   const send = (msg, pct) => mainWindow?.webContents.send('preflight-progress', { msg, pct })
   const detections = []
@@ -9231,7 +9231,8 @@ ipcMain.handle('run-preflight-scan', async () => {
     tweakStates,
     safetyScore: Math.max(0, Math.min(100, score))
   }
-})
+}
+ipcMain.handle('run-preflight-scan', async () => { const r = await runPreflightCore(); try { diagSvc().notePreflight(r) } catch {} return r })
 
 // ─── Auto-Updater ─────────────────────────────────────────────────────────────
 // Each GitHub release MUST have these 3 assets or the updater breaks:
@@ -11405,7 +11406,7 @@ ipcMain.handle('pulse-prearm-defer', async (_, opts = {}) => {
   return { ok: true, deferred: true, skipChecks }
 })
 
-ipcMain.handle('pulse-thermal-audit', async () => {
+async function pulseThermalAuditCore() {
   if (!requiresPremium('pulse-thermal-audit')) return { ok: false, reason: 'premium_required' }
   const SAMPLES = 10, INTERVAL_MS = 500
   // Collect avg clock, max clock, temp, per-core clocks, and fan RPM each sample
@@ -11532,7 +11533,8 @@ Write-Output "CORES=$coreStr"
     recommendation, throttleCause,
     boostScore, coreClocks, sparkline, gameFpsGains, trend,
   }
-})
+}
+ipcMain.handle('pulse-thermal-audit', (_, ...a) => pulseThermalAuditCore(...a))
 
 // ─── Startup Boot Impact (Windows Diagnostics-Performance Event Log) ─────────
 // Reads Event ID 101 from Microsoft-Windows-Diagnostics-Performance/Operational.
@@ -12912,6 +12914,73 @@ async function debloatGuardTick() {
 }
 app.whenReady().then(() => setTimeout(debloatGuardTick, 180000))
 
+// ─── Diagnostics 2.0 (lib/diagnostics): one checkup, a 30-day timeline, drivers, benchmarks, repairs ────────────────
+const Diag2 = require('./lib/diagnostics')
+let _diag = null, _diagAdmin = false
+function diagSvc() {
+  if (!_diag) {
+    _diag = Diag2.create({
+      runPS: (s, ms) => runPS(s, ms),
+      runRecorded: (...a) => journalSvc().runRecorded(...a),
+      createRestorePoint: () => createRestorePointInternal(() => {}, 'JylliTool_Diagnostics'),
+      state: { read: () => cuRead('jt_diagnostics.json', null), write: v => cuWrite('jt_diagnostics.json', v) },
+      getCapsProfile: () => ensureCapsProfile(false),
+      preflight: () => runPreflightCore(),
+      temps: async () => (_lastMetrics && _lastMetrics.cpuTemp ? { cpuTemp: _lastMetrics.cpuTemp } : null),
+      journal: () => journalSvc().journal.list({ limit: 2000 }),
+      isGameRunning: () => !!_systemContext.gameRunning,
+      isAdmin: () => _diagAdmin,
+      thermalAudit: async () => {
+        const r = await pulseThermalAuditCore()
+        return r && r.ok !== false && r.severity ? { severity: String(r.severity), throttlePct: Number(r.throttlePct) || 0, avgTempC: r.avgTempC == null ? null : Number(r.avgTempC), cause: r.throttleCause || null } : null
+      },
+      ramStress: async () => {
+        const r = await ramStressCore(20)
+        return r && r.ok ? { passed: !!r.passed, errors: r.errors || 0, passes: r.passes || 0 } : null
+      },
+      runtimes: async () => { const r = await detectMissingRuntimesCore(); return r && r.ok ? { missing: r.missing.filter(id => id !== 'directx') } : null },
+      installRuntimes: ids => installRuntimesCore(ids.map(id => ({ id }))),
+      benchDir: app.getPath('userData'),
+    })
+  }
+  return _diag
+}
+ipcMain.handle('diag2-scan', async (_, req) => {
+  try {
+    if (_systemContext.gameRunning) return { ok: false, error: 'game-running' }
+    const deep = !!(req && req.mode === 'deep')
+    const pro = !!(auth && auth.isPremium())
+    _diagAdmin = await checkAdmin().catch(() => false)
+    return await diagSvc().scan({ mode: deep ? 'deep' : 'quick', skip: deep && !pro ? ['thermal', 'ram'] : [], onProgress: p => cuSend('diag2-progress', p) })
+  } catch { return { ok: false, error: 'scan-failed' } }
+})
+ipcMain.handle('diag2-abort', () => diagSvc().abort())
+ipcMain.handle('diag2-cached', () => { try { return diagSvc().cached() } catch { return { ok: false, error: 'read-failed' } } })
+ipcMain.handle('diag2-fix', async (_, req) => {
+  const id = req && typeof req.id === 'string' ? req.id : ''
+  const meta = diagSvc().repairMeta(id)
+  if (!meta) return { ok: false, error: 'unknown' }
+  if (id === 'runtimes' && !(auth && auth.isPremium())) return { ok: false, reason: 'premium_required' }
+  const missing = Array.isArray(req.missing) ? req.missing.filter(x => x === 'vcredist' || x === 'dotnet48') : []
+  return diagSvc().fix({ id, missing }, p => cuSend('diag2-progress', p))
+})
+ipcMain.handle('diag2-repair-meta', (_, id) => (typeof id === 'string' ? diagSvc().repairMeta(id) : null))
+ipcMain.handle('diag2-bench', async (_, kinds) => {
+  const ok = ['cpu1', 'cpuN', 'mem', 'disk']
+  const list = Array.isArray(kinds) ? kinds.filter(k => ok.includes(k)) : ok
+  return diagSvc().bench(list.length ? list : ok, p => cuSend('diag2-progress', p))
+})
+ipcMain.handle('diag2-bench-baseline', (_, o) => diagSvc().benchBaseline({ reset: !!(o && o.reset), pin: !!(o && o.pin) }))
+ipcMain.handle('diag2-export-save', async (_, req) => {
+  const html = req && typeof req.html === 'string' ? req.html : ''
+  if (!html || html.length > 3 * 1024 * 1024) return { ok: false, error: 'bad_request' }
+  const base = String((req && req.name) || 'jylli-health-report').replace(/[^\w.\- ]+/g, '').slice(0, 60) || 'jylli-health-report'
+  const r = await dialog.showSaveDialog(mainWindow, { defaultPath: path.join(app.getPath('documents'), base + '.html'), filters: [{ name: 'HTML', extensions: ['html'] }] })
+  if (r.canceled || !r.filePath) return { ok: false, canceled: true }
+  try { fs.writeFileSync(r.filePath, html, 'utf8'); return { ok: true, path: r.filePath } } catch (e) { return { ok: false, error: 'write-failed' } }
+})
+
+
 // Premium explorers (read-only) and the one deleting action they have: send to the Recycle Bin.
 let _cuMapCtl = null
 ipcMain.handle('cleanup2-spacemap', async (_, dir) => {
@@ -13241,7 +13310,7 @@ powercfg /setactive SCHEME_CURRENT
   return { ok: r.code === 0, error: r.err || undefined }
 })
 
-ipcMain.handle('bios-ram-stress', async (_, durationSec) => {
+async function ramStressCore(durationSec) {
   if (!requiresPremium('bios-ram-stress')) return { ok: false, reason: 'premium_required' }
   const dur = Math.min(Math.max(parseInt(durationSec) || 30, 10), 360)
   const timeout = (dur + 40) * 1000
@@ -13270,7 +13339,8 @@ try { Write-Output ([RamTest]::Run(${dur})) } catch { Write-Output "ERRORS=-1;PA
   const m = /ERRORS=(-?\d+);PASSES=(\d+)/.exec(r.out || '')
   if (!m || Number(m[1]) < 0) return { ok: false, passed: false }
   return { ok: true, passed: Number(m[1]) === 0, errors: Number(m[1]), passes: Number(m[2]) }
-})
+}
+ipcMain.handle('bios-ram-stress', (_, ...a) => ramStressCore(...a))
 
 ipcMain.handle('bios-lhm-sensors', async () => {
   if (!requiresPremium('bios-lhm-sensors')) return { ok: false, fans: [], powers: [], volts: [] }
@@ -14662,7 +14732,7 @@ ipcMain.handle('set-idle-suppression', async (_, val) => {
 })
 
 // ─── Runtime Installer ────────────────────────────────────────────────────────
-ipcMain.handle('detect-missing-runtimes', async () => {
+async function detectMissingRuntimesCore() {
   const checks = []
   // .NET 4.8
   const dotnet = await runPS(`(Get-ItemProperty 'HKLM:\\SOFTWARE\\Microsoft\\NET Framework Setup\\NDP\\v4\\Full' -EA SilentlyContinue).Release`)
@@ -14675,7 +14745,8 @@ ipcMain.handle('detect-missing-runtimes', async () => {
   checks.push({ id: 'directx', name: 'DirectX', installed: dx.out.trim().length > 0 })
   // Caller reads: runtimeData.missing.map(k => featureLabels[k] || k) — needs array of id strings
   return { ok: true, runtimes: checks, missing: checks.filter(c => !c.installed).map(c => c.id) }
-})
+}
+ipcMain.handle('detect-missing-runtimes', (_, ...a) => detectMissingRuntimesCore(...a))
 
 ipcMain.handle('prepare-ddu-reinstall', async () => {
   if (!requiresPremium('prepare-ddu-reinstall')) return { ok: false, reason: 'premium_required' }
@@ -14700,7 +14771,7 @@ $gpu = Get-WmiObject Win32_VideoController | Select-Object -First 1
   return { ok: true, dduPath: dduFound ? dduPath : null, dduFound, vendor, gpuName, driverVersion }
 })
 
-ipcMain.handle('install-runtimes', async (_, rawItems = []) => {
+async function installRuntimesCore(rawItems = []) {
   if (!requiresPremium('install-runtimes')) return { ok: false, reason: 'premium_required' }
   const items = (Array.isArray(rawItems) ? rawItems : []).filter(i => i && ['vcredist', 'dotnet48'].includes(i.id))
   const total = items.length
@@ -14731,7 +14802,8 @@ ipcMain.handle('install-runtimes', async (_, rawItems = []) => {
     results.push({ id: item.id, ok, missing })
   }
   return { ok: results.some(r => r.ok) || results.length === 0 }
-})
+}
+ipcMain.handle('install-runtimes', (_, ...a) => installRuntimesCore(...a))
 
 // ─── Tweak Diff Snapshot ──────────────────────────────────────────────────────
 ipcMain.handle('tweak-diff-snapshot', async (_, id) => {

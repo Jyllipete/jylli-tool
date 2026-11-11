@@ -43,6 +43,7 @@ const restorePoints = [
 /** @returns the fixture for an API call, or undefined for "unknown" */
 function respond(name, args, ctx) {
   const lang = ctx.lang, premium = ctx.premium
+  if (/^diag2/.test(name)) return require('./diag-fixture').respond(name, args, ctx)
   switch (name) {
     // BIOS workstation: runs the REAL model/doctor code on synthetic data (HP-style rows plus a few hundred generated ones to exercise the virtual grid)
     case 'bios2Status': {

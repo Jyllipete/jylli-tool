@@ -376,6 +376,15 @@ contextBridge.exposeInMainWorld('api', {
   debloat2ShellRemove:  (req)        => ipcRenderer.invoke('debloat2-shell-remove', req),
   onDebloat2Progress:   (cb)         => on('debloat2-progress', cb),
   onDebloat2Drift:      (cb)         => on('debloat2-drift', cb),
+  diag2Scan:            (req)        => ipcRenderer.invoke('diag2-scan', req),
+  diag2Abort:           ()           => ipcRenderer.invoke('diag2-abort'),
+  diag2Cached:          ()           => ipcRenderer.invoke('diag2-cached'),
+  diag2Fix:             (req)        => ipcRenderer.invoke('diag2-fix', req),
+  diag2RepairMeta:      (id)         => ipcRenderer.invoke('diag2-repair-meta', id),
+  diag2Bench:           (kinds)      => ipcRenderer.invoke('diag2-bench', kinds),
+  diag2BenchBaseline:   (o)          => ipcRenderer.invoke('diag2-bench-baseline', o),
+  diag2ExportSave:      (req)        => ipcRenderer.invoke('diag2-export-save', req),
+  onDiag2Progress:      (cb)         => on('diag2-progress', cb),
 
   // Cleanup Extended
   scanPhantomApps:      ()           => ipcRenderer.invoke('scan-phantom-apps'),
