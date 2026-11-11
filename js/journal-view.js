@@ -57,7 +57,12 @@
     try { entries = await root.api.journalList({ limit: 500, via: filterVia || undefined }) } catch {}
     const names = id => (typeof tName === 'function' && tName(id)) || id
     // Debloat 2.0 entries are journaled as control 'debloat:<catalog id>': show the catalog name, not the id
-    const ctlName = c => { const m = /^debloat:((?:app|svc|task|ad|feat):.+)$/.exec(c); return m && typeof tG === 'function' ? tG('debloat2', 'n_' + m[1]) : c }
+    const ctlName = c => {
+      const m = /^debloat:((?:app|svc|task|ad|feat):.+)$/.exec(c); if (m && typeof tG === 'function') return tG('debloat2', 'n_' + m[1])
+      const f = /^fivem2:([w-]+)$/.exec(c)       // FiveM 2.0: the tweak's name, or the file that was edited
+      if (f && typeof tG === 'function') return tG('fivem2', f[1] === 'ini' ? 'iniT' : f[1] === 'gfx' ? 'seg_graphics' : 'n_' + f[1])
+      return c
+    }
     const opts = ['', ...VIA_KEYS].map(v => `<option value="${attr(v)}"${v === filterVia ? ' selected' : ''}>${esc(v ? tUI('journalVia_' + v) : tUI('journalViaAll'))}</option>`).join('')
     const head = `<div class="j-journal-head"><label class="j-muted">${esc(tUI('journalFilter'))} <select id="journal-filter" class="j-input j-input-sm">${opts}</select></label><span class="j-muted">${entries.length} ${esc(tUI('journalEntries'))}</span></div>`
     if (!entries.length) { box.innerHTML = head + `<div class="j-muted j-journal-empty">${esc(tUI('journalEmpty'))}</div>`; wire(box); return }

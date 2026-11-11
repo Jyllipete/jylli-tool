@@ -10,7 +10,7 @@
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 html, body {
-  width: 186px;
+  width: 224px;
   height: auto;
   overflow: hidden;
   background: transparent;
@@ -37,9 +37,9 @@ html, body {
   justify-content: space-between;
 }
 .hud-uptime {
-  font-size: 8.5px;
+  font-size: 11px;
   font-weight: 400;
-  color: rgba(255,255,255,0.22);
+  color: rgba(255,255,255,0.4);
   text-transform: none;
   letter-spacing: 0;
 }
@@ -51,10 +51,10 @@ html, body {
   margin-bottom: 4px;
 }
 .metric-label {
-  font-size: 8.5px;
+  font-size: 11px;
   font-weight: 700;
-  color: rgba(255,255,255,0.28);
-  width: 28px;
+  color: rgba(255,255,255,0.5);
+  width: 34px;
   flex-shrink: 0;
   letter-spacing: 0.04em;
 }
@@ -72,10 +72,10 @@ html, body {
   width: 0%;
 }
 .metric-val {
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 700;
-  color: rgba(255,255,255,0.7);
-  width: 30px;
+  color: rgba(255,255,255,0.8);
+  width: 36px;
   text-align: right;
   flex-shrink: 0;
   font-variant-numeric: tabular-nums;
@@ -90,9 +90,9 @@ html, body {
   margin-top: -1px;
 }
 .sparkline-label {
-  font-size: 7.5px;
-  color: rgba(255,255,255,0.18);
-  width: 28px;
+  font-size: 11px;
+  color: rgba(255,255,255,0.4);
+  width: 34px;
   flex-shrink: 0;
   letter-spacing: 0.04em;
 }
@@ -101,7 +101,7 @@ html, body {
   display: block;
   height: 16px;
 }
-.sparkline-spacer { width: 30px; flex-shrink: 0; }
+.sparkline-spacer { width: 36px; flex-shrink: 0; }
 
 /* ── Divider ── */
 .divider {
@@ -115,10 +115,11 @@ html, body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  font-size: 9px;
+  font-size: 11px;
+  gap: 8px;
 }
-.ping-label { color: rgba(255,255,255,0.22); font-size: 8.5px; }
-.ping-val { font-weight: 700; font-size: 10px; font-variant-numeric: tabular-nums; }
+.ping-label { color: rgba(255,255,255,0.5); font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.ping-val { font-weight: 700; font-size: 11px; flex: none; font-variant-numeric: tabular-nums; }
 </style>
 </head>
 <body>
@@ -135,7 +136,7 @@ html, body {
   </div>
 
   <div class="sparkline-row">
-    <div class="sparkline-label">trend</div>
+    <div class="sparkline-label" id="lbl-trend">trend</div>
     <canvas class="sparkline-canvas" id="sparkline-cpu" width="86" height="16"></canvas>
     <div class="sparkline-spacer"></div>
   </div>
@@ -155,7 +156,7 @@ html, body {
   <hr class="divider">
 
   <div class="ping-row">
-    <span class="ping-label">CFX ping</span>
+    <span class="ping-label" id="lbl-ping">Server</span>
     <span class="ping-val" id="val-ping" style="color:rgba(255,255,255,0.5)">—</span>
   </div>
 </div>
@@ -241,20 +242,21 @@ setInterval(async () => {
 }, 2000)
 
 // ── CFX ping via IPC event ──────────────────────────────────────────────────
+const LBL = { en: { ping: 'Server', none: 'no server', timeout: 'no reply', trend: 'trend' }, fi: { ping: 'Palvelin', none: 'ei palvelinta', timeout: 'ei vastausta', trend: 'trendi' } }
+const L = LBL[new URLSearchParams(location.search).get('lang')] || LBL.en
+document.getElementById('lbl-trend').textContent = L.trend
+// Latency to the server picked in the FiveM tab, measured by the main process (TCP connect to its HTTP port). Not Cfx infrastructure.
 api.onLivePingTick(d => {
   const val = document.getElementById('val-ping')
+  const lbl = document.getElementById('lbl-ping')
   if (!val) return
-  if (!d || d.ms == null) {
-    val.textContent  = 'timeout'
-    val.style.color  = '#F2555A'
-    return
-  }
-  const ms = d.ms
-  val.textContent = ms + ' ms'
-  val.style.color = ms < 40 ? '#3DD68C' : ms < 80 ? '#F5A524' : '#F2555A'
+  lbl.textContent = d && d.name ? d.name : L.ping
+  if (!d || d.none) { val.textContent = L.none; val.style.color = 'rgba(255,255,255,0.5)'; return }
+  if (d.ms == null) { val.textContent = L.timeout; val.style.color = '#F2555A'; return }
+  val.textContent = d.ms + ' ms'
+  val.style.color = d.ms < 40 ? '#3DD68C' : d.ms < 80 ? '#F5A524' : '#F2555A'
 })
 
-// ping ticks are pushed by the main process (TCP probe) — starting another live-ping here would hijack the Network page's monitor
 </script>
 </body>
 </html>

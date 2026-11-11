@@ -23,7 +23,7 @@ function walk(dir, out = []) {
 
 // ── 1. no hex / colour literals in the new component code ──
 const NEW_FILES = ['tour', 'tours', 'concierge', 'arrival', 'auto-opti', 'auto-opti/reactor', 'bios/category', 'bios/workstation', 'bios/easy', 'ui/filter', 'ui/tab-kit'].map(n => path.join(root, 'js', n + '.js'))
-const files = [path.join(root, 'js', 'ui.js'), ...NEW_FILES, ...walk(path.join(root, 'js', 'pages')), ...walk(path.join(root, 'js', 'cleanup')), ...walk(path.join(root, 'js', 'diagnostics'))].filter(f => fs.existsSync(f))
+const files = [path.join(root, 'js', 'ui.js'), ...NEW_FILES, ...walk(path.join(root, 'js', 'pages')), ...walk(path.join(root, 'js', 'cleanup')), ...walk(path.join(root, 'js', 'diagnostics')), ...walk(path.join(root, 'js', 'fivem'))].filter(f => fs.existsSync(f))
 const COLOR_STYLE = /style\s*=\s*["'`][^"'`]*(color|background|border|box-shadow|fill|stroke)\s*:/i
 for (const f of files) {
   fs.readFileSync(f, 'utf8').split('\n').forEach((line, i) => {
@@ -95,7 +95,7 @@ else {
 {
   const tp = path.join(root, 'js', 'tours.js')
   if (fs.existsSync(tp)) {
-    const srcFiles = [path.join(root, 'index.html'), path.join(root, 'js', 'shell.js'), path.join(root, 'js', 'premium.js'), path.join(root, 'js', 'fivem-logic.js'), path.join(root, 'js', 'bios', 'workstation.js'), ...walk(path.join(root, 'js', 'pages')), ...walk(path.join(root, 'js', 'cleanup')), ...walk(path.join(root, 'js', 'debloat')), ...walk(path.join(root, 'js', 'diagnostics'))].filter(f => fs.existsSync(f))
+    const srcFiles = [path.join(root, 'index.html'), path.join(root, 'js', 'shell.js'), path.join(root, 'js', 'premium.js'), path.join(root, 'js', 'bios', 'workstation.js'), ...walk(path.join(root, 'js', 'pages')), ...walk(path.join(root, 'js', 'cleanup')), ...walk(path.join(root, 'js', 'debloat')), ...walk(path.join(root, 'js', 'diagnostics')), ...walk(path.join(root, 'js', 'fivem'))].filter(f => fs.existsSync(f))
     const src = srcFiles.map(f => fs.readFileSync(f, 'utf8')).join('\n')
     const ctx = { window: null }; ctx.window = ctx; vm.createContext(ctx)
     vm.runInContext(fs.readFileSync(tp, 'utf8'), ctx, { filename: tp })

@@ -43,7 +43,6 @@ let mainWindow = null
 let pulseWindow = null
 // pulse.html listens to a few live events that are produced for the main window; mirror them to it while it is open.
 const sendToPulse = (ch, payload) => { try { if (pulseWindow && !pulseWindow.isDestroyed()) pulseWindow.webContents.send(ch, payload) } catch {} }
-let fivemSettingsWindow = null
 let fivemHudWindow = null
 let tray = null
 
@@ -231,7 +230,10 @@ async function _updateSystemContext() {
         if (settings.fivemHudEnabled && (gName.includes('fivem') || gName.includes('gta') || gName.includes('citizen'))) {
           openFivemHud()
         }
+        // FiveM only (not single-player GTA V): record the network track to the pinned server for this session
+        if (gName.startsWith('fivem') && requiresPremium('fivem2-session')) { try { fivemSvc().gameStarted() } catch {} }
       } else if (wasRunning && !_systemContext.gameRunning) {
+        try { if (_fivem) _fivem.gameEnded() } catch {}
         mainWindow?.webContents.send('game-exited', { name: _systemContext.gameName })
         // Auto-close FiveM HUD on game exit
         if (fivemHudWindow && !fivemHudWindow.isDestroyed()) closeFivemHud()
@@ -1330,6 +1332,7 @@ app.on('will-quit', (e) => {
   stopLhm()
   stopSensorBridge()
   try { _telemetry?.stop() } catch {}
+  try { _fivem?.shutdown() } catch {}
   const duration = Date.now() - sessionStartTime
   const sessionEndPromise = duration > 10000
     ? webhookSessionEnd(duration, sessionPageVisits, sessionTweaksCount)
@@ -2304,8 +2307,8 @@ ipcMain.handle('load-game-bundle', async (_, name) => {
     try {
       const content = readCitizenFXIni()
       if (content !== null) {
-        const updated = applyIniChanges(content, bundle.citizenfxIniSnapshot, { restrict: true })
-        writeCitizenFXIni(updated)
+        const updated = Fivem2.ini.patch(content, bundle.citizenfxIniSnapshot)       // documented, editable keys only (docs/FIVEM_EVIDENCE.md)
+        writeCitizenFXIni(updated.text)
         results.citizenfxIni = { ok: true }
       } else {
         results.citizenfxIni = { ok: false, error: 'CitizenFX.ini not found' }
@@ -3015,156 +3018,22 @@ ipcMain.handle('check-lghub', async () => {
   return { present: r.out.includes('SVC:1') || r.out.includes('PROC:1') }
 })
 
-// ─── FiveM in-game settings (gta5_settings.xml) ──────────────────────────────
-// Format: <KeyName value="val" /> inside <graphics> block
-const FIVEM_SETTINGS_DEFS = [
-  { key: 'LodScale',            label: 'LOD Scale',              impact: 'high',      rec: '1.000000',  type: 'select', opts: [['0.500000','0.5 (Best FPS)'],['1.000000','1.0 (Default)'],['1.500000','1.5'],['2.000000','2.0 (High)']] },
-  { key: 'PedLodBias',          label: 'Ped LOD Bias',           impact: 'high',      rec: '0.000000',  type: 'select', opts: [['0.000000','Off (Best FPS)'],['0.200000','Low'],['0.500000','Medium'],['1.000000','High']] },
-  { key: 'VehicleLodBias',      label: 'Vehicle LOD Bias',       impact: 'high',      rec: '0.000000',  type: 'select', opts: [['0.000000','Off (Best FPS)'],['0.200000','Low'],['0.500000','Medium'],['1.000000','High']] },
-  { key: 'ShadowQuality',       label: 'Shadow Quality',         impact: 'very high', rec: '1',         type: 'select', opts: [['0','Off'],['1','Normal (Recommended)'],['2','High'],['3','Very High'],['4','Ultra']] },
-  { key: 'ReflectionQuality',   label: 'Reflection Quality',     impact: 'medium',    rec: '1',         type: 'select', opts: [['0','Off'],['1','Normal (Recommended)'],['2','High'],['3','Very High'],['4','Ultra']] },
-  { key: 'ReflectionMSAA',      label: 'Reflection MSAA',        impact: 'medium',    rec: '0',         type: 'select', opts: [['0','Off (Recommended)'],['2','2x'],['4','4x'],['8','8x']] },
-  { key: 'MSAA',                label: 'MSAA Anti-Aliasing',     impact: 'high',      rec: '0',         type: 'select', opts: [['0','Off (Recommended)'],['2','2x'],['4','4x'],['8','8x']] },
-  { key: 'FXAA_Enabled',        label: 'FXAA Anti-Aliasing',     impact: 'low',       rec: 'false',     type: 'select', opts: [['false','Off (Recommended)'],['true','On']] },
-  { key: 'TXAA_Enabled',        label: 'TXAA Anti-Aliasing',     impact: 'medium',    rec: 'false',     type: 'select', opts: [['false','Off (Recommended)'],['true','On']] },
-  { key: 'ParticleQuality',     label: 'Particle Quality',       impact: 'medium',    rec: '1',         type: 'select', opts: [['0','Low'],['1','Normal (Recommended)'],['2','High'],['3','Very High'],['4','Ultra']] },
-  { key: 'WaterQuality',        label: 'Water Quality',          impact: 'medium',    rec: '0',         type: 'select', opts: [['0','Low (Recommended)'],['1','Normal'],['2','High'],['3','Very High'],['4','Ultra']] },
-  { key: 'GrassQuality',        label: 'Grass Quality',          impact: 'very high', rec: '0',         type: 'select', opts: [['0','Off (Best FPS)'],['1','Normal'],['2','High'],['3','Ultra']] },
-  { key: 'ShaderQuality',       label: 'Shader Quality',         impact: 'high',      rec: '2',         type: 'select', opts: [['0','Low'],['1','Normal'],['2','High (Recommended)'],['3','Very High'],['4','Ultra']] },
-  { key: 'Shadow_Distance',     label: 'Shadow Draw Distance',   impact: 'high',      rec: '0.500000',  type: 'select', opts: [['0.250000','0.25 (Best FPS)'],['0.500000','0.5 (Recommended)'],['0.750000','0.75'],['1.000000','1.0 (Max)']] },
-  { key: 'Shadow_SoftShadows',  label: 'Soft Shadows',           impact: 'medium',    rec: '0',         type: 'select', opts: [['0','Off (Recommended)'],['1','Softer'],['2','Softest'],['3','AMD CHS']] },
-  { key: 'UltraShadows_Enabled',label: 'Ultra Shadows',          impact: 'high',      rec: 'false',     type: 'select', opts: [['false','Off (Recommended)'],['true','On']] },
-  { key: 'Shadow_ParticleShadows',label:'Particle Shadows',      impact: 'medium',    rec: 'false',     type: 'select', opts: [['false','Off (Recommended)'],['true','On']] },
-  { key: 'Shadow_LongShadows',  label: 'Long Shadows',           impact: 'low',       rec: 'false',     type: 'select', opts: [['false','Off (Recommended)'],['true','On']] },
-  { key: 'CityDensity',         label: 'Ped Density',            impact: 'very high', rec: '0.000000',  type: 'select', opts: [['0.000000','Off (Best FPS)'],['0.500000','Low (Recommended)'],['1.000000','Normal'],['1.500000','High']] },
-  { key: 'VehicleVarietyMultiplier', label: 'Vehicle Density',   impact: 'very high', rec: '0.000000',  type: 'select', opts: [['0.000000','Off (Best FPS)'],['0.500000','Low (Recommended)'],['1.000000','Normal'],['1.500000','High']] },
-  { key: 'PedVarietyMultiplier',label: 'Ped Variety',            impact: 'high',      rec: '0.000000',  type: 'select', opts: [['0.000000','Off (Best FPS)'],['0.500000','Low'],['1.000000','Normal']] },
-  { key: 'PostFX',              label: 'Post FX Quality',        impact: 'medium',    rec: '1',         type: 'select', opts: [['0','Off'],['1','Normal (Recommended)'],['2','High'],['3','Very High'],['4','Ultra']] },
-  { key: 'DoF',                 label: 'Depth of Field',         impact: 'medium',    rec: 'false',     type: 'select', opts: [['false','Off (Recommended)'],['true','On']] },
-  { key: 'MotionBlurStrength',  label: 'Motion Blur',            impact: 'low',       rec: '0.000000',  type: 'select', opts: [['0.000000','Off (Recommended)'],['0.500000','Low'],['1.000000','Full']] },
-  { key: 'Tessellation',        label: 'Tessellation',           impact: 'medium',    rec: '0',         type: 'select', opts: [['0','Off (Recommended)'],['1','Normal'],['2','High'],['3','Very High']] },
-  { key: 'AnisotropicFiltering',label: 'Anisotropic Filtering',  impact: 'low',       rec: '16',        type: 'select', opts: [['0','Off'],['2','2x'],['4','4x'],['8','8x'],['16','16x (Recommended)']] },
-  { key: 'SSAO',                label: 'Ambient Occlusion (SSAO)',impact: 'medium',   rec: '0',         type: 'select', opts: [['0','Off (Recommended)'],['1','Normal'],['2','High']] },
-  { key: 'Lighting_FogVolumes', label: 'Volumetric Fog',         impact: 'medium',    rec: 'false',     type: 'select', opts: [['false','Off (Recommended)'],['true','On']] },
-  { key: 'HdStreamingInFlight', label: 'HD Streaming While Flying', impact: 'high',   rec: 'false',     type: 'select', opts: [['false','Off (Recommended)'],['true','On']] },
-]
-
-// Pre-compiled regex map — built once at startup, reused on every read/write
-const _fivemSettingsRegexMap = new Map(
-  FIVEM_SETTINGS_DEFS.map(def => [
-    def.key,
-    {
-      read:    new RegExp(`<${def.key}\\s+value="([^"]*)"`, 'i'),
-      replace: new RegExp(`(<${def.key}(?=\\s)\\s+value=")[^"]*("\\s*/?>)`, 'i'),
-    }
-  ])
-)
-
-// gta5_settings.xml finder — primary path is %APPDATA%\CitizenFX\gta5_settings.xml
-function findFivemSettings(manualPath) {
-  if (manualPath && typeof manualPath === 'string' && manualPath.trim()) {
-    const p = manualPath.trim()
-    // only the real settings file, wherever the user keeps it — never an arbitrary file
-    if (!path.win32.isAbsolute(p) || path.win32.basename(p).toLowerCase() !== 'gta5_settings.xml') return null
-    try { require('fs').accessSync(p); return p } catch {}
-    return null
-  }
-  const primary = path.join(process.env.APPDATA || '', 'CitizenFX', 'gta5_settings.xml')
-  try { require('fs').accessSync(primary); return primary } catch {}
-  return null
-}
-
-ipcMain.handle('fivem-read-settings', async (_, manualPath) => {
-  if (!requiresPremium('fivem-read-settings')) return { ok: false, reason: 'premium_required' }
-  const settingsPath = findFivemSettings(manualPath)
-  if (!settingsPath) {
-    return {
-      ok: false,
-      reason: 'gta5_settings.xml not found at %APPDATA%\\CitizenFX\\gta5_settings.xml',
-      hint: 'Launch FiveM, open Settings → Graphics, adjust any setting and close FiveM. The file will be created automatically.'
-    }
-  }
-  let raw
-  try { raw = fs.readFileSync(settingsPath, 'utf8') } catch (e) {
-    return { ok: false, reason: `Could not read ${settingsPath}: ${e.message}` }
-  }
-  const vals = {}
-  for (const def of FIVEM_SETTINGS_DEFS) {
-    const rx = _fivemSettingsRegexMap.get(def.key)
-    const m = rx ? raw.match(rx.read) : null
-    vals[def.key] = m ? m[1] : null
-  }
-  return { ok: true, vals, defs: FIVEM_SETTINGS_DEFS, path: settingsPath }
-})
-
-ipcMain.handle('fivem-write-settings', async (_, changes, manualPath) => {
-  if (!requiresPremium('fivem-write-settings')) return { ok: false, reason: 'premium_required' }
-  return fivemWriteSettingsCore(changes, manualPath)
-})
-async function fivemWriteSettingsCore(changes, manualPath) {
-  const settingsPath = findFivemSettings(manualPath)
-  if (!settingsPath) return { ok: false, reason: 'gta5_settings.xml not found — cannot save.' }
-  let content
-  try { content = fs.readFileSync(settingsPath, 'utf8') } catch (e) {
-    return { ok: false, reason: `Could not read file: ${e.message}` }
-  }
-
-  // 4a: structural validation before we touch anything
-  if (!/<graphics>/i.test(content) || !/<\/graphics>/i.test(content)) {
-    return { ok: false, reason: 'gta5_settings.xml appears corrupt (missing <graphics> block). Restore from .bak or re-launch FiveM.' }
-  }
-
-  // Backup (write to .bak.tmp then rename so the backup is also atomic)
-  try {
-    fs.writeFileSync(settingsPath + '.bak.tmp', content, 'utf8')
-    fs.renameSync(settingsPath + '.bak.tmp', settingsPath + '.bak')
-  } catch (e) {
-    // No backup, no write: the auto-restore below would otherwise copy back a stale .bak from an earlier session.
-    return { ok: false, reason: 'Could not back up gta5_settings.xml first (' + String(e.message).slice(0, 100) + '). Nothing was changed.' }
-  }
-
-  if (!changes || typeof changes !== 'object' || Array.isArray(changes)) return { ok: false, reason: 'invalid_request' }
-  let changedCount = 0
-  for (const [key, val] of Object.entries(changes)) {
-    const rx = _fivemSettingsRegexMap.get(key)
-    if (!rx || !Ini.isSafeXmlValue(val)) continue          // unknown key or unsafe value: ignored, never written
-    const v = String(val)
-    if (rx.replace.test(content)) content = content.replace(rx.replace, (_, a, b) => a + v + b)
-    else content = content.replace(/(<\/graphics>)/i, (_, close) => `    <${key} value="${v}" />\n  ${close}`)
-    changedCount++
-  }
-
-  // 4a: atomic write — tmp → rename (NTFS guarantees the rename is atomic)
-  const tmp = settingsPath + '.tmp'
-  try {
-    fs.writeFileSync(tmp, content, 'utf8')
-    fs.renameSync(tmp, settingsPath)
-  } catch (e) {
-    try { fs.unlinkSync(tmp) } catch {}
-    // Attempt to auto-restore from backup
-    try {
-      if (fs.existsSync(settingsPath + '.bak')) {
-        fs.copyFileSync(settingsPath + '.bak', settingsPath)
-        return { ok: false, reason: `Write failed — restored from backup. Error: ${e.message}`, restored: true }
-      }
-    } catch {}
-    return { ok: false, reason: `Could not write file: ${e.message}` }
-  }
-
-  // 4a: post-write structural validation — verify the file is still valid XML
-  try {
-    const verify = fs.readFileSync(settingsPath, 'utf8')
-    if (!/<graphics>/i.test(verify) || !/<\/graphics>/i.test(verify)) {
-      // File is corrupt after write — restore backup
-      if (fs.existsSync(settingsPath + '.bak')) {
-        fs.copyFileSync(settingsPath + '.bak', settingsPath)
-        return { ok: false, reason: 'Post-write validation failed — restored from backup.', restored: true }
-      }
-    }
-  } catch (_) {}
-
-  let size = 0; try { size = fs.statSync(settingsPath).size } catch {}
-  return { ok: true, path: settingsPath, changed: changedCount, size }
+// ─── gta5_settings.xml for Auto-Optimize's `fivem-settings` control ─────────────────────────────────────────
+// The FiveM tab has its own journaled writer (lib/fivem/index.js). This one serves Auto-Optimize only: it goes through the same
+// lib/fivem/graphics.js (keys already in the file, values validated) and keeps the .bak the control journals.
+const FvGfx = require('./lib/fivem/graphics')
+const fivemSettingsPath = () => path.join(process.env.APPDATA || '', 'CitizenFX', 'gta5_settings.xml')
+async function fivemWriteSettingsCore(changes) {
+  const file = fivemSettingsPath()
+  let text; try { text = fs.readFileSync(file, 'utf8') } catch { return { ok: false, reason: 'no-file' } }
+  if (!FvGfx.read(text).structure) return { ok: false, reason: 'corrupt' }
+  const p = FvGfx.patch(text, changes && typeof changes === 'object' && !Array.isArray(changes) ? changes : {})
+  if (!p.changed.length) return { ok: true, changed: 0, size: Buffer.byteLength(text) }
+  try { fs.writeFileSync(file + '.bak.tmp', text, 'utf8'); fs.renameSync(file + '.bak.tmp', file + '.bak') } catch { return { ok: false, reason: 'backup-failed' } }
+  const tmp = file + '.tmp'
+  try { fs.writeFileSync(tmp, p.text, 'utf8'); fs.renameSync(tmp, file) } catch { try { fs.unlinkSync(tmp) } catch {} try { fs.copyFileSync(file + '.bak', file) } catch {} return { ok: false, reason: 'write-failed' } }
+  if (!FvGfx.read(fs.readFileSync(file, 'utf8')).structure) { try { fs.copyFileSync(file + '.bak', file) } catch {} return { ok: false, reason: 'verify-failed' } }
+  return { ok: true, changed: p.changed.length, size: Buffer.byteLength(p.text) }
 }
 
 // ─── CitizenFX.ini batch read/write helper ────────────────────────────────────
@@ -3188,588 +3057,11 @@ function writeCitizenFXIni(content) {
   } catch { try { fs.unlinkSync(tmp) } catch {} return false }
 }
 
-// Keys the visual editor knows about (CITIZENFX_INI_DEFS is declared below; resolved lazily at call time) + keys used by built-in tweaks.
-const INI_EXTRA_KEYS = ['DisableSteamAchievements', 'MaxObjectLodDistance']
-function applyIniChanges(content, changes, { restrict = false } = {}) {
-  const allowed = restrict ? new Set([...CITIZENFX_INI_DEFS.map(d => d.key), ...INI_EXTRA_KEYS]) : undefined
-  return Ini.applyIniChanges(content, changes, allowed).content
+// Used by the restore functions of the retired fivem-* tweaks and by game-bundle activation (documented keys only there).
+function applyIniChanges(content, changes) {
+  return Ini.applyIniChanges(content, changes, undefined).content
 }
 
-// IPC: batch-apply multiple CitizenFX.ini changes in a single read→write
-// ─── CitizenFX.ini key definitions (full visual editor) ──────────────────────
-const CITIZENFX_INI_DEFS = [
-  // Performance
-  { key: 'StreamingMemory',        category: 'performance', type: 'number', default: 500,  recommended: 1024, min: 256, max: 3072,
-    label: 'Streaming Memory (MB)', desc: 'How much RAM FiveM pre-loads for assets. Higher = fewer texture pop-ins and world stutters. Safe up to 60% of your installed RAM. Too high causes crashes.',
-    danger: (v, ramMB) => v > ramMB * 0.6 ? `Value (${v} MB) exceeds 60% of your RAM (${ramMB} MB) — may cause out-of-memory crashes.` : null },
-  { key: 'WorkerThreads',          category: 'performance', type: 'number', default: 2,    recommended: null, min: 2, max: 16,
-    label: 'Worker Threads',        desc: 'Background threads for asset streaming. Default is 2 — set to your CPU core count for faster world loading. Max useful value is 16.' },
-  { key: 'MaximumGrass',           category: 'performance', type: 'number', default: 1,    recommended: 0,    min: 0, max: 1,
-    label: 'Maximum Grass (0=off)', desc: 'Disabling grass removes all grass draw calls — one of the single biggest FPS gains in open areas. 0 = off, 1 = on (default).' },
-  { key: 'MaxLodDistance',         category: 'performance', type: 'number', default: 100,  recommended: 30,   min: 10, max: 200,
-    label: 'Max LOD Distance',      desc: 'Controls LOD rendering distance. Reducing to 30 from 100 noticeably cuts the number of polygons rendered per frame in dense server environments.' },
-  { key: 'MaxObjectLodDistance',   category: 'performance', type: 'number', default: 100,  recommended: 30,   min: 10, max: 200,
-    label: 'Max Object LOD Distance', desc: 'Same as MaxLodDistance but for world objects specifically. Reduce in tandem with MaxLodDistance.' },
-  { key: 'AdaptivePerformanceMode', category: 'performance', type: 'boolean', default: 0,  recommended: 1,
-    label: 'Adaptive Performance Mode', desc: 'Enables dynamic resource scaling based on system load. Can help maintain stable frame rates on mid-tier hardware by reducing background resource priority.' },
-  // Networking
-  { key: 'DisableNetworkOverlay',  category: 'networking', type: 'boolean', default: 0,    recommended: 1,
-    label: 'Disable Network Overlay', desc: 'Removes the FiveM network debug overlay (ping/packet loss indicator). Saves a tiny amount of render overhead and removes visual clutter.' },
-  { key: 'EndpointPrivacy',        category: 'networking', type: 'boolean', default: 0,    recommended: 1,
-    label: 'Endpoint Privacy',     desc: 'Hides your IP address from other players in the server browser. Recommended for privacy — no gameplay impact.' },
-  { key: 'CustomBackend',          category: 'networking', type: 'string',  default: '',   recommended: '',
-    label: 'Custom Backend URL',   desc: 'Override the FiveM backend endpoint. Leave blank for default Cfx.re infrastructure. Only change this if your server admin instructs you to.' },
-  // Stability
-  { key: 'UpdateChannel',          category: 'stability',  type: 'string',  default: 'release', recommended: 'canary',
-    label: 'Update Channel',       desc: 'Controls update notifications. "canary" suppresses the "new version available" popup that interrupts session startup. Does not affect actual client version.' },
-  { key: 'DisableCrashReporter',   category: 'stability',  type: 'boolean', default: 0,    recommended: 1,
-    label: 'Disable Crash Reporter', desc: 'Stops FiveM uploading crash dumps to Cfx.re. Removes a background process that runs even during normal gameplay.' },
-  { key: 'TelemetryUpload',        category: 'stability',  type: 'boolean', default: 1,    recommended: 0,
-    label: 'Telemetry Upload',     desc: 'Disabling stops FiveM sending anonymous usage data to Cfx.re servers. Reduces background network traffic.' },
-  { key: 'SkipLockConfirm',        category: 'stability',  type: 'boolean', default: 0,    recommended: 1,
-    label: 'Skip Lock Confirmation', desc: 'Skips the confirmation dialog when a server locks mid-session. Speeds up reconnect flow.' },
-  // Visual
-  { key: 'UseHbaoPlus',            category: 'visual',     type: 'boolean', default: 0,    recommended: 0,
-    label: 'Use HBAO+',            desc: 'Enables HBAO+ ambient occlusion instead of default SSAO. Higher quality shadows around objects. Significant GPU cost — only enable on high-end GPUs.' },
-  { key: 'UseAltSound',            category: 'visual',     type: 'boolean', default: 0,    recommended: 0,
-    label: 'Use Alternative Sound Engine', desc: 'Switches to an alternative audio processing path. May resolve audio crackling on some hardware but can introduce other issues. Experimental.' },
-  // Advanced
-  { key: 'AssetScanLimit',         category: 'advanced',   type: 'number',  default: 0,    recommended: 0,    min: 0, max: 500,
-    label: 'Asset Scan Limit',     desc: 'Limits how many assets FiveM scans at startup. 0 = no limit. Only set this if you have an unusually long startup scan on servers with many resources.' },
-  { key: 'ScriptHookAllowed',      category: 'advanced',   type: 'boolean', default: 0,    recommended: 0,
-    label: 'Allow ScriptHook',     desc: 'Enables ScriptHookV compatibility. Required for some legacy single-player mods. NEVER enable on servers that prohibit it — you will be banned.',
-    danger: (v) => v == 1 || v === true ? 'ScriptHook may trigger bans on servers with anti-cheat. Only enable if you know what you are doing.' : null },
-  { key: 'BoostGamePriority',      category: 'advanced',   type: 'boolean', default: 0,    recommended: 1,
-    label: 'Boost Game Priority',  desc: 'Instructs FiveM to request elevated process priority at launch. Similar to the fivem-priority tweak but applied at the FiveM level before the game process spawns.' },
-  { key: 'DisableReporting',       category: 'advanced',   type: 'boolean', default: 0,    recommended: 1,
-    label: 'Disable Reporting',    desc: 'Stops FiveM sending server connection and performance reports to Cfx.re analytics. Combined with TelemetryUpload=0 for full telemetry opt-out.' },
-]
-
-// IPC: read all known CitizenFX.ini keys and return current values
-ipcMain.handle('fivem-ini-read-all', async () => {
-  try {
-    if (!requiresPremium('fivem-ini-read-all')) return { ok: false, reason: 'premium_required' }
-    const p = CITIZENFX_INI_PATH()
-    debugLog(`[CitizenFX.ini] path=${p}`)
-    const content = readCitizenFXIni()
-    if (content === null) return { ok: false, reason: 'CitizenFX.ini not found — is FiveM installed?' }
-    const values = {}
-    for (const def of CITIZENFX_INI_DEFS) {
-      const m = content.match(new RegExp(`^${def.key}\\s*=\\s*(.+)`, 'im'))
-      values[def.key] = m ? m[1].trim() : null
-    }
-    const os = require('os')
-    const ramMB = Math.floor(os.totalmem() / (1024 * 1024))
-    const safeDefs = CITIZENFX_INI_DEFS.map(({ danger, ...rest }) => {
-      const cur = values[rest.key]
-      const dangerHint = (danger && cur !== null) ? danger(cur, ramMB) : null
-      return dangerHint ? { ...rest, dangerHint } : rest
-    })
-    return { ok: true, values, defs: safeDefs, ramMB }
-  } catch (e) {
-    debugLog(`[CitizenFX.ini] read error: ${e}`)
-    return { ok: false, reason: e.message || String(e) }
-  }
-})
-
-// IPC: write a single CitizenFX.ini key with safety validation
-ipcMain.handle('fivem-ini-write-key', async (_, { key, value, force = false }) => {
-  if (!requiresPremium('fivem-ini-write-key')) return { ok: false, reason: 'premium_required' }
-  const def = CITIZENFX_INI_DEFS.find(d => d.key === key)
-  if (!def) return { ok: false, reason: 'Unknown key' }
-  if (def.type === 'number') {
-    const n = V.inRange(value, def.min ?? -Infinity, def.max ?? Infinity)
-    if (n === null) return { ok: false, reason: `Value must be a number between ${def.min} and ${def.max}` }
-    value = n
-  } else if (def.type === 'boolean') {
-    if (!(value === 0 || value === 1 || value === true || value === false || value === '0' || value === '1')) return { ok: false, reason: 'Value must be 0 or 1' }
-    value = (value === 1 || value === true || value === '1') ? 1 : 0
-  } else if (!Ini.isSafeValue(value)) return { ok: false, reason: 'Invalid value' }
-  const ramMB = Math.floor(require('os').totalmem() / (1024 * 1024))
-  if (!force && def.danger) {
-    const warning = def.danger(value, ramMB)
-    if (warning) return { ok: false, reason: warning, needsConfirm: true }
-  }
-  const content = readCitizenFXIni()
-  if (content === null) return { ok: false, reason: 'CitizenFX.ini not found — is FiveM installed?' }
-  const updated = applyIniChanges(content, { [key]: value }, { restrict: true })
-  return writeCitizenFXIni(updated) ? { ok: true } : { ok: false, reason: 'Could not write CitizenFX.ini' }
-})
-
-// IPC: read last 200 lines of CitizenFX log
-ipcMain.handle('fivem-read-log', async () => {
-  if (!requiresPremium('fivem-read-log')) return { ok: false, reason: 'premium_required' }
-  try {
-    const logsDir = path.join(process.env.LOCALAPPDATA || '', 'FiveM', 'FiveM.app', 'logs')
-    if (!fs.existsSync(logsDir)) return { ok: false, error: 'CitizenFX.log not found — has FiveM been launched at least once?' }
-    const entries = fs.readdirSync(logsDir)
-      .filter(f => f.startsWith('CitizenFX') && f.endsWith('.log'))
-      .map(f => ({ f, mtime: fs.statSync(path.join(logsDir, f)).mtimeMs }))
-      .sort((a, b) => b.mtime - a.mtime)
-    if (!entries.length) return { ok: false, error: 'CitizenFX.log not found — has FiveM been launched at least once?' }
-    const raw = fs.readFileSync(path.join(logsDir, entries[0].f), 'utf8')
-    const lines = raw.split('\n').slice(-200)
-    return { ok: true, lines }
-  } catch (e) {
-    return { ok: false, error: e.message }
-  }
-})
-
-// ─── FiveM cache clear ────────────────────────────────────────────────────────
-// ─── FiveM Mod Conflict Detector ─────────────────────────────────────────────
-// Mod scan result cache — avoid hammering fs.readdirSync on repeated clicks
-let _modScanCache = null
-let _modScanCacheTs = 0
-const MOD_SCAN_CACHE_MS = 30000
-
-// Known heavy/problematic resource patterns — high severity first so we break early
-const HEAVY_PATTERNS_SORTED = [
-  { pattern: /menyoo/i,         name: 'Menyoo',                     reason: 'Spawner — causes desyncs on servers that block it',                                    severity: 'high' },
-  { pattern: /trainer/i,        name: 'Trainer',                    reason: 'May contain injection hooks that trigger anticheat',                                   severity: 'high' },
-  { pattern: /lambda/i,         name: 'Lambda Menu',                reason: 'Detected by many server anticheat systems',                                            severity: 'high' },
-  { pattern: /scripthookv/i,    name: 'ScriptHookV',                reason: 'Native trainer bypass — blocked by most RP servers',                                   severity: 'high' },
-  { pattern: /lspdfr/i,         name: 'LSPDFR',                     reason: 'Police mod — not compatible with most RP server environments',                         severity: 'high' },
-  { pattern: /rage.*hook/i,     name: 'RageHook',                   reason: 'Plugin loader — blocks FiveM from starting if loaded',                                 severity: 'high' },
-  { pattern: /openiv/i,         name: 'OpenIV',                     reason: 'Mod installer — ASI loader left enabled can cause crashes',                            severity: 'medium' },
-  { pattern: /heap.*adjuster/i, name: 'Heap Adjuster',              reason: 'Outdated — FiveM has built-in heap management; causes instability on new builds',      severity: 'medium' },
-  { pattern: /dirhook/i,        name: 'DirHook',                    reason: 'ASI hook — can interfere with FiveM module loading',                                   severity: 'medium' },
-  { pattern: /visualv/i,        name: 'VisualV',                    reason: 'Replaces timecycle/weather — often causes sky glitches',                               severity: 'medium' },
-  { pattern: /naturalvision/i,  name: 'NaturalVision',              reason: 'Graphics mod — conflicts with server-side weather sync',                               severity: 'medium' },
-  { pattern: /enb/i,            name: 'ENB',                        reason: 'Post-process injector — increases VRAM usage significantly',                           severity: 'medium' },
-  { pattern: /reshade/i,        name: 'ReShade',                    reason: 'Shader overlay — adds frame time overhead (~2–5ms)',                                   severity: 'low' },
-  { pattern: /packfile/i,       name: 'PackfileLimitAdjuster',      reason: 'May conflict with server-side packfile limits',                                        severity: 'low' },
-  { pattern: /discord.*hook/i,  name: 'DiscordRichPresence (mod)',  reason: 'Duplicate RPC — conflicts with FiveM built-in Discord integration',                   severity: 'low' },
-]
-
-// ASI/DLL exports that indicate incompatible loaders even when filename is generic
-const BANNED_EXPORTS = ['ScriptMain', 'DirectInput8Create', 'InitializeASI', 'DllMain']
-
-function peHasKnownExport(filePath) {
-  try {
-    const fd = require('fs').openSync(filePath, 'r')
-    const buf = Buffer.alloc(512)
-    require('fs').readSync(fd, buf, 0, 512, 0)
-    require('fs').closeSync(fd)
-    // Must start with MZ
-    if (buf[0] !== 0x4D || buf[1] !== 0x5A) return false
-    // Read PE offset at 0x3C
-    const peOffset = buf.readUInt32LE(0x3C)
-    if (peOffset > 450) return false  // beyond our buffer, skip
-    // Check PE signature
-    if (buf[peOffset] !== 0x50 || buf[peOffset + 1] !== 0x45) return false
-    // Read the raw bytes as text to find export name strings (fast heuristic, not full PE parse)
-    const raw = require('fs').readFileSync(filePath)
-    const str = raw.toString('ascii')
-    return BANNED_EXPORTS.some(exp => str.includes(exp))
-  } catch { return false }
-}
-
-ipcMain.handle('fivem-scan-mods', async () => {
-  if (!requiresPremium('fivem-scan-mods')) return { ok: false, reason: 'premium_required' }
-  // Return cached result if fresh enough
-  if (_modScanCache && (Date.now() - _modScanCacheTs) < MOD_SCAN_CACHE_MS) {
-    return { ..._modScanCache, cached: true, cacheAge: Date.now() - _modScanCacheTs }
-  }
-
-  const lad = process.env.LOCALAPPDATA || ''
-
-  const searchDirs = [
-    path.join(lad, 'FiveM', 'FiveM.app', 'plugins'),
-    path.join(lad, 'FiveM', 'FiveM.app', 'addons'),
-    path.join(process.env.USERPROFILE || '', 'Documents', 'Rockstar Games', 'GTA V', 'scripts'),
-    path.join(process.env.USERPROFILE || '', 'Documents', 'Rockstar Games', 'GTA V', 'plugins'),
-  ]
-
-  const found = []
-  const scanned = []
-  const seenFiles = new Set()
-
-  // Helper: scan a directory against HEAVY_PATTERNS with early exit on high severity
-  function scanDir(dir, checkGenericDlls = false) {
-    if (!fs.existsSync(dir)) return
-    scanned.push(dir)
-    let files
-    try { files = fs.readdirSync(dir) } catch { return }
-    for (const file of files) {
-      const fileLower = file.toLowerCase()
-      const fileKey = dir + '/' + fileLower
-      if (seenFiles.has(fileKey)) continue
-      let matched = false
-      for (const { pattern, name, reason, severity } of HEAVY_PATTERNS_SORTED) {
-        if (pattern.test(fileLower)) {
-          found.push({ file, dir, name, reason, severity })
-          seenFiles.add(fileKey)
-          matched = true
-          break  // high-severity patterns are first — no need to test further patterns for this file
-        }
-      }
-      // 4e: Check generic-named .dll/.asi files for known bad PE exports
-      if (!matched && checkGenericDlls && /\.(dll|asi)$/i.test(file)) {
-        const fullPath = path.join(dir, file)
-        if (peHasKnownExport(fullPath)) {
-          found.push({ file, dir, name: 'Unknown ASI/DLL loader', reason: 'Contains known modding export names (ScriptMain / DirectInput8Create / InitializeASI) — potential ban-risk even with a generic filename', severity: 'high' })
-          seenFiles.add(fileKey)
-        }
-      }
-    }
-  }
-
-  for (const dir of searchDirs) scanDir(dir, false)
-
-  // Also scan GTA V root — check generic DLL names here (4e)
-  const gtaRegR = await runPS(`
-    $p = $null
-    try { $p = (Get-ItemProperty 'HKLM:\\SOFTWARE\\WOW6432Node\\Rockstar Games\\Grand Theft Auto V' -EA Stop).InstallFolder } catch {}
-    if (-not $p) { try { $p = (Get-ItemProperty 'HKLM:\\SOFTWARE\\Rockstar Games\\Grand Theft Auto V' -EA Stop).InstallFolder } catch {} }
-    if (-not $p) {
-      try {
-        $appId = (Get-ItemProperty 'HKLM:\\SOFTWARE\\WOW6432Node\\Valve\\Steam' -EA Stop).InstallPath
-        $manifestPath = Join-Path $appId 'steamapps\\appmanifest_271590.acf'
-        if (Test-Path $manifestPath) {
-          $line = Get-Content $manifestPath | Where-Object { $_ -match '"installdir"' } | Select-Object -First 1
-          if ($line -match '"installdir"\\s+"([^"]+)"') { $p = Join-Path (Join-Path $appId 'steamapps\\common') $matches[1] }
-        }
-      } catch {}
-    }
-    if ($p -and (Test-Path $p)) { Write-Output $p }
-  `).catch(() => ({ out: '' }))
-  const gtaRegPath = gtaRegR.out.trim()
-
-  const gtaDirs = [
-    ...(gtaRegPath ? [gtaRegPath] : []),
-    path.join('C:', 'Program Files (x86)', 'Steam', 'steamapps', 'common', 'Grand Theft Auto V'),
-    path.join('C:', 'Program Files', 'Rockstar Games', 'Grand Theft Auto V'),
-    path.join('C:', 'Program Files (x86)', 'Rockstar Games', 'Grand Theft Auto V'),
-  ]
-  for (const dir of gtaDirs) {
-    if (!fs.existsSync(dir)) continue
-    // Check ReShade D3D hook DLLs before the general pattern scan
-    let files
-    try { files = fs.readdirSync(dir) } catch { continue }
-    for (const file of files) {
-      const fileLower = file.toLowerCase()
-      const fileKey = dir + '/' + fileLower
-      if (seenFiles.has(fileKey)) continue
-      if (/reshade|dxgi\.dll|d3d11\.dll/i.test(fileLower) && fileLower !== 'd3d11.dll') {
-        found.push({ file, dir, name: 'ReShade / DLL override', reason: 'D3D hook DLL in GTA5 folder — adds overhead and may flag anticheat', severity: 'medium' })
-        seenFiles.add(fileKey)
-        continue
-      }
-    }
-    scanDir(dir, true)  // enable PE header check in GTA V root
-  }
-
-  const result = { ok: true, found, scanned }
-  _modScanCache = result
-  _modScanCacheTs = Date.now()
-  return result
-})
-
-ipcMain.handle('fivem-clear-cache', async (_, { force = false, targets = null } = {}) => {
-  if (!requiresPremium('fivem-clear-cache')) return { ok: false, reason: 'premium_required' }
-  const send = (msg, level) => mainWindow?.webContents.send('log', { msg, level, ts: new Date().toLocaleTimeString() })
-  const lad = process.env.LOCALAPPDATA || ''
-  const fivemBase = path.join(lad, 'FiveM', 'FiveM.app')
-
-  // 4b: block if FiveM or GTA5 is running (unless forced by user confirmation)
-  if (!force) {
-    const procR = await runPS(`$procs = Get-Process -EA SilentlyContinue | Where-Object { $_.Name -match '^(FiveM|GTA5|GTAVLauncher|PlayGTAV)' -or ($_.Path -and $_.Path -like '*\\FiveM\\*') }; if ($procs) { Write-Output 'running' }`)
-    if (procR.out.trim() === 'running') {
-      return { ok: false, gameRunning: true, reason: 'FiveM or GTA V is currently running. Close the game before clearing cache to avoid corrupted cache state.' }
-    }
-  }
-
-  const allTargets = {
-    cache:            path.join(fivemBase, 'data', 'cache'),
-    'server-cache':   path.join(fivemBase, 'data', 'server-cache'),
-    'server-cache-priv': path.join(fivemBase, 'data', 'server-cache-priv'),
-    DXCache:          path.join(lad, 'NVIDIA', 'DXCache'),
-  }
-  const toClean = targets ? Object.fromEntries(Object.entries(allTargets).filter(([k]) => targets.includes(k))) : allTargets
-
-  // 1d: one PS spawn for all paths — build a single script block
-  const pathsToClean = Object.entries(toClean).filter(([, p]) => fs.existsSync(p))
-  if (pathsToClean.length === 0) {
-    send('No cache directories found to clear.', 'warn')
-    return { ok: true, cleared: [] }
-  }
-
-  const script = pathsToClean.map(([name, p]) =>
-    `try { Remove-Item -Path '${p}\\*' -Recurse -Force -EA SilentlyContinue; $left = @(Get-ChildItem -LiteralPath '${p}' -Force -EA SilentlyContinue).Count; if ($left -eq 0) { Write-Output "OK:${name}" } else { Write-Output "ERR:${name}" } } catch { Write-Output "ERR:${name}" }`
-  ).join('\n')
-
-  const r = await runPS(script)
-  const cleared = []
-  const lockedNames = []
-  for (const line of r.out.split('\n')) {
-    const trimmed = line.trim()
-    if (trimmed.startsWith('OK:')) {
-      const name = trimmed.slice(3)
-      send(`  ${name}: cleared`, 'ok')
-      cleared.push(name)
-    } else if (trimmed.startsWith('ERR:')) {
-      send(`  ${trimmed.slice(4)}: error clearing (files may be locked)`, 'warn')
-      lockedNames.push(trimmed.slice(4))
-    }
-  }
-  send(`Cache cleared — ${cleared.length} of ${pathsToClean.length} location${pathsToClean.length !== 1 ? 's' : ''}.`, lockedNames.length ? 'warn' : 'ok')
-  // Invalidate mod scan cache since server-cache contents changed
-  _modScanCache = null
-  if (!cleared.length && lockedNames.length) return { ok: false, cleared, locked: lockedNames, error: 'files_locked' }
-  return { ok: true, cleared, locked: lockedNames }
-})
-
-// IPC: get cache directory sizes + last-modified timestamps (for smart cache panel, 2c)
-ipcMain.handle('fivem-cache-info', async () => {
-  if (!requiresPremium('fivem-cache-info')) return { ok: false, reason: 'premium_required' }
-  const lad = process.env.LOCALAPPDATA || ''
-  const fivemBase = path.join(lad, 'FiveM', 'FiveM.app')
-  const targets = {
-    cache:            path.join(fivemBase, 'data', 'cache'),
-    'server-cache':   path.join(fivemBase, 'data', 'server-cache'),
-    'server-cache-priv': path.join(fivemBase, 'data', 'server-cache-priv'),
-    DXCache:          path.join(lad, 'NVIDIA', 'DXCache'),
-  }
-  // Single PS call: get size + last write for all 4 paths at once
-  const script = Object.entries(targets).map(([name, p]) => `
-    try {
-      $items = Get-ChildItem -Path '${p}' -Recurse -Force -EA SilentlyContinue
-      $size = ($items | Measure-Object -Property Length -Sum -EA SilentlyContinue).Sum
-      $latest = ($items | Sort-Object LastWriteTime -Descending | Select-Object -First 1 -EA SilentlyContinue).LastWriteTime
-      Write-Output "${name}|$([math]::Round($size/1MB,1))|$latest"
-    } catch { Write-Output "${name}|0|" }
-  `).join('\n')
-
-  const r = await runPS(script).catch(() => ({ out: '' }))
-  const info = {}
-  for (const line of r.out.split('\n')) {
-    const [name, sizeMB, lastWrite] = line.trim().split('|')
-    if (name && targets[name]) {
-      info[name] = {
-        exists: fs.existsSync(targets[name]),
-        sizeMB: parseFloat(sizeMB) || 0,
-        lastWrite: lastWrite ? new Date(lastWrite).getTime() : null,
-        path: targets[name],
-      }
-    }
-  }
-  return { ok: true, info }
-})
-
-// IPC: export current FiveM tweaks + CitizenFX.ini + gta5_settings.xml as .jyt pack
-ipcMain.handle('fivem-export-pack', async () => {
-  if (!requiresPremium('fivem-export-pack')) return { ok: false, reason: 'premium_required' }
-  try {
-    const s = loadSettings()
-    const appliedTweaks = Object.keys(s).filter(k => k.startsWith('tweak_fivem-') && s[k] === 'applied').map(k => k.slice(6))
-
-    // Read CitizenFX.ini
-    const iniPath = path.join(process.env.LOCALAPPDATA || '', 'FiveM', 'FiveM.app', 'CitizenFX.ini')
-    let iniRaw = ''
-    try { iniRaw = fs.readFileSync(iniPath, 'utf8') } catch {}
-
-    // Read gta5_settings.xml
-    const xmlPath = path.join(process.env.APPDATA || '', 'CitizenFX', 'gta5_settings.xml')
-    let xmlRaw = ''
-    try { xmlRaw = fs.readFileSync(xmlPath, 'utf8') } catch {}
-
-    const pack = {
-      schema: 'jylli-fivem-pack-v1',
-      exportedAt: new Date().toISOString(),
-      appliedTweaks,
-      citizenFxIni: iniRaw,
-      gta5SettingsXml: xmlRaw,
-    }
-
-    const { filePath, canceled } = await dialog.showSaveDialog({
-      title: 'Export FiveM Setup Pack',
-      defaultPath: path.join(os.homedir(), 'Desktop', 'MyFiveMSetup.jyt'),
-      filters: [{ name: 'Jylli FiveM Pack', extensions: ['jyt'] }],
-    })
-    if (canceled || !filePath) return { ok: false, canceled: true }
-    fs.writeFileSync(filePath, JSON.stringify(pack, null, 2), 'utf8')
-    shell.showItemInFolder(filePath)
-    return { ok: true, path: filePath }
-  } catch (e) {
-    return { ok: false, error: e.message }
-  }
-})
-
-// IPC: import a .jyt FiveM pack — apply tweaks, write ini and settings xml
-ipcMain.handle('fivem-import-pack', async () => {
-  if (!requiresPremium('fivem-import-pack')) return { ok: false, reason: 'premium_required' }
-  try {
-    const { filePaths, canceled } = await dialog.showOpenDialog({
-      title: 'Import FiveM Setup Pack',
-      filters: [{ name: 'Jylli FiveM Pack', extensions: ['jyt'] }],
-      properties: ['openFile'],
-    })
-    if (canceled || !filePaths.length) return { ok: false, canceled: true }
-    if (fs.statSync(filePaths[0]).size > 1024 * 1024) return { ok: false, error: 'file_too_large' }
-    const pack = JSON.parse(fs.readFileSync(filePaths[0], 'utf8'))
-    if (!pack || pack.schema !== 'jylli-fivem-pack-v1') return { ok: false, error: 'invalid_schema' }
-
-    const results = { tweaks: [], failedTweaks: [], ini: false, xml: false, errors: [] }
-
-    // Apply tweaks — a shared pack file is untrusted: only FiveM tweaks, only ones that exist, bounded count
-    const packIds = Array.isArray(pack.appliedTweaks) ? pack.appliedTweaks.slice(0, 100) : []
-    for (const id of packIds) {
-      if (typeof id !== 'string' || !id.startsWith('fivem-') || !Object.prototype.hasOwnProperty.call(TWEAKS, id) || !TWEAKS[id].apply) continue
-      try {
-        const msgs = []
-        let hardFail = null
-        await invokeTweak(id, 'apply', m => msgs.push(m), { onFailures: f => { hardFail = f } })
-        if (hardFail) { results.failedTweaks.push(id); continue }
-        const s = loadSettings(); s[`tweak_${id}`] = 'applied'; saveSettings(s)
-        results.tweaks.push(id)
-      } catch { results.failedTweaks.push(id) }
-    }
-
-    // Write CitizenFX.ini
-    if (typeof pack.citizenFxIni === 'string' && pack.citizenFxIni.length <= 64 * 1024 && !pack.citizenFxIni.includes('\0')) {
-      try {
-        const iniPath = path.join(process.env.LOCALAPPDATA || '', 'FiveM', 'FiveM.app', 'CitizenFX.ini')
-        fs.mkdirSync(path.dirname(iniPath), { recursive: true })
-        if (fs.existsSync(iniPath)) fs.copyFileSync(iniPath, iniPath + '.bak')   // never overwrite without a way back
-        fs.writeFileSync(iniPath, pack.citizenFxIni, 'utf8')
-        results.ini = true
-      } catch (e) { results.errors.push('citizenfx_ini') }
-    }
-
-    // Write gta5_settings.xml
-    if (typeof pack.gta5SettingsXml === 'string' && pack.gta5SettingsXml.length <= 256 * 1024 && /<graphics>/i.test(pack.gta5SettingsXml) && /<\/graphics>/i.test(pack.gta5SettingsXml)) {
-      try {
-        const xmlPath = path.join(process.env.APPDATA || '', 'CitizenFX', 'gta5_settings.xml')
-        fs.mkdirSync(path.dirname(xmlPath), { recursive: true })
-        if (fs.existsSync(xmlPath)) fs.copyFileSync(xmlPath, xmlPath + '.bak')
-        fs.writeFileSync(xmlPath, pack.gta5SettingsXml, 'utf8')
-        results.xml = true
-      } catch (e) { results.errors.push('gta5_settings') }
-    }
-
-    const partial = results.failedTweaks.length > 0 || results.errors.length > 0
-    return { ok: !partial || results.tweaks.length > 0 || results.ini || results.xml, partial, results }
-  } catch (e) {
-    return { ok: false, error: e.message }
-  }
-})
-
-// IPC: ping a FiveM server's public /info.json + /players.json endpoints
-ipcMain.handle('fivem-server-ping', async (_, args) => {
-  if (!requiresPremium('fivem-server-ping')) return { ok: false, reason: 'premium_required' }
-  const host = args?.host
-  const port = typeof args?.port === 'string' && /^\d{1,5}$/.test(args.port) ? parseInt(args.port, 10) : args?.port
-  if (!V.isHostname(host) || !V.isPort(port)) return { ok: false }
-  const http  = require('http')
-  const https = require('https')
-  const makeFetch = (mod, extra = {}) => (path) => new Promise(resolve => {
-    const start = Date.now()
-    const req = mod.get({ hostname: host, port: parseInt(port, 10), path, timeout: 4000, ...extra }, res => {
-      let raw = ''
-      res.on('data', d => { raw += d; if (raw.length > 2 * 1024 * 1024) { req.destroy(); resolve({ ok: false }) } })
-      res.on('end', () => {
-        try { resolve({ ok: true, data: JSON.parse(raw), ms: Date.now() - start }) }
-        catch { resolve({ ok: false }) }
-      })
-    })
-    req.on('error', () => resolve({ ok: false }))
-    req.on('timeout', () => { req.destroy(); resolve({ ok: false }) })
-  })
-
-  const fetchJson      = makeFetch(http)
-  const fetchJsonHttps = makeFetch(https, { rejectUnauthorized: false })
-
-  let [infoRes, playersRes] = await Promise.all([fetchJson('/info.json'), fetchJson('/players.json')])
-  if (!infoRes.ok) {
-    ;[infoRes, playersRes] = await Promise.all([fetchJsonHttps('/info.json'), fetchJsonHttps('/players.json')])
-  }
-
-  if (!infoRes.ok) return { ok: false }
-
-  const info    = infoRes.data
-  const players = playersRes.ok && Array.isArray(playersRes.data) ? playersRes.data : []
-  const maxClients = parseInt(info.sv_maxClients, 10) || 0
-  const name   = info.vars?.sv_projectName || info.hostname || `${host}:${port}`
-  const mapName = info.vars?.mapname || ''
-
-  return { ok: true, name, mapName, players: players.length, maxClients, pingMs: infoRes.ms }
-})
-
-// IPC: resolve a cfx.re shortlink to a direct IP:port via FiveM's servers API
-ipcMain.handle('fivem-resolve-shortlink', async (_, shortcode) => {
-  if (!requiresPremium()) return { ok: false, error: 'premium' }
-  const https = require('https')
-  return new Promise(resolve => {
-    const req = https.get(
-      `https://servers-frontend.fivem.net/api/servers/single/${encodeURIComponent(shortcode)}`,
-      { timeout: 6000, headers: { 'User-Agent': 'JylliTool/1.0' } },
-      res => {
-        let raw = ''
-        res.on('data', d => { raw += d })
-        res.on('end', () => {
-          try {
-            const json = JSON.parse(raw)
-            const endpoints = json?.Data?.connectEndPoints
-            if (!Array.isArray(endpoints) || !endpoints.length) return resolve({ ok: false, error: 'no_endpoints' })
-            const ep = endpoints[0]
-            let host, port
-            if (ep.startsWith('http://') || ep.startsWith('https://')) {
-              // Full URL format used by EVO-filter / proxied servers
-              const u = new URL(ep)
-              host = u.hostname
-              port = u.port || '30120'
-            } else {
-              const lastColon = ep.lastIndexOf(':')
-              if (lastColon < 1) return resolve({ ok: false, error: 'bad_endpoint' })
-              host = ep.slice(0, lastColon)
-              port = ep.slice(lastColon + 1)
-            }
-            const d = json.Data
-            const name       = d?.vars?.sv_projectName || d?.hostname || null
-            const mapName    = d?.mapname || d?.vars?.mapname || ''
-            const players    = typeof d?.clients === 'number' ? d.clients : 0
-            const maxClients = d?.svMaxclients || d?.sv_maxclients || 0
-            resolve({ ok: true, host, port, name, mapName, players, maxClients, cfxCode: shortcode })
-          } catch { resolve({ ok: false, error: 'parse' }) }
-        })
-      }
-    )
-    req.on('error', () => resolve({ ok: false, error: 'network' }))
-    req.on('timeout', () => { req.destroy(); resolve({ ok: false, error: 'timeout' }) })
-  })
-})
-
-// IPC: fetch live server info from CFX API by shortcode (for EVO-filter / proxied servers)
-ipcMain.handle('fivem-cfx-server-info', async (_, shortcode) => {
-  if (!requiresPremium()) return { ok: false }
-  const https = require('https')
-  return new Promise(resolve => {
-    const req = https.get(
-      `https://servers-frontend.fivem.net/api/servers/single/${encodeURIComponent(shortcode)}`,
-      { timeout: 6000, headers: { 'User-Agent': 'JylliTool/1.0' } },
-      res => {
-        let raw = ''
-        res.on('data', d => { raw += d })
-        res.on('end', () => {
-          try {
-            const json = JSON.parse(raw)
-            const d = json?.Data
-            if (!d) return resolve({ ok: false })
-            resolve({
-              ok: true,
-              name:       d.vars?.sv_projectName || d.hostname || null,
-              mapName:    d.mapname || d.vars?.mapname || '',
-              players:    typeof d.clients === 'number' ? d.clients : 0,
-              maxClients: d.svMaxclients || d.sv_maxclients || 0,
-            })
-          } catch { resolve({ ok: false }) }
-        })
-      }
-    )
-    req.on('error', () => resolve({ ok: false }))
-    req.on('timeout', () => { req.destroy(); resolve({ ok: false }) })
-  })
-})
 
 // ─── Auto-Optimization ────────────────────────────────────────────────────────
 // ─── Run Planner ─────────────────────────────────────────────────────────────
@@ -3778,6 +3070,7 @@ ipcMain.handle('fivem-cfx-server-info', async (_, shortcode) => {
  * (apply/restore functions take (send, runPS, runCmd, regAdd, regDelete); calling them with no arguments silently does nothing).
  */
 function hasTweak(id, action = 'apply') {
+  retireTweaks()                       // idempotent: makes sure retired tweaks (the old fivem-* ones included) are not applicable from any caller
   return typeof id === 'string' && Object.prototype.hasOwnProperty.call(TWEAKS, id) && (action === 'apply' || action === 'restore') && typeof TWEAKS[id][action] === 'function'
 }
 // Undo handlers for Auto-Optimize changes the journal cannot read from the registry: each can read the current state and put the old one back.
@@ -3814,7 +3107,7 @@ function journalSvc() {
       emit: (ch, payload) => mainWindow?.webContents.send(ch, payload),
       loadSettings, saveSettings, writeLog: debugLog,
       noteSettingsWrites: patch => { for (const [k, v] of Object.entries(patch)) _settingsWriteLog.note(k, v) },
-      handlers: { 'gpu-power-limit': powerLimitSvc().undoHandler, dns: dnsUndoHandler, ...autoOptiUndoHandlers, ...debloatSvc().handlers },
+      handlers: { 'gpu-power-limit': powerLimitSvc().undoHandler, dns: dnsUndoHandler, ...autoOptiUndoHandlers, ...debloatSvc().handlers, ...fivemSvc().handlers() },
       manifest: (() => { try { return require('./lib/tweak-manifest.json') } catch { return {} } })(),
     })
     try { _journalSvc.journal.rotate() } catch {}
@@ -4152,10 +3445,14 @@ const RETIRED_TWEAKS = {
   'bcd-tweaks':                'Boot menu timeout and boot log only change start-up cosmetics, not game performance.',
   'disable-auto-maintenance':  'Stops TRIM, updates and other upkeep for an anecdotal gain.',
 }
+// FiveM 2.0: the old fivem-* tweaks cannot be applied any more (docs/FIVEM_EVIDENCE.md). Only their restore stays, so changes made by an
+// earlier version can still be undone from the Client view ("Made by the old FiveM tab").
+function retireFivemTweaks() { for (const id of Fivem2.LEGACY) { const t = TWEAKS[id]; if (t && t.apply) { delete t.apply; t.legacy = true } } }
 let _retiredApplied = false
 function retireTweaks() {
   if (_retiredApplied) return
   _retiredApplied = true
+  retireFivemTweaks()
   for (const [id, why] of Object.entries(RETIRED_TWEAKS)) {
     const t = TWEAKS[id]; if (!t || t.retired) continue
     t.retired = why
@@ -4288,8 +3585,8 @@ function aoRunner() {
     log: (msg, level, source) => aoSend('log', { msg, level, ts: new Date().toLocaleTimeString(), source }),
     confirmMs: 15000,
     controlDeps: { fivem: {
-      read: async () => { const p = findFivemSettings(); if (!p) return { ok: false }; try { const raw = fs.readFileSync(p, 'utf8'); const vals = {}; for (const def of FIVEM_SETTINGS_DEFS) { const m = raw.match(_fivemSettingsRegexMap.get(def.key).read); vals[def.key] = m ? m[1] : null } return { ok: true, vals, path: p, size: Buffer.byteLength(raw) } } catch { return { ok: false } } },
-      write: changes => fivemWriteSettingsCore(changes, null),
+      read: async () => { const p = fivemSettingsPath(); try { const raw = fs.readFileSync(p, 'utf8'); const g = FvGfx.read(raw); return g.structure ? { ok: true, vals: g.values, path: p, size: Buffer.byteLength(raw) } : { ok: false } } catch { return { ok: false } } },
+      write: changes => fivemWriteSettingsCore(changes),
       vramMB: async () => (cachedSysInfo && cachedSysInfo.vramMB) || 0,
     } },
   })
@@ -4310,7 +3607,7 @@ ipcMain.handle('auto-opti-scan', async (_, req) => {
     const admin = await checkAdmin()
     let gameCount = 0
     try { gameCount = (await getGamesRegistry(false)).games.length } catch {}
-    const context = { apps: { fivem: fs.existsSync(path.join(process.env.LOCALAPPDATA || '', 'FiveM', 'FiveM.app')) && !!findFivemSettings(), games: gameCount } }
+    const context = { apps: { fivem: fs.existsSync(path.join(process.env.LOCALAPPDATA || '', 'FiveM', 'FiveM.app')) && fs.existsSync(fivemSettingsPath()), games: gameCount } }
     const profile = await AutoOpti.detect.detect({ runPS, emit: ev => aoSend('auto-opti-scan-progress', ev) }, { admin, scanId, context })
     _aoScan = { scanId, profile, at: Date.now() }
     _capsProfile = profile; _capsAt = Date.now()
@@ -10702,8 +9999,8 @@ function openFivemHud() {
   const { screen } = require('electron')
   const { width } = screen.getPrimaryDisplay().workAreaSize
   fivemHudWindow = new BrowserWindow({
-    width: 180, height: 160,
-    x: width - 200, y: 20,
+    width: 224, height: 190,
+    x: width - 244, y: 20,
     frame: false,
     transparent: true,
     alwaysOnTop: true,
@@ -10727,12 +10024,13 @@ function openFivemHud() {
   })
   fivemHudWindow.on('closed', () => { fivemHudWindow = null; clearInterval(_hudPingInterval); _hudPingInterval = null })
 
-  // TCP probe to runtime.fivem.net every 3s — no PS spawn, near-zero overhead
+  // TCP connect to the server picked in the FiveM tab every 3s (no PS spawn). Not Cfx infrastructure: this is the user's own server.
   clearInterval(_hudPingInterval)
   _hudPingInterval = setInterval(async () => {
     if (!fivemHudWindow || fivemHudWindow.isDestroyed()) { clearInterval(_hudPingInterval); _hudPingInterval = null; return }
-    const ms = await _tcpProbe('runtime.fivem.net', 80, 2000).catch(() => null)
-    fivemHudWindow?.webContents.send('live-ping-tick', { ms: (Number.isFinite(ms) ? ms : null), ts: Date.now() })
+    let sv = null; try { const st = fivemSvc().servers(); sv = st.servers.find(s => s.id === st.active) || null } catch {}
+    const ms = sv ? await _tcpProbe(sv.host, sv.port, 2000).catch(() => null) : null
+    fivemHudWindow?.webContents.send('live-ping-tick', { ms: (Number.isFinite(ms) ? ms : null), ts: Date.now(), name: sv ? (sv.name || sv.host) : null, none: !sv })
   }, 3000)
 }
 
@@ -10744,43 +10042,6 @@ function closeFivemHud() {
 
 ipcMain.handle('open-fivem-hud', () => { openFivemHud() })
 ipcMain.handle('close-fivem-hud', () => { closeFivemHud() })
-
-// ─── FiveM Graphics Settings Window ──────────────────────────────────────────
-ipcMain.handle('open-fivem-settings', () => {
-  if (fivemSettingsWindow && !fivemSettingsWindow.isDestroyed()) {
-    fivemSettingsWindow.focus()
-    return
-  }
-  fivemSettingsWindow = new BrowserWindow({
-    width: 680,
-    height: 740,
-    minWidth: 560,
-    minHeight: 500,
-    frame: false,
-    transparent: false,
-    backgroundColor: windowBg(),
-    show: false,
-    focusable: true,
-    skipTaskbar: false,
-    title: 'FiveM Graphics Settings',
-    icon: path.join(__dirname, 'assets', 'icon.png'),
-    webPreferences: {
-      preload: path.join(__dirname, 'preload.js'),
-      nodeIntegration: false,
-      contextIsolation: true,
-      sandbox: true,
-      devTools: false
-    }
-  })
-  fivemSettingsWindow.loadFile('fivem-settings.html', { query: { lang: windowLang(), accent: windowAccent(), theme: windowTheme(), scheme: windowScheme() } })
-  fivemSettingsWindow.once('ready-to-show', () => fivemSettingsWindow.show())
-  fivemSettingsWindow.on('closed', () => { fivemSettingsWindow = null })
-})
-
-ipcMain.handle('close-fivem-settings', () => {
-  if (fivemSettingsWindow && !fivemSettingsWindow.isDestroyed()) fivemSettingsWindow.close()
-  fivemSettingsWindow = null
-})
 
 // ─── Arma Reforger Settings Window ───────────────────────────────────────────
 let armaSettingsWindow = null
@@ -11812,55 +11073,6 @@ ipcMain.handle('run-ping-tests-v2', async (_, opts = {}) => {
   return { ok: true, results, mode }
 })
 
-// ─── FiveM CFX Server Health Monitor (2a) ─────────────────────────────────────
-// Runs 5-ping test against CFX infrastructure hosts and reports min/avg/max/jitter/loss
-ipcMain.handle('fivem-server-health', async () => {
-  if (!requiresPremium('fivem-server-health')) return { ok: false, reason: 'premium_required' }
-  const CFX_HOSTS = [
-    { name: 'CFX Runtime',        host: 'runtime.fivem.net' },
-    { name: 'CFX Servers',        host: 'servers.fivem.net' },
-    { name: 'Rockstar Services',  host: 'ros.rockstargames.com' },
-  ]
-  const results = []
-  const script = CFX_HOSTS.map(({ name, host }) => `
-    $rtts_${name.replace(/\W/g,'_')} = @()
-    1..5 | ForEach-Object {
-      try {
-        $p = New-Object System.Net.NetworkInformation.Ping
-        $r = $p.Send('${host}', 2000)
-        if ($r.Status -eq 'Success') { $rtts_${name.replace(/\W/g,'_')} += $r.RoundtripTime }
-      } catch {}
-      Start-Sleep -Milliseconds 150
-    }
-    $v = $rtts_${name.replace(/\W/g,'_')} | Where-Object {$_ -ne $null}
-    if ($v.Count -gt 0) {
-      $avg = [math]::Round(($v | Measure-Object -Average).Average, 1)
-      $min = ($v | Measure-Object -Minimum).Minimum
-      $max = ($v | Measure-Object -Maximum).Maximum
-      $jitter = if ($v.Count -gt 1) { [math]::Round([math]::Sqrt((($v | ForEach-Object { ($_ - $avg) * ($_ - $avg) }) | Measure-Object -Sum).Sum / $v.Count), 1) } else { 0 }
-      Write-Output "${name}|$avg|$min|$max|$jitter|$($v.Count)"
-    } else { Write-Output "${name}|timeout|timeout|timeout|0|0" }
-  `).join('\n')
-
-  const r = await runPS(script, 25000).catch(() => ({ out: '' }))
-  for (const line of r.out.split('\n')) {
-    const parts = line.trim().split('|')
-    if (parts.length < 6) continue
-    const [name, avg, min, max, jitter, count] = parts
-    const isTimeout = avg === 'timeout'
-    const packetLoss = Math.round((5 - parseInt(count || 0)) / 5 * 100)
-    results.push({
-      name,
-      avg:    isTimeout ? null : parseFloat(avg),
-      min:    isTimeout ? null : parseFloat(min),
-      max:    isTimeout ? null : parseFloat(max),
-      jitter: isTimeout ? null : parseFloat(jitter),
-      packetLoss,
-      status: isTimeout ? 'timeout' : packetLoss > 0 ? 'loss' : parseFloat(avg) > 80 ? 'high' : parseFloat(avg) > 40 ? 'medium' : 'good',
-    })
-  }
-  return { ok: true, results }
-})
 
 // ─── DNS Benchmarker ──────────────────────────────────────────────────────────
 ipcMain.handle('benchmark-dns', async () => {
@@ -12980,6 +12192,82 @@ ipcMain.handle('diag2-export-save', async (_, req) => {
   try { fs.writeFileSync(r.filePath, html, 'utf8'); return { ok: true, path: r.filePath } } catch (e) { return { ok: false, error: 'write-failed' } }
 })
 
+
+// ─── FiveM 2.0 (lib/fivem): Uplink route radar, session recorder, graphics, client changes, crash lab ──────────────
+// docs/FIVEM_EVIDENCE.md. Every change goes through the change journal (control `fivem2:<id>`); state lives in jt_fivem.json.
+const Fivem2 = require('./lib/fivem')
+let _fivem = null
+let _fvAdmin = false
+function fivemSvc() {
+  if (!_fivem) {
+    _fivem = Fivem2.create({
+      fs, path, env: process.env,
+      runPS: (s, ms) => runPS(s, ms),
+      runRecorded: (...a) => journalSvc().runRecorded(...a),
+      undoControl: c => journalSvc().undoControl(c),
+      state: { read: () => cuRead('jt_fivem.json', null), write: v => cuWrite('jt_fivem.json', v) },
+      isAdmin: () => _fvAdmin,
+      isFivemRunning: async () => /running/.test((await runPS(`if (Get-Process -EA SilentlyContinue | Where-Object { $_.Name -match '^(FiveM|GTA5|GTAVLauncher|PlayGTAV|FiveM_b)' }) { 'running' }`, 5000)).out || ''),
+      vramMB: () => (cachedSysInfo && cachedSysInfo.vramMB) || null,
+      cleanCache: async () => { const r = await cleanupSvc.cleanOne('fivem-clear-cache'); return r.error ? { ok: false, error: String(r.error).slice(0, 160) } : { ok: true, freed: r.freed || 0, skipped: r.skipped || null } },
+      recorder: { list: () => SessionRec.list(SESSIONS_DIR(), fs, path), get: id => SessionRec.load(SESSIONS_DIR(), id, fs, path) },
+      transport: require('./lib/fivem/server').nodeTransport(),
+      spawn: require('child_process').spawn,
+      emit: cuSend,
+      backupDir: path.join(app.getPath('userData'), 'fivem-backups'),
+      sessionsDir: path.join(app.getPath('userData'), 'fivem-sessions'),
+      legacyState: () => { const s = loadSettings(); return Object.keys(s).filter(k => /^tweak_fivem-[\w-]+$/.test(k) && s[k] === 'applied').map(k => k.slice(6)) },
+      legacyRestore: async id => {
+        if (!hasTweak(id, 'restore')) return { ok: false }
+        await invokeTweak(id, 'restore', null, {})
+        saveSettings({ ...loadSettings(), ['tweak_' + id]: 'restored' })
+        return { ok: true }
+      },
+    })
+  }
+  return _fivem
+}
+const fvStr = (v, n) => (typeof v === 'string' ? v.slice(0, n) : '')
+const fvMap = (o, maxKeys) => { const out = {}; if (o && typeof o === 'object' && !Array.isArray(o)) for (const k of Object.keys(o).slice(0, maxKeys)) if (/^\w{1,48}$/.test(k) && (typeof o[k] === 'string' || typeof o[k] === 'number')) out[k] = String(o[k]).slice(0, 64); return out }
+function fvHandle(name, fn) {
+  ipcMain.handle(name, async (_, a) => {
+    if (!requiresPremium(name)) return { ok: false, reason: 'premium_required' }
+    try { return await fn(a && typeof a === 'object' ? a : {}, fivemSvc()) } catch (e) { return { ok: false, error: String((e && e.message) || e).slice(0, 160) } }
+  })
+}
+fvHandle('fivem2-scan', async (a, s) => { _fvAdmin = await checkAdmin(); return s.scan() })
+fvHandle('fivem2-cached', (a, s) => s.cached())
+fvHandle('fivem2-servers', (a, s) => s.servers())
+fvHandle('fivem2-server-add', (a, s) => s.serverAdd(fvStr(a.input, 300)))
+fvHandle('fivem2-server-remove', (a, s) => s.serverRemove(fvStr(a.id, 16)))
+fvHandle('fivem2-server-use', (a, s) => s.serverUse(fvStr(a.id, 16)))
+fvHandle('fivem2-server-live', (a, s) => s.serverLive(fvStr(a.id, 16)))
+fvHandle('fivem2-import-bookmarks', (a, s) => s.importBookmarks((Array.isArray(a.list) ? a.list : []).slice(0, 12).map(b => ({ name: fvStr(b && b.name, 80), host: fvStr(b && b.host, 253), port: b && b.port, cfxCode: fvStr(b && b.cfxCode, 12) }))))
+fvHandle('fivem2-route-start', (a, s) => s.routeStart(fvStr(a.id, 16)))
+fvHandle('fivem2-route-stop', (a, s) => s.routeStop())
+fvHandle('fivem2-route-snapshot', (a, s) => s.routeSnapshot())
+fvHandle('fivem2-mtu', (a, s) => s.mtu(fvStr(a.id, 16)))
+fvHandle('fivem2-apply', async (a, s) => { _fvAdmin = await checkAdmin(); return s.apply(fvStr(a.id, 24)) })
+fvHandle('fivem2-undo', (a, s) => s.undo(fvStr(a.id, 24)))
+fvHandle('fivem2-ini-write', (a, s) => s.iniWrite(fvMap(a.changes, 12)))
+fvHandle('fivem2-gfx-write', (a, s) => s.gfxWrite(fvMap(a.changes, 40)))
+fvHandle('fivem2-gfx-preset', (a, s) => s.gfxPreset(fvStr(a.name, 16)))
+fvHandle('fivem2-cache-clear', (a, s) => s.cacheClear())
+fvHandle('fivem2-mods', (a, s) => s.mods())
+fvHandle('fivem2-logs', (a, s) => s.logs())
+fvHandle('fivem2-legacy', (a, s) => s.legacy())
+fvHandle('fivem2-legacy-restore', (a, s) => s.legacyRestore(fvStr(a.id, 40)))
+fvHandle('fivem2-sessions', (a, s) => s.sessionList())
+fvHandle('fivem2-session', (a, s) => s.session(fvStr(a.id, 16)))
+// Connect: only a saved server (host and port were validated when it was added), through explorer.exe so FiveM starts without elevation.
+fvHandle('fivem2-connect', (a, s) => {
+  const id = fvStr(a.id, 16)
+  const sv = s.servers().servers.find(x => x.id === id)
+  if (!sv) return { ok: false, error: 'unknown' }
+  s.serverUse(id)
+  const url = sv.code ? `fivem://connect/cfx.re/join/${sv.code}` : `fivem://connect/${sv.host}:${sv.port}`
+  try { execFile('explorer.exe', [url], { windowsHide: true }); return { ok: true } } catch { return { ok: false, error: 'launch-failed' } }
+})
 
 // Premium explorers (read-only) and the one deleting action they have: send to the Recycle Bin.
 let _cuMapCtl = null
@@ -14189,12 +13477,6 @@ ipcMain.handle('close-fps-hud-settings', () => {
   return { ok: true }
 })
 
-ipcMain.handle('fivem-running-check', async () => {
-  try {
-    const r = await runPS(`$p = Get-Process -EA SilentlyContinue | Where-Object { $_.Name -match '^(FiveM|GTA5|GTAVLauncher|PlayGTAV|FiveM_b)' }; if ($p) { Write-Output 'running' }`, 5000)
-    return { ok: true, running: r.out.trim() === 'running' }
-  } catch { return { ok: false, running: false } }
-})
 
 // ─── Game Shield / Update Guard ───────────────────────────────────────────────
 let _updateGuardTimer = null

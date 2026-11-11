@@ -37,7 +37,7 @@
     pulse: c => buildPulse(c),
     games: async c => { if (!settings.isPremium) await JylliPremium.build(c, 'games'); else await buildGameOpti(c) },
     apps: c => buildAppOptimizer(c),
-    fivem: c => buildFiveM(c),
+    fivem: c => JylliFivemPage.mount(c),
     latency: c => buildLatencyMonitor(c),
     replay: c => { registerPageCleanup('replay', replayClose); return buildReplay(c) },
     cleanup: c => buildCleanup(c),

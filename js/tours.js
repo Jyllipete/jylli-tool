@@ -54,9 +54,10 @@
       T('apps-hero', ['Tuning for your apps', 'Optimize all applies the recommended changes for the apps we detected.'], ['Sovellusten viritys', 'Optimoi kaikki ottaa käyttöön suositellut muutokset tunnistetuille sovelluksille.']),
       T('apps-list', ['Apps and priority', 'Each app shows what will change, including process priority, before you apply it.'], ['Sovellukset ja prioriteetti', 'Jokainen sovellus näyttää, mitä muuttuu, myös prosessin prioriteetti, ennen käyttöönottoa.']),
     ] },
-    fivem: { v: 1, tag: { 'fivem-score': '#fivem-hero', 'fivem-tweaks': '.section-card' }, stops: [
-      T('fivem-score', ['FiveM at a glance', 'How many FiveM and GTA V tweaks are applied, and the current tier.'], ['FiveM yhdellä silmäyksellä', 'Kuinka monta FiveM- ja GTA V -säätöä on käytössä, ja nykyinen taso.']),
-      T('fivem-tweaks', ['Cache and tweaks', 'Cache cleanup and settings for FiveM. Run them in the order shown.'], ['Välimuisti ja säädöt', 'FiveM:n välimuistin siivous ja asetukset. Aja ne esitetyssä järjestyksessä.']),
+    fivem: { v: 2, tag: { 'fivem-servers': '.fv-rail', 'fivem-radar': '.fv-radar', 'fivem-views': '.fv-bar .j-seg' }, stops: [
+      T('fivem-servers', ['Your servers', 'Add the server you play on with its cfx.re/join link or IP and port. The route to it is traced from here.'], ['Palvelimesi', 'Lisää palvelin, jolla pelaat, cfx.re/join-linkillä tai IP-osoitteella ja portilla. Reitti sinne jäljitetään tästä.']),
+      T('fivem-radar', ['The route radar', 'Every router between this PC and the server, measured once a second. The verdict says where a problem starts, or that the path is clean.'], ['Reittitutka', 'Jokainen reititin tämän tietokoneen ja palvelimen välillä, mitattuna kerran sekunnissa. Tulos kertoo, mistä ongelma alkaa tai että reitti on puhdas.']),
+      T('fivem-views', ['Sessions, graphics and more', 'Sessions names the cause of each hitch. Graphics and Client edit your real FiveM files with a backup and an undo. Crash lab reads your log.'], ['Istunnot, grafiikka ja muuta', 'Istunnot nimeää jokaisen nykäisyn syyn. Grafiikka ja Asiakasohjelma muokkaavat oikeita FiveM-tiedostojasi varmuuskopion ja kumoamisen kanssa. Kaatumislaboratorio lukee lokisi.']),
     ] },
     latency: { v: 1, tag: { 'latency-graph': '.j-lat-canvas', 'latency-spikes': '#dpc-spike-log', 'latency-drivers': '.j-lat-fixes' }, stops: [
       T('latency-graph', ['DPC and ISR time', 'Driver work that delays your game. Lower and steadier is better.'], ['DPC- ja ISR-aika', 'Ajurityö, joka viivästyttää peliäsi. Pienempi ja tasaisempi on parempi.']),

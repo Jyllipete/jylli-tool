@@ -256,9 +256,9 @@ test('FiveM settings: only differing recommended values are written, the backup 
   const fivem = { read: async () => ({ ok: true, vals, path: 'C:/x/gta5_settings.xml', size: 100 }), write: async c => { written = c; return { ok: true, size: 90 } }, vramMB: async () => 8192 }
   const r = await fivemSettings({ rec: { note: c => noted.push(c) }, fivem })
   assert.strictEqual(r.status, 'ok')
-  assert.deepStrictEqual(Object.keys(written).sort(), ['DoF', 'GrassQuality', 'MSAA'])   // a key missing from the file (null) is added by the writer
+  assert.deepStrictEqual(Object.keys(written).sort(), ['GrassQuality', 'MSAA'])   // a key missing from the file (null) is never added (docs/FIVEM_EVIDENCE.md)
   assert.deepStrictEqual(noted[0], { kind: 'file-backup', file: 'C:/x/gta5_settings.xml', backup: 'C:/x/gta5_settings.xml.bak', before: { exists: true, value: 100 }, after: { exists: true, value: 90 } })
-  assert.deepStrictEqual(controlChanges('fivem-settings', r).map(c => [c.label, c.before.v, c.after.v]), [['MSAA', '4', '0'], ['GrassQuality', '3', '0'], ['DoF', null, 'false']])
+  assert.deepStrictEqual(controlChanges('fivem-settings', r).map(c => [c.label, c.before.v, c.after.v]), [['MSAA', '4', '0'], ['GrassQuality', '3', '0']])
   // nothing to do / no file / write refused
   assert.strictEqual((await fivemSettings({ rec: null, fivem: { ...fivem, read: async () => ({ ok: true, vals: want }) } })).reason, 'already-recommended')
   assert.strictEqual((await fivemSettings({ rec: null, fivem: { ...fivem, read: async () => ({ ok: false }) } })).reason, 'no-settings-file')

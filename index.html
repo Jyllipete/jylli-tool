@@ -20,6 +20,7 @@
 <link rel="stylesheet" href="css/debloat.css">
 <link rel="stylesheet" href="css/cleanup.css">
 <link rel="stylesheet" href="css/diagnostics.css">
+<link rel="stylesheet" href="css/fivem.css">
 <link rel="stylesheet" href="css/bios.css">
 <link rel="stylesheet" href="css/premium.css">
 </head>
@@ -490,6 +491,8 @@
 <script src="js/lang/debloat-fi.js"></script>
 <script src="js/lang/diagnostics-en.js"></script>
 <script src="js/lang/diagnostics-fi.js"></script>
+<script src="js/lang/fivem-en.js"></script>
+<script src="js/lang/fivem-fi.js"></script>
 <script src="js/esc.js"></script>
 <script src="js/theme-sync.js"></script>
 <script src="js/ui.js"></script>
@@ -562,7 +565,12 @@
 <script src="js/bios/category.js"></script>
 <script src="js/bios/workstation.js"></script>
 <script src="js/bios/easy.js"></script>
-<script src="js/fivem-logic.js"></script>
+<script src="lib/fivem/ini.js"></script>
+<script src="lib/fivem/graphics.js"></script>
+<script src="lib/fivem/route-verdict.js"></script>
+<script src="js/fivem/radar.js"></script>
+<script src="js/fivem/page.js"></script>
+<script src="js/fivem/views.js"></script>
 <script>
 'use strict'
 // ─── Language ─────────────────────────────────────────────────────────────────
@@ -1135,20 +1143,6 @@ async function init(isPremium = false) {
         _flickerNudgeSent = true
         toast(tUI('tipTrayTitle'), tUI('tipTrayBody'), 'info', 7000)
       }
-      // FiveM auto-optimize
-      if (gameId === 'gtav' && settings['tweak_fivem-auto-opti'] === 'applied') {
-        const fivemIds = [
-          'fivem-priority','fivem-io-priority','fivem-mmcss','fivem-fso',
-          'fivem-gpu','fivem-network','fivem-hang-fix','fivem-streaming-mem','fivem-commandline',
-        ]
-        window._fivemAutoApplied = []
-        const toApply = fivemIds.filter(id => settings[`tweak_${id}`] !== 'applied')
-        for (const id of toApply) {
-          await applyTweak(id, 'apply')
-          window._fivemAutoApplied.push(id)
-        }
-        if (toApply.length > 0) toast(tUI('fivemAutoOptiTitle'), tUI('fivemAutoOptiMsg').replace('{n}', toApply.length), 'success', 4000)
-      }
     } else if (event === 'game-closed') {
       const lbl = document.getElementById('watcher-active-game')
       if (lbl) lbl.textContent = tUI('watcherWatchingLabel')
@@ -1162,13 +1156,6 @@ async function init(isPremium = false) {
         if (settings.discordRpcEnabled !== false) api.setDiscordRpc(true)
         api.setFocusAssist(false).catch(() => {})
         api.setSelfPriority(false).catch(() => {})
-      }
-      // Restore auto-optimized FiveM tweaks
-      if (gameId === 'gtav' && window._fivemAutoApplied?.length) {
-        const toRestore = [...window._fivemAutoApplied]
-        window._fivemAutoApplied = []
-        for (const id of toRestore) await applyTweak(id, 'restore')
-        toast(tUI('fivemAutoOptiTitle'), tUI('fivemAutoOptiRestored').replace('{n}', toRestore.length), 'info', 3000)
       }
     }
   })
@@ -1288,11 +1275,6 @@ async function init(isPremium = false) {
     window._gameRunning = false
     Shell.state(pulseIsActive ? 'pulse' : 'idle')
     toast(tUI('gameExitedMsg'), d.name || d.exe, 'info', 4000)
-    if (typeof _fivemHudOpen !== 'undefined') {
-      _fivemHudOpen = false
-      const lbl = document.getElementById('fivem-hud-toggle-label')
-      if (lbl) lbl.innerHTML = `<i class="fa fa-circle-play"></i> ${tUI('fivemHeroHudOpen')}`
-    }
     setLaunchRuleDots(false)
     // ProcessFreeze: collect savings and show report
     const savings = {}
@@ -1633,10 +1615,6 @@ function showPage(page, tabId) {
     if (leavingPage && leavingPage !== page && _pageCleanupFns[leavingPage]) {
       try { _pageCleanupFns[leavingPage]() } catch {}
       delete _pageCleanupFns[leavingPage]
-    }
-    // Stop FiveM bookmark refresh interval when navigating away
-    if (leavingPage === 'fivem' && typeof window.stopFivemIntervals === 'function') {
-      try { window.stopFivemIntervals() } catch {}
     }
 
     // Remove AOM nav badge for the page being opened
@@ -2355,23 +2333,6 @@ const SEARCH_INDEX = [
   { id:'dns-cloudflare',        label:'Set DNS → Cloudflare 1.1.1.1',             page:'network',      desc:'Fast privacy-focused DNS' },
   { id:'dns-google',            label:'Set DNS → Google 8.8.8.8',                 page:'network',      desc:'Reliable public DNS' },
   { id:'flush-dns',             label:'Flush DNS Cache',                           page:'network',      desc:'Clear stale DNS entries' },
-  // FiveM
-  { id:'fivem-priority',        label:'FiveM CPU Priority (HIGH)',                  page:'fivem',        desc:'IFEO process priority for FiveM + GTA' },
-  { id:'fivem-io-priority',     label:'FiveM I/O Priority (HIGH)',                  page:'fivem',        desc:'Faster asset streaming' },
-  { id:'fivem-mmcss',           label:'FiveM MMCSS Scheduling',                     page:'fivem',        desc:'Top-priority game scheduling' },
-  { id:'fivem-fso',             label:'FiveM Fullscreen Optimizations Off',        page:'fivem',        desc:'Reduce input lag in FSO' },
-  { id:'fivem-gpu',             label:'FiveM GPU Performance',                      page:'fivem',        desc:'NVIDIA max + HWSCH' },
-  { id:'fivem-network',         label:'FiveM Network Tweaks',                       page:'fivem',        desc:'Nagle off, TcpAckFrequency=1' },
-  { id:'fivem-vm',              label:'FiveM Virtual Memory Optimise',              page:'fivem',        desc:'Keep kernel in RAM, reduce paging' },
-  { id:'fivem-streaming-mem',   label:'FiveM Streaming Memory 1GB',                page:'fivem',        desc:'Reduce texture pop-in' },
-  { id:'fivem-commandline',     label:'FiveM/GTA commandline.txt',                  page:'fivem',        desc:'DX11, fullscreen, no texture cap' },
-  { id:'fivem-defender',        label:'FiveM Defender Exclusion',                   page:'fivem',        desc:'Add FiveM path to AV exclusions' },
-  { id:'fivem-hang-fix',        label:'FiveM Hang Fix (HungAppTimeout)',            page:'fivem',        desc:'Fix disconnect hang on close' },
-  { id:'fivem-worker-threads',  label:'FiveM Worker Threads (CitizenFX.ini)',       page:'fivem',        desc:'Increase streaming threads' },
-  { id:'fivem-disable-crash-reporter', label:'FiveM Crash Reporter Off',           page:'fivem',        desc:'Disable crash upload' },
-  { id:'fivem-disable-anticheat-upload', label:'FiveM Anti-Cheat Upload Off',      page:'fivem',        desc:'Disable anti-cheat data uploads' },
-  { id:'fivem-preload-ipl',     label:'FiveM Preload IPL',                          page:'fivem',        desc:'Faster world loading' },
-  { id:'fivem-reduce-draw-distance', label:'FiveM Reduce Draw Distance',           page:'fivem',        desc:'Reduce LOD for FPS gain' },
   // Game Tweaks
   { id:'gtav',                  label:'GTA V / FiveM Optimiser',                    page:'game-tweaks',  desc:'Game-specific registry tweaks' },
   { id:'valorant',              label:'Valorant Optimiser',                         page:'game-tweaks',  desc:'Game-specific registry tweaks' },
@@ -4669,11 +4630,6 @@ const TWEAK_CONFLICTS = {
   'dns-adguard':         { conflictsWith: ['dns-cloudflare','dns-google','dns-quad9','dns-custom'] },
   'dns-custom':          { conflictsWith: ['dns-cloudflare','dns-google','dns-quad9','dns-adguard'] },
   'dns-doh':             { warnIf: () => tweakState('dns-cloudflare') !== 'applied', warnMsg: 'conflictDohNeedsCloudflare' },
-  // FiveM-specific conflict rules
-  'fivem-streaming-mem': { warnIf: si => si.ramGB > 0 && si.ramGB < 12, warnMsg: 'conflictFivemStreamingMem' },
-  'fivem-worker-threads': { warnIf: si => si.cpuCores > 0 && si.cpuCores < 4, warnMsg: 'conflictFivemWorkerThreads' },
-  'fivem-gpu':           { warnIf: si => { const g = (si.gpu||'').toLowerCase(); return !(/nvidia|geforce|rtx|gtx/.test(g)) }, warnMsg: 'conflictFivemGpuNvidiaOnly' },
-  'fivem-vm':            { warnIf: si => si.ramGB > 0 && si.ramGB < 8, warnMsg: 'conflictFivemVmLowRam' },
 }
 
 function getConflictInfo(id) {
@@ -5025,9 +4981,8 @@ function syncTweakFlags() {
   document.querySelectorAll('#page-content .tweak-card[id^="tcw-"]').forEach(card => { card.dataset.applied = tweakState(card.id.slice(4)) === 'applied' ? '1' : '0' })
   document.querySelectorAll('#page-content .tweak-row[data-tweak-id]').forEach(row => { row.dataset.applied = tweakState(row.dataset.tweakId) === 'applied' ? '1' : '0' })
   if (window._winHero) window._winHero.refresh()
-  if (window._fvRefresh) window._fvRefresh()
   if (window._netRefresh) window._netRefresh()
-  for (const f of [window._winFilter, window._hwFilter, window._fvFilter, window._netFilter]) if (f) f.refresh()
+  for (const f of [window._winFilter, window._hwFilter, window._netFilter]) if (f) f.refresh()
 }
 
 function genRefreshAllCounters() {
@@ -5423,11 +5378,6 @@ const RADAR_CATEGORIES = [
     tweaks: ['gpu-hwsch','msi-mode','cpu-parking','cstates','speed-shift','nvme-latency',
              'nvidia-max-perf','nvidia-low-latency','disable-hdcp','tdr-delay',
              'pcie-power','usb-suspend','bcd-tweaks'], total: 13 },
-  { label: 'FiveM',    icon: 'fa-gamepad',        page: 'fivem',
-    tweaks: ['fivem-priority','fivem-io-priority','fivem-mmcss','fivem-fso','fivem-gpu',
-             'fivem-network','fivem-vm','fivem-streaming-mem','fivem-commandline',
-             'fivem-worker-threads','fivem-disable-crash-reporter',
-             'fivem-preload-ipl','fivem-reduce-draw-distance','fivem-defender'], total: 14 },
   { label: 'Cleanup',  icon: 'fa-trash',          page: 'cleanup',
     tweaks: ['clean-temp','clean-browsers','clean-discord','clean-nvidia','flush-dns',
              'winsock-reset'], total: 6 },
@@ -7069,10 +7019,6 @@ const SPW_GAMES = [
   { id:'cyberpunk', label:'Cyberpunk 2077',icon:'fa-city'         },
   { id:'rust',      label:'Rust',          icon:'fa-tree'         },
 ]
-const SPW_FIVEM_IDS = [
-  'fivem-priority','fivem-io-priority','fivem-mmcss','fivem-fso','fivem-gpu',
-  'fivem-network','fivem-hang-fix','fivem-streaming-mem','fivem-commandline',
-]
 
 const SPW_REVIEW_EXTRA = [
   'cortana','cortana-blackout','hibernate','cloud-sync-off','bluetooth-hard-off',
@@ -7508,7 +7454,6 @@ function spwBuildTweakList() {
   const useEthernet = _spwConnType === 'ethernet' || (_spwConnType === null && si.isWifi === false)
   if (useEthernet) SPW_NIC_EXTRA.forEach(id => ids.add(id))
   if (_spwBluetooth === true)  ids.delete('bluetooth-hard-off')
-  if (_spwGames.has('fivem'))  SPW_FIVEM_IDS.forEach(id => ids.add(id))
   // Same allowlist as Auto-Optimize (served by main): low-value, side-effect-prone and security-touching tweaks never go in an automatic run
   const allowed = window._aoAllowed
   return [...ids].filter(id => tweakCompat(id) && tweakState(id) !== 'applied' && (!allowed || allowed.has(id)))
@@ -8746,7 +8691,7 @@ async function netApplySafeDefaults(btn) {
 }
 
 
-// ─── Page: FiveM — see js/fivem-logic.js ───────────────────────────────────────
+// ─── Page: FiveM — see js/fivem/ (page.js, views.js, radar.js) and lib/fivem/ ───────────────
 
 // ─── Paragon-style Tweak Card Builder ────────────────────────────────────────
 let _pfStatesCache = null
@@ -9335,23 +9280,11 @@ async function gpCreateBundle() {
   // Get assigned tweak profile for selected game
   const tweakProfileName = curSettings[`gameProfile_${selectedGameId}`] || null
 
-  // Snapshot CitizenFX.ini keys if FiveM bundle
-  let citizenfxIniSnapshot = {}
-  if (selectedGameId === 'fivem') {
-    try {
-      const iniData = await api.fivemIniReadAll()
-      if (iniData?.ok) citizenfxIniSnapshot = Object.fromEntries(
-        Object.entries(iniData.values || {}).filter(([, v]) => v !== null && v !== undefined)
-      )
-    } catch {}
-  }
-
   const bundle = {
     name: trimmed,
     gameId: selectedGameId || null,
     pulsePreset: pulsePreset || null,
     tweakProfileName: tweakProfileName || null,
-    citizenfxIniSnapshot,
     createdAt: Date.now(),
   }
   const r = await api.saveGameBundle(bundle)

@@ -29,11 +29,12 @@ const NOSHOT = !!arg('noshot', false)             // skip PNGs (use with --lint)
 const AUTO_OPTI = !!arg('auto-opti', false)   // --auto-opti: shoot every Auto-Optimize scene (--ao-profile <fixture>)
 const DIAG = !!arg('diagnostics', false)   // --diagnostics: shoot every Diagnostics scene (--dx-state clean|first|fail)
 const DEBLOAT = !!arg('debloat', false)   // --debloat: shoot every Debloat scene (--db-state drift|empty|fail for the other states)
+const FIVEM = !!arg('fivem', false)   // --fivem: shoot every FiveM scene (--fv-state clean|lossy|noinstall|first|fail)
 const GALLERY = !!arg('gallery', false)   // shoot tools/ui-preview/gallery.html (every component) instead of the app
 
 const PAGES = ['dashboard', 'preflight', 'fixes', 'restore-points', 'performance', 'gaming', 'network', 'privacy-cleanup', 'startup-manager', 'process-manager',
   'latency-monitor', 'bios-tuner', 'pulse', 'fivem', 'scheduler', 'changelog', 'settings']
-const SECONDARY = ['pulse.html', 'fivem-settings.html', 'arma-settings.html', 'fps-hud.html', 'fivem-hud.html', 'fps-hud-settings.html']
+const SECONDARY = ['pulse.html', 'arma-settings.html', 'fps-hud.html', 'fivem-hud.html', 'fps-hud-settings.html']
 
 // the mock needs the list of API methods: read it from the real preload so it can never drift
 const preloadSrc = fs.readFileSync(path.join(ROOT, 'preload.js'), 'utf8')
@@ -47,6 +48,7 @@ const AO = require('./auto-opti-preview')
 ipcMain.handle('mock', async (e, name, args) => {
   const ctx = ctxByContents.get(e.sender.id) || { lang: 'en', premium: true }
   if (/^ao[A-Z]/.test(name)) { const r = await AO.handle(name, args, e.sender, ctx); if (r !== undefined) return r }
+  if (/^fivem2/.test(name)) { const r = await require('./fivem-fixture').handle(name, args, e.sender, ctx); if (r !== undefined) return r }
   const r = respond(name, args, ctx)
   if (r === undefined) { unknownCalls.set(name, (unknownCalls.get(name) || 0) + 1); return { ok: false, mock: 'no-fixture' } }
   return r
@@ -95,6 +97,29 @@ async function debloatShots(win, dir, logs, report) {
   await shot(win, path.join(dir, 'debloat-6-confirm.png'))
   await js("document.getElementById('confirm-modal-ok')?.click()").catch(() => {}); await sleep(1500)
   await shot(win, path.join(dir, 'debloat-7-receipt.png'))
+  logs.forEach(l => report.push('   ' + l))
+}
+
+// FiveM 2.0: the Uplink view as it fills, then every other view (the mock route answers with synthetic rounds).
+async function fivemShots(win, dir, logs, report) {
+  const js = c => win.webContents.executeJavaScript(c)
+  await js("showPage('fivem')").catch(e => logs.push('[showPage] ' + e.message))
+  await sleep(500)
+  await shot(win, path.join(dir, 'fv-1-start.png'))
+  await sleep(4200)
+  await shot(win, path.join(dir, 'fv-2-uplink.png'))
+  await js("document.querySelector('.fv-hops')?.setAttribute('open', '')"); await js("document.querySelector('.fv-hops')?.scrollIntoView({ block: 'center' })"); await sleep(600)
+  await shot(win, path.join(dir, 'fv-3-hops.png'))
+  await js("document.querySelector('.fv-findings')?.scrollIntoView({ block: 'start' })"); await sleep(400)
+  await shot(win, path.join(dir, 'fv-4-preflight.png'))
+  for (const [i, v] of ['sessions', 'graphics', 'client', 'crash'].entries()) {
+    await js("window.scrollTo(0, 0); document.getElementById('page-content')?.scrollTo(0, 0); document.querySelector('.fv .j-seg-item[data-id=\"" + v + "\"]')?.click()"); await sleep(1300)
+    await shot(win, path.join(dir, 'fv-' + (5 + i) + '-' + v + '.png'))
+  }
+  await js("document.querySelector('.fv .j-seg-item[data-id=\"graphics\"]')?.click()"); await sleep(400)
+  await js("document.querySelector('.fv [data-preset=\"performance\"]')?.click()"); await sleep(900)
+  await shot(win, path.join(dir, 'fv-9-graphics-preset.png'))
+  if (LINT) { const r = await js(require('./lint-page')).catch(e => 'lint failed: ' + e.message); report.push('LINT fivem: ' + r) }
   logs.forEach(l => report.push('   ' + l))
 }
 
@@ -190,13 +215,14 @@ async function main() {
   }
   for (const lang of LANGS) for (const tier of TIERS) for (const size of SIZES) {
     const name = `${TAG}/${lang}-${tier}-${size.join('x')}`
-    const ctx = { lang, premium: tier === 'premium', accent: ACCENT && ACCENT !== true ? ACCENT : null, arrival: !!arg('arrival', false), tours: !!arg('tours', false), debloat: arg('db-state', null), dx: arg('dx-state', null) }   // --arrival: first-launch flow; --tours: guided tours on (off by default so shots stay clean)
+    const ctx = { lang, premium: tier === 'premium', accent: ACCENT && ACCENT !== true ? ACCENT : null, arrival: !!arg('arrival', false), tours: !!arg('tours', false), debloat: arg('db-state', null), dx: arg('dx-state', null), fv: arg('fv-state', null) }   // --arrival: first-launch flow; --tours: guided tours on (off by default so shots stay clean)
     const { win, logs } = await makeWindow('index.html', ctx, size)
     const ready = await appReady(win)
     if (!ready) { report.push(`${name}: APP NEVER BECAME READY`); logs.forEach(l => report.push('   ' + l)); win.destroy(); continue }
     await sleep(1800)   // boot animation + first metrics
     if (SCHEME !== 'dark') await win.webContents.executeJavaScript(`JylliTheme.applyScheme(${JSON.stringify(SCHEME)})`).catch(() => {})
     if (DIAG) { await diagShots(win, path.join(OUT, name), logs, report); win.destroy(); continue }
+    if (FIVEM) { await fivemShots(win, path.join(OUT, name), logs, report); win.destroy(); continue }
     if (DEBLOAT) { await debloatShots(win, path.join(OUT, name), logs, report); win.destroy(); continue }
     if (AUTO_OPTI) { await (arg('ao-max', false) ? autoOptiMaxShots : autoOptiShots)(win, path.join(OUT, name), logs, report); win.destroy(); continue }
     for (const page of (ONLY_PAGES || PAGES)) {

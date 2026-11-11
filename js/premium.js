@@ -50,7 +50,7 @@
         <div class="jp-foot"><i class="fa fa-rotate-left"></i>${T('pvPulseRestore')}</div></div>`
       case 'games': return `<div class="jp-pv jp-cards">${['FiveM', 'CS2', 'Rust'].map((g, i) => `<div class="jp-card" style="--i:${i + 1}"><div class="jp-card-t">${g}</div>${bar([86, 64, 72][i], i + 1)}<div class="jp-card-s">${[12, 9, 7][i]} ${T('pvTweaks')}</div></div>`).join('')}</div>`
       case 'fivem': return `<div class="jp-pv jp-split"><svg viewBox="0 0 80 80" class="jp-ring" aria-hidden="true"><circle cx="40" cy="40" r="32" class="jp-ring-bg"/><circle cx="40" cy="40" r="32" class="jp-ring-fg" pathLength="100"/></svg>
-        <div class="jp-col">${row('FiveM', T('pvFivemTier'), 1, 'ok')}${row('GTA V', T('pvFivemTweaks'), 2)}${row('Cache', T('pvFivemCache'), 3)}</div></div>`
+        <div class="jp-col">${row(T('pvFivemRow1'), T('pvFivemTier'), 1, 'ok')}${row(T('pvFivemRow2'), T('pvFivemTweaks'), 2)}${row(T('pvFivemRow3'), T('pvFivemCache'), 3)}</div></div>`
       case 'latency': return `<div class="jp-pv"><svg viewBox="0 0 220 70" class="jp-graph" aria-hidden="true" preserveAspectRatio="none"><path class="jp-gridl" d="M0 55H220M0 35H220M0 15H220"/>
         <polyline class="jp-line" pathLength="100" points="0,52 20,50 40,53 60,49 80,51 95,12 105,48 125,52 150,50 170,53 190,49 220,51"/><circle class="jp-spot" cx="95" cy="12" r="3.5"/></svg>
         ${row('nvlddmkm.sys', T('pvLatSpike'), 1, 'bad')}${row('ndis.sys', 'OK', 2, 'ok')}</div>`

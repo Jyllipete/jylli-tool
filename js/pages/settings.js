@@ -198,11 +198,10 @@ function buildSettings(c) {
             // Navigate to the first mismatched tweak's category page
             const firstId = mismatches[0].id
             // Where each tweak lives: [legacy page, tab id]. Anything unlisted is a Windows tweak.
-            const W = ['windows-opti', 'windows'], HW = id => ['hardware', id], NET = ['network', 'network'], FV = ['fivem', 'fivem']
+            const W = ['windows-opti', 'windows'], HW = id => ['hardware', id], NET = ['network', 'network']
             const where = { 'gpu-hwsch': HW('gpu'), 'intel-power-plan': HW('power'), 'amd-power-plan': HW('power'), 'pcie-power': HW('power'),
               'sysmain': W, 'power-throttling': W, 'usb-suspend': W,
-              'nic-interrupt-mod': NET, 'nic-flow-control': NET, 'nic-energy-efficient': NET, 'nic-offloads': NET, 'nic-rss-affinity': NET, 'nic-ndis-poll': NET,
-              'fivem-gpu': FV, 'fivem-streaming-mem': FV, 'fivem-worker-threads': FV, 'fivem-vm': FV }
+              'nic-interrupt-mod': NET, 'nic-flow-control': NET, 'nic-energy-efficient': NET, 'nic-offloads': NET, 'nic-rss-affinity': NET, 'nic-ndis-poll': NET }
             const [page, tab] = where[firstId] || W
             showPage(page, tab)
             setTimeout(() => {

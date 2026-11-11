@@ -2,6 +2,16 @@
 
 ## Julkaisematon (Välilehtien uudistus)
 
+### FiveM 2.0 (Uplink)
+- FiveM-välilehti on rakennettu uudelleen oman moottorin (lib/fivem) päälle viidellä näkymällä: **Yhteys**, **Istunnot**, **Grafiikka**, **Asiakasohjelma** ja **Kaatumislaboratorio**. Lähtökohta: jokainen näytetty luku on mitattu tai luettu tiedostosta, eikä mitään arvata (docs/FIVEM_EVIDENCE.md)
+- Uusi **reittitutka**: oikea reitti tietokoneelta valitsemallesi palvelimelle (cfx.re/join-linkki tai IP:portti), yksi piste per reititin, hyppykohtainen viive, vaihtelu ja häviö kerran sekunnissa sekä ICMP- ja TCP-mittaus palvelimelle. Tulos nimeää, mistä ongelma alkaa (oma verkko, operaattori, internet vai palvelin). Reitittimen vastausten rajoitus ei näy pakettihäviönä, koska häviö lasketaan vain, jos se jatkuu palvelimelle asti. Lisäksi MTU-testi
+- Uudet **istunnot**: pelatun FiveM-istunnon kuvaruutuaika, kuorma, lämpötilat ja viive palvelimelle samalla aikajanalla. Jokainen nykäisy saa syyn (kuumuus, näytönohjaimen muisti, RAM, GPU/CPU rajalla, kellotaajuuden lasku) vain jos tallennettu mittaus tukee sitä, muuten "tuntematon". Verkkotapahtumat näytetään erikseen eikä niitä syytetä nykäisyistä
+- **Grafiikka** korvaa erillisen ikkunan: gta5_settings.xml muokataan vain avaimilta, jotka tiedostossa jo ovat, arvot validoidaan, ennen tallennusta näkyy muutosluettelo ja tiedosto varmuuskopioidaan. Esiasetukset, VRAM-tietoinen suositus (tuntematon VRAM ei enää tarkoita "heikkoa konetta") ja suhteellinen kuormamittari
+- **Asiakasohjelma**: vain todistetut muutokset (CPU- ja levyprioriteetti, ikkunoidun kokonäytön yhteensopivuus, Game Bar, Defender-poikkeus), CitizenFX.ini oikeasta tiedostosta vain FiveM:n dokumentoimilla avaimilla sekä välimuisti, joka ei koske pelin omiin tiedostoihin. Kaikki kulkee muutospäiväkirjan kautta kumottavissa, ja kumoaminen palauttaa käyttäjän oman alkuperäisen arvon
+- Poistettu: neljä jo poistettua säätöä, `fivem-auto-opti` (ei tehnyt mitään), `fivem-disable-update-checks` (ilmoitti onnistuneensa tekemättä mitään), commandline.txt:n ylikirjoitus sekä CitizenFX.ini-avaimet, joita FiveM ei dokumentoi. Aiemmat muutokset voi palauttaa Asiakasohjelma-näkymästä
+- Korjattu: Smart Recommend valitsi aina heikon koneen asetukset (luki vääriä kenttiä), Home-näkymän istuntoyhteenveto lakkasi toimimasta FiveM-välilehdellä käynnin jälkeen, välimuistin tyhjennys poisti myös pelin omat tiedostot (cachegame, server-cachegame), HUD:n "CFX ping" mittasi Cfx:n palvelinta eikä pelaajan omaa palvelinta (nyt valittu palvelin, 11 px:n tekstit)
+- Premium-esittely kuvaa nyt oikeita ominaisuuksia (ei enää "9 / 12")
+
 ### Diagnostiikka 2.0 (Vitals)
 - Diagnostiikka-välilehti on rakennettu uudelleen oman moottorin (lib/diagnostics) päälle: oikea terveystarkistus vanhan "turvapisteen" tilalle. Jokainen tulos näyttää mitatun arvon, rajan ja lähteen; mittaamatonta aluetta ei koskaan pisteytetä arvauksella
 - Uusi **Vitals-rengas**: kymmenen osaa (vakaus, tallennus, muisti, CPU ja lämpötilat, GPU ja näyttö, ajurit, Windowsin eheys, tietoturva, verkko, asetukset), jotka täyttyvät vain kun niiden oikeat tarkistukset valmistuvat
