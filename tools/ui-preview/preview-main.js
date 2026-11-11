@@ -27,6 +27,7 @@ const SCALE = Number(arg('scale', 1)) || 1        // <1 shrinks screenshots (che
 const LINT = !!arg('lint', false)                 // run tools/ui-preview/lint-page.js on every page and put the text report in report.txt
 const NOSHOT = !!arg('noshot', false)             // skip PNGs (use with --lint)
 const AUTO_OPTI = !!arg('auto-opti', false)   // --auto-opti: shoot every Auto-Optimize scene (--ao-profile <fixture>)
+const DEBLOAT = !!arg('debloat', false)   // --debloat: shoot every Debloat scene (--db-state drift|empty|fail for the other states)
 const GALLERY = !!arg('gallery', false)   // shoot tools/ui-preview/gallery.html (every component) instead of the app
 
 const PAGES = ['dashboard', 'preflight', 'fixes', 'restore-points', 'performance', 'gaming', 'network', 'privacy-cleanup', 'startup-manager', 'process-manager',
@@ -49,6 +50,35 @@ ipcMain.handle('mock', async (e, name, args) => {
   if (r === undefined) { unknownCalls.set(name, (unknownCalls.get(name) || 0) + 1); return { ok: false, mock: 'no-fixture' } }
   return r
 })
+
+
+// Debloat 2.0: every view of the tab, plus the run and the receipt (the mock run answers instantly; the real timing is only visible in the app).
+async function debloatShots(win, dir, logs, report) {
+  const js = c => win.webContents.executeJavaScript(c)
+  const until = async (cond, ms = 15000) => { const t0 = Date.now(); while (Date.now() - t0 < ms) { if (await js(cond).catch(() => false)) return true; await sleep(150) } report.push('timeout: ' + cond); return false }
+  await js("showPage('debloater')").catch(e => logs.push('[showPage] ' + e.message))
+  await sleep(400)
+  await shot(win, path.join(dir, 'debloat-1-scanning.png'))
+  await until("document.querySelector('.db-stage .db-verdict')?.dataset.tone !== 'idle'"); await sleep(1300)
+  await shot(win, path.join(dir, 'debloat-2-ready.png'))
+  for (const [k, sel] of [['a-intents', '.db-intents'], ['b-lanes', '.db-tools'], ['c-lanes2', '.db-lane[data-lane=\"review\"]'], ['d-guard', '.db-guard']]) { await js("document.querySelector('" + sel + "')?.scrollIntoView({ block: 'start' })"); await sleep(350); await shot(win, path.join(dir, 'debloat-2' + k + '.png')) }
+  await js("document.querySelector('.db-stage')?.scrollIntoView({ block: 'start' })")
+  await js("document.querySelector('.db-card[data-id=\"app:Microsoft.YourPhone\"] .db-exp')?.click(); document.querySelector('.db-lane[data-lane=\"kept\"] [data-act=\"kept-toggle\"]')?.click()"); await sleep(500)
+  await shot(win, path.join(dir, 'debloat-3-details-kept.png'))
+  await js("document.querySelector('[data-intent=\"laptop\"]')?.click()"); await sleep(700)
+  await shot(win, path.join(dir, 'debloat-4-laptop-intent.png'))
+  await js("document.querySelector('[data-intent=\"laptop\"]')?.click()"); await sleep(400)
+  for (const v of ['admap', 'programs', 'extras', 'history']) {
+    await js("document.querySelector('.db-bar [data-id=\"" + v + "\"]')?.click()"); await sleep(1400)
+    await shot(win, path.join(dir, 'debloat-5-' + v + '.png'))
+  }
+  await js("document.querySelector('.db-bar [data-id=\"lean\"]')?.click()"); await sleep(500)
+  await js('window.JylliWorld && (JylliWorld.holdToApply = () => false), 0'); await js("(document.querySelector('.db-verdict [data-act=\"clean\"]'))?.click()"); await sleep(600)
+  await shot(win, path.join(dir, 'debloat-6-confirm.png'))
+  await js("document.getElementById('confirm-modal-ok')?.click()").catch(() => {}); await sleep(1500)
+  await shot(win, path.join(dir, 'debloat-7-receipt.png'))
+  logs.forEach(l => report.push('   ' + l))
+}
 
 const sleep = ms => new Promise(r => setTimeout(r, ms))
 
@@ -142,12 +172,13 @@ async function main() {
   }
   for (const lang of LANGS) for (const tier of TIERS) for (const size of SIZES) {
     const name = `${TAG}/${lang}-${tier}-${size.join('x')}`
-    const ctx = { lang, premium: tier === 'premium', accent: ACCENT && ACCENT !== true ? ACCENT : null, arrival: !!arg('arrival', false), tours: !!arg('tours', false) }   // --arrival: first-launch flow; --tours: guided tours on (off by default so shots stay clean)
+    const ctx = { lang, premium: tier === 'premium', accent: ACCENT && ACCENT !== true ? ACCENT : null, arrival: !!arg('arrival', false), tours: !!arg('tours', false), debloat: arg('db-state', null) }   // --arrival: first-launch flow; --tours: guided tours on (off by default so shots stay clean)
     const { win, logs } = await makeWindow('index.html', ctx, size)
     const ready = await appReady(win)
     if (!ready) { report.push(`${name}: APP NEVER BECAME READY`); logs.forEach(l => report.push('   ' + l)); win.destroy(); continue }
     await sleep(1800)   // boot animation + first metrics
     if (SCHEME !== 'dark') await win.webContents.executeJavaScript(`JylliTheme.applyScheme(${JSON.stringify(SCHEME)})`).catch(() => {})
+    if (DEBLOAT) { await debloatShots(win, path.join(OUT, name), logs, report); win.destroy(); continue }
     if (AUTO_OPTI) { await (arg('ao-max', false) ? autoOptiMaxShots : autoOptiShots)(win, path.join(OUT, name), logs, report); win.destroy(); continue }
     for (const page of (ONLY_PAGES || PAGES)) {
       logs.length = 0

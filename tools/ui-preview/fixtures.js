@@ -100,11 +100,6 @@ function respond(name, args, ctx) {
     case 'getTweakStates': return tweakStates
     case 'getProcesses': return processes
     case 'scanInstalledApps': return ['edge-optimize','chrome-optimize','firefox-optimize','discord-optimize','discord-cpu-priority','spotify-optimize','steam-optimize','epic-optimize','riot-optimize','obs-optimize','nvidia-app-optimize','vscode-optimize','explorer-optimize']
-    // debloat hero: a realistic mix so the preview shows a real score
-    case 'scanUwpApps': return ['Microsoft.BingNews', 'Microsoft.BingWeather', 'Microsoft.GetHelp', 'Microsoft.Getstarted', 'Microsoft.MicrosoftSolitaireCollection', 'Microsoft.WindowsMaps', 'Microsoft.WindowsStore', 'Microsoft.XboxApp', 'Microsoft.YourPhone', 'Microsoft.ZuneVideo', 'Microsoft.WindowsCalculator']
-    case 'scanProvisionedUwp': return ['Microsoft.BingNews_8wekyb3d8bbwe', 'Microsoft.GetHelp_8wekyb3d8bbwe']
-    case 'getServiceStatuses': return Object.fromEntries((args[0] || []).map((id, i) => [id, ['Running', 'Stopped', 'Disabled', 'Running', 'MISSING'][i % 5]]))
-    case 'getTaskStates': return { 'Consolidator': 'Ready', 'UsbCeip': 'Ready', 'DiskDiagnosticDataCollector': 'Disabled', 'Microsoft Compatibility Appraiser': 'Ready', 'ProgramDataUpdater': 'Disabled', 'StartupAppTask': 'Ready' }
     case 'healthCheckAppOptimizer': return { 'chrome-optimize': 'drifted', 'steam-optimize': 'ok' }
     case 'aoGetCpuCaps': return {}
     case 'freezeGetPids': return { ok: true, frozenPids: [] }
@@ -168,6 +163,66 @@ function respond(name, args, ctx) {
     case 'pulseDetectGame': return { ok: true, game: null }
     case 'detectAv': return null
     case 'analyticsPageVisit': case 'analyticsTweakApplied': case 'discordSetPage': case 'startupTrace': return { ok: true }
+    // Debloat 2.0: the REAL probe parser, model, classifier and footprint on a synthetic gaming desktop (printer, 2 Bluetooth devices, Xbox controller, OBS)
+    case 'debloat2Scan': {
+      const D = require('../../lib/debloat'), now = Date.now(), H = 3600000, DAY = 24 * H
+      const CDM = 'HKCU:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\ContentDeliveryManager', ADV = 'HKCU:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced'
+      if (ctx.debloat === 'empty') return { ok: true, model: D.model.buildModel(D.probe.parse(D.probe.MARK + JSON.stringify({ facts: { build: 26200, ubr: 1, mfr: 'HP' } })), { now }), drift: [], prefs: { intents: null, shield: true, deprovision: true, guard: { mode: 'off' } } }
+      if (ctx.debloat === 'fail') return { ok: false, error: 'scan-failed' }
+      const app = (n, sz) => ({ n, f: n + '_8wekyb3d8bbwe', sz: sz * 1048576 })
+      const task = (p, n, h, rep, st) => ({ p: '\\Microsoft\\Windows\\' + p + '\\', n, s: st || 'Ready', nx: now + h * H, rep: rep || '' })
+      const snap = D.probe.parse(D.probe.MARK + JSON.stringify({
+        appx: [app('Microsoft.BingNews', 48), app('Microsoft.BingWeather', 61), app('Microsoft.GetHelp', 12), app('Microsoft.Getstarted', 9), app('Microsoft.MicrosoftSolitaireCollection', 140), app('Microsoft.WindowsMaps', 96), app('Microsoft.ZuneVideo', 33), app('Microsoft.XboxApp', 120), app('Microsoft.XboxGamingOverlay', 74),
+          app('Microsoft.YourPhone', 188), app('Clipchamp.Clipchamp', 210), app('Microsoft.WindowsStore', 90), app('Microsoft.GamingServices', 60), app('Microsoft.Copilot', 150), app('Microsoft.Todos', 40), app('BytedancePte.Ltd.TikTok', 70), app('king.com.CandyCrushSaga', 55), app('Microsoft.People', 8), app('MicrosoftWindows.Client.WebExperience', 130)],
+        prov: ['Microsoft.BingNews', 'Microsoft.BingWeather', 'Microsoft.GetHelp', 'Microsoft.YourPhone', 'Clipchamp.Clipchamp', 'king.com.CandyCrushSaga'],
+        svc: { DiagTrack: { st: 'Running', sm: 'Auto', sh: 1, ws: 38 * 1048576 }, SysMain: { st: 'Running', sm: 'Auto', sh: 1, ws: 96 * 1048576 }, WSearch: { st: 'Running', sm: 'Auto', sh: 1, ws: 142 * 1048576 }, WerSvc: { st: 'Stopped', sm: 'Manual', sh: 0, ws: 0 },
+          Spooler: { st: 'Running', sm: 'Auto', sh: 1, ws: 14 * 1048576 }, bthserv: { st: 'Running', sm: 'Manual', sh: 5, ws: 0 }, XblAuthManager: { st: 'Stopped', sm: 'Manual', sh: 0, ws: 0 }, XboxGipSvc: { st: 'Running', sm: 'Manual', sh: 3, ws: 0 }, RemoteRegistry: { st: 'Stopped', sm: 'Disabled', sh: 0, ws: 0 },
+          MapsBroker: { st: 'Stopped', sm: 'Auto', sh: 0, ws: 0 }, lfsvc: { st: 'Running', sm: 'Manual', sh: 4, ws: 0 }, Fax: { st: 'Stopped', sm: 'Manual', sh: 0, ws: 0 }, PcaSvc: { st: 'Running', sm: 'Auto', sh: 6, ws: 0 } },
+        tasks: [task('Application Experience', 'Microsoft Compatibility Appraiser', 3.4), task('Application Experience', 'ProgramDataUpdater', 5.1), task('Application Experience', 'StartupAppTask', 9.2), task('Customer Experience Improvement Program', 'Consolidator', 0.9, 'PT6H'), task('Customer Experience Improvement Program', 'UsbCeip', 1.6),
+          task('Maintenance', 'WinSAT', 14), task('Windows Error Reporting', 'QueueReporting', 7.3), task('Feedback\\Siuf', 'DmClient', 4.2, 'PT4H'), task('Maps', 'MapsUpdateTask', 2.2, 'PT8H'), task('Autochk', 'Proxy', 0, '', 'Disabled'), task('Shell', 'FamilySafetyMonitor', 6.4, 'PT1H')],
+        reg: { [CDM + '|RotatingLockScreenEnabled']: 1, [CDM + '|RotatingLockScreenOverlayEnabled']: 1, [CDM + '|SubscribedContent-338387Enabled']: 1, [CDM + '|SystemPaneSuggestionsEnabled']: 0, [ADV + '|Start_IrisRecommendations']: 1, [CDM + '|PreInstalledAppsEnabled']: 1, [CDM + '|PreInstalledAppsEverEnabled']: 1, [CDM + '|OemPreInstalledAppsEnabled']: 1,
+          [CDM + '|SilentInstalledAppsEnabled']: 0, [ADV + '|TaskbarDa']: 1, [ADV + '|ShowSyncProviderNotifications']: 1, [CDM + '|SubscribedContent-338393Enabled']: 1, [CDM + '|SubscribedContent-353694Enabled']: 1, [CDM + '|SubscribedContent-353696Enabled']: 1, [CDM + '|SubscribedContent-338389Enabled']: 1, [CDM + '|SoftLandingEnabled']: 1 },
+        feat: { SMB1Protocol: true, 'SMB1Protocol-Client': true, 'SMB1Protocol-Server': false, MicrosoftWindowsPowerShellV2Root: true, MicrosoftWindowsPowerShellV2: true, 'Internet-Explorer-Optional-amd64': true, TelnetClient: false, DirectPlay: true, WindowsMediaPlayer: true },
+        procs: { yourphone: 61 * 1048576, phoneexperiencehost: 40 * 1048576, searchindexer: 142 * 1048576 }, lastRun: { yourphone: now - 4 * DAY, spotify: now - 1 * DAY },
+        facts: { printers: 1, btPaired: 2, xboxController: 1, gamePass: 3, obs: true, dev: false, laptop: false, build: 26200, ubr: 1742, mfr: 'HP' },
+      }))
+      const model = D.model.buildModel(snap, { now })
+      return { ok: true, model, drift: ctx.debloat === 'drift' ? [{ id: 'app:Microsoft.BingNews', since: now - 20 * DAY }, { id: 'svc:DiagTrack', since: now - 20 * DAY }] : [], prefs: { intents: null, shield: true, deprovision: true, guard: { mode: premium ? 'update' : 'off' } } }
+    }
+    case 'debloat2Run': {
+      const ids = (args[0] && args[0].ids) || []
+      const kind = id => ({ app: 'appx', svc: 'service', task: 'task', ad: 'ad', feat: 'feature' })[id.split(':')[0]]
+      const n = p => ids.filter(i => i.startsWith(p)).length
+      return { ok: true, drift: [], receipt: { batchId: 'preview', ts: Date.now(), ms: 8400, aborted: false, deprovision: true, skipped: [], restorePoint: { ok: true }, failed: [], restartNeeded: false,
+        rows: ids.map(id => ({ id, kind: kind(id), ok: true, error: null })),
+        counts: { apps: n('app:'), services: n('svc:'), tasks: n('task:'), ads: n('ad:'), features: n('feat:') },
+        delta: { ram: [310 * 1048576, 24 * 1048576], disk: [1.4 * 1073741824, 0], wakes: [31, 9] } } }
+    }
+    case 'debloat2Abort': return { ok: true }
+    case 'debloat2Summary': return { ok: true, summary: { ts: Date.now(), count: 23, safe: 17, ram: 310 * 1048576, disk: 1.4 * 1073741824, wakes: 31, layers: { apps: 11, services: 4, tasks: 5, ads: 3, features: 0 } } }
+    case 'debloat2PrefsSet': return { ok: true, prefs: { intents: null, shield: true, deprovision: true, guard: { mode: 'off' } } }
+    case 'debloat2GuardSet': return premium ? { ok: true, guard: { mode: args[0] } } : { ok: false, reason: 'premium_required' }
+    case 'debloat2Undo': return { ok: true, ids: [] }
+    case 'debloat2Wayback': return { ok: true, how: 'offline' }
+    case 'debloat2ShellRemove': return { ok: true, batchId: 'preview', rows: [] }
+    case 'debloat2History': {
+      const t = Date.now()
+      return { ok: true, runs: [], entries: [
+        { entryId: 'e1', batchId: 'b1', id: 'app:Microsoft.BingNews', ts: t - 3600000, result: 'ok', fidelity: 'exact', undone: false, family: 'Microsoft.BingNews_8wekyb3d8bbwe' },
+        { entryId: 'e2', batchId: 'b1', id: 'svc:DiagTrack', ts: t - 3600000, result: 'ok', fidelity: 'exact', undone: false, family: '' },
+        { entryId: 'e3', batchId: 'b1', id: 'ad:start-recommended', ts: t - 3600000, result: 'ok', fidelity: 'exact', undone: false, family: '' },
+        { entryId: 'e4', batchId: 'b0', id: 'task:winsat', ts: t - 9 * 86400000, result: 'ok', fidelity: 'exact', undone: true, family: '' } ] }
+    }
+    case 'listInstalledWin32': {
+      const M = 1048576
+      return [{ DisplayName: 'HP Smart', DisplayVersion: '152.1', Publisher: 'HP Inc.', SizeBytes: 380 * M, InstallDate: '20240115', Key: 'a' }, { DisplayName: 'Spotify', DisplayVersion: '1.2', Publisher: 'Spotify AB', SizeBytes: 420 * M, InstallDate: '20250301', Key: 'b' },
+        { DisplayName: 'Old Video Converter', DisplayVersion: '4.0', Publisher: 'Acme', SizeBytes: 900 * M, InstallDate: '20190512', Key: 'c' }, { DisplayName: 'Microsoft Visual C++ 2015-2022 Redistributable (x64)', DisplayVersion: '14.38', Publisher: 'Microsoft Corporation', SizeBytes: 24 * M, InstallDate: '20240101', Key: 'd' },
+        { DisplayName: 'Steam', DisplayVersion: '2.10', Publisher: 'Valve Corporation', SizeBytes: 1.2 * 1073741824, InstallDate: '20230101', Key: 'e' }, { DisplayName: 'HP Support Assistant', DisplayVersion: '9.1', Publisher: 'HP Inc.', SizeBytes: 210 * M, InstallDate: '20230620', Key: 'f' }]
+    }
+    case 'getPrefetchAges': return [{ Name: 'SPOTIFY.EXE-ABCD1234.pf', LastWriteTime: new Date(Date.now() - 86400000).toISOString() }, { Name: 'STEAM.EXE-ABCD1235.pf', LastWriteTime: new Date(Date.now() - 2 * 86400000).toISOString() }]
+    case 'getUserAssist': return [{ path: 'C:\\Program Files\\Old Video Converter\\Old Video Converter.exe', count: 3, lastUsed: new Date(Date.now() - 400 * 86400000).toISOString() }]
+    case 'getUnusedDevices': return [{ name: 'USB Mass Storage Device', id: 'USB\\VID_1', status: 'Unknown', cls: 'USB', present: false }, { name: 'Generic PnP Monitor', id: 'DISPLAY\\X', status: 'Unknown', cls: 'Monitor', present: false }]
+    case 'getShellExtensions': return [{ clsid: '{11111111-1111-1111-1111-111111111111}', name: 'Old Archiver shell extension', dllPath: 'C:\\Program Files\\OldArc\\shell.dll', dllExists: false }, { clsid: '{22222222-2222-2222-2222-222222222222}', name: 'Git Bash Here', dllPath: 'C:\\Program Files\\Git\\git.dll', dllExists: true }]
     default: return undefined
   }
 }

@@ -56,6 +56,8 @@
     let entries = []
     try { entries = await root.api.journalList({ limit: 500, via: filterVia || undefined }) } catch {}
     const names = id => (typeof tName === 'function' && tName(id)) || id
+    // Debloat 2.0 entries are journaled as control 'debloat:<catalog id>': show the catalog name, not the id
+    const ctlName = c => { const m = /^debloat:((?:app|svc|task|ad|feat):.+)$/.exec(c); return m && typeof tG === 'function' ? tG('debloat2', 'n_' + m[1]) : c }
     const opts = ['', ...VIA_KEYS].map(v => `<option value="${attr(v)}"${v === filterVia ? ' selected' : ''}>${esc(v ? tUI('journalVia_' + v) : tUI('journalViaAll'))}</option>`).join('')
     const head = `<div class="j-journal-head"><label class="j-muted">${esc(tUI('journalFilter'))} <select id="journal-filter" class="j-input j-input-sm">${opts}</select></label><span class="j-muted">${entries.length} ${esc(tUI('journalEntries'))}</span></div>`
     if (!entries.length) { box.innerHTML = head + `<div class="j-muted j-journal-empty">${esc(tUI('journalEmpty'))}</div>`; wire(box); return }
@@ -68,7 +70,7 @@
           const fid = f.fidelity === 'partial' ? `<span class="j-badge j-badge-warning" title="${attr(tUI('journalPartialTip'))}">${esc(tUI('journalPartial').replace('{n}', f.unresolved))}</span>` : f.fidelity === 'intent' ? `<span class="j-badge">${esc(tUI('journalIntent'))}</span>` : `<span class="j-badge j-badge-success">${esc(tUI('journalExact'))}</span>`
           const diff = e.changes.map(c => { const d = describe(c); return `<div class="j-journal-diff"><span class="j-num">${esc(d.label)}</span><span>${d.unresolved ? esc(tUI('journalNotTracked')) : `${esc(d.before == null ? tUI('journalNone') : d.before)} → <b>${esc(d.after == null ? tUI('journalNone') : d.after)}</b>`}</span></div>` }).join('')
           const canUndo = !e.undoneBy && e.via !== 'undo' && e.action === 'apply'
-          return `<div class="j-journal-entry-row"><details class="j-journal-entry"><summary><span>${esc(e.action === 'apply' ? '' : tUI('journalRestored') + ': ')}${esc(e.control ? e.control : names(e.tweakId))}</span> ${fid} ${undone}<span class="j-muted j-num">${esc(new Date(e.ts).toLocaleTimeString())}</span></summary>${diff || `<div class="j-muted">${esc(tUI('journalNoChanges'))}</div>`}</details>${canUndo ? `<button type="button" class="j-btn j-btn-sm j-btn-ghost" data-undo-entry="${attr(e.id)}">${esc(tUI('journalUndo'))}</button>` : ''}</div>`
+          return `<div class="j-journal-entry-row"><details class="j-journal-entry"><summary><span>${esc(e.action === 'apply' ? '' : tUI('journalRestored') + ': ')}${esc(e.control ? ctlName(e.control) : names(e.tweakId))}</span> ${fid} ${undone}<span class="j-muted j-num">${esc(new Date(e.ts).toLocaleTimeString())}</span></summary>${diff || `<div class="j-muted">${esc(tUI('journalNoChanges'))}</div>`}</details>${canUndo ? `<button type="button" class="j-btn j-btn-sm j-btn-ghost" data-undo-entry="${attr(e.id)}">${esc(tUI('journalUndo'))}</button>` : ''}</div>`
         }).join('')
         const undoable = b.entries.some(e => !e.undoneBy && e.via !== 'undo' && e.action === 'apply')
         return `<div class="j-journal-batch"><div class="j-journal-batch-head"><b>${esc(tUI('journalVia_' + (b.via || 'manual')))}</b><span class="j-muted">${b.entries.length} ${esc(tUI('journalChanges'))}</span>${b.batchId && undoable ? `<button type="button" class="j-btn j-btn-sm" data-undo-batch="${attr(b.batchId)}">${esc(tUI('journalUndoBatch'))}</button>` : ''}</div>${rows}</div>`

@@ -8,6 +8,16 @@
 - `registerPageCleanup` on nyt additiivinen: Verkko-välilehden live-ping ei jää käyntiin välilehdeltä poistuttaessa
 - `body.game-running` → `body.game-live` (pelin aikainen animaatioiden pysäytys toimii nyt oikeasti); ui.css:n nollaukset eivät enää syö uusien herojen varjoja
 
+### Bloatware 2.0 (Kevyt)
+- Bloatware-välilehti on rakennettu uudelleen yhden moottorin (lib/debloat) päälle: yksi luettelo siitä, mitä saa poistaa tai kytkeä pois, yksi mittaus ja yksi ajo, joten näytetty luku on se, mikä muuttuu (vanha pistemäärä luettiin DOM-merkeistä)
+- Uusi **jalanjälki-Ydin** (sovellukset, palvelut, tehtävät, mainokset, ominaisuudet), mitatut luvut (muisti nyt, levy, heräämiset 24 h:ssa) ja **taustahälinäjana**: oikeat ajastettujen tehtävien seuraavat ajat, ei arvioita
+- Kolme kaistaa: **Turvallista poistaa**, **Sinun päätöksesi** ja **Käytössä, säilytetään** (jokainen kertoo syyn: tulostin kytketty, Bluetooth-laitteita paritettu, Xbox-ohjain, avattu hiljattain, suojattu). "Tämä kone on tarkoitettu" -valinnat tunnistetaan koneesta ja päivittävät listat heti
+- Ajo tapahtuu paikan päällä: palautuspiste ensin, kohta kohdalta oikeat tapahtumat, kuitti **mitatuilla** ennen/jälkeen-arvoilla ja **Peru tämä ajo**. Palvelut, tehtävät, mainosasetukset ja kontekstivalikon kohdat palautuvat muutospäiväkirjan kautta täsmälleen vanhoihin arvoihinsa; poistetuille sovelluksille on **Paluu** (offline, jos Windows säilyttää paketin, muuten Storen sivu). Poisto vaatii pitkän painalluksen
+- Sovellusten poisto poistaa nyt myös asennuskuvan kopion (valinnainen), jotta Windows ei asenna niitä uudelleen; vanha toiminta ei koskaan tehnyt tätä
+- **Mainoskartta**: kaavakuva työpöydästä ja nastat jokaiselle mainospaikalle (16 asetusta, aiemmin 10); **Ohjelmat**: koko, viimeisin avaus, valmistajan apuohjelmat; **Lisät**: haamulaitteet ja kontekstivalikon kohdat; **Historia**: ajot ja Peru / Paluu
+- **Vahti**: huomaa, mitä Windows toi takaisin päivityksen jälkeen. Ilmainen: ilmoitus välilehteä avattaessa. Premium: taustatarkistus päivitysten jälkeen ja valinnainen hiljainen uudelleenpoisto
+- Luettelo kattaa nykyisen Windows 11:n (Copilot, uusi Outlook, uusi Teams, Widgetit, Dev Home, sponsoroidut sovellukset) ja uusia palveluita; vanhat, käyttämättömät kanavat ja vanha tulos-hero poistettu
+
 ### Siivous 2.0 (Vapauta)
 - Siivous on rakennettu uudelleen yhden moottorin (lib/cleanup) päälle: mittaus, siivous, clean-*-säädöt, komentopaletti ja Auto-Optimize käyttävät samaa kohdeluetteloa, joten näytetty luku on se, mikä poistuu (aiemmin esim. WinSxS laskettiin kokonaan ja NVIDIA mitattiin eri kansioista kuin siivottiin)
 - Uusi **Ydin**: levy renkaana, jonka kaaret kasvavat skannauksen aikana ja tyhjenevät siivouksen aikana oikeiden tapahtumien mukaan; keskellä löydetty ja lopuksi vapautettu määrä

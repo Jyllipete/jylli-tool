@@ -495,7 +495,6 @@ const { createAuth } = require('./lib/auth')
 const { createSnapshotStore } = require('./lib/snapshot')
 const { createJournalService } = require('./lib/journal-service')
 const { createRestorePointService } = require('./lib/restore-point')
-const { splitProtected } = require('./lib/uwp-protect')
 const JylliScore = require('./js/score')
 const { createHub } = require('./lib/telemetry-hub')
 const { createTelemetryService } = require('./lib/telemetry-service')
@@ -2742,60 +2741,6 @@ ipcMain.handle('save-text-file', async (_, { filename, content }) => {
 })
 
 // ─── Debloat: scan installed apps ─────────────────────────────────────────────
-ipcMain.handle('scan-uwp-apps', async () => {
-  const r = await runPS('Get-AppxPackage -AllUsers | Select-Object -ExpandProperty Name | ConvertTo-Json')
-  if (!r.ok || !r.out) return []
-  try { return JSON.parse(r.out) } catch { return r.out.split('\n').map(l => l.trim()).filter(Boolean) }
-})
-
-ipcMain.handle('remove-uwp-apps', async (_, requested, opts) => {
-  const send = (msg, level) => mainWindow?.webContents.send('log', { msg, level, ts: new Date().toLocaleTimeString() })
-  const { allowed: packages, protectedPkgs } = splitProtected(requested, opts?.keepXboxStore !== false)
-  for (const p of protectedPkgs) send(`  ${p}: kept (Xbox & Microsoft Store shield)`, 'info')
-  send(`Removing ${packages.length} UWP app(s)…`, 'head')
-
-  // Build one PS script that removes all packages in a single process invocation.
-  // Each iteration emits a PROGRESS: token so we can track per-item status without
-  // spawning a new PowerShell process per package (saves ~300ms startup per item).
-  const listLiteral = packages.map(p => `'${escapePSSingleQuote(String(p))}'`).join(',')
-  const script = `
-$pkgs = @(${listLiteral})
-$total = $pkgs.Count
-for ($i = 0; $i -lt $total; $i++) {
-  $name = $pkgs[$i]
-  Write-Host "PROGRESS:$($i+1)/$total/$name"
-  Get-AppxPackage -Name $name -AllUsers -ErrorAction SilentlyContinue | Remove-AppxPackage -AllUsers -ErrorAction SilentlyContinue
-  $pkg2 = Get-AppxPackage -Name $name -AllUsers -ErrorAction SilentlyContinue
-  if ($pkg2) { Write-Host "RESULT:$name=skip" } else { Write-Host "RESULT:$name=ok" }
-}
-Write-Host "DONE"
-`
-  const results = []
-  let lastProgress = { current: 0, total: packages.length, pkg: '' }
-
-  // Stream output line-by-line via the existing runPS helper
-  const r = await runPS(script, 300000)
-  for (const line of (r.out || '').split('\n')) {
-    const l = line.trim()
-    if (l.startsWith('PROGRESS:')) {
-      const parts = l.slice(9).split('/')
-      const current = parseInt(parts[0]) || 0
-      const total   = parseInt(parts[1]) || packages.length
-      const pkg     = parts.slice(2).join('/')
-      lastProgress  = { current, total, pkg }
-      mainWindow?.webContents.send('debloat-progress', lastProgress)
-    } else if (l.startsWith('RESULT:')) {
-      const eq   = l.indexOf('=')
-      const pkg  = l.slice(7, eq)
-      const ok   = l.slice(eq + 1) === 'ok'
-      send(`  [${results.length + 1}/${packages.length}] ${pkg}: ${ok ? 'removed' : 'not found/skipped'}`, ok ? 'ok' : 'info')
-      results.push({ pkg, ok })
-    }
-  }
-  send('UWP removal complete.', 'ok')
-  return results
-})
-
 // Uninstall commands are remembered here (read from the registry by main); the renderer only ever sends back a Key.
 let _win32Uninstall = new Map()
 ipcMain.handle('list-installed-win32', async () => {
@@ -2875,49 +2820,6 @@ const PROTECTED_SERVICES = new Set(['rpcss', 'rpceptmapper', 'dcomlaunch', 'lsm'
   'brokerinfrastructure', 'systemeventsbroker', 'timebrokersvc', 'staterepository', 'windefend', 'wdnissvc', 'securityhealthservice', 'sense'])
 const isProtectedService = id => PROTECTED_SERVICES.has(String(id).toLowerCase())
 
-ipcMain.handle('disable-services', async (_, services) => {
-  const send = (msg, level) => mainWindow?.webContents.send('log', { msg, level, ts: new Date().toLocaleTimeString() })
-  const origStarts = {}
-  if (!Array.isArray(services) || services.length > 200) return { ok: false, origStarts }
-  for (const svc of services) {
-    if (!V.isServiceName(svc)) {
-      send(`  Skipped invalid service name`, 'warn')
-      continue
-    }
-    if (isProtectedService(svc)) {
-      send(`  ${svc}: protected system service — skipped`, 'warn')
-      continue
-    }
-    // Capture current start type before disabling so undo can restore it precisely.
-    const qr = await runFile('sc.exe', ['qc', svc])
-    const match = (qr.out || '').match(/START_TYPE\s*:\s*\d+\s+(\S+)/)
-    if (match) {
-      // sc output uses AUTO_START, DEMAND_START, DISABLED, BOOT_START, SYSTEM_START
-      const raw = match[1].toLowerCase()
-      origStarts[svc] = raw.includes('auto') ? 'auto' : raw.includes('boot') ? 'boot' : raw.includes('system') ? 'system' : 'demand'
-    } else {
-      origStarts[svc] = 'demand'
-    }
-    await runFile('sc.exe', ['config', svc, 'start=', 'disabled'])
-    await runFile('sc.exe', ['stop', svc])
-    send(`  ${svc}: disabled (was ${origStarts[svc]})`, 'ok')
-  }
-  return { ok: true, origStarts }
-})
-
-ipcMain.handle('disable-scheduled-tasks', async (_, tasks) => {
-  const send = (msg, level) => mainWindow?.webContents.send('log', { msg, level, ts: new Date().toLocaleTimeString() })
-  if (!Array.isArray(tasks) || tasks.length > 200) return { ok: false }
-  for (const task of tasks) {
-    if (!task || typeof task.name !== 'string' || task.name.length > 260 || (task.path && String(task.path).length > 260)) continue
-    const safePath = escapePSSingleQuote(String(task.path || ''))
-    const safeName = escapePSSingleQuote(String(task.name || ''))
-    const r = await runPS(`Disable-ScheduledTask -TaskPath '${safePath}' -TaskName '${safeName}' -ErrorAction SilentlyContinue`)
-    send(`  ${task.name}: ${r.ok ? 'disabled' : 'skipped/not found'}`, r.ok ? 'ok' : 'warn')
-  }
-  return { ok: true }
-})
-
 ipcMain.handle('get-unused-devices', async () => {
   // Use pnputil to enumerate all devices including hidden/ghost ones
   const r = await runPS(`
@@ -2968,120 +2870,10 @@ ipcMain.handle('remove-devices', async (_, ids) => {
 })
 
 // ─── Debloat: provisioned UWP packages ───────────────────────────────────────
-ipcMain.handle('scan-provisioned-uwp', async () => {
-  const r = await runPS('Get-AppxProvisionedPackage -Online | Select-Object -ExpandProperty PackageName | ConvertTo-Json', 30000)
-  if (!r.ok || !r.out) return []
-  try { return JSON.parse(r.out) } catch { return r.out.split('\n').map(l => l.trim()).filter(Boolean) }
-})
-
 // ─── Debloat: service status batch query ─────────────────────────────────────
-ipcMain.handle('get-service-statuses', async (_, ids) => {
-  if (!Array.isArray(ids) || !ids.length) return {}
-  const safe = ids.filter(id => /^[\w\-]{1,256}$/.test(id))
-  const listLiteral = safe.map(id => `'${id}'`).join(',')
-  const r = await runPS(`
-$ids = @(${listLiteral})
-foreach ($id in $ids) {
-  $s = Get-Service -Name $id -ErrorAction SilentlyContinue
-  if (!$s) { Write-Host "$id=MISSING"; continue }
-  $startType = $s.StartType.ToString()
-  $status    = $s.Status.ToString()
-  if ($startType -eq 'Disabled') { Write-Host "$id=Disabled" }
-  elseif ($status -eq 'Running')  { Write-Host "$id=Running"  }
-  else                            { Write-Host "$id=Stopped"  }
-}
-`, 20000)
-  const result = {}
-  for (const line of (r.out || '').split('\n')) {
-    const eq = line.indexOf('=')
-    if (eq > 0) result[line.slice(0, eq).trim()] = line.slice(eq + 1).trim()
-  }
-  return result
-})
-
 // ─── Debloat: re-enable a service ────────────────────────────────────────────
-ipcMain.handle('enable-service', async (_, { id, start }) => {
-  const send = (msg, level) => mainWindow?.webContents.send('log', { msg, level, ts: new Date().toLocaleTimeString() })
-  if (!/^[\w\-]{1,256}$/.test(id)) return { ok: false }
-  const startType = ['auto', 'demand', 'boot', 'system'].includes(start) ? start : 'demand'
-  await runCmd(`sc config ${id} start= ${startType}`)
-  const r = await runCmd(`sc start ${id}`)
-  send(`  ${id}: re-enabled (start=${startType})`, 'ok')
-  return { ok: true }
-})
-
 // ─── Debloat: scheduled task state batch query ────────────────────────────────
-ipcMain.handle('get-task-states', async () => {
-  // Query all BLOAT_TASKS names in one PS call by iterating names.
-  // Returns { TaskName: 'Ready'|'Disabled'|'Running'|'MISSING' }
-  const r = await runPS(`
-$tasks = Get-ScheduledTask -ErrorAction SilentlyContinue
-$map = @{}
-foreach ($t in $tasks) { $map[$t.TaskName] = $t.State.ToString() }
-$map | ConvertTo-Json -Compress
-`, 20000)
-  if (!r.ok || !r.out) return {}
-  try { return JSON.parse(r.out) } catch { return {} }
-})
-
 // ─── Debloat: re-enable a scheduled task ─────────────────────────────────────
-ipcMain.handle('enable-scheduled-task', async (_, { path, name }) => {
-  const send = (msg, level) => mainWindow?.webContents.send('log', { msg, level, ts: new Date().toLocaleTimeString() })
-  const safePath = escapePSSingleQuote(String(path || ''))
-  const safeName = escapePSSingleQuote(String(name || ''))
-  const r = await runPS(`Enable-ScheduledTask -TaskPath '${safePath}' -TaskName '${safeName}' -ErrorAction SilentlyContinue`)
-  send(`  ${name}: ${r.ok ? 're-enabled' : 'failed/not found'}`, r.ok ? 'ok' : 'warn')
-  return { ok: r.ok }
-})
-
-// ─── Debloat: Windows Ads/Suggestions registry state ─────────────────────────
-// Each ad toggle maps to a specific registry path + value name.
-const ADS_REGISTRY_MAP = {
-  'lock-screen-ads':   { path: 'HKCU:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\ContentDeliveryManager', name: 'RotatingLockScreenEnabled',        disableVal: 0 },
-  'start-suggestions': { path: 'HKCU:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\ContentDeliveryManager', name: 'SystemPaneSuggestionsEnabled',      disableVal: 0 },
-  'start-tiles':       { path: 'HKCU:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\ContentDeliveryManager', name: 'PreInstalledAppsEnabled',           disableVal: 0 },
-  'silent-app-install':{ path: 'HKCU:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\ContentDeliveryManager', name: 'SilentInstalledAppsEnabled',        disableVal: 0 },
-  'tips-notifications':{ path: 'HKCU:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\ContentDeliveryManager', name: 'SoftLandingEnabled',                disableVal: 0 },
-  'welcome-experience':{ path: 'HKCU:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\ContentDeliveryManager', name: 'SubscribedContentEnabled',          disableVal: 0 },
-  'advertising-id':    { path: 'HKCU:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\AdvertisingInfo',        name: 'Enabled',                          disableVal: 0 },
-  'ms-account-nag':    { path: 'HKCU:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\ContentDeliveryManager', name: 'ShowSyncProviderNotifications',     disableVal: 0 },
-  'spotlight':         { path: 'HKCU:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\ContentDeliveryManager', name: 'RotatingLockScreenOverlayEnabled',  disableVal: 0 },
-  'tailored-exp':      { path: 'HKCU:\\Control Panel\\International\\User Profile',                           name: 'HttpAcceptLanguageOptOut',          disableVal: 1 },
-}
-
-ipcMain.handle('get-ads-states', async () => {
-  const entries = Object.entries(ADS_REGISTRY_MAP)
-  const lines = entries.map(([id, { path, name, disableVal }]) =>
-    `try { $v=(Get-ItemPropertyValue '${path}' '${name}' -EA Stop); if($v -eq ${disableVal}){"${id}=disabled"}else{"${id}=enabled"} } catch {"${id}=default"}`
-  ).join('\n')
-  const r = await runPS(lines, 10000)
-  const result = {}
-  for (const line of (r.out || '').split('\n')) {
-    const eq = line.indexOf('=')
-    if (eq > 0) result[line.slice(0, eq).trim()] = line.slice(eq + 1).trim()
-  }
-  return result
-})
-
-ipcMain.handle('kill-all-ads', async () => {
-  const send = (msg, level) => mainWindow?.webContents.send('log', { msg, level, ts: new Date().toLocaleTimeString() })
-  const script = Object.values(ADS_REGISTRY_MAP).map(({ path, name, disableVal }) =>
-    `New-Item -Path '${path}' -Force -EA SilentlyContinue | Out-Null\nSet-ItemProperty -Path '${path}' -Name '${name}' -Value ${disableVal} -Type DWord -Force -EA SilentlyContinue`
-  ).join('\n')
-  const r = await runPS(script, 15000)
-  send('All Windows ads/suggestions registry keys written.', 'ok')
-  return { ok: r.ok }
-})
-
-ipcMain.handle('set-ads-toggle', async (_, { id, disable }) => {
-  const entry = ADS_REGISTRY_MAP[id]
-  if (!entry) return { ok: false }
-  const { path, name, disableVal } = entry
-  const val = disable ? disableVal : (disableVal === 0 ? 1 : 0)
-  const r = await runPS(`New-Item -Path '${path}' -Force -EA SilentlyContinue | Out-Null\nSet-ItemProperty -Path '${path}' -Name '${name}' -Value ${val} -Type DWord -Force -EA SilentlyContinue`, 8000)
-  return { ok: r.ok }
-})
-
 // ─── Debloat: shell extension scanner ────────────────────────────────────────
 ipcMain.handle('get-shell-extensions', async () => {
   const r = await runPS(`
@@ -3121,59 +2913,7 @@ foreach ($clsid in $approved.Keys) {
   return exts
 })
 
-ipcMain.handle('remove-shell-extension', async (_, req) => {
-  const clsid = req?.clsid
-  const send = (msg, level) => mainWindow?.webContents.send('log', { msg, level, ts: new Date().toLocaleTimeString() })
-  // Validate CLSID format before touching registry
-  if (typeof clsid !== 'string' || !/^\{[0-9A-Fa-f\-]{36}\}$/.test(clsid)) return { ok: false }
-  // Explorer only loads extensions listed in "Shell Extensions\Approved". Removing the approval stops the extension loading
-  // but keeps the COM class registered, so the program that owns it keeps working and the entry can be re-added from the backup.
-  const q = V.psQuote(clsid)
-  const r = await runPS(`
-$removed = 0
-foreach ($p in @('HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Shell Extensions\\Approved', 'HKCU:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Shell Extensions\\Approved')) {
-  $v = (Get-ItemProperty -Path $p -Name ${q} -EA SilentlyContinue).${q}
-  if ($null -ne $v) { Write-Output ("BACKUP|" + $p + "|" + $v); Remove-ItemProperty -Path $p -Name ${q} -Force -EA SilentlyContinue; $removed++ }
-}
-if ($removed -gt 0) { Write-Host "OK" } else { Write-Host "NOTFOUND" }
-`, 10000)
-  const backup = {}
-  for (const line of String(r.out || '').split(/\r?\n/)) {
-    const m = /^BACKUP\|(HK(?:LM|CU):[^|]+)\|(.*)$/.exec(line.trim())
-    if (m) backup[`${clsid}@${m[1]}`] = m[2]
-  }
-  if (Object.keys(backup).length) snapshots.merge('shell-extensions', backup)
-  const ok = r.out.includes('OK')
-  send(`  Shell extension ${clsid}: ${ok ? 'blocked from loading (backup kept)' : 'not found or failed'}`, ok ? 'ok' : 'warn')
-  return { ok }
-})
-
 // ─── Debloat: optional Windows features (DISM) ───────────────────────────────
-ipcMain.handle('get-optional-features', async () => {
-  const r = await runPS('Get-WindowsOptionalFeature -Online -ErrorAction SilentlyContinue | Select-Object FeatureName,State | ConvertTo-Json -Compress', 60000)
-  if (!r.ok || !r.out) return []
-  try {
-    const all = JSON.parse(r.out)
-    const arr = Array.isArray(all) ? all : [all]
-    return arr.map(f => ({ name: f.FeatureName, enabled: f.State === 'Enabled' || f.State === 2 }))
-  } catch { return [] }
-})
-
-ipcMain.handle('disable-optional-feature', async (_, name) => {
-  const send = (msg, level) => mainWindow?.webContents.send('log', { msg, level, ts: new Date().toLocaleTimeString() })
-  if (!name || typeof name !== 'string' || !/^[\w\-\.]{1,128}$/.test(name)) return { ok: false }
-  const safeName = escapePSSingleQuote(name)
-  const r = await runPS(`
-$result = & DISM.exe /Online /Disable-Feature /FeatureName:'${safeName}' /NoRestart
-$out = ($result | Out-String)
-Write-Host $out
-if ($out -match 'restart') { Write-Host "RESTART_NEEDED" }
-`, 120000)
-  const restartNeeded = (r.out || '').includes('RESTART_NEEDED')
-  send(`  Optional feature ${name}: ${r.ok ? 'disabled' : 'failed'}${restartNeeded ? ' (restart required)' : ''}`, r.ok ? 'ok' : 'warn')
-  return { ok: r.ok, restartNeeded }
-})
-
 // ─── Debloat: UserAssist app usage data ──────────────────────────────────────
 ipcMain.handle('get-user-assist', async () => {
   // UserAssist stores ROT13-encoded app paths + FILETIME/run-count in binary values.
@@ -4074,7 +3814,7 @@ function journalSvc() {
       emit: (ch, payload) => mainWindow?.webContents.send(ch, payload),
       loadSettings, saveSettings, writeLog: debugLog,
       noteSettingsWrites: patch => { for (const [k, v] of Object.entries(patch)) _settingsWriteLog.note(k, v) },
-      handlers: { 'gpu-power-limit': powerLimitSvc().undoHandler, dns: dnsUndoHandler, ...autoOptiUndoHandlers },
+      handlers: { 'gpu-power-limit': powerLimitSvc().undoHandler, dns: dnsUndoHandler, ...autoOptiUndoHandlers, ...debloatSvc().handlers },
       manifest: (() => { try { return require('./lib/tweak-manifest.json') } catch { return {} } })(),
     })
     try { _journalSvc.journal.rotate() } catch {}
@@ -13082,6 +12822,95 @@ async function cleanupAutopilot() {
   } catch {}
 }
 app.whenReady().then(() => setTimeout(cleanupAutopilot, 120000))
+
+// ─── Debloat 2.0 (lib/debloat): one catalog, one probe, journaled run, Guard, Way back ───────────────────────────
+const Debloat2 = require('./lib/debloat')
+let _debloat = null
+function debloatSvc() {
+  if (!_debloat) {
+    _debloat = Debloat2.create({
+      runPS: (s, ms) => runPS(s, ms),
+      runRecorded: (...a) => journalSvc().runRecorded(...a),
+      createRestorePoint: () => createRestorePointInternal(() => {}, 'JylliTool_Debloat'),
+      state: { read: () => cuRead('jt_debloat.json', null), write: v => cuWrite('jt_debloat.json', v) },
+      openExternal: url => { if (/^ms-windows-store:\/\/pdp\/\?PFN=[\w.\-%]+$/.test(url)) shell.openExternal(url) },
+      isProtectedService: id => isProtectedService(id),
+    })
+  }
+  return _debloat
+}
+const dbIds = v => (Array.isArray(v) ? v.filter(x => typeof x === 'string' && x.length < 200).slice(0, 400) : [])
+ipcMain.handle('debloat2-scan', async () => { try { return await debloatSvc().scan() } catch { return { ok: false, error: 'scan-failed' } } })
+ipcMain.handle('debloat2-run', async (_, req) => {
+  try {
+    return await debloatSvc().run({ ids: dbIds(req && req.ids), deprovision: typeof (req && req.deprovision) === 'boolean' ? req.deprovision : undefined,
+      restorePoint: req && req.restorePoint === 'skip' ? 'skip' : 'auto', onProgress: p => cuSend('debloat2-progress', p) })
+  } catch (e) { return { ok: false, error: String((e && e.message) || e).slice(0, 200) } }
+})
+ipcMain.handle('debloat2-abort', () => ({ ok: debloatSvc().abort() }))
+ipcMain.handle('debloat2-summary', () => ({ ok: true, summary: debloatSvc().summary() }))
+ipcMain.handle('debloat2-prefs-set', (_, p) => ({ ok: true, prefs: debloatSvc().setPrefs(p || {}) }))
+ipcMain.handle('debloat2-guard-set', (_, mode) => {
+  if (mode !== 'off' && !requiresPremium('debloat2-guard-set')) return { ok: false, reason: 'premium_required' }
+  return { ok: true, guard: debloatSvc().setGuard(mode) }
+})
+ipcMain.handle('debloat2-history', () => {
+  const j = journalSvc()
+  const entries = j.journal.list({ limit: 600 }).filter(e => typeof e.control === 'string' && e.control.startsWith('debloat:')).map(e => ({
+    entryId: e.id, batchId: e.batchId, id: e.control.slice(8), ts: e.ts, result: e.result, fidelity: e.fidelity, undone: !!e.undoneBy,
+    family: ((e.changes || []).find(c => c.kind === 'appx') || {}).family || '' }))
+  return { ok: true, entries, runs: (cuRead('jt_debloat.json', {}) || {}).runs || [] }
+})
+ipcMain.handle('debloat2-undo', async (_, t) => {
+  const target = t && t.batchId ? { batchId: String(t.batchId) } : t && t.entryId ? { entryId: String(t.entryId) } : null
+  if (!target) return { ok: false, error: 'bad_request' }
+  const j = journalSvc()
+  const ents = target.batchId ? j.journal.list({ batchId: target.batchId, limit: 5000 }) : [j.journal.get(target.entryId)].filter(Boolean)
+  const r = await j.undo(target, { force: true })
+  const good = new Set((r.results || []).filter(x => x.ok).map(x => x.entryId))
+  const ids = ents.filter(e => good.has(e.id) && typeof e.control === 'string' && e.control.startsWith('debloat:')).map(e => e.control.slice(8))
+  debloatSvc().forget(ids)
+  return { ok: !!r.ok, ids, error: r.error, results: r.results }
+})
+ipcMain.handle('debloat2-wayback', async (_, req) => {
+  const id = req && typeof req.id === 'string' ? req.id : ''
+  if (!id.startsWith('app:')) return { ok: false, how: 'none' }
+  const ent = journalSvc().journal.list({ limit: 800 }).find(e => e.control === 'debloat:' + id && (e.changes || []).some(c => c.kind === 'appx'))
+  const ch = ent && ent.changes.find(c => c.kind === 'appx')
+  if (!ch) return { ok: false, how: 'none' }
+  const r = await debloatSvc().wayback.restoreApp({ pkg: ch.pkg, family: ch.family })
+  if (r.ok) debloatSvc().forget([id])
+  return r
+})
+// Context-menu (shell extension) entries: removal goes through the journal, so Undo restores the exact approval value.
+ipcMain.handle('debloat2-shell-remove', async (_, req) => {
+  const list = (Array.isArray(req && req.clsids) ? req.clsids : []).filter(c => typeof c === 'string' && /^\{[0-9A-Fa-f\-]{36}\}$/.test(c)).slice(0, 200)
+  const batchId = require('crypto').randomBytes(6).toString('hex')
+  const rows = []
+  for (const clsid of list) {
+    let ok = false
+    try {
+      ok = await journalSvc().runRecorded('debloat:shell:' + clsid, 'apply', { via: 'manual', batchId }, async ps => {
+        const q = V.psQuote(clsid)
+        const r = await ps(`foreach ($p in @('HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Shell Extensions\\Approved','HKCU:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Shell Extensions\\Approved')) { Remove-ItemProperty -Path $p -Name ${q} -Force -ErrorAction SilentlyContinue }`, 15000)
+        return r.ok
+      })
+    } catch { ok = false }
+    rows.push({ clsid, ok })
+  }
+  return { ok: true, batchId, rows }
+})
+async function debloatGuardTick() {
+  try {
+    if (!auth || !auth.isPremium()) return
+    const svc = debloatSvc()
+    if (svc.prefs().guard.mode === 'off') return
+    const ubr = await runPS(`(Get-ItemPropertyValue 'HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion' UBR)`, 8000)
+    const r = await svc.guardCheck({ build: parseInt(String(require('os').release()).split('.')[2], 10) || 0, ubr: parseInt(String(ubr.out || '').trim(), 10) || 0 })
+    if (r.drift.length) cuSend('debloat2-drift', { count: r.drift.length, reapplied: r.reapplied || 0 })
+  } catch {}
+}
+app.whenReady().then(() => setTimeout(debloatGuardTick, 180000))
 
 // Premium explorers (read-only) and the one deleting action they have: send to the Recycle Bin.
 let _cuMapCtl = null

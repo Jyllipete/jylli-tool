@@ -95,7 +95,7 @@ else {
 {
   const tp = path.join(root, 'js', 'tours.js')
   if (fs.existsSync(tp)) {
-    const srcFiles = [path.join(root, 'index.html'), path.join(root, 'js', 'shell.js'), path.join(root, 'js', 'premium.js'), path.join(root, 'js', 'fivem-logic.js'), path.join(root, 'js', 'bios', 'workstation.js'), ...walk(path.join(root, 'js', 'pages')), ...walk(path.join(root, 'js', 'cleanup'))].filter(f => fs.existsSync(f))
+    const srcFiles = [path.join(root, 'index.html'), path.join(root, 'js', 'shell.js'), path.join(root, 'js', 'premium.js'), path.join(root, 'js', 'fivem-logic.js'), path.join(root, 'js', 'bios', 'workstation.js'), ...walk(path.join(root, 'js', 'pages')), ...walk(path.join(root, 'js', 'cleanup')), ...walk(path.join(root, 'js', 'debloat'))].filter(f => fs.existsSync(f))
     const src = srcFiles.map(f => fs.readFileSync(f, 'utf8')).join('\n')
     const ctx = { window: null }; ctx.window = ctx; vm.createContext(ctx)
     vm.runInContext(fs.readFileSync(tp, 'utf8'), ctx, { filename: tp })
