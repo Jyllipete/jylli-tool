@@ -12909,87 +12909,6 @@ ipcMain.handle('get-disk-usage', async () => {
   } catch { return [] }
 })
 
-ipcMain.handle('get-cleanup-sizes', async () => {
-  const lad = process.env.LOCALAPPDATA || ''
-  const apd = process.env.APPDATA || ''
-  const tmp = process.env.TEMP || ''
-  const up  = process.env.USERPROFILE || ''
-  const safe = (p) => p.replace(/'/g, "''")
-
-  // Generic folder-based entries (use recursive size sum)
-  const entries = [
-    { id: 'clean-temp',          paths: [tmp, 'C:\\Windows\\Temp', 'C:\\Windows\\SoftwareDistribution\\Download'] },
-    { id: 'clean-browsers',      paths: [path.join(lad,'Microsoft','Edge','User Data','Default','Cache'), path.join(lad,'Google','Chrome','User Data','Default','Cache'), path.join(lad,'Mozilla','Firefox','Profiles')] },
-    { id: 'clean-discord',       paths: [path.join(apd,'discord','Cache'), path.join(apd,'discord','Code Cache'), path.join(apd,'discord','GPUCache')] },
-    { id: 'clean-nvidia',        paths: [path.join(lad,'NVIDIA','DXCache'), path.join(lad,'NVIDIA','GLCache')] },
-    { id: 'clean-steam',         paths: [path.join(lad,'Steam','htmlcache')] },
-    { id: 'clean-gameservices',  paths: [path.join(lad,'EA Desktop','Temp'), path.join(lad,'Battle.net','Cache'), path.join(lad,'EpicGamesLauncher','Saved','webcache')] },
-    { id: 'clean-errorlogs',     paths: ['C:\\Windows\\Minidump'] },
-    { id: 'clean-spotify',       paths: [path.join(lad,'Spotify','Storage')] },
-    { id: 'clean-roblox',        paths: [path.join(lad,'Roblox','logs'), path.join(tmp,'Roblox')] },
-    { id: 'fivem-clear-cache',   paths: [path.join(lad,'FiveM','FiveM.app','data','cache'), path.join(lad,'FiveM','FiveM.app','data','server-cache')] },
-    { id: 'clean-old-windows',   paths: ['C:\\Windows.old'] },
-    { id: 'clean-winsxs',        paths: ['C:\\Windows\\WinSxS'] },
-    { id: 'clean-vs-temp',       paths: [
-      path.join(up, '.nuget', 'packages'),
-      path.join(lad, 'NuGet', 'Cache'),
-      path.join(lad, 'Microsoft', 'TypeScript'),
-      path.join(lad, 'npm-cache'),
-      path.join(apd, 'npm-cache'),
-    ]},
-  ]
-
-  // Special-cased items requiring PS glob/logic (set paths:[] so generic loop skips them)
-  const psSpecial = `
-    $thumbDir = "$env:LOCALAPPDATA\\Microsoft\\Windows\\Explorer"
-    $tcFiles  = @(Get-ChildItem -Path $thumbDir -Filter "thumbcache_*.db" -Force -EA SilentlyContinue) + @(Get-ChildItem -Path $thumbDir -Filter "iconcache_*.db" -Force -EA SilentlyContinue)
-    $sizes['clean-thumbnails'] = if ($tcFiles) { ($tcFiles | Measure-Object -Property Length -Sum).Sum } else { 0 }
-
-    $bhFiles = @('${ safe(path.join(lad,'Microsoft','Edge','User Data','Default','History'))}','${ safe(path.join(lad,'Microsoft','Edge','User Data','Default','Cookies'))}','${ safe(path.join(lad,'Google','Chrome','User Data','Default','History'))}','${ safe(path.join(lad,'Google','Chrome','User Data','Default','Cookies'))}') | Where-Object { Test-Path $_ } | Get-Item
-    $ffSqlite = Get-ChildItem "$env:APPDATA\\Mozilla\\Firefox\\Profiles" -Filter "places.sqlite" -Recurse -EA SilentlyContinue
-    $sizes['clean-browser-history'] = [long](($bhFiles | Measure-Object -Property Length -Sum).Sum + ($ffSqlite | Measure-Object -Property Length -Sum).Sum)
-
-    $evtxFiles = Get-ChildItem "C:\\Windows\\System32\\winevt\\Logs" -Filter "*.evtx" -Force -EA SilentlyContinue
-    $sizes['clean-eventlogs'] = if ($evtxFiles) { ($evtxFiles | Measure-Object -Property Length -Sum).Sum } else { 0 }
-
-    $fcFiles1 = Get-ChildItem "$env:LOCALAPPDATA\\Microsoft\\Windows" -Filter "FontCache*" -Force -EA SilentlyContinue
-    $fcFile2  = if (Test-Path "C:\\Windows\\System32\\FNTCACHE.DAT") { (Get-Item "C:\\Windows\\System32\\FNTCACHE.DAT").Length } else { 0 }
-    $sizes['clean-fontcache'] = [long](($fcFiles1 | Measure-Object -Property Length -Sum).Sum + $fcFile2)
-
-    $xboxPkg = Get-ChildItem "$env:LOCALAPPDATA\\Packages" -Filter "Microsoft.GamingApp_*" -EA SilentlyContinue | Select-Object -First 1
-    $sizes['clean-xbox'] = if ($xboxPkg -and (Test-Path "$($xboxPkg.FullName)\\LocalCache")) { (Get-ChildItem "$($xboxPkg.FullName)\\LocalCache" -Recurse -Force -EA SilentlyContinue | Measure-Object -Property Length -Sum).Sum } else { 0 }
-
-    $msPkg = Get-ChildItem "$env:LOCALAPPDATA\\Packages" -Filter "Microsoft.WindowsStore_*" -EA SilentlyContinue | Select-Object -First 1
-    $sizes['clean-msstore'] = if ($msPkg -and (Test-Path "$($msPkg.FullName)\\LocalCache")) { (Get-ChildItem "$($msPkg.FullName)\\LocalCache" -Recurse -Force -EA SilentlyContinue | Measure-Object -Property Length -Sum).Sum } else { 0 }
-  `
-
-  // Build PowerShell script measuring all path-based entries
-  const pathEntries = entries.filter(e => e.paths.length > 0)
-  const psLines = pathEntries.map(e => {
-    const pathArr = e.paths.map(p => `'${safe(p)}'`).join(',')
-    return `$sizes['${e.id}'] = @(${pathArr}) | ForEach-Object { if (Test-Path $_) { $s=(Get-ChildItem $_ -Recurse -Force -EA SilentlyContinue | Measure-Object -Property Length -Sum).Sum; if($s){$s}else{0} } else { 0 } } | Measure-Object -Sum | Select-Object -ExpandProperty Sum`
-  }).join('\n    ')
-
-  const r = await runPS(`
-    $sizes = @{}
-    ${psLines}
-    ${psSpecial}
-    $sizes | ConvertTo-Json -Compress
-  `, 45000)
-
-  try {
-    const raw = JSON.parse(r.out?.trim() || '{}')
-    const result = {}
-    for (const [id, val] of Object.entries(raw)) result[id] = Number(val) || 0
-    // Recycle Bin via COM
-    try {
-      const rbR = await runPS(`try { $s=New-Object -ComObject Shell.Application; $b=$s.Namespace(10); $bz=($b.Items()|Measure-Object -Property Size -Sum).Sum; if($bz){Write-Output ([long]$bz)}else{Write-Output 0} } catch { Write-Output 0 }`, 6000)
-      result['clean-recycle'] = parseInt(rbR.out?.trim()) || 0
-    } catch {}
-    return result
-  } catch { return {} }
-})
-
 ipcMain.handle('get-cleanup-history', () => {
   try {
     if (!CLEANUP_HISTORY_PATH || !fs.existsSync(CLEANUP_HISTORY_PATH)) return []
@@ -13045,6 +12964,154 @@ ipcMain.handle('get-disk-projection', async () => {
     } catch {}
     return { totalBytes, freeBytes, projectedFullDate }
   } catch { return null }
+})
+
+// ─── Cleanup 2.0 ─────────────────────────────────────────────────────────────
+// One engine (lib/cleanup) behind the Cleanup tab, the clean-* tweaks, the command palette and Auto-Optimize.
+const Cleanup2 = require('./lib/cleanup')
+const cuSend = (ch, d) => { try { if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send(ch, d) } catch {} }
+const cuFile = n => path.join(app.getPath('userData'), n)
+const cuRead = (n, fallback) => { try { return JSON.parse(fs.readFileSync(cuFile(n), 'utf8')) } catch { return fallback } }
+const cuWrite = (n, v) => { try { fs.writeFileSync(cuFile(n), JSON.stringify(v), 'utf8') } catch {} }
+let _cuHas = null
+const cleanupSvc = Cleanup2.create({
+  env: process.env,
+  runPS: (s, ms) => runPS(s, ms),
+  running: async () => {
+    const r = await runPS('(Get-Process | Select-Object -ExpandProperty Name | Sort-Object -Unique) -join ","', 8000)
+    return new Set(String(r.out || '').split(/[,\r\n]+/).map(s => s.trim().toLowerCase()).filter(Boolean).map(n => n + '.exe'))
+  },
+  has: async () => {
+    if (_cuHas) return _cuHas
+    const r = await runPS('(Get-CimInstance Win32_VideoController | Select-Object -ExpandProperty Name) -join "|"', 8000)
+    const g = String(r.out || '').toLowerCase()
+    _cuHas = { nvidia: /nvidia|geforce|quadro/.test(g), amd: /\bamd\b|radeon/.test(g), fivem: fs.existsSync(path.join(process.env.LOCALAPPDATA || '', 'FiveM', 'FiveM.app')) }
+    return _cuHas
+  },
+  wuPending: async () => /True/i.test((await runPS(`Test-Path 'HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\WindowsUpdate\\Auto Update\\RebootRequired'`, 6000)).out || ''),
+  diskInfo: async () => {
+    const r = await runPS(`Get-PSDrive C | Select-Object @{N='used';E={$_.Used}},@{N='free';E={$_.Free}} | ConvertTo-Json -Compress`, 10000)
+    const raw = JSON.parse(r.out?.trim() || 'null')
+    if (!raw) return null
+    return { freeBytes: Number(raw.free) || 0, usedBytes: Number(raw.used) || 0, totalBytes: (Number(raw.free) || 0) + (Number(raw.used) || 0) }
+  },
+  diskFree: async () => {
+    const r = await runPS(`(Get-PSDrive C).Free`, 8000)
+    const n = parseInt(String(r.out || '').trim(), 10)
+    return Number.isFinite(n) ? n : null
+  },
+})
+
+// The clean-* tweaks delete exactly what the tab shows: same catalog, same rules.
+for (const id of Cleanup2.targets.ids()) {
+  const tw = TWEAKS[id]
+  if (!tw) continue
+  tw.apply = async (s) => {
+    const r = await cleanupSvc.cleanOne(id)
+    if (r.error) throw new Error(r.error)
+    const skipped = ((r.skipped && (r.skipped.inUse || 0)) + (r.skipped && (r.skipped.access || 0))) || 0
+    s(`Freed ${(r.freed / 1048576).toFixed(1)} MB${r.unknownFreed ? ' (size not measurable)' : ''}${skipped ? `; ${skipped} file(s) in use were skipped` : ''}.`, 'ok')
+  }
+}
+
+ipcMain.handle('cleanup2-scan', async (_, opts = {}) => {
+  try {
+    const model = await cleanupSvc.scan({ analyzeDism: !!opts.analyzeDism, onProgress: p => cuSend('cleanup2-progress', { kind: 'scan', ...p }) })
+    const snaps = cuRead('jt_cleanup_scans.json', [])
+    if (!snaps.length || Date.now() - snaps[0].ts > 3600000) {
+      snaps.unshift({ ts: model.ts, free: model.disk ? model.disk.freeBytes : null, sizes: Object.fromEntries(model.items.map(i => [i.id, i.bytes])) })
+      cuWrite('jt_cleanup_scans.json', snaps.slice(0, 60))
+    }
+    return { ok: true, model }
+  } catch (e) { return { ok: false, error: String((e && e.message) || e).slice(0, 200) } }
+})
+
+ipcMain.handle('cleanup2-run', async (_, opts = {}) => {
+  const ids = Array.isArray(opts.ids) ? opts.ids.filter(x => typeof x === 'string').slice(0, 64) : []
+  const confirmed = Array.isArray(opts.confirmed) ? opts.confirmed.filter(x => typeof x === 'string').slice(0, 8) : []
+  const out = await cleanupSvc.run({ ids, confirmed, onProgress: p => cuSend('cleanup2-progress', { kind: 'run', ...p }) })
+  if (out.ok) {
+    const entries = cuRead('jt_cleanup_history.json', [])
+    entries.unshift(Cleanup2.receipt.historyEntry(out.receipt))
+    cuWrite('jt_cleanup_history.json', entries.slice(0, 60))
+  }
+  return out
+})
+ipcMain.handle('cleanup2-abort', () => ({ ok: cleanupSvc.abort() }))
+
+ipcMain.handle('cleanup2-history', async () => {
+  const history = cuRead('jt_cleanup_history.json', [])
+  const snaps = cuRead('jt_cleanup_scans.json', [])
+  const premium = !!(auth && auth.isPremium())
+  const disk = await (async () => { try { const r = await runPS(`(Get-PSDrive C).Free`, 8000); return parseInt(String(r.out || '').trim(), 10) || null } catch { return null } })()
+  const points = [...snaps.filter(s => s.free).map(s => ({ ts: s.ts, free: s.free })), ...history.filter(h => h.diskFreeBytes > 0).map(h => ({ ts: h.ts, free: h.diskFreeBytes }))]
+  const regrowth = premium ? Cleanup2.insights.regrowth(snaps, history) : null
+  return { ok: true, history: history.slice(0, 30), total: Cleanup2.insights.totalReclaimed(history), regrowth, projection: disk ? Cleanup2.insights.projectFull(points, disk) : null, premium }
+})
+
+ipcMain.handle('cleanup2-autopilot-get', () => ({ ok: true, rule: cuRead('jt_cleanup_autopilot.json', { mode: 'off', thresholdBytes: 2 * 1073741824, lastRunTs: 0 }) }))
+ipcMain.handle('cleanup2-autopilot-set', (_, rule) => {
+  if (!requiresPremium('cleanup2-autopilot-set')) return { ok: false, reason: 'premium_required' }
+  const cur = cuRead('jt_cleanup_autopilot.json', { mode: 'off', thresholdBytes: 2 * 1073741824, lastRunTs: 0 })
+  const mode = ['off', 'weekly', 'threshold'].includes(rule && rule.mode) ? rule.mode : 'off'
+  const thr = Math.max(256 * 1048576, Math.min(100 * 1073741824, Number(rule && rule.thresholdBytes) || cur.thresholdBytes))
+  const next = { mode, thresholdBytes: thr, lastRunTs: cur.lastRunTs || 0 }
+  cuWrite('jt_cleanup_autopilot.json', next)
+  return { ok: true, rule: next }
+})
+
+// Autopilot: when the app has been open a while and the rule is due, clean the safe lane quietly. It never touches the review or
+// permanent lanes, never restarts Explorer or services, and stays out of the way while a game is running.
+async function cleanupAutopilot() {
+  try {
+    if (!auth || !auth.isPremium()) return
+    const rule = cuRead('jt_cleanup_autopilot.json', null)
+    if (!rule || rule.mode === 'off') return
+    if (rule.mode === 'weekly' && !Cleanup2.insights.autopilotDue(rule, { lastRunTs: rule.lastRunTs, safeBytes: 0 })) return
+    const model = await cleanupSvc.scan({})
+    if (!Cleanup2.insights.autopilotDue(rule, { lastRunTs: rule.lastRunTs, safeBytes: model.totals.safe })) return
+    const ids = model.items.filter(i => i.lane === 'safe' && i.bytes > 0 && !Cleanup2.targets.get(i.id).needsExplorerRestart && !Cleanup2.targets.get(i.id).needsService && !i.lockedBy.length).map(i => i.id)
+    if (!ids.length) return
+    const out = await cleanupSvc.run({ ids, confirmed: [] })
+    if (!out.ok) return
+    const entries = cuRead('jt_cleanup_history.json', [])
+    entries.unshift({ ...Cleanup2.receipt.historyEntry(out.receipt), auto: true })
+    cuWrite('jt_cleanup_history.json', entries.slice(0, 60))
+    cuWrite('jt_cleanup_autopilot.json', { ...rule, lastRunTs: Date.now() })
+    cuSend('cleanup2-autopilot-done', { freed: out.receipt.total, count: out.receipt.rows.filter(r => r.freed > 0).length })
+  } catch {}
+}
+app.whenReady().then(() => setTimeout(cleanupAutopilot, 120000))
+
+// Premium explorers (read-only) and the one deleting action they have: send to the Recycle Bin.
+let _cuMapCtl = null
+ipcMain.handle('cleanup2-spacemap', async (_, dir) => {
+  if (!requiresPremium('cleanup2-spacemap')) return { ok: false, reason: 'premium_required' }
+  const p = typeof dir === 'string' && /^[A-Za-z]:\\/.test(dir) && dir.length < 520 && !/[*?<>|"\0]/.test(dir) ? path.win32.resolve(dir) : 'C:\\'
+  if (_cuMapCtl) _cuMapCtl.aborted = true
+  const ctl = _cuMapCtl = { aborted: false }
+  const r = await Cleanup2.explore.spaceMap(p, { ctl })
+  return ctl.aborted ? { ok: false, reason: 'superseded' } : r
+})
+ipcMain.handle('cleanup2-largefiles', async () => {
+  if (!requiresPremium('cleanup2-largefiles')) return { ok: false, reason: 'premium_required' }
+  return Cleanup2.explore.largeFiles(process.env)
+})
+ipcMain.handle('cleanup2-trash', async (_, paths) => {
+  if (!requiresPremium('cleanup2-trash')) return { ok: false, reason: 'premium_required' }
+  const list = (Array.isArray(paths) ? paths : []).slice(0, 50)
+  let freed = 0; const failed = []
+  for (const p of list) {
+    if (!Cleanup2.explore.trashAllowed(p, process.env)) { failed.push(p); continue }
+    try {
+      const st = fs.lstatSync(p)
+      if (st.isSymbolicLink()) { failed.push(p); continue }
+      const size = st.isFile() ? st.size : (await Cleanup2.explore.sizeOf(p, fs.promises, Date.now() + 15000)).bytes
+      await shell.trashItem(path.win32.resolve(p))
+      freed += size
+    } catch { failed.push(p) }
+  }
+  return { ok: true, freed, failed }
 })
 
 ipcMain.handle('export-report', async () => {
@@ -14543,22 +14610,6 @@ Get-WinEvent -LogName System -MaxEvents 200 -EA SilentlyContinue |
 })
 
 // ─── Cleanup Extended ────────────────────────────────────────────────────────
-ipcMain.handle('get-cleanup-regrets', async () => {
-  const regretsPath = path.join(app.getPath('userData'), 'cleanup-regrets.json')
-  try {
-    const regrets = JSON.parse(fs.readFileSync(regretsPath, 'utf8'))
-    return Array.isArray(regrets) ? regrets : []
-  } catch { return [] }
-})
-
-ipcMain.handle('get-cleanup-fingerprints', async () => {
-  const fpPath = path.join(app.getPath('userData'), 'cleanup-fingerprints.json')
-  try {
-    const fp = JSON.parse(fs.readFileSync(fpPath, 'utf8'))
-    return fp
-  } catch { return {} }
-})
-
 ipcMain.handle('scan-phantom-apps', async () => {
   if (!requiresPremium('scan-phantom-apps')) return { ok: false, reason: 'premium_required' }
   const r = await runPS(`

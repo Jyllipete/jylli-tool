@@ -116,6 +116,44 @@ function respond(name, args, ctx) {
       { id: 'game-dvr', action: 'apply', ts: now - 3600000 }, { id: 'mmcss', action: 'apply', ts: now - 3500000 }, { id: 'tcp-stack', action: 'restore', ts: now - 86400000 },
     ]
     case 'listProfiles': return premium ? { 'Gaming Mode': { name: 'Gaming Mode', tweaks: { tweak_mmcss: 'applied', 'tweak_game-dvr': 'applied' }, savedAt: now - 86400000 } } : {}
+    // Cleanup 2.0: the REAL model builder on synthetic scan numbers (a realistic gaming PC: open Discord/Chrome, personal files in Temp, Recycle Bin)
+    case 'cleanup2Scan': {
+      const rc = require('../../lib/cleanup/receipt'), M = 1048576, G = 1073741824
+      const s = (bytes, extra) => ({ present: bytes > 0, bytes, files: Math.round(bytes / 400000) + 1, ...extra })
+      const scans = {
+        'clean-temp': s(1.9 * G, { personalFiles: 3, recentBytes: 410 * M, roots: [{ path: 'C:\\Users\\Pete\\AppData\\Local\\Temp', bytes: 1.5 * G }, { path: 'C:\\Windows\\Temp', bytes: 0.4 * G }] }),
+        'clean-wu': s(820 * M), 'clean-errorlogs': s(310 * M), 'clean-thumbnails': s(96 * M), 'clean-fontcache': s(22 * M), 'clean-deliveryopt': s(540 * M),
+        'clean-browsers': s(2.6 * G, { roots: [{ path: 'C:\\Users\\Pete\\AppData\\Local\\Google\\Chrome\\User Data\\Default\\Cache', bytes: 1.7 * G }, { path: 'C:\\Users\\Pete\\AppData\\Local\\Microsoft\\Edge\\User Data\\Default\\Cache', bytes: 0.9 * G }] }),
+        'clean-discord': s(640 * M), 'clean-spotify': s(1.1 * G), 'clean-steam': s(380 * M), 'clean-vscode': s(210 * M), 'clean-msstore': s(0), 'clean-roblox': s(0),
+        'clean-nvidia': s(1.4 * G), 'clean-vs-temp': s(1.2 * G), 'fivem-clear-cache': s(3.2 * G),
+        'clean-winsxs': { present: true, unknown: true, bytes: 0 }, 'clean-eventlogs': s(148 * M),
+        'clean-recycle': s(3.8 * G), 'clean-old-windows': s(21.4 * G), 'clean-browser-history': s(64 * M),
+      }
+      const model = rc.buildModel(scans, { running: new Set(['discord.exe', 'chrome.exe']), has: { nvidia: true, amd: false, fivem: true } })
+      model.ts = Date.now(); model.disk = { totalBytes: 1863 * G, usedBytes: 1051 * G, freeBytes: 812 * G }
+      return { ok: true, model }
+    }
+    case 'cleanup2Run': return { ok: true, receipt: require('../../lib/cleanup/receipt').buildReceipt([
+      { id: 'clean-temp', freed: 1.5 * 1073741824, files: 412, skipped: { inUse: 2, access: 0, tooNew: 9, personal: 3 }, skippedBytes: 410 * 1048576 }, { id: 'clean-browsers', freed: 1.7 * 1073741824, files: 900, skipped: { inUse: 14, access: 0, tooNew: 0, personal: 0 }, skippedBytes: 900 * 1048576 },
+      { id: 'clean-spotify', freed: 1.1 * 1073741824, files: 300, skipped: {}, skippedBytes: 0 }], { startedAt: Date.now() - 6400, endedAt: Date.now(), disk: { before: 812 * 1073741824, after: 816.3 * 1073741824 } }) }
+    case 'cleanup2Abort': return { ok: true }
+    case 'cleanup2AutopilotGet': return { ok: true, rule: { mode: premium ? 'weekly' : 'off', thresholdBytes: 2 * 1073741824, lastRunTs: 0 } }
+    case 'cleanup2AutopilotSet': return { ok: true, rule: args[0] }
+    case 'cleanup2History': {
+      const D = 86400000, G = 1073741824
+      return { ok: true, premium, total: 41.6 * G, history: [6.1, 3.2, 8.4, 2.1, 5.7, 4.4, 9.8, 1.9].map((g, i) => ({ ts: now - i * 4 * D, freedBytes: g * G, itemCount: 7, auto: i % 3 === 1 })),
+        regrowth: premium ? { 'clean-browsers': { perDay: 90 * 1048576, samples: 3 }, 'clean-discord': { perDay: 20 * 1048576, samples: 2 }, 'clean-spotify': { perDay: 40 * 1048576, samples: 2 } } : null, projection: { days: 212, perDay: 3.4 * G, date: now + 212 * D } }
+    }
+    case 'cleanup2SpaceMap': {
+      const G = 1073741824, p = String(args[0] || 'C:\\')
+      const n = (name, gb, kind, dir = true) => ({ name, path: p.replace(/\\$/, '') + '\\' + name, bytes: gb * G, kind, dir })
+      return { ok: true, path: p, total: 1051 * G, partial: false, nodes: [n('Games', 412, 'games'), n('Users', 288, 'media'), n('Program Files', 96, 'apps'), n('Windows', 61, 'system'), n('Program Files (x86)', 54, 'apps'), n('ProgramData', 22, 'system'), n('Projektit', 9, 'files'), n('$Recycle.Bin', 3.8, 'system'), { name: '', path: p, bytes: 2.4 * G, kind: 'files', dir: false, files: 6 }] }
+    }
+    case 'cleanup2LargeFiles': return { ok: true, partial: false, total: 38e9, files: [
+      { path: 'C:\\Users\\Pete\\Videos\\raw-2025-02.mkv', name: 'raw-2025-02.mkv', bytes: 14.2e9, ageDays: 420, reason: 'large-old' }, { path: 'C:\\Users\\Pete\\Downloads\\Windows11_23H2.iso', name: 'Windows11_23H2.iso', bytes: 6.1e9, ageDays: 210, reason: 'installer' },
+      { path: 'C:\\Users\\Pete\\Documents\\vm\\ubuntu.vhdx', name: 'ubuntu.vhdx', bytes: 11.4e9, ageDays: 160, reason: 'large-old' }] }
+    case 'cleanup2Trash': return { ok: true, freed: 14.2e9, failed: [] }
+    case 'scanPhantomApps': return premium ? [{ folderPath: 'C:\\Users\\Pete\\AppData\\Roaming\\OldLauncher', folderName: 'OldLauncher', sizeBytes: 312 * 1048576, label: 'Large orphan' }, { folderPath: 'C:\\Program Files\\Leftover', folderName: 'Leftover', sizeBytes: 12000, label: 'Empty folder' }] : { ok: false, reason: 'premium_required' }
     case 'getTempSize': return { totalMB: 2840 }
     case 'getDiskUsage': return { ok: true, folders: [] }
     case 'getRecycleBinSize': return { sizeMB: 412 }

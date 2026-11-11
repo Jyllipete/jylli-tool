@@ -8,6 +8,16 @@
 - `registerPageCleanup` on nyt additiivinen: Verkko-välilehden live-ping ei jää käyntiin välilehdeltä poistuttaessa
 - `body.game-running` → `body.game-live` (pelin aikainen animaatioiden pysäytys toimii nyt oikeasti); ui.css:n nollaukset eivät enää syö uusien herojen varjoja
 
+### Siivous 2.0 (Vapauta)
+- Siivous on rakennettu uudelleen yhden moottorin (lib/cleanup) päälle: mittaus, siivous, clean-*-säädöt, komentopaletti ja Auto-Optimize käyttävät samaa kohdeluetteloa, joten näytetty luku on se, mikä poistuu (aiemmin esim. WinSxS laskettiin kokonaan ja NVIDIA mitattiin eri kansioista kuin siivottiin)
+- Uusi **Ydin**: levy renkaana, jonka kaaret kasvavat skannauksen aikana ja tyhjenevät siivouksen aikana oikeiden tapahtumien mukaan; keskellä löydetty ja lopuksi vapautettu määrä
+- Kolme kaistaa: **Turvallista poistaa** (valittu valmiiksi), **Kannattaa katsoa** (varjostinvälimuistit, tapahtumalokit, WinSxS, kehityskansiot) ja **Pysyvät** (Roskakori, Windows.old, selainhistoria; ei koskaan yhden napin siivouksessa, jokainen vaatii pitkän painalluksen)
+- Siivous näyttää todelliset poistetut tavut per kohde, kertoo avoimet sovellukset ja omilta näyttävät tiedostot (säilytetään aina) ja päättyy **kuittiin**: vapautettu, vapaa tila ennen ja jälkeen, ohitetut syyineen, yritä uudelleen, tallenna kuva
+- Laajempi kattavuus: kaikki selainprofiilit (Edge, Chrome, Brave, Vivaldi, Opera, Firefox), AMD-varjostinvälimuisti, Delivery Optimization, VS Code, Teams ja Slack, päivitysjäänteet; alle vuorokauden vanhoja temp-tiedostoja ei poisteta
+- Mittaus kestää sekunteja (aiemmin jopa 45 s) eikä seuraa linkkejä tai liitoskohtia
+- **Premium**: Tilakartta (levy puukarttana), Suuret ja unohtuneet tiedostot, Jääneet sovelluskansiot (kaikki Roskakoriin), Autopilotti (hiljainen turvallisen kaistan siivous viikoittain tai rajan ylittyessä) ja täyttymisnopeudet Historiassa
+- Poistettu kuolleet toiminnot (regret-banneri ja turvamerkit, joita mikään ei koskaan täyttänyt) ja vanha Pikasiivous-ikkuna
+
 ### Välilehdet
 - **Windows / Elämänlaatu**: hero kattavuusmittarilla, osioiden rivistö (klikkaus vierittää ja korostaa), Suositellut-painike rajattuna avoimeen välilehteen; Pikavoitot-nauha yhdistettiin heroon; suodatinchipit (Kaikki, Suositellut, Käytössä, Vaatii käynnistyksen, Riskialttiit)
 - **CPU & Muisti / GPU / Virta**: työkalupaneelit omilla välilehdillään (Topologia ja Latenssibudjetti → CPU & Muisti, Thermal → GPU, Tehokkuus → Virta); tyhjät osiot (Audio) piilossa; haku ja laskurit vain avoimelle välilehdelle

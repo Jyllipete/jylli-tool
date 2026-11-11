@@ -165,7 +165,6 @@ contextBridge.exposeInMainWorld('api', {
   getScheduledTaskHistory: (name)  => ipcRenderer.invoke('get-scheduled-task-history', name),
   getTempSize:        ()           => ipcRenderer.invoke('get-temp-size'),
   getDiskUsage:       ()           => ipcRenderer.invoke('get-disk-usage'),
-  getCleanupSizes:        ()     => ipcRenderer.invoke('get-cleanup-sizes'),
   getCleanupHistory:      ()     => ipcRenderer.invoke('get-cleanup-history'),
   addCleanupHistoryEntry: (data) => ipcRenderer.invoke('add-cleanup-history-entry', data),
   getDiskProjection:      ()     => ipcRenderer.invoke('get-disk-projection'),
@@ -368,9 +367,20 @@ contextBridge.exposeInMainWorld('api', {
   aoSetCpuCap:          (appId, capPercent) => ipcRenderer.invoke('ao-set-cpu-cap', { appId, capPercent }),
   aoFingerprintDriftCause: (id, driftedAt) => ipcRenderer.invoke('ao-fingerprint-drift-cause', { id, driftedAt }),
 
+  // Cleanup 2.0
+  cleanup2Scan:         (opts)       => ipcRenderer.invoke('cleanup2-scan', opts),
+  cleanup2Run:          (opts)       => ipcRenderer.invoke('cleanup2-run', opts),
+  cleanup2Abort:        ()           => ipcRenderer.invoke('cleanup2-abort'),
+  cleanup2History:      ()           => ipcRenderer.invoke('cleanup2-history'),
+  cleanup2AutopilotGet: ()           => ipcRenderer.invoke('cleanup2-autopilot-get'),
+  cleanup2AutopilotSet: (rule)       => ipcRenderer.invoke('cleanup2-autopilot-set', rule),
+  cleanup2SpaceMap:     (dir)        => ipcRenderer.invoke('cleanup2-spacemap', dir),
+  cleanup2LargeFiles:   ()           => ipcRenderer.invoke('cleanup2-largefiles'),
+  cleanup2Trash:        (paths)      => ipcRenderer.invoke('cleanup2-trash', paths),
+  onCleanup2Progress:   (cb)         => on('cleanup2-progress', cb),
+  onCleanup2Autopilot:  (cb)         => on('cleanup2-autopilot-done', cb),
+
   // Cleanup Extended
-  getCleanupRegrets:    ()           => ipcRenderer.invoke('get-cleanup-regrets'),
-  getCleanupFingerprints: ()         => ipcRenderer.invoke('get-cleanup-fingerprints'),
   scanPhantomApps:      ()           => ipcRenderer.invoke('scan-phantom-apps'),
   deletePhantomFolder:  (folderPath) => ipcRenderer.invoke('delete-phantom-folder', folderPath),
 
