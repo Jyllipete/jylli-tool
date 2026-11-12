@@ -2709,7 +2709,8 @@ ipcMain.handle('list-restore-points', async () => {
 })
 
 // Newest Windows restore point for the Home "Safety net" card and the nav dot. The renderer combines it with lastRestorePointAt (js/restore-nudge.js).
-ipcMain.handle('get-restore-status', async () => {
+ipcMain.handle('get-restore-status', () => restoreStatusCore())
+async function restoreStatusCore() {
   const lastCreatedAt = loadSettings().lastRestorePointAt || null
   if (!_rpStatusCache) {
     const r = await runPS('Get-ComputerRestorePoint | Sort-Object SequenceNumber -Descending | Select-Object -First 1 CreationTime | ConvertTo-Json')
@@ -2719,7 +2720,7 @@ ipcMain.handle('get-restore-status', async () => {
     _rpStatusCache = { newestAt }
   }
   return { newestAt: _rpStatusCache.newestAt, lastCreatedAt }
-})
+}
 
 ipcMain.handle('restore-to-point', async (_, seq) => {
   const n = assertPositiveInt(seq, 'seq')
@@ -3768,6 +3769,7 @@ ipcMain.handle('auto-opti-verify', async () => {
   }
   const metricsAfter = await AoMetrics.snapshot({ runPS }, { sampleCpu: true })
   const st = AoVerify.verifyState(pv, { lastBootAt, events, drift })
+  try { homeSvc().noteVerify(st) } catch {}    // Home's Proof Ledger keeps the boot before/after after this result is dismissed
   return { ...st, rows: AoMetrics.diff(pv.metricsBefore, metricsAfter) }
 })
 
@@ -9393,7 +9395,8 @@ const TWEAK_VERIFY = {
   'explorer-perf':         { hive: 'HKCU', path: 'Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced',               name: 'LaunchTo',                 expect: 1 },
 }
 
-ipcMain.handle('run-tweak-health', async () => {
+ipcMain.handle('run-tweak-health', () => tweakHealthCore())
+async function tweakHealthCore() {
   const settings = loadSettings()
   const appliedIds = Object.entries(settings)
     .filter(([k, v]) => k.startsWith('tweak_') && v === 'applied')
@@ -9424,7 +9427,7 @@ ipcMain.handle('run-tweak-health', async () => {
   }
 
   return { checked: verifiable.length, reverted }
-})
+}
 
 ipcMain.handle('detect-av', async () => {
   try {
@@ -12561,7 +12564,8 @@ ipcMain.handle('clean-ram', async () => {
   return { ok: r.ok || freeMB > 0, freeMB }
 })
 
-ipcMain.handle('get-health-score', async (_, settings) => {
+ipcMain.handle('get-health-score', (_, settings) => healthScoreCore(settings))
+async function healthScoreCore(settings) {
   const scores = {}
 
   // 1. Temp files size (0-20 points)
@@ -12635,6 +12639,47 @@ ipcMain.handle('get-health-score', async (_, settings) => {
     tempMB, startupCount, diskHealth,
     appliedTweaks, driverDate
   }
+}
+
+// ─── Home (lib/home): the Jylli Index, the facts for the Next Best Move, the Proof Ledger ────────────────────────
+const Home2 = require('./lib/home')
+let _home = null
+function homeSvc() {
+  if (!_home) {
+    _home = Home2.create({
+      state: { read: () => cuRead('jt_home.json', null), write: v => cuWrite('jt_home.json', v) },
+      settings: () => loadSettings(),
+      // The applicability map needs the hardware profile; until it exists Tuned is "not measured" (the profile is built in the background).
+      applicability: () => {
+        if (!_capsProfile) { ensureCapsProfile(false).catch(() => {}); return null }
+        const caps = Caps.deriveCaps(_capsProfile), map = {}
+        for (const id of Object.keys(TWEAKS)) if (Applic.RULES[id]) { const r = Applic.evaluate(id, caps); map[id] = { show: r.show, state: r.state } }
+        return map
+      },
+      restore: () => restoreStatusCore(),
+      diagCached: () => diagSvc().cached(),
+      isAdmin: () => checkAdmin().catch(() => null),
+      cleanupHistory: () => cuRead('jt_cleanup_history.json', []),
+      cleanupScans: () => cuRead('jt_cleanup_scans.json', []),
+      cleanupLane: id => { const t = Cleanup2.targets.get(id); return t ? t.lane : null },
+      debloatSummary: () => debloatSvc().summary(),
+      journal: n => journalSvc().list({ limit: n }),
+      game: () => (_systemContext.gameRunning ? { running: true, name: _systemContext.gameName || '' } : null),
+      driftCheck: () => tweakHealthCore(),
+    })
+  }
+  return _home
+}
+ipcMain.handle('home2-cached', () => { try { return homeSvc().cached() } catch { return { ok: false, last: null } } })
+ipcMain.handle('home2-snapshot', async () => { try { return await homeSvc().snapshot() } catch { return { ok: false, error: 'snapshot-failed' } } })
+ipcMain.handle('home2-drift', async () => { try { return await homeSvc().drift() } catch { return { ok: false, error: 'check-failed' } } })
+// The quick score is only the fallback for a PC without a Vitals checkup; it takes a few seconds, so Home asks for it once and in the background.
+ipcMain.handle('home2-legacy', async () => {
+  try {
+    const r = await healthScoreCore(loadSettings())
+    if (r && typeof r.total === 'number' && r.measured && r.measured.length) homeSvc().noteLegacy(r.total)
+    return { ok: true }
+  } catch { return { ok: false } }
 })
 
 // ─── BIOS workstation (lib/bios): status, SCEWIN import, read-only engines ────

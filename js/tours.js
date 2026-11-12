@@ -9,9 +9,9 @@
   root.JylliTours = {
     home: { v: 1, stops: [
       { sel: '#j-nav', en: { t: 'Everything in five places', b: 'Optimize, Gaming, Clean and System sit in the sidebar. Press Ctrl K from anywhere to search for a page or a tweak.' }, fi: { t: 'Kaikki viidessä paikassa', b: 'Optimointi, Pelaaminen, Siivous ja Järjestelmä löytyvät sivupalkista. Ctrl K hakee mistä tahansa sivun tai säädön.' } },
-      T('home-ring', ['Your PC health', 'One score from your latest scan. It moves as you apply tweaks and as Windows changes.'], ['Koneesi kunto', 'Yksi pistemäärä viimeisimmästä tarkistuksesta. Se muuttuu, kun otat säätöjä käyttöön ja Windows muuttuu.']),
+      T('home-ring', ['The Jylli Index', 'Three bands: health, tuning and protection. Click one to see exactly what the number is made of. Anything that could not be measured is left out, never guessed.'], ['Jylli-indeksi', 'Kolme kaistaa: terveys, viritys ja suojaus. Napsauta yhtä nähdäksesi tarkasti, mistä luku koostuu. Mitä ei voitu mitata, jätetään pois eikä arvata.']),
       T('home-rig', ['Your machine, drawn from your hardware', 'Hover a part to see what it is doing right now. Nothing here changes your system.'], ['Koneesi laitteistosi mukaan', 'Vie osan päälle nähdäksesi, mitä se tekee juuri nyt. Tämä näkymä ei muuta järjestelmää.']),
-      T('home-moves', ['Your first moves', 'A short list we prepared for this PC. Nothing is applied until you choose it.'], ['Ensimmäiset askeleesi', 'Lyhyt lista, jonka laadimme tälle koneelle. Mitään ei oteta käyttöön ennen kuin valitset sen.']),
+      T('home-moves', ['Your next best move', 'One recommendation, picked from what is really going on with this PC. Nothing is applied until you press the button, and each change can be undone.'], ['Paras seuraava siirtosi', 'Yksi suositus, valittu sen perusteella mitä koneella oikeasti tapahtuu. Mitään ei oteta käyttöön ennen kuin painat nappia, ja jokaisen muutoksen voi kumota.']),
     ] },
     windows: { v: 1, stops: [
       T('windows-search', ['Find a tweak', 'Search by name or effect. Safe defaults applies only the well-proven ones.'], ['Etsi säätö', 'Hae nimellä tai vaikutuksella. Turvalliset oletukset ottaa käyttöön vain hyväksi todetut.']),

@@ -22,6 +22,7 @@
 <link rel="stylesheet" href="css/diagnostics.css">
 <link rel="stylesheet" href="css/fivem.css">
 <link rel="stylesheet" href="css/pulse.css">
+<link rel="stylesheet" href="css/home.css">
 <link rel="stylesheet" href="css/bios.css">
 <link rel="stylesheet" href="css/premium.css">
 <link rel="stylesheet" href="css/boot.css">
@@ -498,6 +499,8 @@
 <script src="js/lang/fivem-fi.js"></script>
 <script src="js/lang/pulse-en.js"></script>
 <script src="js/lang/pulse-fi.js"></script>
+<script src="js/lang/home-en.js"></script>
+<script src="js/lang/home-fi.js"></script>
 <script src="js/lang/boot-en.js"></script>
 <script src="js/lang/boot-fi.js"></script>
 <script src="js/esc.js"></script>
@@ -535,6 +538,14 @@
 <script src="js/concierge.js"></script>
 <script src="js/restore-nudge.js"></script>
 <script src="js/restore-nudge-ui.js"></script>
+<script src="lib/home/model.js"></script>
+<script src="lib/home/moves.js"></script>
+<script src="lib/home/proof.js"></script>
+<script src="lib/home/rewind.js"></script>
+<script src="js/home/pure.js"></script>
+<script src="js/home/views.js"></script>
+<script src="js/home/rewind-view.js"></script>
+<script src="js/home/page.js"></script>
 <script src="js/pages/home.js"></script>
 <script src="js/pages/home-concierge.js"></script>
 <script src="js/pages/settings.js"></script>
@@ -875,7 +886,6 @@ async function init(isPremium = false) {
 
   initUiSounds()
   showPage('dashboard')
-  refreshHomeChips()
   startMetrics()
 
   // Delegated toggle bounce — fires once on any .toggle-switch input change
@@ -4281,59 +4291,6 @@ document.addEventListener('click', e => {
 const _genBadgeCache = new Map()
 let _genCounterEl = null, _genRestoreBtnEl = null
 
-function _homeDayWord(d, cap) { return d === 0 ? tG('rpx', cap ? 'todayCap' : 'today') : d === 1 ? tG('rpx', cap ? 'yesterdayCap' : 'yesterday') : tG('rpx', 'daysAgo', { n: d }) }
-function refreshHomeChips() {
-  // Populate AOM last-run badge + sparkline + streak + last optimized from the changelog. Runs on every visit to Home (it used to run once at boot).
-  return api.getChangelog?.().then(cl => {
-    const allRuns = (cl || []).filter(e => e.type === 'aom-run')
-    const runs = allRuns.slice(0, 5)
-    if (!runs.length) return
-    const last = runs[0]
-    const el = document.getElementById('aom-last-run-badge')
-    if (el) {
-      const ageDays = Math.round((Date.now() - new Date(last.ts).getTime()) / 86400000)
-      const agoStr = _homeDayWord(ageDays)
-      const dotColor = n => n >= 10 ? jStatus('ok') : n >= 5 ? jStatus('warn') : jStatus('err')
-      const dots = runs.slice().reverse().map((r, i) => {
-        const n = r.tweakCount || 0
-        const cx = 8 + i * 14
-        const date = new Date(r.ts).toLocaleDateString()
-        return `<circle cx="${cx}" cy="8" r="5" fill="${dotColor(n)}" opacity=".85"><title>${date} · ${n} tweaks</title></circle>`
-      }).join('')
-      const sparkline = runs.length >= 2 ? `<svg width="${8 + (runs.length-1)*14 + 8}" height="16" style="vertical-align:middle;margin-left:6px">${dots}</svg>` : ''
-      el.innerHTML = `<i class="fa fa-clock-rotate-left" style="margin-right:4px;opacity:.5"></i>${tWizard('aomLastRunBadge').replace('{ago}', agoStr).replace('{n}', last.tweakCount || 0)}${sparkline}`
-      el.style.display = 'block'
-    }
-
-    // Populate Last Optimized in identity card
-    const lastOptEl = document.getElementById('db-last-optimized')
-    if (lastOptEl && allRuns.length) {
-      const lastRun = allRuns[0]
-      const ageDays = Math.round((Date.now() - new Date(lastRun.ts).getTime()) / 86400000)
-      lastOptEl.textContent = _homeDayWord(ageDays, true)
-      lastOptEl.style.color = ageDays === 0 ? 'var(--success)' : ageDays <= 7 ? 'var(--c-text-secondary)' : 'var(--c-text-tertiary)'
-    }
-
-    // Streak counter
-    const streakRow = document.getElementById('db-streak-row')
-    const streakChip = document.getElementById('db-streak-chip')
-    const lastRunChip = document.getElementById('db-lastrun-chip')
-    if (streakRow && streakChip && lastRunChip) {
-      // Compute streak: consecutive calendar days ending today with at least one aom-run
-      const today = new Date(); today.setHours(0,0,0,0)
-      const dayKeys = new Set(allRuns.map(r => { const d = new Date(r.ts); d.setHours(0,0,0,0); return d.getTime() }))
-      let streak = 0
-      let check = new Date(today)
-      while (dayKeys.has(check.getTime())) { streak++; check.setDate(check.getDate() - 1) }
-      const lastAgeDays = Math.round((Date.now() - new Date(last.ts).getTime()) / 86400000)
-      const lastAgoStr = _homeDayWord(lastAgeDays)
-      streakChip.innerHTML = `<i class="fa fa-fire jx-198"></i>${tUI('dashStreakDays').replace('{n}', streak)}`
-      if (streak >= 3) streakChip.classList.add('db-streak-fire')
-      lastRunChip.innerHTML = `<i class="fa fa-clock-rotate-left" style="margin-right:5px;opacity:.5"></i>${tUI('dashStreakLastRun').replace('{ago}', lastAgoStr)}`
-      streakRow.style.display = 'flex'
-    }
-  }).catch(() => {})
-}
 
 // Keeps the data-applied flag of every rendered tweak card/row in step with settings, then lets each tab's hero and filter catch up.
 function syncTweakFlags() {
@@ -4503,6 +4460,7 @@ async function updateMetrics() {
     const m = await api.getMetrics()
     window._lastMetrics = m
     Shell.metrics(m)
+    if (currentPage === 'dashboard') return   // Home reads the telemetry hub itself (js/home/page.js); the tiles below belong to Process manager
 
     // Metric tiles
     const cpuPct = m.cpu || 0, gpuPct = m.gpu ?? null, ramPct = m.ram || 0   // gpu stays null when no GPU load source exists
@@ -4842,50 +4800,6 @@ function updateRadar(m) {
   if (_radarInited) drawRadar(_radarScores)
 }
 
-// ─── Quick Health ─────────────────────────────────────────────────────────────
-async function initQuickHealth() {
-  const saved = await api.loadSettings().catch(() => ({}))
-  const appliedCount = Object.entries(saved).filter(([k,v]) => k.startsWith('tweak_') && v === 'applied').length
-  const totalTweaks = SEARCH_INDEX.length
-  const tweakPct = Math.round((appliedCount / totalTweaks) * 100)
-  setQH('tweaks-applied', `${appliedCount} / ${totalTweaks}`, tweakPct, tweakPct >= 60 ? 'good' : tweakPct >= 30 ? 'warn' : 'bad')
-
-  // Debloat: what the last Debloat scan found (js/debloat). "—" until the tab has scanned once.
-  setQHSkeleton('bloat-services'); setQHSkeleton('removable-apps')
-  api.debloat2Summary().then(r => {
-    const d = r && r.summary
-    if (!d) { setQH('bloat-services', '—', 0, ''); setQH('removable-apps', '—', 0, ''); return }
-    const bg = (d.layers.services || 0) + (d.layers.tasks || 0), apps = d.layers.apps || 0
-    setQH('bloat-services', `${bg} ${tUI('dashRemaining')}`, Math.min(100, Math.round(bg / 30 * 100)), bg > 10 ? 'bad' : bg > 4 ? 'warn' : 'good')
-    setQH('removable-apps', `${apps} ${tUI('dashFound')}`, Math.min(100, Math.round(apps / 30 * 100)), apps > 15 ? 'bad' : apps > 8 ? 'warn' : 'good')
-  }).catch(() => { setQH('bloat-services', '—', 0, ''); setQH('removable-apps', '—', 0, '') })
-
-  // Startup items — real count
-  setQHSkeleton('bloat-tasks')
-  api.getStartupItems().then(items => {
-    const enabled = (items || []).filter(i => i.Enabled !== false).length
-    const startPct = Math.min(100, Math.round((enabled / 20) * 100))
-    setQH('bloat-tasks', `${enabled} ${tUI('dashEnabled')}`, startPct, enabled > 10 ? 'bad' : enabled > 5 ? 'warn' : 'good')
-    // Sidebar badge: flag startup-manager tab when >10 startup items are enabled
-    setSidebarBadge('startup-manager', enabled > 10)
-  }).catch(() => setQH('bloat-tasks', '—', 0, ''))
-
-  // Unused devices — real count
-  setQHSkeleton('unused-devices')
-  api.getUnusedDevices().then(devs => {
-    const count = (devs || []).length
-    const devPct = Math.min(100, count * 10)
-    setQH('unused-devices', `${count} ${tUI('dashFound')}`, devPct, count > 5 ? 'bad' : count > 2 ? 'warn' : 'good')
-  }).catch(() => setQH('unused-devices', '—', 0, ''))
-
-  setQHSkeleton('temp-data')
-  api.getTempSize().then(r => {
-    const color = r.mb > 2048 ? 'bad' : r.mb > 512 ? 'warn' : 'good'
-    setQH('temp-data', r.label, r.pct, color)
-    // Sidebar badge: flag cleanup tab when there's >512 MB of junk
-    setSidebarBadge('cleanup', r.mb > 512)
-  }).catch(() => setQH('temp-data', '—', 0, ''))
-}
 
 function setSidebarBadge(page, show) {
   const btn = document.querySelector(`[data-page="${page}"]`)
@@ -4916,63 +4830,6 @@ function setQHSkeleton(id) {
   if (valEl) { valEl.innerHTML = '<span class="skeleton jx-421"></span>'; valEl.className = 'qh-val' }
 }
 
-async function initHealthScoreRing() {
-  const arc = document.getElementById('health-ring-arc')
-  const numEl = document.getElementById('health-score-num')
-  const msgEl = document.getElementById('health-score-msg')
-  const factorsEl = document.getElementById('health-score-factors')
-  if (!arc || !numEl) return
-
-  // The first scan takes several seconds: show progress instead of a bare dash
-  if (msgEl) msgEl.innerHTML = `<i class="fa fa-spinner fa-spin" aria-hidden="true"></i> ${tUI('healthScoreLoading')}`
-  let result
-  try { result = await api.getHealthScore(settings, getPreflightStates()) } catch { result = null }
-  if (!result) { if (msgEl) msgEl.textContent = '—'; return }
-
-  const score = Math.max(0, Math.min(100, Math.round(result.total ?? 0)))
-  window._lastHealthScore = score
-  const circumference = 213.6  // 2π × 34 (hero ring)
-  const offset = circumference - (score / 100) * circumference
-
-  // Color: red below 40, amber 40-70, green/cyan above 70
-  const color = score < 40 ? jStatus('err') : score < 70 ? jStatus('warn') : 'var(--success)'
-  arc.style.stroke = color
-  arc.style.strokeDashoffset = String(circumference)  // start at 0
-  requestAnimationFrame(() => { arc.style.strokeDashoffset = String(offset) })
-
-  numEl.textContent = String(score)
-  numEl.style.color = color
-
-  if (msgEl) {
-    msgEl.textContent = score >= 70 ? tUI('healthScoreGood') : score >= 40 ? tUI('healthScoreFair') : tUI('healthScorePoor')
-    msgEl.style.color = color
-  }
-
-  // Show up to 3 factor labels that are dragging the score down.
-  // result.breakdown: { temp: { score, max, label }, startup: { ... }, ... }
-  if (factorsEl && result.breakdown) {
-    const weak = Object.values(result.breakdown)
-      .filter(f => f.score != null && f.score < f.max * 0.7)
-      .sort((a, b) => (a.score / a.max) - (b.score / b.max))
-      .slice(0, 3)
-      .map(f => `<span class="jx-422">${f.label}</span>`)
-    factorsEl.innerHTML = weak.length ? weak.join('') : `<span class="jx-29">${tUI('healthScoreGood')}</span>`
-  }
-
-  // Set sidebar badge: show dot when score < 70, remove it when score improves to >= 70
-  const navBtn = document.querySelector('[data-page="dashboard"]')
-  if (navBtn) {
-    const existing = navBtn.querySelector('.health-score-badge')
-    if (score >= 70) {
-      if (existing) existing.remove()
-    } else if (!existing) {
-      const badge = document.createElement('span')
-      badge.className = 'health-score-badge'
-      badge.style.cssText = `display:inline-block;width:7px;height:7px;border-radius:50%;background:${color};margin-left:5px;vertical-align:middle;flex-shrink:0`;
-      (navBtn.querySelector('.nav-label') || navBtn.querySelector('span'))?.appendChild(badge)
-    }
-  }
-}
 
 async function runWindowsHealthDash(btn) {
   const banner = document.getElementById('win-health-banner')
@@ -5020,111 +4877,8 @@ async function runWindowsHealthDash(btn) {
   btn.disabled = false
 }
 
-// Also show a dashboard health nudge if health check is stale/never run
-function showHealthNudgeIfNeeded() {
-  const healthTs = parseInt(localStorage.getItem('health_check_ts') || '0')
-  const ageHours = (Date.now() - healthTs) / 3600000
-  const banner = document.getElementById('win-health-banner')
-  if (!banner) return
-  if (healthTs === 0) {
-    banner.style.display = 'block'
-    banner.style.background = 'rgba(var(--c-warning-rgb),0.07)'; banner.style.border = '1px solid rgba(var(--c-warning-rgb),0.2)'; banner.style.color = 'var(--c-warning)'
-    banner.innerHTML = `<i class="fa fa-triangle-exclamation"></i> <strong>${tUI('dashHealthNeverRun').split('—')[0].trim()}</strong> — ${tUI('dashHealthNeverRun').split('—').slice(1).join('—').trim()}`
-  } else if (ageHours > 72) {
-    banner.style.display = 'block'
-    banner.style.background = 'rgba(var(--c-info-rgb),0.07)'; banner.style.border = '1px solid rgba(var(--c-info-rgb),0.2)'; banner.style.color = 'var(--c-info)'
-    banner.innerHTML = `<i class="fa fa-clock-rotate-left"></i> ${tUI('dashHealthStale').replace('{h}', Math.round(ageHours))}`
-  } else if (localStorage.getItem('health_check_ok') === '0') {
-    banner.style.display = 'block'
-    banner.style.background = pinkA(0.07); banner.style.border = `1px solid ${pinkA(0.2)}`; banner.style.color = 'var(--pink)'
-    banner.innerHTML = `<i class="fa fa-triangle-exclamation"></i> <strong>${tUI('dashHealthIssues').split('—')[0].trim()}</strong> — ${tUI('dashHealthIssues').split('—').slice(1).join('—').trim()}`
-  }
-}
 
-// ─── Page: Dashboard ────────────────────────────────────────────────────
-async function loadAiAdvisor() {
-  const card = document.getElementById('ai-advisor-card')
-  if (!card) return
-  try {
-    const status = await window.api.aiGetStatus()
-    if (!status?.loaded) return  // model missing — keep card hidden
 
-    card.style.display = ''
-
-    const chipEl = document.getElementById('ai-provider-chip')
-    if (chipEl) {
-      const labels   = { npu: tUI('aiProviderNpu'), gpu: tUI('aiProviderGpu'), cpu: tUI('aiProviderCpu'), none: '—' }
-      const shortLbl = { npu: 'NPU', gpu: 'GPU', cpu: 'CPU', none: '—' }
-      const colors   = { npu: '#00d4ff', gpu: 'var(--c-accent)', cpu: 'var(--muted)', none: 'var(--muted)' }
-      chipEl.textContent = shortLbl[status.provider] || '—'
-      chipEl.title       = labels[status.provider] || ''
-      chipEl.style.color = colors[status.provider] || 'var(--muted)'
-    }
-
-    document.getElementById('ai-loading').style.display = ''
-    document.getElementById('ai-recs-list').innerHTML = ''
-
-    const result = await window.api.aiGetRecommendations()
-    document.getElementById('ai-loading').style.display = 'none'
-
-    if (!result?.ok) {
-      if (result?.reason === 'premium_required') document.getElementById('ai-unavail').style.display = ''
-      return
-    }
-
-    const tsEl = document.getElementById('ai-last-ts')
-    if (tsEl) tsEl.textContent = tUI('aiAnalysedTs')
-
-    const list = document.getElementById('ai-recs-list')
-    if (!result.recommendations?.length) {
-      list.innerHTML = `
-        <div class="jx-423">
-          <i class="fa fa-circle-check jx-424"></i>
-          <div>
-            <div class="jx-425">${tUI('aiAllGood')}</div>
-            <div class="jx-15">${tUI('aiAllGoodSub')}</div>
-          </div>
-        </div>`
-      return
-    }
-
-    // Intro hint on first render
-    list.innerHTML = `<div class="jx-426">${tUI('aiIntroHint')}</div>`
-
-    for (const rec of result.recommendations) {
-      const row = document.createElement('div')
-      row.style.cssText = 'display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;background:var(--bg-card2);border:1px solid var(--border)'
-      const pct = Math.round(rec.score * 100)
-      const confLabel = pct >= 85 ? tUI('aiMatchStrong') : pct >= 70 ? tUI('aiMatchGood') : tUI('aiMatchPossible')
-      const confColor = pct >= 85 ? jStatus('ok')           : pct >= 70 ? jStatus('warn')          : 'var(--muted)'
-      row.innerHTML = `
-        <div class="jx-6">
-          <div class="jx-427">
-            <span class="jx-428">${rec.name || rec.id}</span>
-            <span style="font-size:11px;color:${confColor};flex-shrink:0">${confLabel}</span>
-          </div>
-          <div class="jx-429">
-            <div style="height:100%;width:${pct}%;background:var(--c-accent);border-radius:9999px;transition:width .4s"></div>
-          </div>
-        </div>
-        <button class="btn btn-ghost btn-sm" style="flex-shrink:0" title="${tUI('aiApplyTip')}" onclick="applyAiRec('${rec.id}',this)">${tUI('aiApplyBtn')}</button>
-      `
-      list.appendChild(row)
-    }
-  } catch {}
-}
-
-async function applyAiRec(tweakId, btn) {
-  btn.disabled = true; btn.textContent = tUI('aiApplying')
-  try {
-    const res = await window.api.runTweak(tweakId, 'apply')
-    const ok = res?.ok || res?.result === 'ok'
-    btn.textContent   = ok ? tUI('aiApplied') : tUI('aiFailed')
-    btn.style.background = ok ? 'var(--c-success)' : 'var(--c-danger)'
-    btn.style.color = '#fff'
-    btn.style.border = 'none'
-  } catch { btn.textContent = tUI('aiError'); btn.style.background = 'var(--c-danger)'; btn.style.color = '#fff' }
-}
 
 // ─── ARIA Panel helpers ───────────────────────────────────────────────────────
 let _ariaAnomalyFeed = []   // recent anomaly events (kept in renderer)
@@ -5182,63 +4936,6 @@ function ariaRenderJournal() {
   } catch {}
 }
 
-// ─── Weekly Optimization Report Card ─────────────────────────────────────────
-async function buildWeeklyReport() {
-  const card = document.getElementById('db-weekly-report')
-  const statsEl = document.getElementById('db-weekly-stats')
-  if (!card || !statsEl) return
-  const dismissedTs = parseInt(localStorage.getItem('weekly_report_dismissed_ts') || '0')
-  if (dismissedTs > 0 && Date.now() - dismissedTs < 7 * 24 * 60 * 60 * 1000) return
-
-  try {
-    const now = Date.now()
-    const weekAgo = now - 7 * 24 * 60 * 60 * 1000
-    const changelog = await api.getChangelog()
-
-    // Count tweaks applied this week
-    const weekEntries = (changelog || []).filter(e => {
-      const ts = new Date(e.timestamp || e.ts || 0).getTime()
-      return ts >= weekAgo && e.action === 'apply'
-    })
-    const tweaksThisWeek = weekEntries.length
-
-    // Compute session stats from local journal store
-    const journal = JSON.parse(localStorage.getItem('aria_journal') || '[]')
-    const weekSessions = journal.filter(j => j.ts >= weekAgo)
-    const sessionCount = weekSessions.length
-    const avgFps = sessionCount > 0
-      ? Math.round(weekSessions.reduce((s, j) => s + (j.avgFps || 0), 0) / sessionCount)
-      : null
-
-    // Health score — from settings
-    const healthNow = settings.lastHealthScore || 0
-
-    // Streak days
-    const aomDays = JSON.parse(localStorage.getItem('aom_run_days') || '{}')
-    const dayKeys = new Set(Object.keys(aomDays).map(k => parseInt(k)))
-    let streak = 0
-    const dayCheck = new Date(); dayCheck.setHours(0,0,0,0)
-    while (dayKeys.has(dayCheck.getTime())) { streak++; dayCheck.setDate(dayCheck.getDate() - 1) }
-
-    if (tweaksThisWeek === 0 && sessionCount === 0 && streak === 0) return
-
-    const statTile = (icon, label, val, color = 'var(--pink)') =>
-      `<div class="jx-434">
-        <div style="font-size:14px;color:${color};margin-bottom:4px"><i class="fa ${icon}"></i></div>
-        <div class="jx-66">${val}</div>
-        <div class="jx-15">${label}</div>
-      </div>`
-
-    statsEl.innerHTML = [
-      statTile('fa-bolt', tUI('weeklyReportTweaks'), tweaksThisWeek, 'var(--pink)'),
-      sessionCount > 0 ? statTile('fa-gamepad', tUI('weeklyReportSessions'), sessionCount, jStatus('ok')) : '',
-      avgFps != null && avgFps > 0 ? statTile('fa-gauge-high', tUI('weeklyReportAvgFps'), avgFps + ' FPS', jStatus('info')) : '',
-      streak > 0 ? statTile('fa-fire', tUI('weeklyReportStreak'), streak + 'd', jStatus('warn')) : '',
-    ].filter(Boolean).join('')
-
-    card.style.display = ''
-  } catch {}
-}
 
 function ariaInitPanel() {
   const enabled = settings.ariaEnabled === true
@@ -5816,20 +5513,6 @@ function drawHistorySparkline(canvasId, values, statId, color) {
 }
 
 
-function buildSpecWarnings() {
-  const si = sysInfo
-  const el = document.getElementById('spec-warnings')
-  if (!el) return
-  const warns = []
-  const w = (k, v) => tG('specWarn', k, v)
-  if (!si.isAdmin) warns.push({ type:'danger', text: w('admin') })
-  if (si.ramGB > 0 && si.ramGB < 8) warns.push({ type:'danger', text: w('ramLow', { n: si.ramGB }) })
-  else if (si.ramGB > 0 && si.ramGB < 16) warns.push({ type:'warning', text: w('ramMid', { n: si.ramGB }) })
-  if (si.isWifi) warns.push({ type:'warning', text: w('wifi') })
-  if (si.isLaptop) warns.push({ type:'warning', text: w('laptop') })
-  if (!si.nvme) warns.push({ type:'info', text: w('noNvme') })
-  el.innerHTML = warns.map(w => `<div class="tip ${w.type}"><span class="tip-icon">${{danger:'<i class="fa fa-triangle-exclamation"></i>',warning:'<i class="fa fa-triangle-exclamation"></i>',info:'<i class="fa fa-circle-info"></i>'}[w.type]}</span><span>${w.text}</span></div>`).join('')
-}
 
 // ── Optimization score weights per tweak ID ──────────────────────────────────
 const TWEAK_OPT_WEIGHTS = {
@@ -5990,7 +5673,7 @@ async function quickClearTemp() {
   } else {
     toast(tUI('dashHealthFailed'), result?.error || '', 'err')
   }
-  initQuickHealth()
+  window.JylliHomePage?.refresh()
 }
 async function quickCleanRam() {
   const btn = document.getElementById('btn-ram-clean')

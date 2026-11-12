@@ -31,6 +31,7 @@ const DIAG = !!arg('diagnostics', false)   // --diagnostics: shoot every Diagnos
 const DEBLOAT = !!arg('debloat', false)   // --debloat: shoot every Debloat scene (--db-state drift|empty|fail for the other states)
 const PULSE = !!arg('pulse', false)   // --pulse: shoot every Pulse scene: the tab, the Cockpit and the HUD (--pu-state live|idle|hitchy|debrief|fail)
 const FIVEM = !!arg('fivem', false)   // --fivem: shoot every FiveM scene (--fv-state clean|lossy|noinstall|first|fail)
+const HOME = !!arg('home', false)   // --home: shoot Home on the real lib/home service (--hm-state attention|healthy|first|fail)
 const BOOT = !!arg('boot', false)   // --boot: shoot the boot scan while it runs (--bt-state first|returning|changed|slow|fail)
 const GALLERY = !!arg('gallery', false)   // shoot tools/ui-preview/gallery.html (every component) instead of the app
 
@@ -52,6 +53,7 @@ ipcMain.handle('mock', async (e, name, args) => {
   if (/^ao[A-Z]/.test(name)) { const r = await AO.handle(name, args, e.sender, ctx); if (r !== undefined) return r }
   if (/^(pulse2|pulseGetPresets|pulseGetCoreLoads|pulseThermalAudit)/.test(name)) { const r = await require('./pulse-fixture').handle(name, args, e.sender, ctx); if (r !== undefined) return r }
   if (name === 'getSystemInfo' && ctx.bt) { const r = await require('./boot-fixture').handle(name, args, e.sender, ctx); if (r !== undefined) return r }
+  if (/^(home2|journalList$|getMetricsHistory$|listSessions$|aiGet|telemetrySubscribe$)/.test(name)) { const r = await require('./home-fixture').handle(name, args, e.sender, ctx); if (r !== undefined) return r }
   if (/^fivem2/.test(name)) { const r = await require('./fivem-fixture').handle(name, args, e.sender, ctx); if (r !== undefined) return r }
   const r = respond(name, args, ctx)
   if (r === undefined) { unknownCalls.set(name, (unknownCalls.get(name) || 0) + 1); return { ok: false, mock: 'no-fixture' } }
@@ -275,7 +277,7 @@ async function main() {
   }
   for (const lang of LANGS) for (const tier of TIERS) for (const size of SIZES) {
     const name = `${TAG}/${lang}-${tier}-${size.join('x')}`
-    const ctx = { lang, premium: tier === 'premium', accent: ACCENT && ACCENT !== true ? ACCENT : null, arrival: !!arg('arrival', false), tours: !!arg('tours', false), debloat: arg('db-state', null), dx: arg('dx-state', null), pu: arg('pu-state', null), fv: arg('fv-state', null), bt: BOOT ? String(arg('bt-state', 'first')) : null }   // --arrival: first-launch flow; --tours: guided tours on (off by default so shots stay clean)
+    const ctx = { hm: HOME || arg('hm-state', null) ? String(arg('hm-state', 'attention')) : null, lang, premium: tier === 'premium', accent: ACCENT && ACCENT !== true ? ACCENT : null, arrival: !!arg('arrival', false), tours: !!arg('tours', false), debloat: arg('db-state', null), dx: arg('dx-state', null), pu: arg('pu-state', null), fv: arg('fv-state', null), bt: BOOT ? String(arg('bt-state', 'first')) : null }   // --arrival: first-launch flow; --tours: guided tours on (off by default so shots stay clean)
     const { win, logs } = await makeWindow('index.html', ctx, size)
     if (BOOT) { await bootShots(win, path.join(OUT, name), logs, report, ctx); win.destroy(); continue }
     const ready = await appReady(win)
@@ -287,7 +289,7 @@ async function main() {
     if (FIVEM) { await fivemShots(win, path.join(OUT, name), logs, report); win.destroy(); continue }
     if (DEBLOAT) { await debloatShots(win, path.join(OUT, name), logs, report); win.destroy(); continue }
     if (AUTO_OPTI) { await (arg('ao-max', false) ? autoOptiMaxShots : autoOptiShots)(win, path.join(OUT, name), logs, report); win.destroy(); continue }
-    for (const page of (ONLY_PAGES || PAGES)) {
+    for (const page of (ONLY_PAGES || (HOME ? ['dashboard'] : PAGES))) {
       logs.length = 0
       await win.webContents.executeJavaScript(`showPage(${JSON.stringify(page)})`).catch(e => logs.push('[showPage] ' + e.message))
       await sleep(1100)
