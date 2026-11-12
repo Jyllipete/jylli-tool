@@ -1,4 +1,4 @@
-/* FiveM 2.0 "Uplink" (js/fivem/*). Tokens only; durations scale with --motion-scale. Root carries .jk so the legacy #page-content resets stay out. */
+/* FiveM "Uplink" (js/fivem/*). Tokens only; durations scale with --motion-scale. Root carries .jk so the legacy #page-content resets stay out. */
 .fv { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
 .fv-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
 .fv-chips { display: flex; gap: 8px; flex-wrap: wrap; }

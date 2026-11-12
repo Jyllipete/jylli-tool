@@ -1,5 +1,5 @@
 'use strict'
-// Preview fixtures for FiveM 2.0: the REAL ini, graphics, readiness, route-verdict, attribution and signature code on a synthetic PC.
+// Preview fixtures for FiveM: the REAL ini, graphics, readiness, route-verdict, attribution and signature code on a synthetic PC.
 // --fv-state clean (default) | lossy (loss starts at the ISP) | noinstall (FiveM not installed) | first (no server saved yet) | fail (scan error)
 const Ini = require('../../lib/fivem/ini')
 const Gfx = require('../../lib/fivem/graphics')

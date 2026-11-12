@@ -41,7 +41,7 @@ LANG.fi = {
     },
     sections: {},
     ui: {
-      // 2.0 shell
+      // shell
       settingsCatGeneral:'Yleiset',settingsCatGaming:'Pelaaminen',settingsCatPrivacy:'Yksityisyys',
       navHome:'Etusivu', navOptimize:'Optimoi', navGaming:'Pelaaminen', navClean:'Siivous', navSystem:'Järjestelmä', navSettings:'Asetukset', navHomeSub:'Järjestelmän yleiskatsaus', navOptimizeSub:'Säädöt, laitteisto, verkko ja korjaukset', navGamingSub:'Pulse, peliprofiilit, FiveM ja viive', navCleanSub:'Siivous, bloatware ja käynnistyssovellukset', navSystemSub:'Diagnostiikka, prosessit, BIOS, ajastin ja historia', navSettingsSub:'Sovelluksen asetukset', tabNetwork:'Verkko', tabFixes:'Korjaukset', tabPulse:'Pulse', tabGames:'Pelit', tabApps:'Sovellukset', tabLatency:'Viive', tabStartup:'Käynnistys', tabDiagnostics:'Diagnostiikka', tabProcesses:'Prosessit', tabBios:'BIOS', tabScheduler:'Ajastin', tabRestore:'Palautuspisteet', tabHistory:'Historia', shellJump:'Hae tai siirry…', shellMore:'Lisää', shellActivity:'Toimintoloki', shellAdvanced:'Lisäasetustila', shellStatusIdle:'Lepotila', shellStatusGame:'Peli käynnissä', shellStatusPulse:'Pulse aktiivinen',
       apply:'Käytä', restore:'Palauta', runFix:'Suorita korjaus', done:'Valmis', running:'Käynnissä…',
@@ -3397,6 +3397,13 @@ aoHeroEyebrow:'Sovellusskanneri', aoHeroDetected:'{n} sovellusta tunnistettu', a
     },
     fixHero: {
       title:'Korjaukset', dial:'käytössä', statApplied:'Käytössä', statRec:'Suositeltu sinulle', cta:'Näytä suositellut', recTitle:'Suositeltu tälle koneelle', eyebrow:'{a} / {n} korjausta käytössä',
+    },
+    rpNudge: {
+      title:'Harkitse palautuspisteen luomista ennen jatkamista',
+      bannerNever:'Sinulla ei ole vielä palautuspistettä. Sen luominen kestää hetken, ja sen avulla Windowsin voi palauttaa, jos jokin muutos menee pieleen.',
+      bannerStale:'Viimeisin palautuspiste on tehty {when}. Tuore piste mahdollistaa Windowsin palautuksen, jos jokin muutos menee pieleen.',
+      create:'Luo palautuspiste', open:'Avaa palautuspisteet', last:'Viimeisin palautuspiste: {when}', none:'Ei yhtään',
+      qhLabel:'Viimeisin palautuspiste', qhTip:'Milloin System Restore tallensi viimeksi pisteen, johon Windowsin voi palauttaa',
     },
     rpx: {
       today:'tänään', yesterday:'eilen', todayCap:'Tänään', yesterdayCap:'Eilen', daysAgo:'{n} pv sitten', hoursAgo:'{n} h sitten', minsAgo:'{n} min sitten', justNow:'juuri nyt',

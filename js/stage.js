@@ -64,7 +64,7 @@
     d.querySelector('#stage-discard').onclick = discard
     d.querySelector('#stage-review').onclick = review
     d.querySelector('#stage-apply').onclick = () => apply()
-    if (root.JylliHold) JylliHold.attach(d.querySelector('#stage-apply'), 650, () => apply())   // 4.0: hold to apply (a plain click still works in Classic)
+    if (root.JylliHold) JylliHold.attach(d.querySelector('#stage-apply'), 650, () => apply())   // hold to apply (a plain click still works in Classic)
   }
 
   function mark(id) {

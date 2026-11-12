@@ -1,5 +1,5 @@
 'use strict'
-// Auto-Optimize 2.0. A full-window flow (scan -> diagnosis -> plan -> run -> result, plus "welcome back" after the restart) built on the
+// Auto-Optimize. A full-window flow (scan -> diagnosis -> plan -> run -> result, plus "welcome back" after the restart) built on the
 // engine in lib/auto-opti. The renderer never names a tweak: it sends finding ids and choices, main rebuilds the plan from its own
 // cached scan. Every number on screen is a detected or measured value.
 // Pure helpers are exported for node tests (test/auto-opti-ui.test.js); the DOM part is guarded by `typeof document`.

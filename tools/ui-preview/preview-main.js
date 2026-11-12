@@ -57,7 +57,7 @@ ipcMain.handle('mock', async (e, name, args) => {
 })
 
 
-// Diagnostics 2.0: idle/cached state, the scan, the result, every view.
+// Diagnostics: idle/cached state, the scan, the result, every view.
 async function diagShots(win, dir, logs, report) {
   const js = c => win.webContents.executeJavaScript(c)
   const until = async (cond, ms = 15000) => { const t0 = Date.now(); while (Date.now() - t0 < ms) { if (await js(cond).catch(() => false)) return true; await sleep(150) } report.push('timeout: ' + cond); return false }
@@ -74,7 +74,7 @@ async function diagShots(win, dir, logs, report) {
   if (LINT) { const r = await js(require('./lint-page')).catch(e => 'lint failed: ' + e.message); report.push('LINT diagnostics: ' + r) }
 }
 
-// Debloat 2.0: every view of the tab, plus the run and the receipt (the mock run answers instantly; the real timing is only visible in the app).
+// Debloat: every view of the tab, plus the run and the receipt (the mock run answers instantly; the real timing is only visible in the app).
 async function debloatShots(win, dir, logs, report) {
   const js = c => win.webContents.executeJavaScript(c)
   const until = async (cond, ms = 15000) => { const t0 = Date.now(); while (Date.now() - t0 < ms) { if (await js(cond).catch(() => false)) return true; await sleep(150) } report.push('timeout: ' + cond); return false }
@@ -102,7 +102,7 @@ async function debloatShots(win, dir, logs, report) {
   logs.forEach(l => report.push('   ' + l))
 }
 
-// Pulse 2.0: the tab as the river fills, a boost, every segment and a debrief; then the Cockpit and the HUD (own windows, same engine).
+// Pulse: the tab as the river fills, a boost, every segment and a debrief; then the Cockpit and the HUD (own windows, same engine).
 async function pulseShots(win, dir, logs, report, ctx, size) {
   const js = c => win.webContents.executeJavaScript(c)
   await js("showPage('pulse')").catch(e => logs.push('[showPage] ' + e.message))
@@ -140,7 +140,7 @@ async function pulseShots(win, dir, logs, report, ctx, size) {
   }
 }
 
-// FiveM 2.0: the Uplink view as it fills, then every other view (the mock route answers with synthetic rounds).
+// FiveM: the Uplink view as it fills, then every other view (the mock route answers with synthetic rounds).
 async function fivemShots(win, dir, logs, report) {
   const js = c => win.webContents.executeJavaScript(c)
   await js("showPage('fivem')").catch(e => logs.push('[showPage] ' + e.message))

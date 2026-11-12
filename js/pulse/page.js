@@ -1,5 +1,5 @@
 'use strict'
-// Pulse 2.0 tab: mounted from js/shell.js. One live subscription (pulse2-live, 4 Hz) feeds the hero, the Frame River, the Limiter,
+// Pulse tab: mounted from js/shell.js. One live subscription (pulse2-live, 4 Hz) feeds the hero, the Frame River, the Limiter,
 // the vitals and the boost receipt; Sessions, Rules and Pre-flight load on demand. Copy: LANG group `pulse2` (js/lang/pulse-*.js).
 // The launch rules keep the ids that the global launchRule*/gs* handlers in index.html find their elements by.
 ;(function (root) {

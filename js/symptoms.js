@@ -1,5 +1,5 @@
 'use strict'
-// Symptom search (4.0): Ctrl K also answers "what is wrong" instead of only "where is it": typing stutter, high ping, loud fans or
+// Symptom search: Ctrl K also answers "what is wrong" instead of only "where is it": typing stutter, high ping, loud fans or
 // slow startup (English or Finnish) offers the page that fixes it. Keywords are search terms only; titles come from the LANG keys.
 // The matching is pure and unit-tested.
 ;(function (root) {

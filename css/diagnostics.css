@@ -1,4 +1,4 @@
-/* Diagnostics 2.0 (js/diagnostics/*). Tokens only; durations scale with --motion-scale. Root carries .jk so the legacy #page-content resets stay out. */
+/* Diagnostics (js/diagnostics/*). Tokens only; durations scale with --motion-scale. Root carries .jk so the legacy #page-content resets stay out. */
 .dx { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
 .dx-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
 .dx-view { display: flex; flex-direction: column; gap: 16px; min-width: 0; }

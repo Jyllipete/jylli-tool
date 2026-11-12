@@ -1,5 +1,5 @@
 'use strict'
-// Share card (4.0): a 1200x630 PNG of a recorded game session for posting. It only prints what the recording holds: average FPS,
+// Share card: a 1200x630 PNG of a recorded game session for posting. It only prints what the recording holds: average FPS,
 // 1 % low, length and the peak GPU temperature when that series was recorded; a missing value is left out, never invented.
 // `stats` is the pure part (unit-tested); `draw` paints it on a canvas with the app's own fonts and accent.
 ;(function (root) {

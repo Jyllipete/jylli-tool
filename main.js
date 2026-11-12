@@ -2623,9 +2623,10 @@ ipcMain.handle('set-low-resource-mode', () => {})
 // One restore point implementation (lib/restore-point.js): admin check, confirms a new sequence number really appeared, restores
 // the throttle and VSS settings it touched. Used by the manual button, auto-snapshot, Auto-Optimize and the batch pipeline.
 const _restorePointSvc = createRestorePointService({ runPS })
+let _rpStatusCache = null // { newestAt } for the session; reset after a point is created
 async function createRestorePointInternal(send, desc = 'JylliTool_AutoOpti') {
   const r = await _restorePointSvc.create(desc, send)
-  if (r.ok) { const s = loadSettings(); s.lastRestorePointAt = Date.now(); saveSettings(s) }
+  if (r.ok) { const s = loadSettings(); s.lastRestorePointAt = Date.now(); saveSettings(s); _rpStatusCache = null }
   return r.ok ? r : { ...r, error: r.reason }
 }
 
@@ -2660,6 +2661,19 @@ ipcMain.handle('list-restore-points', async () => {
     const data = JSON.parse(r.out)
     return Array.isArray(data) ? data : [data]
   } catch (e) { return [] }
+})
+
+// Newest Windows restore point for the Home "Safety net" card and the nav dot. The renderer combines it with lastRestorePointAt (js/restore-nudge.js).
+ipcMain.handle('get-restore-status', async () => {
+  const lastCreatedAt = loadSettings().lastRestorePointAt || null
+  if (!_rpStatusCache) {
+    const r = await runPS('Get-ComputerRestorePoint | Sort-Object SequenceNumber -Descending | Select-Object -First 1 CreationTime | ConvertTo-Json')
+    if (!r.ok) return { newestAt: null, lastCreatedAt, unknown: true }
+    let newestAt = null
+    try { if (r.out) newestAt = require('./js/restore-nudge').parseWmiDate(JSON.parse(r.out).CreationTime) } catch (e) {}
+    _rpStatusCache = { newestAt }
+  }
+  return { newestAt: _rpStatusCache.newestAt, lastCreatedAt }
 })
 
 ipcMain.handle('restore-to-point', async (_, seq) => {
@@ -3439,7 +3453,7 @@ const RETIRED_TWEAKS = {
   'bcd-tweaks':                'Boot menu timeout and boot log only change start-up cosmetics, not game performance.',
   'disable-auto-maintenance':  'Stops TRIM, updates and other upkeep for an anecdotal gain.',
 }
-// FiveM 2.0: the old fivem-* tweaks cannot be applied any more (docs/FIVEM_EVIDENCE.md). Only their restore stays, so changes made by an
+// FiveM: the old fivem-* tweaks cannot be applied any more (docs/FIVEM_EVIDENCE.md). Only their restore stays, so changes made by an
 // earlier version can still be undone from the Client view ("Made by the old FiveM tab").
 function retireFivemTweaks() { for (const id of Fivem2.LEGACY) { const t = TWEAKS[id]; if (t && t.apply) { delete t.apply; t.legacy = true } } }
 let _retiredApplied = false
@@ -3514,7 +3528,7 @@ ipcMain.handle('build-run-plan', async (_, { runMode = 'smart', sysInfo = {} } =
   return { ok: true, plan, context: _systemContext }
 })
 
-// ─── Auto-Optimize 2.0 ───────────────────────────────────────────────────────
+// ─── Auto-Optimize ───────────────────────────────────────────────────────
 // scan (probes -> profile -> findings) -> plan (findings + choices -> steps) -> run. The renderer only ever names finding ids; every
 // step is rebuilt here from the cached profile and the catalog allowlist.
 const AutoOpti = require('./lib/auto-opti')
@@ -4227,7 +4241,7 @@ const TWEAKS = {
     },
     restore: async (s, _, cmd) => { await cmd('powercfg /hibernate on'); s('Hibernate re-enabled.', 'ok') }
   },
-  // ── Added for Auto-Optimize 2.0: each one exists because detection found the problem on this PC ──
+  // ── Added for Auto-Optimize: each one exists because detection found the problem on this PC ──
   'game-mode-on': {
     name: 'Windows Game Mode On',
     category: 'gaming',
@@ -8693,24 +8707,30 @@ ipcMain.handle('clean-power-plans', async () => {
 
 // What's New content
 const WHATS_NEW = [
-  { version: '1.6.0', date: 'Oct 2026', items: [
-    'New — Redesigned interface: graphite surfaces, one accent colour, Geist font; themes now change only the accent',
-    'Security — Sign-in and Premium status are now verified with signed tokens; no secrets or webhooks are stored in the app',
-    'Security — Telemetry is opt-in with a consent dialog; settings, paths and commands are validated before use',
-    'Security — Windows and secondary windows are sandboxed; external navigation is blocked',
-    'Fix — Tweaks that change the registry, power plans, MSI mode and NetBIOS take a snapshot first, so Restore returns your real previous values',
-    'Fix — Game Boost, process freeze and CPU pinning restore correctly; BIOS values are re-read before writing',
-    'Improved — The app quits cleanly and installs updates on exit; Electron updated to v45',
-    'Improved — Toasts and messages are translated (EN/FI); the accent colour carries over to Pulse, FiveM and Arma windows',
+  { version: '1.6.0', date: 'Nov 2026', items: [
+    'New — Pulse: frame river, Limiter (what limits your FPS right now), session debriefs, boost receipt, cockpit window and in-game HUD',
+    'New — Rebuilt tabs: Cleanup, Bloatware, Diagnostics and FiveM (route radar, session recorder) with measured results and undoable changes',
+    'New — BIOS workstation: HP support, SCEWIN import, risk tiers, verified writes and automatic revert, Easy mode',
+    'New — Auto-Optimize rebuilt: real detection, a curated tweak list and Maximum mode',
+    'New — 3D hardware view, hardware heroes (GPU, network, memory, storage), speed test, Replay tab and a game library for Steam and Epic',
+    'New — First-launch flow, guided tours on every tab and suggested first moves',
+    'New — Redesigned interface: new sidebar, Timeline, quick search, new toasts and a shared tab frame',
+    'Improved — Change journal: every tweak can be undone, high-risk tweaks need confirmation and a restore point',
+    'Improved — Tweak audit: no-effect tweaks removed, and each shows only on PCs it fits',
+    'Fix — Failed changes are now reported honestly instead of being marked as done',
+    'Security — Signed tokens, sandboxed windows and opt-in telemetry',
   ], items_fi: [
-    'Uusi — Uudistettu käyttöliittymä: grafiitin sävyiset pinnat, yksi korostusväri ja Geist-fontti; teemat vaihtavat nyt vain korostusvärin',
-    'Tietoturva — Kirjautuminen ja Premium-tila varmennetaan allekirjoitetuilla tokeneilla; sovellukseen ei tallenneta salaisuuksia tai webhookeja',
-    'Tietoturva — Telemetria on vapaaehtoinen ja siitä kysytään suostumus; asetukset, polut ja komennot validoidaan ennen käyttöä',
-    'Tietoturva — Ikkunat on eristetty (sandbox) ja ulkoinen navigointi estetty',
-    'Korjaus — Rekisteriä, virrankäyttösuunnitelmia, MSI-tilaa ja NetBIOSia muuttavat säädöt ottavat ensin tilannekuvan, joten Palauta tuo oikeat aiemmat arvot',
-    'Korjaus — Game Boost, prosessin jäädytys ja CPU-kiinnitys palautuvat oikein; BIOS-arvot luetaan uudelleen ennen kirjoitusta',
-    'Parannus — Sovellus sulkeutuu siististi ja asentaa päivitykset suljettaessa; Electron päivitetty versioon 45',
-    'Parannus — Ilmoitukset ja viestit on käännetty (EN/FI); korostusväri siirtyy Pulse-, FiveM- ja Arma-ikkunoihin',
+    'Uusi — Pulse: ruutuvirta, Rajoittaja (mikä FPS:ää rajoittaa juuri nyt), istuntoyhteenvedot, tehostuskuitti, ohjaamoikkuna ja pelinaikainen HUD',
+    'Uusi — Uudistetut välilehdet: Siivous, Bloatware, Diagnostiikka ja FiveM (reittitutka, istuntojen tallennus) mitattuine tuloksineen ja peruutettavine muutoksineen',
+    'Uusi — BIOS-työpöytä: HP-tuki, SCEWIN-tuonti, riskiluokitus, varmennetut kirjoitukset ja automaattinen palautus, Helppo tila',
+    'Uusi — Automaattioptimointi uusittu: oikea tunnistus, kuratoitu säätölista ja Maksimi-tila',
+    'Uusi — 3D-laitteistonäkymä, laitteistoheroes (GPU, verkko, muisti, levy), nopeustesti, Toisto-välilehti ja pelikirjasto Steam- ja Epic-peleille',
+    'Uusi — Ensikäynnistys, opastetut kierrokset jokaiselle välilehdelle ja ehdotetut ensimmäiset siirrot',
+    'Uusi — Uudistettu käyttöliittymä: uusi sivupalkki, Aikajana, pikahaku, uudet ilmoitukset ja yhteinen välilehtirunko',
+    'Parannus — Muutospäiväkirja: kaikki säädöt voi perua, korkean riskin säädöt vaativat vahvistuksen ja palautuspisteen',
+    'Parannus — Säätöjen auditointi: tehottomat säädöt poistettu ja jokainen näkyy vain koneilla, joille se sopii',
+    'Korjaus — Epäonnistuneet muutokset raportoidaan nyt oikein, eikä niitä enää merkitä onnistuneiksi',
+    'Tietoturva — Allekirjoitetut tokenit, eristetyt ikkunat ja vapaaehtoinen telemetria',
   ]},
   { version: '1.5.9', date: 'Jun 2026', items: [
     // Hardware Detection
@@ -9935,7 +9955,7 @@ Stop-Process -Id ${n} -Force -ErrorAction SilentlyContinue
 
 let _boostDeprioritised = []
 // ─── Pulse Window ─────────────────────────────────────────────────────────────
-// The Cockpit window lives in the Pulse 2.0 block (puOpenCockpit); these keep the old channel names working.
+// The Cockpit window lives in the Pulse block (puOpenCockpit); these keep the old channel names working.
 ipcMain.handle('open-pulse-window', () => {
   if (!requiresPremium('open-pulse-window')) return { ok: false, reason: 'premium_required' }
   return puOpenCockpit()
@@ -11844,7 +11864,7 @@ ipcMain.handle('get-disk-projection', async () => {
   } catch { return null }
 })
 
-// ─── Cleanup 2.0 ─────────────────────────────────────────────────────────────
+// ─── Cleanup ─────────────────────────────────────────────────────────────
 // One engine (lib/cleanup) behind the Cleanup tab, the clean-* tweaks, the command palette and Auto-Optimize.
 const Cleanup2 = require('./lib/cleanup')
 const cuSend = (ch, d) => { try { if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send(ch, d) } catch {} }
@@ -11961,7 +11981,7 @@ async function cleanupAutopilot() {
 }
 app.whenReady().then(() => setTimeout(cleanupAutopilot, 120000))
 
-// ─── Debloat 2.0 (lib/debloat): one catalog, one probe, journaled run, Guard, Way back ───────────────────────────
+// ─── Debloat (lib/debloat): one catalog, one probe, journaled run, Guard, Way back ───────────────────────────
 const Debloat2 = require('./lib/debloat')
 let _debloat = null
 function debloatSvc() {
@@ -12050,7 +12070,7 @@ async function debloatGuardTick() {
 }
 app.whenReady().then(() => setTimeout(debloatGuardTick, 180000))
 
-// ─── Diagnostics 2.0 (lib/diagnostics): one checkup, a 30-day timeline, drivers, benchmarks, repairs ────────────────
+// ─── Diagnostics (lib/diagnostics): one checkup, a 30-day timeline, drivers, benchmarks, repairs ────────────────
 const Diag2 = require('./lib/diagnostics')
 let _diag = null, _diagAdmin = false
 function diagSvc() {
@@ -12117,7 +12137,7 @@ ipcMain.handle('diag2-export-save', async (_, req) => {
 })
 
 
-// ─── Pulse 2.0 (lib/pulse): Flow. One engine behind the tab, the Cockpit window and the in-game HUD ─────────────
+// ─── Pulse (lib/pulse): Flow. One engine behind the tab, the Cockpit window and the in-game HUD ─────────────
 // docs/PULSE_EVIDENCE.md. Frames come from the PresentMon tap in spawnPresentMon; window prefs live in jt_pulse.json;
 // one small debrief per recorded session lives in userData/pulse-debriefs. The boost itself is still activatePulse().
 const Pulse2 = require('./lib/pulse')
@@ -12317,7 +12337,7 @@ pu2Handle('pulse2-close-cockpit', () => { if (pulseWindow && !pulseWindow.isDest
 
 app.on('will-quit', () => { try { puKeys.unregisterAll() } catch {} })
 
-// ─── FiveM 2.0 (lib/fivem): Uplink route radar, session recorder, graphics, client changes, crash lab ──────────────
+// ─── FiveM (lib/fivem): Uplink route radar, session recorder, graphics, client changes, crash lab ──────────────
 // docs/FIVEM_EVIDENCE.md. Every change goes through the change journal (control `fivem2:<id>`); state lives in jt_fivem.json.
 const Fivem2 = require('./lib/fivem')
 let _fivem = null

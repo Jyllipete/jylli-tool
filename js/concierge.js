@@ -57,7 +57,7 @@
     if (input.health && input.health.restorePoint === false) {
       add({ id: 'restore', tab: 'restore', base: 95, blocking: true, impact: 'high', risk: 1, minutes: 1, action: { type: 'tab', page: 'restore-points', tab: 'restore' } })
     }
-    // Auto-Optimize 2.0: offered when it has never run here or the last run is over 30 days old (the caller says it is available)
+    // Auto-Optimize: offered when it has never run here or the last run is over 30 days old (the caller says it is available)
     if (input.autoOptiReady && (!input.lastAutoOptiAt || Date.now() - input.lastAutoOptiAt > 30 * 86400000)) add({ id: 'autoOpti', tab: 'home', base: 90, impact: 'high', risk: 1, minutes: 3, action: { type: 'autoOpti', useCase: (prof && prof.useCase) || undefined } })
     const ess = essentialsIds(input, deps)
     if (ess.length) add({ id: 'essentials', tab: 'windows', base: 60, vars: { n: ess.length }, impact: 'high', risk: 1, minutes: 2, action: { type: 'batch', ids: ess } })

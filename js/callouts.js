@@ -1,5 +1,5 @@
 'use strict'
-// Callouts (4.0): on Home the main parts of the rig carry a small glass plate with their live numbers, joined to the part by a thin
+// Callouts: on Home the main parts of the rig carry a small glass plate with their live numbers, joined to the part by a thin
 // line that follows the camera. The numbers are the same data-metric elements as everywhere else, so a missing sensor reads
 // "Not available" with its reason and nothing is made up. Only shown when the hero window is big enough for them.
 // `layout` is the pure part (unit-tested): it puts plates on the window's left and right edges, level with their part, without overlap.

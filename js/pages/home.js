@@ -1,5 +1,5 @@
 'use strict'
-// Home (dashboard) page. Layout rebuilt on ui.* in the 2.0 UI; every element id that live-update code looks up
+// Home (dashboard) page. Layout rebuilt on ui.* in the UI; every element id that live-update code looks up
 // (updateMetrics, initHealthScoreRing, ARIA, weekly report, quick health, ...) is unchanged.
 function buildDashboard(c) {
   const { html, raw } = ui
@@ -66,6 +66,9 @@ function buildDashboard(c) {
 
   put(conciergeCardHtml())
 
+  // Safety net: filled by JylliRestoreUI (js/restore-nudge-ui.js)
+  put(html`<div id="rp-safety" class="rp-safety"></div>`)
+
   // Live tiles
   const tile =(id, label, valId, trendId, sparkId, footer, unitless) => html`<div class="db-metric-tile j-stat" id="${id}">
     <div class="j-stat-label">${label}</div>
@@ -111,6 +114,7 @@ function buildDashboard(c) {
     { id: 'tweaks-applied', label: tUI('dashTweaksApplied'), btn: tUI('apply'), action: "showPage('windows-opti')", icon: 'bolt', tip: tUI('qhTipTweaksApplied') },
     { id: 'unused-devices', label: tUI('dashUnusedDevices'), btn: tUI('manage'), action: "showPage('debloater')", icon: 'microchip', tip: tUI('qhTipUnusedDevices') },
     { id: 'removable-apps', label: tUI('dashRemovableApps'), btn: tUI('remove'), action: "showPage('debloater')", icon: 'box-open', tip: tUI('qhTipRemovableApps') },
+    { id: 'restore-point', label: tG('rpNudge', 'qhLabel'), btn: tUI('rpCreate'), action: 'rpNudgeCreate()', icon: 'shield-halved', tip: tG('rpNudge', 'qhTip') },
     { id: 'temp-data', label: tUI('dashTempData'), btn: tUI('clear'), action: 'quickClearTemp()', icon: 'broom', tip: tUI('qhTipTempData') },
   ]
   put(html`<div class="db-grid-bottom">${ui.card({
@@ -123,6 +127,8 @@ function buildDashboard(c) {
         <button class="qh-btn j-btn j-btn-sm" type="button" title="${r.tip}" onclick="event.stopPropagation();${r.action}"><i class="fa fa-${r.icon}" aria-hidden="true"></i>${r.btn}</button>
       </div>`)}</div>`,
   })}</div>`)
+
+  window.JylliRestoreUI?.paint(); window.JylliRestoreUI?.refresh()
 
   // This PC
   const cpuShort = (si.cpu || '').replace(/\(R\)|\(TM\)|Intel Core |AMD Ryzen /gi, '').replace(/\s+/g, ' ').trim().split('@')[0].trim()

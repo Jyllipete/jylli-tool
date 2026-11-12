@@ -1,5 +1,5 @@
 'use strict'
-// FiveM 2.0 views besides Uplink: Sessions (flight recorder), Graphics, Client, Crash lab. Each builder gets (host, ctx) and returns
+// FiveM views besides Uplink: Sessions (flight recorder), Graphics, Client, Crash lab. Each builder gets (host, ctx) and returns
 // { refresh }. ctx = { T, esc, el, ago, A, S, show, rescan, toast, confirm }. Pure helpers are exported for node tests.
 ;(function (root) {
   // ── pure ──

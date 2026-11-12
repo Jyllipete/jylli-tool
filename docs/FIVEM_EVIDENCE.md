@@ -1,4 +1,4 @@
-# FiveM 2.0 "Uplink": evidence
+# FiveM "Uplink": evidence
 
 `lib/fivem/` only reads, says and changes what this file justifies. Anything not confirmed here is not shipped; the feature
 degrades instead of guessing. Grades: **documented** (official docs.fivem.net), **community** (several independent guides,
@@ -52,7 +52,7 @@ type them; it does not toggle them.
 **Community** (hosting guides agree; no official page). Safe to clear with FiveM closed: `cache\browser`, `cache\subprocess`,
 `server-cache-priv`, `nui-storage`, and the contents of `server-cache` except its `game` folder. **Never cleared:**
 `cache\game` and `server-cache\game` (multi-GB GTA assets; clearing forces a 4 to 8 GB re-download). The first launch after a
-clear is slower. No FPS gain is claimed. Clearing is done through Cleanup 2.0's target list, not here.
+clear is slower. No FPS gain is claimed. Clearing is done through Cleanup's target list, not here.
 
 ## Graphics (`%APPDATA%\CitizenFX\gta5_settings.xml`)
 

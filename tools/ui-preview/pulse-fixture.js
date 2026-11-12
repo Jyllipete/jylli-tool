@@ -1,5 +1,5 @@
 'use strict'
-// Preview fixtures for Pulse 2.0: the REAL lib/pulse service (frames, river columns, limiter, score, attribution, debrief, pre-flight) driven by a
+// Preview fixtures for Pulse: the REAL lib/pulse service (frames, river columns, limiter, score, attribution, debrief, pre-flight) driven by a
 // synthetic game, so the tab, the Cockpit and the HUD show real engine output. No PresentMon, no PowerShell, no registry.
 // --pu-state live (default) | idle (no game, no frames) | hitchy (heat and stalls) | debrief (history already recorded) | fail (calls fail)
 const Pulse = require('../../lib/pulse')

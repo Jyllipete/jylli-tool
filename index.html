@@ -238,7 +238,7 @@
   </div>
 </div>
 
-<!-- Auto-Optimize 2.0 (js/auto-opti.js): scan, diagnosis, plan, run, result, welcome back -->
+<!-- Auto-Optimize (js/auto-opti.js): scan, diagnosis, plan, run, result, welcome back -->
 <div id="auto-opti" style="display:none"></div>
 
 <!-- What's New modal -->
@@ -425,7 +425,7 @@
   </div>
 </div>
 
-<!-- 4.0 world: the persistent 3D stage behind everything (css/glass.css, js/world.js); outside #app because its entrance animation would turn fixed into relative -->
+<!-- world: the persistent 3D stage behind everything (css/glass.css, js/world.js); outside #app because its entrance animation would turn fixed into relative -->
 <div id="world" aria-hidden="true"><div class="j-twin-slot" id="world-slot" data-twin-view="rig:home"></div><div id="world-vignette"></div></div>
 <div id="app" class="hidden">
   <!-- Title bar -->
@@ -527,6 +527,8 @@
 <script src="js/shell.js"></script>
 <script src="js/premium.js"></script>
 <script src="js/concierge.js"></script>
+<script src="js/restore-nudge.js"></script>
+<script src="js/restore-nudge-ui.js"></script>
 <script src="js/pages/home.js"></script>
 <script src="js/pages/home-concierge.js"></script>
 <script src="js/pages/settings.js"></script>
@@ -2334,7 +2336,7 @@ const SEARCH_INDEX = [
 function startOnboarding() { JylliArrival.start({ rerun: true }) }
 
 // ─── Page: Pulse ─────────────────────────────────────────────
-// Pulse 2.0 lives in js/pulse/* (the tab) and pulse.html / pulse-hud.html (Cockpit and HUD). What stays here is the little the rest of the
+// Pulse lives in js/pulse/* (the tab) and pulse.html / pulse-hud.html (Cockpit and HUD). What stays here is the little the rest of the
 // app reads: whether a boost is running (status pill, tray, game events), the game Auto-Pulse picked, and the preset names.
 const PULSE_PRESET_LIST = [
   { id:'fortnite',     name:'Fortnite' },
@@ -4062,7 +4064,7 @@ async function applyTweak(id, action = 'apply') {
   let result
   try { result = await api.runTweak(id, action) } catch (e) { result = { ok: false, error: String(e?.message || e) } }   // a rejected IPC call must not leave the UI stuck on "Running…"
   if (!result) result = { ok: false }
-  if (result.ok && action === 'apply' && window.JylliWorld) { try { JylliWorld.pulseTweak(id, applyBtn) } catch {} }   // 4.0: light from the button into the part
+  if (result.ok && action === 'apply' && window.JylliWorld) { try { JylliWorld.pulseTweak(id, applyBtn) } catch {} }   // light from the button into the part
 
   // Tweak Diff: snapshot after and persist to tweak_diff_log in localStorage
   if (_diffBefore && result.ok) {
@@ -6134,6 +6136,8 @@ async function quickCreateRP() {
   appendLog(tUI('rpCreating'), 'head')
   const r = await api.createRestorePoint('JylliTool_v1_Quick')
   appendLog(r.ok ? tUI('rpCreated') : `${tUI('rpFailed')} ${r.error}`, r.ok ? 'ok' : 'err')
+  window.JylliRestoreUI?.refresh()
+  return r
 }
 
 async function quickFlushDNS() { await applyTweak('flush-dns') }
@@ -9501,11 +9505,11 @@ async function doAppOpti(id, action = 'apply') {
 }
 
 // ─── Page: Cleanup ────────────────────────────────────────────────────────────
-// Cleanup 2.0: js/cleanup/{core,page,extras}.js on the engine in lib/cleanup. Everything on the tab comes from there.
+// Cleanup: js/cleanup/{core,page,extras}.js on the engine in lib/cleanup. Everything on the tab comes from there.
 function buildCleanup(c) { JylliCleanupPage.mount(c) }
 
 // ─── Page: Debloat ────────────────────────────────────────────────────────────
-// Debloat 2.0: js/debloat/{core,page,views}.js on the engine in lib/debloat (catalog, probe, classify, footprint, run, guard, wayback).
+// Debloat: js/debloat/{core,page,views}.js on the engine in lib/debloat (catalog, probe, classify, footprint, run, guard, wayback).
 function buildDebloater(c) { JylliDebloatPage.mount(c) }
 
 // ─── Page: Restore Points ─────────────────────────────────────────────────────
@@ -9565,7 +9569,7 @@ async function doCreateRP() {
       if (keys.length > 20) keys.slice(0, keys.length - 20).forEach(k => delete snapshot[k])
       localStorage.setItem('rp_tweak_snapshots', JSON.stringify(snapshot))
     } catch {}
-    loadRPList().catch(() => {}); loadRPDiskUsage().catch(() => {})
+    loadRPList().catch(() => {}); loadRPDiskUsage().catch(() => {}); window.JylliRestoreUI?.refresh()
   }
 }
 
@@ -9668,10 +9672,12 @@ async function loadRPList() {
 
   const staleBanner = document.getElementById('rp-stale-banner')
   if (staleBanner) {
-    const autoEnabled = (settings.autoSnapshotDays || '0') !== '0'
-    const sevenDaysAgo = Date.now() - 7 * 86400000
-    const hasRecent = points.some(p => { const d = _rpParseDate(p.CreationTime); return d && d.getTime() > sevenDaysAgo })
-    staleBanner.style.display = (autoEnabled && points.length > 0 && !hasRecent) ? 'flex' : 'none'
+    // Same rule as Home and the nav dot (js/restore-nudge.js): newest of Windows' list and the one Jylli made.
+    const newest = points.reduce((m, p) => { const d = _rpParseDate(p.CreationTime); return d ? Math.max(m, d.getTime()) : m }, 0)
+    const lvl = JylliRestoreNudge.restoreStatus({ newestAt: newest, lastCreatedAt: settings.lastRestorePointAt })
+    staleBanner.style.display = lvl.level === 'fresh' ? 'none' : 'flex'
+    const bt = document.getElementById('rp-stale-text')
+    if (bt) bt.textContent = lvl.level === 'never' ? tG('rpNudge', 'bannerNever') : tG('rpNudge', 'bannerStale', { when: _rpRelAge(lvl.ageMs) })
   }
 
   if (!points.length) {

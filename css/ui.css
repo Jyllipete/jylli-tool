@@ -1,4 +1,4 @@
-/* ─── Jylli UI 2.0 component layer ───────────────────────────────────────────
+/* ─── Jylli UI component layer ───────────────────────────────────────────
    Every class is j- prefixed so it cannot collide with legacy css/style.css while old pages still exist.
    Emitted by js/ui.js; shell classes (titlebar, sidebar, statusbar, drawer, modal, toast, palette) are used by index.html. */
 
@@ -459,7 +459,7 @@
 .process-table .sort-arrow.asc { display: inline-block; transform: rotate(180deg); }
 .j-card-actions .j-input { width: 160px; height: 26px; font-size: var(--fs-2); }
 
-/* ═══ Legacy section cards (makeSection) in the 2.0 look ═══ */
+/* ═══ Legacy section cards (makeSection) in the current look ═══ */
 #page-content .section-card { margin-bottom: 14px; padding: 0; background: var(--surface-1); border: 1px solid var(--hairline); border-radius: var(--r-md); box-shadow: var(--hairline-top); overflow: hidden; animation: none; transform: none; }
 #page-content .section-card:hover { border-color: var(--hairline); }
 #page-content .section-card::before, #page-content .section-card::after { display: none; }
@@ -994,3 +994,17 @@ html #loading { flex-direction: row; justify-content: flex-start; padding-left: 
 .j-twin-svg .j-twin-part { stroke: rgba(255,255,255,0.55); }
 .j-twin-svg .j-twin-decor { stroke: rgba(255,255,255,0.32); }
 .j-twin-svg .j-twin-ghost { stroke: rgba(255,255,255,0.5); }
+
+/* Restore-point nudge (js/restore-nudge-ui.js): Safety net card on Home, dot on the System nav item and Restore tab */
+.rp-safety:empty { display: none; }
+.rp-safety { margin-bottom: 12px; }
+.rp-safety-callout { align-items: center; flex-wrap: wrap; }
+.j-nav-dot { margin-left: auto; width: 8px; height: 8px; border-radius: 50%; background: var(--c-warning); flex: none; }
+.j-nav-dot + .j-nav-count { margin-left: 6px; }
+.j-collapsed .j-nav-item { position: relative; }
+.j-collapsed .j-nav-dot { position: absolute; top: 8px; right: 10px; }
+.rp-tab-dot { margin-left: 6px; align-self: center; }
+.rp-pulse, #rp-stale-btn { position: relative; }
+.rp-pulse::after, #rp-stale-btn::after { content: ''; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; opacity: 0; box-shadow: 0 0 0 4px rgba(var(--c-warning-rgb), .4); animation: jxRing 2s ease-in-out infinite; }
+.j-nav-dot.rp-pulse::after, .rp-tab-dot.rp-pulse::after { border-radius: 50%; }
+@media (prefers-reduced-motion: reduce) { .rp-pulse::after, #rp-stale-btn::after { animation: none; opacity: 1; } }

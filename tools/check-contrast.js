@@ -70,7 +70,7 @@ for (const [name, vars, scheme] of [['dark', dark, 'dark'], ['light', light, 'li
     if (fgOn < 3) { fail++; console.log(`✗ ${name}: accent-fg for '${k}' on surface-1 = ${fgOn.toFixed(2)} (< 3)`) }
   }
 }
-// 4.0 glass: surfaces over the world must still clear AA for the text on them, even over the brightest thing the rig can put behind
+// glass: surfaces over the world must still clear AA for the text on them, even over the brightest thing the rig can put behind
 // them (a bloomed fan ring or the case glass catching the light, sampled at roughly #B8B8C8). Each rule's own rgba() stops are read
 // from css/glass.css, translucent ones composited over that backdrop, and the lightest result is the one tested.
 const glass = fs.readFileSync(path.join(__dirname, '..', 'css', 'glass.css'), 'utf8')

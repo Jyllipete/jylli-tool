@@ -1,5 +1,5 @@
 'use strict'
-// Hold to apply (4.0): anything that changes the system is confirmed by holding the button while a fill crosses it. Releasing
+// Hold to apply: anything that changes the system is confirmed by holding the button while a fill crosses it. Releasing
 // early cancels. Pointer, Space and Enter all work. Without the world (Classic) or with reduced motion a plain click still runs it,
 // so nothing is ever reachable only by a long press. `progress` is the pure part (unit-tested).
 ;(function (root) {

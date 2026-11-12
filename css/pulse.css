@@ -1,4 +1,4 @@
-/* Pulse 2.0 "Flow" (js/pulse/*). Tokens only; durations scale with --motion-scale. The tab root carries .jk so the legacy #page-content
+/* Pulse "Flow" (js/pulse/*). Tokens only; durations scale with --motion-scale. The tab root carries .jk so the legacy #page-content
    resets stay out; the Cockpit window (pulse.html) loads the same file. Nothing animates while a game runs (body.game-live). */
 .pu { display: flex; flex-direction: column; gap: 16px; min-width: 0; --tone: var(--c-accent-rgb); }
 .pu [hidden], .pu-keep[hidden] { display: none !important; }

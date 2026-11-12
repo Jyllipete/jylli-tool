@@ -27,7 +27,7 @@ class JylliSensor
         "cpu_usage",
         "ram_usage",
         "gpu_mem_usage",
-        // appended in 3.0 (the schema is sent first, so readers map by id): fans, pump, memory junction
+        // appended later (the schema is sent first, so readers map by id): fans, pump, memory junction
         "gpu_fan_rpm",
         "gpu_fan_pct",
         "gpu_mem_temp",

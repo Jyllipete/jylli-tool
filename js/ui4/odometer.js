@@ -1,5 +1,5 @@
 'use strict'
-// Rolling digits (4.0): a live number changes digit by digit instead of jumping. set(el, text) keeps one column per digit and
+// Rolling digits: a live number changes digit by digit instead of jumping. set(el, text) keeps one column per digit and
 // moves a 0-9 strip with a transform, so only the compositor animates. The text is the single source of truth: it is also the
 // aria-label, and with the world off, in Classic or with reduced motion the element just gets plain text.
 // `plan` is the pure part (unit-tested): it says whether the column structure must be rebuilt and which digit each column shows.

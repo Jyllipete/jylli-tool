@@ -1,4 +1,4 @@
-# Pulse 2.0 evidence
+# Pulse evidence
 
 `lib/pulse/` only reads, says and measures what this file justifies. A number that cannot be measured is shown as "not measured" (an en dash) and never counts as zero, as a pass or as a fail. Anything unconfirmed is not shipped.
 

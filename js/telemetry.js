@@ -84,7 +84,7 @@
       const text = r.ok ? `${r.text}${r.unit ? (r.unit === '%' || r.unit === '°C' ? '' : ' ') + r.unit : ''}` : r.text
       if (root.JylliOdo && el.hasAttribute('data-odo')) root.JylliOdo.set(el, text)
       else if (el.textContent !== text) el.textContent = text
-      // with the provenance tag (4.0) the native tooltip is replaced; without it the title stays
+      // with the provenance tag the native tooltip is replaced; without it the title stays
       if (root.JylliProv) { if (el._prov !== r.title) { el._prov = r.title; el.setAttribute('data-prov', r.title) } if (el.hasAttribute('title')) el.removeAttribute('title') } else if (el.title !== r.title) el.title = r.title
       const na = !r.ok
       if (el._na !== na) { el._na = na; el.classList.toggle('j-metric-na', na) }

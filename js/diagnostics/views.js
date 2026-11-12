@@ -1,5 +1,5 @@
 'use strict'
-// Diagnostics 2.0 secondary views, built the first time they are opened: Timeline, Drivers, Benchmarks, Report.
+// Diagnostics secondary views, built the first time they are opened: Timeline, Drivers, Benchmarks, Report.
 // Each builder is (host, ctx) -> { refresh() }; ctx comes from page.js ({ T, esc, el, ago, S, api, show, rescan, runFix }).
 ;(function (root) {
   const DAY = 86400000

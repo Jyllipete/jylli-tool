@@ -1,5 +1,5 @@
 'use strict'
-// JylliWorld (4.0 "Through the glass"): the director of the persistent 3D stage behind the whole app. It decides whether the world
+// JylliWorld ("Through the glass"): the director of the persistent 3D stage behind the whole app. It decides whether the world
 // is on (quality tier, dark scheme, 3D not off), gives pages without a hero slot a camera shot, projects the one light onto
 // every glass edge, and runs the light pulses that connect an action to the part it changed. Pure lookups are unit-tested.
 ;(function (root) {

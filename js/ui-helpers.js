@@ -343,7 +343,7 @@ window.addEventListener('unhandledrejection', e => {
 })
 
 function toast(title, msg = '', type = 'ok', duration = 3500, opts) {
-  if (window.JylliToast) return JylliToast.show(title, msg, type, duration, opts || {})   // 4.0 toast (js/ui4/toast.js); everything below is the fallback
+  if (window.JylliToast) return JylliToast.show(title, msg, type, duration, opts || {})   // toast (js/ui4/toast.js); everything below is the fallback
   const typeMap = { success: 'ok', error: 'err' }
   const t_type = typeMap[type] || type
   const validTypes = { ok: 1, err: 1, warn: 1, info: 1 }

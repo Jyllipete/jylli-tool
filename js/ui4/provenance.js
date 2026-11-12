@@ -1,5 +1,5 @@
 'use strict'
-// Provenance tags (4.0): hover or focus any live number and a small tag says where it came from and how old it is. The text is
+// Provenance tags: hover or focus any live number and a small tag says where it came from and how old it is. The text is
 // built by JylliTelemetry.fmt (data-prov, e.g. "from nvidia-smi · 0.8s ago") or says why there is no value; nothing is invented.
 ;(function (root) {
   if (typeof document === 'undefined') return

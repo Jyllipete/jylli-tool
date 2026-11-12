@@ -1,4 +1,4 @@
-// FiveM 2.0 "Uplink" copy (group `fivem2`, read with tG('fivem2', key, vars)). Key conventions:
+// FiveM "Uplink" copy (group `fivem2`, read with tG('fivem2', key, vars)). Key conventions:
 //   v_/vd_<verdict> route verdict title/lead · t_/w_/a_<finding> pre-flight title/why/button · n_/d_/r_<tweak> name/description/risk
 //   g_<xml key> graphics setting · o_<step> option label · kd_<ini key> · sig_/sigf_<signature> · mod_<id> · cause_<id> · ln_<old tweak id>
 // Names like FiveM, GTA V, CPU, GPU, VRAM, ICMP, TCP, MTU, Wi-Fi stay as they are in every language.

@@ -1,4 +1,4 @@
-/* Debloat 2.0 (js/debloat/*). Tokens only; durations scale with --motion-scale. Root carries .jk so the legacy #page-content resets stay out. */
+/* Debloat (js/debloat/*). Tokens only; durations scale with --motion-scale. Root carries .jk so the legacy #page-content resets stay out. */
 .db { --l-apps: var(--c-accent-rgb); --l-services: var(--c-info-rgb); --l-tasks: var(--c-warning-rgb); --l-ads: 192,132,252; --l-features: var(--c-success-rgb);
   display: flex; flex-direction: column; gap: 16px; min-width: 0; }
 .db-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; }

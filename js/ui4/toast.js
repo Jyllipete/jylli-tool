@@ -1,5 +1,5 @@
 'use strict'
-// Toasts (4.0): the one place for "something happened, here is the way back". Same call as before, toast(title, msg, type, ms), plus
+// Toasts: the one place for "something happened, here is the way back". Same call as before, toast(title, msg, type, ms), plus
 // an optional 5th argument { action: { label, run }, tag, part } so Undo lives inside the toast (the old undo snackbar is gone).
 // Newest on top, at most three visible ("and 2 more" for the rest), the lifetime pauses while the pointer or focus is on a toast,
 // long names are shortened in the middle, confirmations stay quiet while a game is in front, errors never do.

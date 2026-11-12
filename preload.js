@@ -61,6 +61,7 @@ contextBridge.exposeInMainWorld('api', {
   journalUndo:        (req)        => ipcRenderer.invoke('journal-undo', req),
   createRestorePoint: (desc)       => ipcRenderer.invoke('create-restore-point', desc),
   listRestorePoints:  ()           => ipcRenderer.invoke('list-restore-points'),
+  getRestoreStatus:   ()           => ipcRenderer.invoke('get-restore-status'),
   restoreToPoint:     (seq)        => ipcRenderer.invoke('restore-to-point', seq),
   listInstalledWin32: ()           => ipcRenderer.invoke('list-installed-win32'),
   uninstallWin32Apps: (items)      => ipcRenderer.invoke('uninstall-win32-apps', items),
@@ -102,7 +103,7 @@ contextBridge.exposeInMainWorld('api', {
   pulseThermalAudit:  ()           => ipcRenderer.invoke('pulse-thermal-audit'),
   pulseSaveSession:       (record) => ipcRenderer.invoke('pulse-save-session', record),
   pulseGetCoreLoads:      ()       => ipcRenderer.invoke('pulse-get-core-loads'),
-  // Pulse 2.0 (lib/pulse): one engine behind the tab, the Cockpit window and the HUD. on*() returns an unsubscribe function.
+  // Pulse (lib/pulse): one engine behind the tab, the Cockpit window and the HUD. on*() returns an unsubscribe function.
   pulse2Status:           ()       => ipcRenderer.invoke('pulse2-status'),
   pulse2Subscribe:        ()       => ipcRenderer.invoke('pulse2-subscribe'),
   pulse2Unsubscribe:      ()       => ipcRenderer.invoke('pulse2-unsubscribe'),
@@ -346,7 +347,7 @@ contextBridge.exposeInMainWorld('api', {
   aoSetCpuCap:          (appId, capPercent) => ipcRenderer.invoke('ao-set-cpu-cap', { appId, capPercent }),
   aoFingerprintDriftCause: (id, driftedAt) => ipcRenderer.invoke('ao-fingerprint-drift-cause', { id, driftedAt }),
 
-  // Cleanup 2.0
+  // Cleanup
   cleanup2Scan:         (opts)       => ipcRenderer.invoke('cleanup2-scan', opts),
   cleanup2Run:          (opts)       => ipcRenderer.invoke('cleanup2-run', opts),
   cleanup2Abort:        ()           => ipcRenderer.invoke('cleanup2-abort'),

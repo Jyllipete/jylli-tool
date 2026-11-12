@@ -1,5 +1,5 @@
 'use strict'
-// Cleanup 2.0, Reclaim view: the Core, a verdict, three lanes (Safe / Worth a look / Permanent), in-place run, receipt, Autopilot.
+// Cleanup, Reclaim view: the Core, a verdict, three lanes (Safe / Worth a look / Permanent), in-place run, receipt, Autopilot.
 // Everything on screen comes from the scan (lib/cleanup) or from a real run event; nothing is estimated here.
 // Pure helpers are exported for node tests (test/cleanup-ui.test.js); the DOM part is guarded by `typeof document`.
 ;(function (root) {

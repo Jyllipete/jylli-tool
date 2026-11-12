@@ -1,4 +1,4 @@
-// Diagnostics 2.0 strings (group `diag2`). Loaded after en.js. Product and hardware names are not translated.
+// Diagnostics strings (group `diag2`). Loaded after en.js. Product and hardware names are not translated.
 // Findings: t_<id> title, w_<id> why, t_<id>_ok label when the check passed, f_<id> fix button. Stop codes: bc_<hex>.
 LANG.en.diag2 = {
   "segCheckup": "Checkup", "segTimeline": "Timeline", "segDrivers": "Drivers", "segBench": "Benchmarks", "segReport": "Report",

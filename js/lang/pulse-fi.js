@@ -1,4 +1,4 @@
-// Pulse 2.0 "Flow" -tekstit (ryhmä `pulse2`). Avainperheet ja säännöt kuten pulse-en.js:ssä.
+// Pulse "Flow" -tekstit (ryhmä `pulse2`). Avainperheet ja säännöt kuten pulse-en.js:ssä.
 // Nimet kuten CPU, GPU, VRAM, RAM, FPS, V-Sync, MMCSS ja Game Shield pysyvät sellaisinaan kaikilla kielillä.
 globalThis.LANG = globalThis.LANG || { en: {}, fi: {} }
 LANG.fi.pulse2 = {

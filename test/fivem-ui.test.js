@@ -108,7 +108,7 @@ test('radar: layout spans the width in order, segments are contiguous, tones fol
   assert.ok(Radar.travel(0) < Radar.travel(100) && Radar.travel(1e6) <= 2.6)
 })
 
-// ── source hygiene (same rules tools/check-ui.js enforces for the other 2.0 tabs) ─────
+// ── source hygiene (same rules tools/check-ui.js enforces for the other rebuilt tabs) ─────
 test('source: no hex colours or colour inline styles in the FiveM page code', () => {
   for (const f of ['radar.js', 'page.js', 'views.js']) {
     const s = fs.readFileSync(path.join(root, 'js', 'fivem', f), 'utf8')

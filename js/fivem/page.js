@@ -1,5 +1,5 @@
 'use strict'
-// FiveM 2.0 "Uplink": the frame and the Uplink view (servers, Route Radar, verdict, pre-flight). The other four views (Sessions,
+// FiveM "Uplink": the frame and the Uplink view (servers, Route Radar, verdict, pre-flight). The other four views (Sessions,
 // Graphics, Client, Crash lab) live in js/fivem/views.js. Everything shown comes from lib/fivem (scan report, measured route rounds,
 // recorded sessions); nothing is estimated here. Pure helpers are exported for node tests.
 ;(function (root) {

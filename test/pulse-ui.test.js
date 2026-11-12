@@ -160,7 +160,7 @@ test('page: the primary action follows the boost state and never offers a boost 
   assert.equal(Page.VIEWS.length, 4)
 })
 
-// ── source and css hygiene (the rules tools/check-ui.js enforces for the other 2.0 tabs) ─────
+// ── source and css hygiene (the rules tools/check-ui.js enforces for the other rebuilt tabs) ─────
 test('source: no hex colours or colour inline styles in the Pulse code', () => {
   for (const f of fs.readdirSync(path.join(root, 'js', 'pulse'))) {
     const s = fs.readFileSync(path.join(root, 'js', 'pulse', f), 'utf8')

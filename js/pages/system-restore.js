@@ -11,7 +11,7 @@ function buildRestorePoints(c) {
 
   c.innerHTML = String(html`
     <div id="rp-admin-banner" class="j-callout j-callout-danger j-rp-banner" role="alert" style="display:none"><i class="fa fa-shield-exclamation" aria-hidden="true"></i><div class="j-grow">${tUI('rpAdminWarn')}</div>${ui.button({ label: tUI('rpRelaunchAdmin'), variant: 'danger', size: 'sm', onclick: 'api.relaunchAdmin()' })}</div>
-    <div id="rp-stale-banner" class="j-callout j-callout-warn j-rp-banner" role="status" style="display:none"><i class="fa fa-clock-rotate-left" aria-hidden="true"></i><div class="j-grow">${tUI('rpStaleWarn')}</div>${ui.button({ label: tUI('rpCreate'), variant: 'ghost', size: 'sm', onclick: 'doCreateRP()' })}</div>
+    <div id="rp-stale-banner" class="j-callout j-callout-warn j-rp-banner" role="status" style="display:none"><i class="fa fa-clock-rotate-left" aria-hidden="true"></i><div class="j-grow"><b>${tG('rpNudge', 'title')}</b><div id="rp-stale-text" class="j-muted"></div></div>${ui.button({ label: tUI('rpCreate'), variant: 'primary', size: 'sm', id: 'rp-stale-btn', onclick: 'doCreateRP()' })}</div>
 
     ${ui.card({ title: tUI('rpHeroTitle'), sub: tUI('rpHeroDesc'), body: html`
       <div class="j-rp-stats">${stat('rp-stat-count', tUI('rpStatSnapshots'))}${stat('rp-stat-disk', tUI('rpStatDisk'))}${stat('rp-stat-age', tUI('rpStatLatest'))}</div>
@@ -63,6 +63,7 @@ function buildRestorePoints(c) {
   }).catch(() => {})
   loadRPDiskUsage()
   loadRPList()
+  window.JylliRestoreUI?.onRestoreOpen()
 
   if (!_rpAutoSnapshotListenerRegistered) {
     _rpAutoSnapshotListenerRegistered = true

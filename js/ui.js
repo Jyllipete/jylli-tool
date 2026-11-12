@@ -1,5 +1,5 @@
 'use strict'
-// Component library for the 2.0 UI. Everything returns a SafeHtml: interpolated values are escaped unless wrapped in raw()
+// Component library for the UI. Everything returns a SafeHtml: interpolated values are escaped unless wrapped in raw()
 // or produced by another ui.* call, so a forgotten escHtml can no longer become an XSS hole.
 // Usage:  const { html, raw } = ui;   el.innerHTML = html`<b>${userText}</b> ${ui.badge('Pro')}`
 ;(function (root) {

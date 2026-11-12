@@ -1,4 +1,4 @@
-// Diagnostiikka 2.0 -tekstit (ryhmä `diag2`). Ladataan fi.js:n jälkeen. Tuote- ja laitenimiä ei käännetä.
+// Diagnostiikka -tekstit (ryhmä `diag2`). Ladataan fi.js:n jälkeen. Tuote- ja laitenimiä ei käännetä.
 LANG.fi.diag2 = {
   "segCheckup": "Tarkistus", "segTimeline": "Aikajana", "segDrivers": "Ajurit", "segBench": "Suorituskykytestit", "segReport": "Raportti",
   "sub_stability": "Vakaus", "sub_storage": "Tallennus", "sub_memory": "Muisti", "sub_cpu": "CPU ja lämpötilat", "sub_gpu": "GPU ja näyttö",

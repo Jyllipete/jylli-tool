@@ -1,5 +1,5 @@
 'use strict'
-// Debloat 2.0, "Lean" view: the Footprint Core, a verdict, the 24-hour chatter band, "this PC is for" intent chips, three lanes
+// Debloat, "Lean" view: the Footprint Core, a verdict, the 24-hour chatter band, "this PC is for" intent chips, three lanes
 // (Safe to remove / Your call / In use, kept), an in-place run, a receipt with MEASURED deltas, the came-back banner and Guard.
 // Facts come from the scan (lib/debloat); which lane an item lands in is JylliDebloatClassify and re-runs instantly when an intent
 // chip changes. Pure helpers are exported for node tests (test/debloat-ui.test.js); the DOM part is guarded by `typeof document`.

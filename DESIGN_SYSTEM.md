@@ -35,7 +35,7 @@ Rules: accent text always uses `--accent-text` (contrast); status colours are ne
 ## Spacing, shape, depth
 - 4px grid: 4 / 8 / 12 / 16 / 20 / 24 / 32. Page gutter 32px, card padding 16px, list row min-height 56px.
 - Radius: 6 (small controls), 7–8 (buttons, inputs), 12 (cards, lists), 14 (modals).
-- Depth by hairline and a 1px top highlight on raised surfaces. Shadows only on popovers, modals and toasts. No glow on chrome. **Exception (3.0):** emissive material plus bloom on live hardware inside the 3D twin, and an accent shadow on the single primary action of a view. Never glow on text, cards or badges.
+- Depth by hairline and a 1px top highlight on raised surfaces. Shadows only on popovers, modals and toasts. No glow on chrome. **Exception:** emissive material plus bloom on live hardware inside the 3D twin, and an accent shadow on the single primary action of a view. Never glow on text, cards or badges.
 - Layout: sidebar 216px (rail 56px), content max width 1160px, title bar 40px, status bar 26px.
 
 ## Motion

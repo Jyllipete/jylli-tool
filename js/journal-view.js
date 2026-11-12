@@ -56,10 +56,10 @@
     let entries = []
     try { entries = await root.api.journalList({ limit: 500, via: filterVia || undefined }) } catch {}
     const names = id => (typeof tName === 'function' && tName(id)) || id
-    // Debloat 2.0 entries are journaled as control 'debloat:<catalog id>': show the catalog name, not the id
+    // Debloat entries are journaled as control 'debloat:<catalog id>': show the catalog name, not the id
     const ctlName = c => {
       const m = /^debloat:((?:app|svc|task|ad|feat):.+)$/.exec(c); if (m && typeof tG === 'function') return tG('debloat2', 'n_' + m[1])
-      const f = /^fivem2:([w-]+)$/.exec(c)       // FiveM 2.0: the tweak's name, or the file that was edited
+      const f = /^fivem2:([w-]+)$/.exec(c)       // FiveM: the tweak's name, or the file that was edited
       if (f && typeof tG === 'function') return tG('fivem2', f[1] === 'ini' ? 'iniT' : f[1] === 'gfx' ? 'seg_graphics' : 'n_' + f[1])
       return c
     }

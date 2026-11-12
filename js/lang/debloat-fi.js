@@ -1,5 +1,5 @@
 'use strict'
-// Debloat 2.0 strings (LANG.fi.debloat2). n_/d_/w_<id> are the name, description and "what stops working" of every item in lib/debloat/catalog.js.
+// Debloat strings (LANG.fi.debloat2). n_/d_/w_<id> are the name, description and "what stops working" of every item in lib/debloat/catalog.js.
 // Loaded after js/lang/fi.js. Product, feature and protocol names are not translated.
 LANG.fi.debloat2 = {
   "segLean": "Kevyt",
@@ -219,7 +219,7 @@ LANG.fi.debloat2 = {
   "histUndoRun": "Peru ajo",
   "histUndo": "Peru",
   "histUndone": " · peruttu",
-  "histLegacy": "Aiemmat toimet ennen 2.0:aa ({n})",
+  "histLegacy": "Aiemmat toimet ennen uudistusta ({n})",
   "wbBtn": "Paluu",
   "wbDone_present": "Jo asennettu",
   "wbDone_offline": "Palautettu Windowsin omasta kopiosta",

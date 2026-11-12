@@ -1,4 +1,4 @@
-// FiveM 2.0 "Uplink" -tekstit (ryhmä `fivem2`, luetaan tG('fivem2', avain, muuttujat)). Avainten nimeäminen kuten fivem-en.js:ssä.
+// FiveM "Uplink" -tekstit (ryhmä `fivem2`, luetaan tG('fivem2', avain, muuttujat)). Avainten nimeäminen kuten fivem-en.js:ssä.
 // Nimet kuten FiveM, GTA V, CPU, GPU, VRAM, ICMP, TCP, MTU ja Wi-Fi pysyvät sellaisinaan kaikilla kielillä.
 LANG.fi.fivem2 = {
   seg_uplink: 'Yhteys', seg_sessions: 'Istunnot', seg_graphics: 'Grafiikka', seg_client: 'Asiakasohjelma', seg_crash: 'Kaatumislaboratorio',

@@ -1,4 +1,4 @@
-/* Cleanup 2.0 (js/cleanup/*). Tokens only; durations scale with --motion-scale. Root carries .jk so the legacy #page-content resets stay out. */
+/* Cleanup (js/cleanup/*). Tokens only; durations scale with --motion-scale. Root carries .jk so the legacy #page-content resets stay out. */
 .cu { --g-system: var(--c-accent-rgb); --g-browsers: var(--c-info-rgb); --g-gpu: 192,132,252; --g-apps: var(--c-success-rgb); --g-games: var(--c-warning-rgb); --g-dev: 56,189,248; --g-permanent: var(--c-danger-rgb);
   display: flex; flex-direction: column; gap: 16px; min-width: 0; }
 .cu-bar-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }

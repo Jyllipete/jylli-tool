@@ -1,5 +1,5 @@
 'use strict'
-// Navigation model for the 2.0 UI: 5 sections + Settings, every old page is a tab. Pure data + lookups (no DOM), unit-tested.
+// Navigation model for the UI: 5 sections + Settings, every old page is a tab. Pure data + lookups (no DOM), unit-tested.
 // `page` is the legacy page id of a tab. showPage(page) keeps driving all lifecycle logic (metrics, polling, cleanup), so deep
 // links, the command palette and internal showPage('windows-opti') calls keep working unchanged.
 ;(function (root) {

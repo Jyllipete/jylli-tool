@@ -153,7 +153,7 @@
     if (H.worldSlot && slot.dataset.twinFocus) H.engine.focus(slot.dataset.twinFocus)
   }
 
-  // ── world mode (4.0): the canvas lives in #world-slot behind the whole app. A page's hero slot is only a "window": the rig is
+  // ── world mode: the canvas lives in #world-slot behind the whole app. A page's hero slot is only a "window": the rig is
   // centred on it and the camera takes the slot's shot, but the scene keeps showing through the glass around it. ──
   const worldOn = () => !!(root.JylliWorld && root.JylliWorld.enabled())
   function worldClass() { const w = H.worldSlot && H.worldSlot.parentElement; if (w) w.classList.toggle('has-window', !!H.win) }

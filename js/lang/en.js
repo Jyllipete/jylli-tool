@@ -21,7 +21,7 @@ LANG.en = {
     },
     sections: {},
     ui: {
-      // 2.0 shell
+      // shell
       settingsCatGeneral:'General',settingsCatGaming:'Gaming',settingsCatPrivacy:'Privacy',
       navHome:'Home', navOptimize:'Optimize', navGaming:'Gaming', navClean:'Clean', navSystem:'System', navSettings:'Settings', navHomeSub:'System overview', navOptimizeSub:'Tweaks, hardware, network and fixes', navGamingSub:'Pulse, game profiles, FiveM and latency', navCleanSub:'Cleanup, debloat and startup apps', navSystemSub:'Diagnostics, processes, BIOS, scheduler and history', navSettingsSub:'App preferences', tabNetwork:'Network', tabFixes:'Fixes', tabPulse:'Pulse', tabGames:'Games', tabApps:'Apps', tabLatency:'Latency', tabStartup:'Startup', tabDiagnostics:'Diagnostics', tabProcesses:'Processes', tabBios:'BIOS', tabScheduler:'Scheduler', tabRestore:'Restore points', tabHistory:'History', shellJump:'Search or jump to…', shellMore:'More', shellActivity:'Activity log', shellAdvanced:'Advanced mode', shellStatusIdle:'Idle', shellStatusGame:'Game running', shellStatusPulse:'Pulse active',
       apply:'Apply', restore:'Restore', runFix:'Run Fix', done:'Done', running:'Running…',
@@ -3214,6 +3214,13 @@ aoHeroEyebrow:'App scanner', aoHeroDetected:'{n} apps detected', aoHeroScanning:
     },
     fixHero: {
       title:'Fixes', dial:'applied', statApplied:'Applied', statRec:'Recommended for you', cta:'Show recommended', recTitle:'Recommended for this PC', eyebrow:'{a} of {n} fixes applied',
+    },
+    rpNudge: {
+      title:'Consider making a restore point before continuing',
+      bannerNever:'You have no restore point yet. It takes a few seconds and lets you roll Windows back if a change goes wrong.',
+      bannerStale:'Your last restore point was made {when}. A fresh one lets you roll Windows back if a change goes wrong.',
+      create:'Create restore point', open:'Open Restore points', last:'Last restore point: {when}', none:'None',
+      qhLabel:'Last restore point', qhTip:'When System Restore last saved a point you can roll Windows back to',
     },
     rpx: {
       today:'today', yesterday:'yesterday', todayCap:'Today', yesterdayCap:'Yesterday', daysAgo:'{n}d ago', hoursAgo:'{n}h ago', minsAgo:'{n}m ago', justNow:'just now',

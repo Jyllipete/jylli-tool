@@ -75,7 +75,7 @@ function respond(name, args, ctx) {
     case 'getAppVersion': return '1.6.0'
     case 'getBootTime': return now - 93600000
     case 'getSystemInfo': return sysInfo
-    // 3.0: hardware inventory and telemetry. sensors: 'full' | 'partial' (default: no CPU temperature, no fans) | 'none'
+    // hardware inventory and telemetry. sensors: 'full' | 'partial' (default: no CPU temperature, no fans) | 'none'
     case 'getHardwareInventory': return { ok: true, rig: require('../../lib/inventory').buildRigSpec(require('../../test/fixtures/sensors/inventory-raw-desktop.json')), detectedAt: now }
     case 'setDeclaredRig': return { ok: true, rig: require('../../lib/inventory').buildRigSpec(require('../../test/fixtures/sensors/inventory-raw-desktop.json'), args[0] || {}) }
     case 'telemetrySubscribe': return { ok: true, snapshot: { v: 1, seq: 1, t: now, s: {} } }
@@ -108,11 +108,12 @@ function respond(name, args, ctx) {
     case 'getBootImpact': return { ok: true, items: [] }
     case 'toggleStartupItem': return { ok: true }
     case 'listRestorePoints': return restorePoints
+    case 'getRestoreStatus': return { newestAt: now - 12 * 86400000, lastCreatedAt: null }
     case 'getChangelog': return [
       { id: 'game-dvr', action: 'apply', ts: now - 3600000 }, { id: 'mmcss', action: 'apply', ts: now - 3500000 }, { id: 'tcp-stack', action: 'restore', ts: now - 86400000 },
     ]
     case 'listProfiles': return premium ? { 'Gaming Mode': { name: 'Gaming Mode', tweaks: { tweak_mmcss: 'applied', 'tweak_game-dvr': 'applied' }, savedAt: now - 86400000 } } : {}
-    // Cleanup 2.0: the REAL model builder on synthetic scan numbers (a realistic gaming PC: open Discord/Chrome, personal files in Temp, Recycle Bin)
+    // Cleanup: the REAL model builder on synthetic scan numbers (a realistic gaming PC: open Discord/Chrome, personal files in Temp, Recycle Bin)
     case 'cleanup2Scan': {
       const rc = require('../../lib/cleanup/receipt'), M = 1048576, G = 1073741824
       const s = (bytes, extra) => ({ present: bytes > 0, bytes, files: Math.round(bytes / 400000) + 1, ...extra })
@@ -164,7 +165,7 @@ function respond(name, args, ctx) {
     case 'pulseDetectGame': return { ok: true, game: null }
     case 'detectAv': return null
     case 'analyticsPageVisit': case 'analyticsTweakApplied': case 'discordSetPage': case 'startupTrace': return { ok: true }
-    // Debloat 2.0: the REAL probe parser, model, classifier and footprint on a synthetic gaming desktop (printer, 2 Bluetooth devices, Xbox controller, OBS)
+    // Debloat: the REAL probe parser, model, classifier and footprint on a synthetic gaming desktop (printer, 2 Bluetooth devices, Xbox controller, OBS)
     case 'debloat2Scan': {
       const D = require('../../lib/debloat'), now = Date.now(), H = 3600000, DAY = 24 * H
       const CDM = 'HKCU:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\ContentDeliveryManager', ADV = 'HKCU:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced'

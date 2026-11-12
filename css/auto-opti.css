@@ -1,4 +1,4 @@
-/* Auto-Optimize 2.0 (js/auto-opti.js, js/auto-opti/reactor.js). Tokens only. Every duration scales with --motion-scale. */
+/* Auto-Optimize (js/auto-opti.js, js/auto-opti/reactor.js). Tokens only. Every duration scales with --motion-scale. */
 #auto-opti { position: fixed; inset: 0; z-index: var(--z-modal); display: none; flex-direction: column; background: var(--surface-0); color: var(--c-text-primary);
   opacity: 0; transition: opacity calc(240ms * var(--motion-scale, 1)); overflow: hidden; }
 #auto-opti.open { opacity: 1; }

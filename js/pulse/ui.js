@@ -1,5 +1,5 @@
 'use strict'
-// Pulse 2.0 shared view builders. Pure: each takes data and the copy function T(key, vars) and returns an HTML string, so the tab,
+// Pulse shared view builders. Pure: each takes data and the copy function T(key, vars) and returns an HTML string, so the tab,
 // the Cockpit window and the tests all use the same markup. A value that was not measured is shown as an en dash with a
 // "Not measured" title, never as 0. Every string that reaches the DOM goes through esc().
 ;(function (root) {

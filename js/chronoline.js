@@ -1,5 +1,5 @@
 'use strict'
-// Chronoline (4.0): a thin glass timeline with three tracks drawn from what the app really recorded: changes (the journal),
+// Chronoline: a thin glass timeline with three tracks drawn from what the app really recorded: changes (the journal),
 // game sessions (the session recorder) and CPU load (the metrics history, one sample a minute). Drag the playhead and the twin
 // replays that moment through JylliTelemetry.setOverride, using only the recorded values: load and memory. Temperatures were
 // never recorded, so the rig shows no heat while replaying, and gaps stay gaps. The pure parts are unit-tested.

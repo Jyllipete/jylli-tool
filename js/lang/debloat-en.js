@@ -1,5 +1,5 @@
 'use strict'
-// Debloat 2.0 strings (LANG.en.debloat2). n_/d_/w_<id> are the name, description and "what stops working" of every item in lib/debloat/catalog.js.
+// Debloat strings (LANG.en.debloat2). n_/d_/w_<id> are the name, description and "what stops working" of every item in lib/debloat/catalog.js.
 // Loaded after js/lang/en.js. Product, feature and protocol names are not translated.
 LANG.en.debloat2 = {
   "segLean": "Lean",
@@ -219,7 +219,7 @@ LANG.en.debloat2 = {
   "histUndoRun": "Undo run",
   "histUndo": "Undo",
   "histUndone": " · undone",
-  "histLegacy": "Earlier actions, before 2.0 ({n})",
+  "histLegacy": "Earlier actions, before the rebuild ({n})",
   "wbBtn": "Way back",
   "wbDone_present": "Already installed",
   "wbDone_offline": "Restored from Windows' own copy",

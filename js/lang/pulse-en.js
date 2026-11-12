@@ -1,4 +1,4 @@
-// Pulse 2.0 "Flow" copy (group `pulse2`, read with tG('pulse2', key, vars); the Cockpit and the HUD read it through their own T()).
+// Pulse "Flow" copy (group `pulse2`, read with tG('pulse2', key, vars); the Cockpit and the HUD read it through their own T()).
 // Key families: lim_/limw_<limiter id> headline and why · sug_<target> · step_/stepState_ boost receipt · cause_<id> · pf_/pfw_<check>_<state>/pfFix_ pre-flight
 // ck_* Cockpit only · hud_* HUD only. Names like CPU, GPU, VRAM, RAM, FPS, V-Sync, MMCSS, Game Shield stay as they are in every language.
 globalThis.LANG = globalThis.LANG || { en: {}, fi: {} }

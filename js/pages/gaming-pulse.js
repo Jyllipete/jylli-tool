@@ -1,5 +1,5 @@
 'use strict'
-// Gaming > Pulse. The tab itself is Pulse 2.0 (js/pulse/page.js); this file keeps the two builders its Rules view reuses
+// Gaming > Pulse. The tab itself is Pulse (js/pulse/page.js); this file keeps the two builders its Rules view reuses
 // (_puRule, _puSlider) and the premium gate. Every id these builders emit is one the launchRule*/gs* handlers in index.html find by id.
 function _puRule({ id, card, dot, check, icon, title, desc, rule, extra = '', badge = '', body = '' }) {
   const { html, raw } = ui

@@ -1,5 +1,5 @@
 'use strict'
-// Debloat 2.0 secondary views: Ad map, Programs, Extras (devices, context menu), History. Built lazily by js/debloat/page.js with a ctx
+// Debloat secondary views: Ad map, Programs, Extras (devices, context menu), History. Built lazily by js/debloat/page.js with a ctx
 // { T, esc, el, fmt, nameOf, items(), model(), rescan(), runQuick(ids), toast(), S }. Pure helpers are exported for node tests.
 ;(function (root) {
   // ── pure ──

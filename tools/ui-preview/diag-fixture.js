@@ -1,5 +1,5 @@
 'use strict'
-// Preview fixtures for Diagnostics 2.0: the REAL incident, cause, finding, grade and report code on a synthetic PC.
+// Preview fixtures for Diagnostics: the REAL incident, cause, finding, grade and report code on a synthetic PC.
 // --dx-state trouble (default: crashing PC, worn SSD) | clean (healthy PC) | first (no checkup yet) | fail (scan error)
 const model = require('../../lib/diagnostics/model')
 

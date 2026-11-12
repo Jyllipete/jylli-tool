@@ -1,5 +1,5 @@
 'use strict'
-// Main-window shell for the 2.0 UI: sidebar sections, section header with tabs, breadcrumb, status bar and the activity drawer.
+// Main-window shell for the UI: sidebar sections, section header with tabs, breadcrumb, status bar and the activity drawer.
 // Page content is still built by the legacy builders; this file decides which builder a tab runs (see TAB_BUILDERS) and draws the chrome.
 // Depends on globals from index.html (settings, tUI, showPage, build*), js/ui.js and js/routes.js.
 ;(function (root) {
@@ -89,7 +89,7 @@
 
   function navItem(s) {
     const e = R.entry(s.id, (root._activeTab || {})[s.id])
-    return html`<button class="j-nav-item" type="button" data-section="${s.id}" data-page="${e.page}" title="${sectionLabel(s.id)}" onclick="Shell.go('${s.id}')"><i class="fa fa-${s.icon}" aria-hidden="true"></i><span>${sectionLabel(s.id)}</span>${s.id === 'system' ? html`<span class="j-nav-count" id="badge-preflight" style="display:none">!</span><span class="j-nav-count" id="badge-boost" style="display:none">LIVE</span>` : ''}</button>`
+    return html`<button class="j-nav-item" type="button" data-section="${s.id}" data-page="${e.page}" title="${sectionLabel(s.id)}" onclick="Shell.go('${s.id}')"><i class="fa fa-${s.icon}" aria-hidden="true"></i><span>${sectionLabel(s.id)}</span>${s.id === 'system' ? html`<span class="j-nav-dot" id="badge-restore" style="display:none" aria-hidden="true"></span><span class="j-nav-count" id="badge-preflight" style="display:none">!</span><span class="j-nav-count" id="badge-boost" style="display:none">LIVE</span>` : ''}</button>`
   }
 
   // Built once per language; afterwards only the active item changes, so badge state set elsewhere survives page changes.
@@ -97,10 +97,10 @@
     const nav = document.getElementById('j-nav')
     if (!nav) return
     if (nav.dataset.lang !== currentLang) {
-      const keep = ['badge-preflight', 'badge-boost'].map(id => { const el = document.getElementById(id); return el && [id, el.style.display, el.textContent] })
+      const keep = ['badge-preflight', 'badge-boost', 'badge-restore'].map(id => { const el = document.getElementById(id); return el && [id, el.style.display, el.textContent, el.className] })
       const main = R.SECTIONS.filter(s => s.id !== 'settings')
       nav.innerHTML = String(html`${main.map(navItem)}<div class="j-nav-spacer"></div>${navItem(R.section('settings'))}<button class="j-nav-item" type="button" id="sidebar-toggle-btn" onclick="toggleSidebar()" title="${tUI('sidebarCollapse')}"><i class="fa fa-angles-left" id="sidebar-toggle-icon" aria-hidden="true"></i><span id="sidebar-toggle-label">${tUI('sidebarCollapse')}</span></button>`)
-      keep.forEach(k => { const el = k && document.getElementById(k[0]); if (el) { el.style.display = k[1]; el.textContent = k[2] } })
+      keep.forEach(k => { const el = k && document.getElementById(k[0]); if (el) { el.style.display = k[1]; el.textContent = k[2]; if (k[3]) el.className = k[3] } })
       nav.dataset.lang = currentLang
     }
     nav.querySelectorAll('.j-nav-item[data-section]').forEach(b => {
@@ -134,6 +134,7 @@
     root._activeTab[route.section] = route.tab
     renderNav(route.section)
     renderHead(route)
+    if (root.JylliRestoreUI) root.JylliRestoreUI.paint()
   }
 
   const Shell = {
@@ -155,7 +156,7 @@
     // Re-draw header/tabs only (Advanced mode toggled, tier changed).
     refresh() {
       const r = R.resolve(currentPage, (root._activeTab || {})[(R.resolve(currentPage) || {}).section])
-      if (r) { renderNav(r.section); renderHead(r) }
+      if (r) { renderNav(r.section); renderHead(r); if (root.JylliRestoreUI) root.JylliRestoreUI.paint() }
     },
     // Live status bar. Values only arrive while metrics polling runs (Home / Processes); otherwise the last known ones stay.
     metrics(m) {

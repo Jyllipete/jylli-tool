@@ -1,5 +1,5 @@
 'use strict'
-// Cleanup 2.0, the other two views: History (what was reclaimed, what refills) and Space Map (Premium: where the drive went, big forgotten
+// Cleanup, the other two views: History (what was reclaimed, what refills) and Space Map (Premium: where the drive went, big forgotten
 // files, leftover app folders). `squarify` is the pure treemap layout (unit-tested).
 ;(function (root) {
   /** values (descending) laid out in a w x h box -> [{ i, x, y, w, h }]; the areas add up to w*h and stay as square as possible. */

@@ -1,4 +1,4 @@
-// UI guard for the 2.0 rework. Never launches the app.
+// UI guard for the UI rework. Never launches the app.
 //  1. js/ui.js and js/pages/** must not contain hex colours or colour-bearing inline styles (use tokens / j- classes).
 //  2. LANG keys must exist in both en and fi.
 // Usage: node tools/check-ui.js [--strict]   (non-strict only reports LANG gaps that existed before the rework, see LANG_BASELINE)

@@ -1,5 +1,5 @@
 'use strict'
-// Diagnostics 2.0, Checkup view + the frame for Timeline / Drivers / Benchmarks / Report (js/diagnostics/views.js).
+// Diagnostics, Checkup view + the frame for Timeline / Drivers / Benchmarks / Report (js/diagnostics/views.js).
 // Everything shown comes from lib/diagnostics (scan events, the report) - nothing is estimated here. Pure helpers are exported for node tests.
 ;(function (root) {
   // Which probes feed which lattice arc. Kept equal to lib/diagnostics PROBE_SUBS by test/diagnostics-ui.test.js.
