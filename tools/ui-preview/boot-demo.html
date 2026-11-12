@@ -8,6 +8,7 @@
 <link rel="stylesheet" href="../../css/tokens.css">
 <link rel="stylesheet" href="../../css/style.css">
 <link rel="stylesheet" href="../../css/ui.css">
+<link rel="stylesheet" href="../../css/boot.css">
 <style>
   body { margin: 0; background: var(--c-bg-base, #09090b); color: var(--c-text-primary); font: 13px var(--font, system-ui); }
   #home { position: fixed; inset: 0; padding: 32px 32px 32px 220px; }
@@ -59,16 +60,16 @@
   const STEPS = [['cpu', 'CPU', 'AMD Ryzen 7 7800X3D · 4.2 GHz', 900], ['ram', 'RAM', '32 GB · 6000 MHz', 700], ['gpu', 'GPU', 'NVIDIA GeForce RTX 5070', 1100], ['vram', 'VRAM', '12GB VRAM', 500], ['storage', 'Storage', 'NVMe SSD · 234/512 GB', 800], ['os', 'OS & Admin', 'Running as Administrator', 1000]]
   const speed = Number(qs.get('speed')) || 1, fast = qs.get('fast')
   const rows = document.getElementById('rows')
-  rows.innerHTML = STEPS.map(([id, label]) => `<div class="boot-row load-step" id="lstep-${id}"><div class="boot-row-left"><span class="boot-row-icon step-icon"></span><span class="boot-row-label step-label">${label}</span></div><div class="boot-row-right step-detail-wrap"><span class="step-detail"></span></div></div>`).join('')
+  rows.innerHTML = STEPS.map(([id, label]) => `<div class="boot-row load-step" id="lstep-${id}" data-state="waiting"><span class="boot-row-icon step-icon"></span><span class="boot-row-label step-label">${label}</span><div class="boot-row-right step-detail-wrap"><span class="step-detail"></span></div></div>`).join('')
   const wait = ms => new Promise(r => setTimeout(r, ms))
   ;(async () => {
     JylliBootStage.start()
     await wait(600 / speed)
     for (let i = 0; i < STEPS.length; i++) {
       const [id, , detail, ms] = STEPS[i], row = document.getElementById('lstep-' + id)
-      JylliBootStage.onStepActive(id); row.classList.add('active')
+      JylliBootStage.onStepActive(id); row.dataset.state = 'reading'
       await wait(fast ? 0 : ms / speed)
-      JylliBootStage.onStepDone(id); row.classList.remove('active'); row.classList.add('done')
+      JylliBootStage.onStepDone(id); row.dataset.state = 'done'
       row.querySelector('.step-detail').textContent = detail
       document.getElementById('boot-progress-fill').style.width = ((i + 1) / STEPS.length * 100) + '%'
     }

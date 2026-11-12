@@ -5,7 +5,7 @@
 // Without live 3D the static SVG silhouette gets the same beats. The pure helpers are unit-tested.
 ;(function (root) {
   // Ledger step -> what it builds. vram adds to the GPU, os switches the lights on.
-  const STEP_TO_STAGE = { cpu: 'cpu', ram: 'ram', gpu: 'gpu', vram: 'gpu', storage: 'disk', os: 'power' }
+  const STEP_TO_STAGE = { cpu: 'cpu', ram: 'ram', gpu: 'gpu', vram: 'gpu', storage: 'disk', display: 'shell', board: 'board', os: 'power' }
 
   /** The part a ledger step points at: parts = layout.parts, stageOf = host.bootStageOf. Detected parts win over ghosts. */
   function partForStep(parts, step, stageOf) {
@@ -43,9 +43,10 @@
     let l = S.leaders.get(step)
     if (l) return l
     const path = document.createElementNS(NS, 'path'), dot = document.createElementNS(NS, 'circle')
-    path.setAttribute('class', 'boot-leader'); dot.setAttribute('class', 'boot-leader-dot'); dot.setAttribute('r', '3')
-    S.svg.appendChild(path); S.svg.appendChild(dot)
-    l = { step, path, dot, part: null, lane: Object.keys(STEP_TO_STAGE).indexOf(step) }
+    path.setAttribute('class', 'boot-leader'); path.setAttribute('pathLength', '1'); dot.setAttribute('class', 'boot-leader-dot'); dot.setAttribute('r', '3')
+    const ret = document.createElementNS(NS, 'path'); ret.setAttribute('class', 'boot-reticle')
+    S.svg.appendChild(path); S.svg.appendChild(ret); S.svg.appendChild(dot)
+    l = { step, path, dot, ret, part: null, drawn: false, lane: Object.keys(STEP_TO_STAGE).indexOf(step) }
     S.leaders.set(step, l)
     return l
   }
@@ -78,12 +79,15 @@
     for (const l of S.leaders.values()) {
       if (!l.part && Tw().layout) l.part = partForStep(Tw().layout.parts, l.step, Tw().bootStageOf)   // the inventory can arrive after the step
       const row = document.getElementById('lstep-' + l.step), b = anchorOf(l)
-      if (!row || !b) { l.path.style.opacity = l.dot.style.opacity = '0'; continue }
-      const rr = row.getBoundingClientRect()
+      const rr = row && row.getBoundingClientRect()
+      if (!row || !b || !rr.width) { l.path.style.opacity = l.dot.style.opacity = l.ret.style.opacity = '0'; continue }   // folded rows (VRAM) have no box: they share the GPU's line
       const a = { x: rr.right + 6, y: rr.top + rr.height / 2 }
       l.path.setAttribute('d', leaderPath(a, b, l.lane, { w: innerWidth, h: innerHeight }))
       l.dot.setAttribute('cx', b.x); l.dot.setAttribute('cy', b.y)
-      l.path.style.opacity = l.dot.style.opacity = ''
+      const R = 11, c = 4   // reticle: four corner ticks around the part
+      l.ret.setAttribute('d', `M${b.x - R} ${b.y - R + c}V${b.y - R}H${b.x - R + c}M${b.x + R - c} ${b.y - R}H${b.x + R}V${b.y - R + c}M${b.x + R} ${b.y + R - c}V${b.y + R}H${b.x + R - c}M${b.x - R + c} ${b.y + R}H${b.x - R}V${b.y + R - c}`)
+      l.path.style.opacity = l.dot.style.opacity = l.ret.style.opacity = ''
+      if (!l.drawn) { l.drawn = true; requestAnimationFrame(() => { l.path.classList.add('is-drawn'); l.ret.classList.add('is-lock') }) }
     }
   }
 

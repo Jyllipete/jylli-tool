@@ -1,0 +1,123 @@
+/* ═══ Boot scan (prefix bt- / boot-): the screen Jylli Tool opens on. js/boot/sequence.js drives it, js/boot-stage.js builds the rig.
+   House style: quiet and exact. Hairlines, Geist, tokens only; no glow, no colored shadows, no left accents. Every duration scales with --motion-scale. ═══ */
+
+#loading {
+  position: fixed; inset: 0; z-index: var(--z-critical, 9999);
+  background: var(--c-bg-base); color: var(--c-text-primary);
+  display: flex; flex-direction: row; align-items: center; justify-content: flex-start;
+  padding-left: clamp(24px, 6vw, 96px); gap: clamp(24px, 4vw, 64px);
+}
+#loading [hidden] { display: none !important; }
+
+/* header */
+#loading .boot-header { position: absolute; top: 0; left: 0; padding: 28px clamp(24px, 6vw, 96px); display: flex; align-items: center; gap: 12px; animation: btFade calc(500ms * var(--motion-scale)) var(--ease-out) both; }
+#loading .boot-logo-icon { width: 40px; height: 40px; flex: none; display: flex; align-items: center; justify-content: center; font-size: 17px; border-radius: var(--r-md); background: var(--c-accent-muted); border: 1px solid var(--c-accent-ring); color: var(--c-accent); }
+#loading .boot-logo-name { font: 700 var(--fs-3)/1.2 var(--font); letter-spacing: -0.01em; }
+#loading .boot-logo-ver { margin-top: 2px; font: 400 var(--fs-1)/1.2 var(--font-mono); color: var(--c-text-tertiary); font-variant-numeric: tabular-nums; }
+
+/* ledger column */
+#loading .boot-center { width: min(440px, 38vw); flex: none; position: relative; z-index: 2; display: flex; flex-direction: column; animation: btFade calc(500ms * var(--motion-scale)) var(--ease-out) calc(120ms * var(--motion-scale)) both; }
+#loading .boot-tagline { font: 500 var(--fs-3)/1.3 var(--font); color: var(--c-text-secondary); margin-bottom: 18px; transition: color calc(300ms * var(--motion-scale)) var(--ease-out); }
+#loading .boot-tagline.is-done { color: var(--c-text-primary); }
+#loading .boot-ellipsis::after { content: ''; animation: btDots 1.6s steps(4, end) infinite; }
+@keyframes btDots { 0% { content: ''; } 25% { content: '.'; } 50% { content: '..'; } 75% { content: '...'; } 100% { content: ''; } }
+
+#loading .boot-rows { border-top: 1px solid var(--hairline); }
+#loading .boot-row {
+  position: relative; display: grid; grid-template-columns: 20px 78px minmax(0, 1fr) auto; align-items: center; column-gap: 12px;
+  padding: 10px 0; border-bottom: 1px solid var(--hairline); min-height: 46px;
+  --hw: var(--c-text-tertiary);
+  opacity: .4; overflow: hidden; transition: opacity calc(300ms * var(--motion-scale)) var(--ease-out);
+}
+#loading #lstep-cpu { --hw: var(--c-hw-cpu); } #loading #lstep-ram { --hw: var(--c-hw-ram); } #loading #lstep-gpu { --hw: var(--c-hw-gpu); }
+#loading #lstep-storage { --hw: var(--c-hw-disk); } #loading #lstep-display { --hw: var(--c-hw-gpu); } #loading #lstep-board { --hw: var(--c-hw-net); } #loading #lstep-os { --hw: var(--c-success); }
+#loading .boot-row-icon { font-size: var(--fs-2); color: var(--c-text-tertiary); text-align: center; transition: color calc(300ms * var(--motion-scale)) var(--ease-out); }
+#loading .boot-row-label { font: 600 var(--fs-2)/1.2 var(--font); color: var(--c-text-secondary); }
+#loading .boot-row-right { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+#loading .step-detail { font: 500 var(--fs-2)/1.3 var(--font); color: var(--c-text-tertiary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-variant-numeric: tabular-nums; }
+#loading .step-sub-detail { font: 400 var(--fs-1)/1.3 var(--font-mono); color: var(--c-text-tertiary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#loading .step-sub-detail:empty { display: none; }
+#loading .bt-tag { font: 400 var(--fs-1)/1 var(--font-mono); color: var(--c-text-tertiary); white-space: nowrap; }
+
+/* row states: waiting → reading → remembered / done / unavailable */
+#loading .boot-row[data-state="reading"] { opacity: 1; }
+#loading .boot-row[data-state="reading"] .boot-row-icon { color: var(--hw); animation: btBreath 1.4s ease-in-out infinite; }
+#loading .boot-row[data-state="reading"]::after { content: ''; position: absolute; left: 0; bottom: -1px; height: 1px; width: 32%; background: linear-gradient(90deg, transparent, var(--hw), transparent); animation: btSweep 1.5s var(--ease-out) infinite; }
+#loading .boot-row[data-state="remembered"] { opacity: .82; }
+#loading .boot-row[data-state="remembered"] .step-detail { color: var(--c-text-secondary); }
+#loading .boot-row[data-state="remembered"] .boot-row-icon { color: var(--hw); opacity: .7; }
+#loading .boot-row[data-state="done"] { opacity: 1; }
+#loading .boot-row[data-state="done"] .step-detail { color: var(--c-text-primary); }
+#loading .boot-row[data-state="done"] .boot-row-icon { color: var(--hw); animation: btPop calc(380ms * var(--motion-scale)) var(--ease-spring) both; }
+#loading .boot-row[data-state="done"] .bt-tag { color: var(--c-success); }
+#loading .boot-row[data-changed] .step-detail { animation: btChanged 1.6s var(--ease-out) both; }
+#loading .boot-row[data-state="unavailable"] { opacity: 1; }
+#loading .boot-row[data-state="unavailable"] .boot-row-icon, #loading .boot-row[data-state="unavailable"] .step-detail { color: var(--c-warning); }
+@keyframes btSweep { from { transform: translateX(-100%); } to { transform: translateX(320%); } }
+@keyframes btBreath { 0%, 100% { opacity: .55; } 50% { opacity: 1; } }
+@keyframes btPop { from { transform: scale(.6); } to { transform: scale(1); } }
+@keyframes btChanged { 0% { color: var(--c-accent); } 100% { color: var(--c-text-primary); } }
+@keyframes btFade { from { opacity: 0; } to { opacity: 1; } }
+
+/* identity card */
+#loading .bt-card { margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--hairline); min-height: 112px; visibility: hidden; opacity: 0; transform: translateY(6px); transition: opacity calc(420ms * var(--motion-scale)) var(--ease-out), transform calc(420ms * var(--motion-scale)) var(--ease-out); }
+#loading .bt-card.is-in { visibility: visible; opacity: 1; transform: none; }
+#loading .bt-card-top { display: flex; align-items: center; gap: 14px; }
+#loading .bt-glyph { width: 44px; height: 44px; flex: none; fill: none; stroke: var(--c-accent); stroke-width: 1.25; stroke-linejoin: round; stroke-linecap: round; }
+#loading .bt-glyph-spokes { opacity: .45; }
+#loading .bt-glyph-ring { stroke-dasharray: 1; stroke-dashoffset: 1; }
+#loading .bt-card.is-in .bt-glyph-ring { stroke-dashoffset: 0; transition: stroke-dashoffset calc(900ms * var(--motion-scale)) var(--ease-out) calc(120ms * var(--motion-scale)); }
+#loading .bt-class { font: 600 var(--fs-4)/1.25 var(--font); color: var(--c-text-primary); }
+#loading .bt-sig { margin-top: 3px; font: 400 var(--fs-1)/1.3 var(--font-mono); color: var(--c-text-tertiary); }
+#loading .bt-sig-id { color: var(--c-text-secondary); letter-spacing: .04em; }
+#loading .bt-line { margin-top: 12px; font: 400 var(--fs-2)/1.45 var(--font); color: var(--c-text-secondary); }
+
+/* slow read / escape hatches */
+#loading .bt-slow { margin-top: 14px; font: 400 var(--fs-1)/1.4 var(--font); color: var(--c-text-tertiary); }
+#loading .boot-skip { position: absolute; right: 0; bottom: -34px; font: 500 var(--fs-1)/1 var(--font); color: var(--c-text-tertiary); text-decoration: none; background: none; border: 0; cursor: pointer; }
+#loading .boot-skip:hover { color: var(--c-text-primary); }
+#loading .bt-slow .j-link { text-decoration: underline; color: var(--c-accent); background: none; border: 0; padding: 0; font: inherit; cursor: pointer; }
+.bt-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* footer: progress line, what this scan does, percent */
+#loading .boot-footer { position: absolute; left: 0; right: 0; bottom: 0; padding: 0 0 0; }
+#loading .boot-progress-track { height: 2px; background: var(--hairline); }
+#loading .boot-progress-fill { height: 100%; width: 0; background: var(--c-accent); transition: width calc(360ms * var(--motion-scale)) var(--ease-out); }
+#loading .bt-foot-row { display: flex; justify-content: space-between; gap: 16px; padding: 12px clamp(24px, 6vw, 96px) 16px; font: 400 var(--fs-1)/1.2 var(--font); color: var(--c-text-tertiary); }
+#loading .boot-step-counter { font: 500 var(--fs-1)/1.2 var(--font-mono); font-variant-numeric: tabular-nums; }
+
+/* stage: the rig assembles beside the ledger */
+#loading .boot-stage { position: absolute; right: clamp(24px, 5vw, 80px); top: 14vh; bottom: 14vh; left: auto; width: min(52vw, 900px); border-radius: var(--r-lg); overflow: hidden; border: 1px solid var(--hairline); background: linear-gradient(160deg, var(--twin-bg-a), var(--twin-bg-b)); animation: btFade calc(600ms * var(--motion-scale)) var(--ease-out) calc(200ms * var(--motion-scale)) both; }
+.boot-leaders { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 3; overflow: visible; }
+.boot-leader { fill: none; stroke: var(--c-accent); stroke-opacity: .55; stroke-width: 1; stroke-linejoin: round; stroke-dasharray: 1; stroke-dashoffset: 1; transition: stroke-dashoffset calc(650ms * var(--motion-scale)) var(--ease-out), stroke-opacity var(--dur-short) var(--ease-out), opacity var(--dur-medium) var(--ease-out); }
+.boot-leader.is-drawn { stroke-dashoffset: 0; }
+.boot-leader.is-hot { stroke-opacity: 1; stroke-width: 1.5; }
+.boot-leader-dot { fill: var(--c-accent); transition: opacity var(--dur-medium) var(--ease-out); }
+.boot-reticle { fill: none; stroke: var(--c-accent); stroke-width: 1.25; stroke-linecap: round; opacity: 0; transform-box: fill-box; transform-origin: center; }
+.boot-reticle.is-lock { animation: btLock calc(520ms * var(--motion-scale)) var(--ease-out) both; }
+@keyframes btLock { from { opacity: 0; transform: scale(2); } to { opacity: .9; transform: scale(1); } }
+/* static silhouette (WebGL off): a stage's rects fade in when that stage lands */
+#loading .boot-stage .j-twin-part { transition: opacity calc(420ms * var(--motion-scale)) var(--ease-out); }
+#loading .boot-stage .j-twin-part:not([data-in]) { opacity: 0; }
+
+/* handoff: ledger, header, leaders and backdrop let go while the stage travels to Home */
+#loading.handoff { background: transparent; pointer-events: none; transition: background calc(260ms * var(--motion-scale)) var(--ease-out); }
+#loading.handoff .boot-center, #loading.handoff .boot-header, #loading.handoff .boot-footer, #loading.handoff .boot-leaders { opacity: 0; transition: opacity calc(240ms * var(--motion-scale)) var(--ease-out); }
+#loading.handoff .boot-stage { border-color: transparent; z-index: 4; }
+#loading.handoff-done { opacity: 0; transition: opacity calc(220ms * var(--motion-scale)) var(--ease-out); }
+#loading.complete { opacity: 0; transition: opacity calc(500ms * var(--motion-scale)) var(--ease-out); pointer-events: none; }
+
+@media (max-height: 720px) { #loading .boot-row { padding: 7px 0; min-height: 38px; } #loading .boot-tagline { margin-bottom: 12px; } #loading .bt-card { margin-top: 14px; padding-top: 12px; } }
+@media (max-width: 900px) {
+  #loading { flex-direction: column; justify-content: flex-end; align-items: flex-start; padding: 0 24px 64px; }
+  #loading .boot-center { width: min(440px, 100%); }
+  #loading .boot-stage { left: 24px; right: 24px; top: 80px; bottom: auto; width: auto; height: 30vh; }
+  #loading .boot-skip { position: static; margin-top: 12px; align-self: flex-start; }
+  #loading .boot-header { padding: 24px; }
+  #loading .bt-foot-row { padding: 12px 24px 16px; }
+  .boot-leaders { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  #loading .boot-row[data-state="reading"]::after { animation: none; }
+  #loading .boot-row[data-state="reading"] .boot-row-icon { animation: none; }
+}

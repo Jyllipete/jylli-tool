@@ -24,6 +24,7 @@
 <link rel="stylesheet" href="css/pulse.css">
 <link rel="stylesheet" href="css/bios.css">
 <link rel="stylesheet" href="css/premium.css">
+<link rel="stylesheet" href="css/boot.css">
 </head>
 <body>
 
@@ -115,8 +116,8 @@
   </div>
 </div>
 
-<!-- Loading screen -->
-<div id="loading">
+<!-- Loading screen: the boot scan (js/boot/sequence.js). Row ids (lstep-*) are shared with js/boot-stage.js and tools/ui-preview/boot-demo.html -->
+<div id="loading" class="bt">
   <!-- Header: logo + wordmark top-left -->
   <div class="boot-header">
     <div class="boot-logo-icon"><i class="fa fa-bolt"></i></div>
@@ -130,82 +131,83 @@
   <div class="boot-stage j-twin-slot" id="boot-twin-slot" role="img" aria-label="Your PC being identified"></div>
   <svg class="boot-leaders" id="boot-leaders" aria-hidden="true"></svg>
 
-  <!-- Center column: tagline + detection rows -->
+  <!-- Center column: headline, one row per read, identity card, escape hatches -->
   <div class="boot-center">
-    <div class="boot-tagline">Scanning your system<span class="boot-ellipsis"></span></div>
-    <div class="boot-rows load-steps">
-      <div class="boot-row load-step active" id="lstep-cpu">
-        <div class="boot-row-left">
-          <span class="boot-row-icon step-icon"><i class="fa fa-microchip"></i></span>
-          <span class="boot-row-label step-label">CPU</span>
-        </div>
-        <div class="boot-row-right step-detail-wrap">
-          <span class="step-detail" id="lstep-cpu-detail">Waiting…</span>
-          <span class="step-sub-detail" id="lstep-cpu-sub"></span>
-        </div>
+    <div class="boot-tagline" id="boot-tagline"><span id="boot-tagline-text">Scanning your system</span><span class="boot-ellipsis"></span></div>
+    <div class="boot-rows load-steps" id="boot-rows">
+      <div class="boot-row load-step" id="lstep-cpu" data-state="waiting">
+        <span class="boot-row-icon step-icon"><i class="fa fa-microchip"></i></span>
+        <span class="boot-row-label step-label">CPU</span>
+        <span class="boot-row-right step-detail-wrap"><span class="step-detail" id="lstep-cpu-detail">Waiting…</span><span class="step-sub-detail" id="lstep-cpu-sub"></span></span>
+        <span class="bt-tag" id="lstep-cpu-tag"></span>
       </div>
-      <div class="boot-row load-step" id="lstep-ram">
-        <div class="boot-row-left">
-          <span class="boot-row-icon step-icon"><i class="fa fa-memory"></i></span>
-          <span class="boot-row-label step-label">RAM</span>
-        </div>
-        <div class="boot-row-right step-detail-wrap">
-          <span class="step-detail" id="lstep-ram-detail">Waiting…</span>
-          <span class="step-sub-detail" id="lstep-ram-sub"></span>
-        </div>
+      <div class="boot-row load-step" id="lstep-ram" data-state="waiting">
+        <span class="boot-row-icon step-icon"><i class="fa fa-memory"></i></span>
+        <span class="boot-row-label step-label">RAM</span>
+        <span class="boot-row-right step-detail-wrap"><span class="step-detail" id="lstep-ram-detail">Waiting…</span><span class="step-sub-detail" id="lstep-ram-sub"></span></span>
+        <span class="bt-tag" id="lstep-ram-tag"></span>
       </div>
-      <div class="boot-row load-step" id="lstep-gpu">
-        <div class="boot-row-left">
-          <span class="boot-row-icon step-icon"><i class="fa fa-display"></i></span>
-          <span class="boot-row-label step-label">GPU</span>
-        </div>
-        <div class="boot-row-right step-detail-wrap">
-          <span class="step-detail" id="lstep-gpu-detail">Waiting…</span>
-          <span class="step-sub-detail" id="lstep-gpu-sub"></span>
-        </div>
+      <div class="boot-row load-step" id="lstep-gpu" data-state="waiting">
+        <span class="boot-row-icon step-icon"><i class="fa fa-display"></i></span>
+        <span class="boot-row-label step-label">GPU</span>
+        <span class="boot-row-right step-detail-wrap"><span class="step-detail" id="lstep-gpu-detail">Waiting…</span><span class="step-sub-detail" id="lstep-gpu-sub"></span></span>
+        <span class="bt-tag" id="lstep-gpu-tag"></span>
       </div>
-      <div class="boot-row load-step" id="lstep-vram">
-        <div class="boot-row-left">
-          <span class="boot-row-icon step-icon"><i class="fa fa-layer-group"></i></span>
-          <span class="boot-row-label step-label">VRAM</span>
-        </div>
-        <div class="boot-row-right step-detail-wrap">
-          <span class="step-detail" id="lstep-vram-detail">Waiting…</span>
-          <span class="step-sub-detail" id="lstep-vram-sub"></span>
-        </div>
+      <!-- VRAM is a read of its own but reads as part of the GPU row: its result lands in the GPU row's sub line -->
+      <div class="boot-row load-step bt-folded" id="lstep-vram" data-state="waiting" hidden>
+        <span class="boot-row-label step-label">VRAM</span>
+        <span class="boot-row-right step-detail-wrap"><span class="step-detail" id="lstep-vram-detail"></span><span class="step-sub-detail" id="lstep-vram-sub"></span></span>
       </div>
-      <div class="boot-row load-step" id="lstep-storage">
-        <div class="boot-row-left">
-          <span class="boot-row-icon step-icon"><i class="fa fa-hard-drive"></i></span>
-          <span class="boot-row-label step-label" data-i18n="loadStepStorage">Storage</span>
-        </div>
-        <div class="boot-row-right step-detail-wrap">
-          <span class="step-detail" id="lstep-storage-detail">Waiting…</span>
-          <span class="step-sub-detail" id="lstep-storage-sub"></span>
-        </div>
+      <div class="boot-row load-step" id="lstep-storage" data-state="waiting">
+        <span class="boot-row-icon step-icon"><i class="fa fa-hard-drive"></i></span>
+        <span class="boot-row-label step-label" data-i18n="loadStepStorage">Storage</span>
+        <span class="boot-row-right step-detail-wrap"><span class="step-detail" id="lstep-storage-detail">Waiting…</span><span class="step-sub-detail" id="lstep-storage-sub"></span></span>
+        <span class="bt-tag" id="lstep-storage-tag"></span>
       </div>
-      <div class="boot-row load-step" id="lstep-os">
-        <div class="boot-row-left">
-          <span class="boot-row-icon step-icon"><i class="fa fa-shield-halved"></i></span>
-          <span class="boot-row-label step-label" data-i18n="loadStepOs">OS &amp; Admin</span>
-        </div>
-        <div class="boot-row-right step-detail-wrap">
-          <span class="step-detail" id="lstep-os-detail">Waiting…</span>
-          <span class="step-sub-detail" id="lstep-os-sub"></span>
-        </div>
+      <div class="boot-row load-step" id="lstep-display" data-state="waiting">
+        <span class="boot-row-icon step-icon"><i class="fa fa-tv"></i></span>
+        <span class="boot-row-label step-label" id="lstep-display-label">Display</span>
+        <span class="boot-row-right step-detail-wrap"><span class="step-detail" id="lstep-display-detail">Waiting…</span><span class="step-sub-detail" id="lstep-display-sub"></span></span>
+        <span class="bt-tag" id="lstep-display-tag"></span>
+      </div>
+      <div class="boot-row load-step" id="lstep-board" data-state="waiting">
+        <span class="boot-row-icon step-icon"><i class="fa fa-table-cells"></i></span>
+        <span class="boot-row-label step-label" id="lstep-board-label">Board</span>
+        <span class="boot-row-right step-detail-wrap"><span class="step-detail" id="lstep-board-detail">Waiting…</span><span class="step-sub-detail" id="lstep-board-sub"></span></span>
+        <span class="bt-tag" id="lstep-board-tag"></span>
+      </div>
+      <div class="boot-row load-step" id="lstep-os" data-state="waiting">
+        <span class="boot-row-icon step-icon"><i class="fa fa-shield-halved"></i></span>
+        <span class="boot-row-label step-label" id="lstep-os-label">OS &amp; Admin</span>
+        <span class="boot-row-right step-detail-wrap"><span class="step-detail" id="lstep-os-detail">Waiting…</span><span class="step-sub-detail" id="lstep-os-sub"></span></span>
+        <span class="bt-tag" id="lstep-os-tag"></span>
       </div>
     </div>
+
+    <!-- Identity card: appears when the scan is done (rig class, signature, the one true closing line) -->
+    <div class="bt-card" id="boot-card">
+      <div class="bt-card-top">
+        <svg class="bt-glyph" id="bt-glyph" viewBox="0 0 40 40" aria-hidden="true"></svg>
+        <div class="bt-card-id">
+          <div class="bt-class" id="bt-class"></div>
+          <div class="bt-sig"><span id="bt-sig-label"></span> <span class="bt-sig-id" id="bt-sig"></span></div>
+        </div>
+      </div>
+      <div class="bt-line" id="bt-line"></div>
+    </div>
+
+    <div class="bt-slow" id="boot-slow" hidden><span id="boot-slow-text"></span> <button class="j-link" id="boot-continue" type="button"></button></div>
     <button class="j-link boot-skip" id="boot-skip" type="button" data-i18n="bootSkip">Skip</button>
   </div>
 
-  <!-- Footer: fluid progress bar + step counter -->
-  <div class="boot-footer">
-    <div class="boot-progress-track">
-      <div class="boot-progress-fill" id="boot-progress-fill"></div>
-    </div>
-    <div class="boot-step-counter" id="boot-step-counter">0 / 6</div>
-  </div>
+  <!-- Screen-reader channel: one polite line per finished read -->
+  <div class="bt-sr" id="boot-announce" role="status" aria-live="polite"></div>
 
+  <!-- Footer: progress line + percent + what this scan does -->
+  <div class="boot-footer">
+    <div class="boot-progress-track"><div class="boot-progress-fill" id="boot-progress-fill"></div></div>
+    <div class="bt-foot-row"><span class="bt-trust" id="boot-trust"></span><span class="boot-step-counter" id="boot-step-counter">0%</span></div>
+  </div>
 </div>
 
 <!-- Generic confirm modal -->
@@ -496,6 +498,8 @@
 <script src="js/lang/fivem-fi.js"></script>
 <script src="js/lang/pulse-en.js"></script>
 <script src="js/lang/pulse-fi.js"></script>
+<script src="js/lang/boot-en.js"></script>
+<script src="js/lang/boot-fi.js"></script>
 <script src="js/esc.js"></script>
 <script src="js/theme-sync.js"></script>
 <script src="js/ui.js"></script>
@@ -524,6 +528,8 @@
 <script src="js/twin/netscene.js"></script>
 <script src="js/twin/host.js"></script>
 <script src="js/boot-stage.js"></script>
+<script src="js/boot/pure.js"></script>
+<script src="js/boot/sequence.js"></script>
 <script src="js/shell.js"></script>
 <script src="js/premium.js"></script>
 <script src="js/concierge.js"></script>
@@ -735,16 +741,13 @@ async function init(isPremium = false) {
     settings.lastSeenVersion = appVersion
     api.saveSettings(settings)
   }
-  document.getElementById('load-ver').textContent       = `v${appVersion} — ${tUI('loadDetecting')}`
-  const _taglineEl = document.querySelector('.boot-tagline')
-  if (_taglineEl) _taglineEl.firstChild.textContent = tUI('loadScanning')
+  document.getElementById('load-ver').textContent       = `v${appVersion}`
   document.getElementById('titlebar-ver').textContent   = `v${appVersion}`
   document.getElementById('sidebar-ver').innerHTML      = `v${appVersion} · Jylli Tool<span id="sidebar-thermal-badge" style="display:none;margin-left:6px;font-size:11px;padding:1px 5px;border-radius:8px;background:var(--tg-badge-bg,var(--surface-2));color:var(--tg-badge-color,var(--c-text-primary))"></span>`
 
   // ThermalGuard: wire sidebar badge to thermal ticks
   // Main knows each tweak's real safety tier; cards use it instead of guessing in the renderer.
   api.aoAllowed?.().then(l => { if (Array.isArray(l) && l.length) window._aoAllowed = new Set(l) }).catch(() => {})
-  api.getApplicability?.().then(r => { if (r && r.ok) window._applic = r.map }).catch(() => {})
   window._tweakMetaReady = (api.getTweakMeta?.() || Promise.resolve(null)).then(list => { if (Array.isArray(list)) window._tweakMeta = Object.fromEntries(list.map(m => [m.id, m])); return !!window._tweakMeta }).catch(() => false)
   try { JylliTelemetry.start() } catch {}
   api.onSettingsPatch?.(p => { if (p && typeof p === 'object') Object.assign(settings, p) })
@@ -775,39 +778,7 @@ async function init(isPremium = false) {
     }
   })
 
-  // ── Loading screen ────────────────────────────────────────────────────────
-  const LOAD_ORDER = ['cpu','ram','gpu','vram','storage','os']
-  const MIN_STEP_MS = 420  // minimum time each step stays active before advancing
-
-  // ── Boot animation helpers ──────────────────────────────────────────────────
-
-  // Typewriter reveal: character-by-character text reveal, cancellable via el._revealTimer
-  function revealText(el, str, speed) {
-    speed = speed || 13
-    if (el._revealTimer) { clearInterval(el._revealTimer); el._revealTimer = null }
-    var i = 0
-    el.textContent = ''
-    el._revealTimer = setInterval(function() {
-      el.textContent = str.slice(0, ++i)
-      if (i >= str.length) { clearInterval(el._revealTimer); el._revealTimer = null }
-    }, speed)
-  }
-
-  // Segmented progress bar — light up each segment as its step completes
-  const LOAD_SEGS = ['cpu','ram','gpu','vram','storage','os']
-  function setLoadProgress(stepId) {
-    var idx = LOAD_SEGS.indexOf(stepId)
-    // Drive fluid progress bar + step counter
-    var fill = document.getElementById('boot-progress-fill')
-    if (fill) fill.style.width = ((idx + 1) / LOAD_SEGS.length * 100) + '%'
-    var counter = document.getElementById('boot-step-counter')
-    if (counter) counter.textContent = (idx + 1) + ' / ' + LOAD_SEGS.length
-  }
-  function markSegActive(stepId) {
-    // Nudge fluid bar to show progress has started on this step
-    var fill = document.getElementById('boot-progress-fill')
-    if (fill) { var pct = LOAD_SEGS.indexOf(stepId) / LOAD_SEGS.length * 100; if (parseFloat(fill.style.width||0) < pct + 2) fill.style.width = (pct + 2) + '%' }
-  }
+  // ── Loading screen: js/boot/sequence.js drives the rows, js/boot-stage.js the rig ──
 
   // Scan complete: slide splash up, app slides in from below
   // Resolves once the splash is gone; Arrival and tours wait on it.
@@ -831,127 +802,7 @@ async function init(isPremium = false) {
     setTimeout(hide, 1050)
   }
 
-  const _activatedSteps = new Set()
-  const _stepStartTimes = {}
-  function markStepDone(id, detail, subDetail) {
-    const el = document.getElementById('lstep-' + id)
-    if (!el) return
-    try { window.JylliBootStage && JylliBootStage.onStepDone(id) } catch {}
-    el.classList.remove('active')
-    el.classList.add('done')
-    el.style.animation = ''
-    el.querySelector('.step-icon').innerHTML = '<i class="fa fa-check"></i>'
-    const det = document.getElementById('lstep-' + id + '-detail')
-    if (det) {
-      if (det._revealTimer) { clearInterval(det._revealTimer); det._revealTimer = null }
-      if (detail) {
-        revealText(det, detail, 12)
-      } else {
-        det.textContent = ''
-      }
-    }
-    // Sub-detail line (e.g. cores/threads, RAM type, driver version)
-    const sub = document.getElementById('lstep-' + id + '-sub')
-    if (sub && subDetail) {
-      setTimeout(function() { revealText(sub, subDetail, 14) }, 180)
-    }
-    // Timing badge [Xms] — appended after step-label, before step-detail-wrap
-    const elapsed = _stepStartTimes[id] ? Date.now() - _stepStartTimes[id] : null
-    if (elapsed !== null) {
-      var ms = document.createElement('span')
-      ms.className = 'step-ms'
-      ms.textContent = '[' + elapsed + 'ms]'
-      var wrap = el.querySelector('.step-detail-wrap')
-      if (wrap) el.insertBefore(ms, wrap)
-    }
-    // Remove ambient glow when step done
-    var stepsCard = document.querySelector('#loading .load-steps')
-    if (stepsCard) stepsCard.classList.remove('glow-' + id)
-    setLoadProgress(id)
-  }
-  function markStepActive(id, detail) {
-    const el = document.getElementById('lstep-' + id)
-    if (!el) return
-    _stepStartTimes[id] = Date.now()
-    try { window.JylliBootStage && JylliBootStage.onStepActive(id) } catch {}
-    el.classList.add('active')
-    if (!_activatedSteps.has(id)) {
-      _activatedSteps.add(id)
-    }
-    // Ambient glow
-    var stepsCard = document.querySelector('#loading .load-steps')
-    if (stepsCard) {
-      ['cpu','ram','gpu','vram','storage','os'].forEach(function(s) { stepsCard.classList.remove('glow-' + s) })
-      stepsCard.classList.add('glow-' + id)
-    }
-    // Mark this segment as active (pulsing)
-    markSegActive(id)
-    const det = document.getElementById('lstep-' + id + '-detail')
-    if (det) revealText(det, detail || 'Detecting…', 10)
-  }
-
-  // Each step gets a resolve function; IPC events call it when detection is done
-  const stepResolvers = {}
-  const stepPromises = {}
-  for (const id of LOAD_ORDER) {
-    stepPromises[id] = new Promise(r => { stepResolvers[id] = r })
-  }
-
-  // IPC event handler — resolves the matching step promise with real detail text
-  const SPEC_MAP = {
-    'CPU detected':            { id: 'cpu' },
-    'RAM detected':            { id: 'ram' },
-    'GPU detected':            { id: 'gpu' },
-    'VRAM detected':           { id: 'vram' },
-    'VRAM detection complete': { id: 'vram' },
-    'Storage detected':        { id: 'storage' },
-    'Done':                    { id: 'os' },
-  }
-  api.startupTrace?.('onSpecProgress listener registering')
-  if (window.api?.onSpecProgress) {
-    api.onSpecProgress(({ label, detail }) => {
-      api.startupTrace?.(`onSpecProgress received: label="${label}"`)
-      const entry = Object.entries(SPEC_MAP).find(([k]) => label.startsWith(k))
-      if (entry) {
-        const id = entry[1].id
-        api.startupTrace?.(`onSpecProgress resolving step "${id}"`)
-        if (stepResolvers[id]) stepResolvers[id]({ detail })
-      }
-    })
-  }
-  api.startupTrace?.('onSpecProgress listener registered')
-
-  // Split a detail string at ' · ' into [mainLine, subLine] for two-line display
-  function splitDetail(id, detail) {
-    if (!detail) return [null, null]
-    // CPU: "Intel Core i7-13700K · 5.2 GHz" → main = model, sub = speed
-    // RAM: "32 GB · 4800 MHz" → main = size, sub = speed
-    // GPU: just the name — sub comes from VRAM step
-    // VRAM: "16GB VRAM" → show on main, no sub
-    // Storage: "NVMe SSD · 234/512 GB" → main = type, sub = usage
-    // OS: "Running as Administrator" or "Not running..." → no split needed
-    const parts = detail.split(' · ')
-    if (parts.length >= 2) return [parts[0], parts.slice(1).join(' · ')]
-    return [detail, null]
-  }
-
-  // Sequential animation: each step stays active until BOTH min time passes AND detection resolves
-  let loadAnimDone = false
-  async function runLoadAnim() {
-    for (const id of LOAD_ORDER) {
-      markStepActive(id, 'Detecting…')
-      const [resolved] = await Promise.all([
-        stepPromises[id],
-        new Promise(r => setTimeout(r, MIN_STEP_MS))
-      ])
-      const raw = resolved?.detail || null
-      const [main, sub] = splitDetail(id, raw)
-      markStepDone(id, main, sub)
-    }
-    loadAnimDone = true
-  }
   try { window.JylliBootStage && JylliBootStage.start() } catch (e) { api.startupTrace?.(`boot stage failed to start: ${e?.message}`) }
-  runLoadAnim()
   api.offAutoOptiProgress()
   api.onAutoOptiProgress(({ step, total, label, id, status }) => {
     if (window._aomProgressHandler) { window._aomProgressHandler({ step, total, label, id, status }); return }
@@ -976,46 +827,10 @@ async function init(isPremium = false) {
       sysInfo.isAdmin = info.isAdmin
     }
   })
-  sysInfoPromise.then(info => {
-    const fallbacks = {
-      cpu:     info.cpu && info.cpu !== 'Detecting…' ? info.cpu : null,
-      ram:     info.ramGB ? info.ramGB + ' GB' + (info.ramSpeed > 0 ? ' · ' + info.ramSpeed + ' MHz' : '') : null,
-      gpu:     info.gpu && info.gpu !== 'Detecting…' ? info.gpu : null,
-      vram:    info.vramMB >= 512 ? (info.vramMB >= 1024 ? (info.vramMB/1024).toFixed(0)+'GB' : info.vramMB+'MB') + ' VRAM' : 'Not detected',
-      storage: info.diskType ? `${info.diskType} · ${info.diskUsedGB}/${info.diskTotalGB} GB` : null,
-      os:      info.isAdmin ? 'Running as Administrator' : 'Ready',
-    }
-    for (const [id, detail] of Object.entries(fallbacks)) {
-      if (stepResolvers[id]) stepResolvers[id]({ detail })
-    }
-  })
-
-  // Hard fallback: after 15s resolve any still-pending steps so boot never hangs
-  setTimeout(() => {
-    api.startupTrace?.('15s hard fallback fired — resolving any pending steps')
-    const genericFallbacks = { cpu: 'Detected', ram: 'Detected', gpu: 'Detected', vram: 'Not detected', storage: 'Detected', os: 'Ready' }
-    for (const [id, detail] of Object.entries(genericFallbacks)) {
-      if (stepResolvers[id]) stepResolvers[id]({ detail })
-    }
-  }, 15000)
-
-  // Wait for animation (which waits for each step to both display AND detect)
-  // plus the admin check, plus actual sysinfo
-  const animDonePromise = new Promise(r => {
-    let _t
-    const check = () => loadAnimDone ? (clearTimeout(_t), r()) : (_t = setTimeout(check, 50))
-    check()
-  })
-  const bootTimeout = new Promise(r => setTimeout(() => { api.startupTrace?.('35s bootTimeout fired'); r() }, 35000))
-
-  api.startupTrace?.('entering Promise.race([Promise.all([sysInfo, animDone]), bootTimeout])')
-  const [fullInfo] = await Promise.race([
-    Promise.all([
-      sysInfoPromise.then(v => { api.startupTrace?.('sysInfoPromise settled'); return v }),
-      animDonePromise.then(v => { api.startupTrace?.('animDonePromise settled'); return v }),
-    ]).then(v => { api.startupTrace?.('Promise.all resolved (normal path)'); return v }),
-    bootTimeout.then(() => { api.startupTrace?.('Promise.race resolved via bootTimeout (fallback path)'); return [{}] }),
-  ])
+  // The sequence registers its spec-progress listener in this same tick, before any event can arrive.
+  api.startupTrace?.('boot scan: JylliBoot.run')
+  const fullInfo = await JylliBoot.run({ api, sysInfoPromise, settings })
+  api.startupTrace?.('boot scan finished')
 
   // isAdmin comes from detectSystemInfo() — no separate IPC call needed.
   // Spread real values over safe defaults so downstream reads never see undefined.
@@ -1051,10 +866,9 @@ async function init(isPremium = false) {
   if (applied.length) appendLog(`  ${applied.length} tweak(s) previously applied — badges restored.`, 'info')
   updateDiscordScore()
   // Detect FiveM for small image indicator
-  api.getSystemInfo().then(si => {
-    const hasFiveM = !!(si?.fivemInstalled)
-    api.discordSetFiveM(hasFiveM).catch(() => {})
-  }).catch(() => {})
+  api.discordSetFiveM(!!sysInfo.fivemInstalled).catch(() => {})
+  // Heavy capability probe: only now that detection is done (it used to compete with it for PowerShell slots)
+  api.getApplicability?.().then(r => { if (r && r.ok) window._applic = r.map }).catch(() => {})
   // Re-send when RPC connects (it's async — ready fires after this code runs)
   api.onDiscordReady(() => updateDiscordScore())
   if (!sysInfo.isAdmin) appendLog('NOT running as Administrator — tweaks requiring registry/system access will fail.', 'err')

@@ -501,6 +501,9 @@ const JylliScore = require('./js/score')
 const { createHub } = require('./lib/telemetry-hub')
 const { createTelemetryService } = require('./lib/telemetry-service')
 const Inventory = require('./lib/inventory')
+const SysFingerprint = require('./lib/sysinfo/fingerprint')
+const SysMerge = require('./lib/sysinfo/merge')
+const SysStore = require('./lib/sysinfo/store')
 const dxSettings = require('./lib/auto-opti/dx-settings')
 const { createPowerLimit } = require('./lib/gpu-power-limit')
 const Smi = require('./lib/nvidia-smi')
@@ -1478,10 +1481,10 @@ async function checkAdmin() {
   // Bypass the runPS semaphore — admin check is a one-liner (~50ms) and must never queue behind
   // slow metrics scripts. If it queued, the 5s timeout would expire while waiting, returning false.
   try {
-    const r = await _runPSRaw(
-      '([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)',
-      5000
-    )
+    const ADMIN_PS = '([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)'
+    let r = await _runPSRaw(ADMIN_PS, 5000)
+    // An empty answer is a timeout under PowerShell load, not "False": ask once more with room to breathe.
+    if (!(r.out || '').trim()) { startupTrace('checkAdmin: empty answer — retrying once'); r = await _runPSRaw(ADMIN_PS, 15000) }
     const out = (r.out || '').trim()
     debugLog(`[checkAdmin] raw PS output: "${out}"`)
     _adminDebugRaw = out
@@ -1573,10 +1576,10 @@ function saveSettings(data) {
 }
 
 // ─── System Info Detection ────────────────────────────────────────────────────
-function emitSpecProgress(label, detail = '') {
+function emitSpecProgress(label, detail = '', extra = null) {
   startupTrace(`emitSpecProgress: "${label}" / "${detail}"`)
   const st = [[/^CPU detected/, 'cpu'], [/^RAM detected/, 'ram'], [/^GPU detected/, 'gpu'], [/^Storage detected/, 'disk'], [/^Network detected/, 'net'], [/^Done/, 'board']].find(([rx]) => rx.test(label))
-  mainWindow?.webContents.send('spec-progress', { label, detail, ...(st ? { stage: st[1], done: true } : {}) })
+  mainWindow?.webContents.send('spec-progress', { label, detail, ...(st ? { stage: st[1], done: true } : {}), ...(extra || {}) })
 }
 
 async function detectSystemInfo() {
@@ -1625,13 +1628,14 @@ async function detectSystemInfo() {
     // ── Batch 1: CPU speed, RAM speed, GPU name — run in parallel, emit each immediately ──
     startupTrace('detectSystemInfo: Batch1 starting (CPU/RAM/GPU)')
     emitSpecProgress('Detecting hardware…', '')
+    const adminP = checkAdmin().then(a => { emitSpecProgress('Admin', '', { admin: true, isAdmin: a }); return a })
     await Promise.all([
       runPS('(Get-CimInstance Win32_Processor | Select-Object -First 1).MaxClockSpeed', 8000)
-        .then(r => { const v = parseInt(r.out.trim()); if (!isNaN(v) && v > 0) info.cpuSpeed = v; emitSpecProgress('CPU detected', `${info.cpu} · ${(info.cpuSpeed/1000).toFixed(1)} GHz`) }),
+        .then(r => { const v = parseInt(r.out.trim()); if (!isNaN(v) && v > 0) info.cpuSpeed = v; emitSpecProgress('CPU detected', `${info.cpu} · ${(info.cpuSpeed/1000).toFixed(1)} GHz`, { data: { cpu: info.cpu, cpuSpeed: info.cpuSpeed, cpuCores: info.cpuCores } }) }),
       runPS('(Get-CimInstance Win32_PhysicalMemory | Measure-Object -Property ConfiguredClockSpeed -Maximum).Maximum', 8000)
-        .then(r => { const v = parseInt(r.out.trim()); if (!isNaN(v) && v > 0) info.ramSpeed = v; emitSpecProgress('RAM detected', `${info.ramGB} GB${info.ramSpeed > 0 ? ' · ' + info.ramSpeed + ' MHz' : ''}`) }),
+        .then(r => { const v = parseInt(r.out.trim()); if (!isNaN(v) && v > 0) info.ramSpeed = v; emitSpecProgress('RAM detected', `${info.ramGB} GB${info.ramSpeed > 0 ? ' · ' + info.ramSpeed + ' MHz' : ''}`, { data: { ramGB: info.ramGB, ramSpeed: info.ramSpeed } }) }),
       runPS('Get-CimInstance Win32_VideoController | Where-Object {$_.Name -notlike "*Basic*" -and $_.Name -notlike "*Remote*" -and $_.Name -notlike "*Virtual*"} | Sort-Object AdapterRAM -Descending | Select-Object -First 1 -ExpandProperty Name', 8000)
-        .then(r => { if (r.ok && r.out.trim()) info.gpu = r.out.trim(); emitSpecProgress('GPU detected', info.gpu || 'Unknown') }),
+        .then(r => { if (r.ok && r.out.trim()) info.gpu = r.out.trim(); emitSpecProgress('GPU detected', info.gpu || 'Unknown', { data: { gpu: info.gpu } }) }),
     ])
     startupTrace('detectSystemInfo: Batch1 done')
 
@@ -1742,7 +1746,7 @@ async function detectSystemInfo() {
     }
 
     emitSpecProgress(info.vramMB >= 512 ? 'VRAM detected' : 'VRAM detection complete',
-      info.vramMB >= 512 ? `${info.vramMB >= 1024 ? (info.vramMB/1024).toFixed(0)+'GB' : info.vramMB+'MB'} VRAM` : 'VRAM not detected')
+      info.vramMB >= 512 ? `${info.vramMB >= 1024 ? (info.vramMB/1024).toFixed(0)+'GB' : info.vramMB+'MB'} VRAM` : 'VRAM not detected', { data: { vramMB: info.vramMB } })
     await new Promise(r => setTimeout(r, 50))
 
     // ── Store HWiNFO availability flag for renderer ───────────────────────────
@@ -1754,6 +1758,41 @@ async function detectSystemInfo() {
 
     // ── NVMe detection — robust multi-method ─────────────────────────────────
     startupTrace('detectSystemInfo: storage detection starting')
+    // Slow, independent reads start now and run beside the storage chain (they used to wait for it).
+    const extraP = runPS(`
+$cpu   = Get-CimInstance Win32_Processor | Select-Object -First 1
+$os    = Get-CimInstance Win32_OperatingSystem
+$nic   = Get-CimInstance Win32_NetworkAdapterConfiguration | Where-Object { $_.IPEnabled -eq $true } | Select-Object -First 1
+$nicPh = Get-CimInstance Win32_NetworkAdapter | Where-Object { $_.Name -eq $nic.Description } | Select-Object -First 1
+$nicDrv = Get-NetAdapter | Where-Object { $_.Status -eq 'Up' -and $_.PhysicalMediaType -ne 'Native 802.11' -and $_.PhysicalMediaType -ne 'Wireless LAN' -and $_.InterfaceDescription -notlike '*Wireless*' -and $_.InterfaceDescription -notlike '*Wi-Fi*' } | Select-Object -First 1
+$gpu   = Get-CimInstance Win32_VideoController | Select-Object -First 1
+$ram   = Get-CimInstance Win32_PhysicalMemory | Select-Object -First 1
+$sys   = Get-CimInstance Win32_ComputerSystem
+$disp  = Get-CimInstance Win32_VideoController | Where-Object { $_.CurrentHorizontalResolution -gt 0 } | Select-Object -First 1
+$disk  = Get-CimInstance Win32_DiskDrive | Sort-Object Size -Descending | Select-Object -First 1
+Write-Output "CPU_THREADS=$($cpu.NumberOfLogicalProcessors)"
+Write-Output "OS_CAPTION=$($os.Caption)"
+Write-Output "NIC_NAME=$($nic.Description)"
+Write-Output "NIC_SPEED=$($nicPh.Speed)"
+Write-Output "NIC_DRIVER=$($nicDrv.DriverVersion)"
+Write-Output "GPU_DRIVER=$($gpu.DriverVersion)"
+Write-Output "RAM_SPEED=$($ram.Speed)"
+Write-Output "RAM_TYPE=$($ram.SMBIOSMemoryType)"
+Write-Output "COMP_NAME=$($sys.DNSHostName)"
+Write-Output "DOMAIN=$($sys.PartOfDomain)"
+Write-Output "DISPLAY_RES=$($disp.CurrentHorizontalResolution)x$($disp.CurrentVerticalResolution)"
+Write-Output "DISPLAY_REFRESH=$($disp.CurrentRefreshRate)"
+Write-Output "DISK_MODEL=$($disk.Model)"
+Write-Output "DISK_SIZE_GB=$([math]::Round($disk.Size / 1GB, 0))"
+`, 15000)
+    const boardP = runPS(`
+$b  = Get-CimInstance Win32_BaseBoard | Select-Object -First 1
+$bi = Get-CimInstance Win32_BIOS | Select-Object -First 1
+$o  = Get-CimInstance Win32_OperatingSystem
+Write-Output "BOARD=$($b.Manufacturer) $($b.Product)"
+Write-Output "BIOS_VER=$($bi.SMBIOSBIOSVersion)"
+Write-Output "OS_BUILD=$($o.BuildNumber)"
+`, 8000)
     emitSpecProgress('Detecting storage…', '')
     // Method 1: Get-PhysicalDisk with both BusType integer AND string matching
     const diskR = await runPS(`
@@ -1798,37 +1837,12 @@ async function detectSystemInfo() {
       info.diskTotalGB = Math.floor(du[1] / (1024**3))
     }
 
-    emitSpecProgress('Storage detected', `${info.diskType} · ${info.diskUsedGB}/${info.diskTotalGB} GB`)
+    emitSpecProgress('Storage detected', `${info.diskType} · ${info.diskUsedGB}/${info.diskTotalGB} GB`, { data: { diskType: info.diskType, nvme: info.nvme, diskUsedGB: info.diskUsedGB, diskTotalGB: info.diskTotalGB } })
     await new Promise(r => setTimeout(r, 50))
 
     // OS caption + extra specs for dashboard
     emitSpecProgress('Detecting OS info…', '')
-    const extraR = await runPS(`
-$cpu   = Get-CimInstance Win32_Processor | Select-Object -First 1
-$os    = Get-CimInstance Win32_OperatingSystem
-$nic   = Get-CimInstance Win32_NetworkAdapterConfiguration | Where-Object { $_.IPEnabled -eq $true } | Select-Object -First 1
-$nicPh = Get-CimInstance Win32_NetworkAdapter | Where-Object { $_.Name -eq $nic.Description } | Select-Object -First 1
-$nicDrv = Get-NetAdapter | Where-Object { $_.Status -eq 'Up' -and $_.PhysicalMediaType -ne 'Native 802.11' -and $_.PhysicalMediaType -ne 'Wireless LAN' -and $_.InterfaceDescription -notlike '*Wireless*' -and $_.InterfaceDescription -notlike '*Wi-Fi*' } | Select-Object -First 1
-$gpu   = Get-CimInstance Win32_VideoController | Select-Object -First 1
-$ram   = Get-CimInstance Win32_PhysicalMemory | Select-Object -First 1
-$sys   = Get-CimInstance Win32_ComputerSystem
-$disp  = Get-CimInstance Win32_VideoController | Where-Object { $_.CurrentHorizontalResolution -gt 0 } | Select-Object -First 1
-$disk  = Get-CimInstance Win32_DiskDrive | Sort-Object Size -Descending | Select-Object -First 1
-Write-Output "CPU_THREADS=$($cpu.NumberOfLogicalProcessors)"
-Write-Output "OS_CAPTION=$($os.Caption)"
-Write-Output "NIC_NAME=$($nic.Description)"
-Write-Output "NIC_SPEED=$($nicPh.Speed)"
-Write-Output "NIC_DRIVER=$($nicDrv.DriverVersion)"
-Write-Output "GPU_DRIVER=$($gpu.DriverVersion)"
-Write-Output "RAM_SPEED=$($ram.Speed)"
-Write-Output "RAM_TYPE=$($ram.SMBIOSMemoryType)"
-Write-Output "COMP_NAME=$($sys.DNSHostName)"
-Write-Output "DOMAIN=$($sys.PartOfDomain)"
-Write-Output "DISPLAY_RES=$($disp.CurrentHorizontalResolution)x$($disp.CurrentVerticalResolution)"
-Write-Output "DISPLAY_REFRESH=$($disp.CurrentRefreshRate)"
-Write-Output "DISK_MODEL=$($disk.Model)"
-Write-Output "DISK_SIZE_GB=$([math]::Round($disk.Size / 1GB, 0))"
-`, 10000)
+    const extraR = await extraP
     for (const line of extraR.out.split('\n')) {
       const [key, ...rest] = line.trim().split('=')
       const val = rest.join('=').trim()
@@ -1849,6 +1863,18 @@ Write-Output "DISK_SIZE_GB=$([math]::Round($disk.Size / 1GB, 0))"
       if (key === 'DISK_MODEL' && val) info.diskModel = val
       if (key === 'DISK_SIZE_GB' && parseInt(val)) info.diskSizeGB = parseInt(val)
     }
+    if (info.displayRes) emitSpecProgress('Display detected', info.displayRes + (info.displayRefresh ? ` · ${info.displayRefresh} Hz` : ''), { data: { displayRes: info.displayRes, displayRefresh: info.displayRefresh } })
+    try {
+      const boardR = await boardP
+      for (const line of (boardR.out || '').split('\n')) {
+        const [key, ...rest] = line.trim().split('=')
+        const val = rest.join('=').trim()
+        if (key === 'BOARD' && val) info.board = val.replace(/\s+/g, ' ')
+        if (key === 'BIOS_VER' && val) info.biosVersion = val
+        if (key === 'OS_BUILD' && val) info.osBuild = val
+      }
+    } catch {}
+    if (info.board) emitSpecProgress('Board detected', info.board + (info.biosVersion ? ` · BIOS ${info.biosVersion}` : ''), { data: { board: info.board, biosVersion: info.biosVersion } })
     // Build ramSpec string e.g. "DDR5-6000"
     // Prefer ramSpeed (ConfiguredClockSpeed — actual running speed) over ramHz (SPD rated/JEDEC default).
     if (info.ramType) {
@@ -1935,7 +1961,7 @@ Write-Output "DISK_SIZE_GB=$([math]::Round($disk.Size / 1GB, 0))"
     await new Promise(r => setTimeout(r, 50))
 
     emitSpecProgress('Checking admin rights…', '')
-    info.isAdmin = await checkAdmin()
+    info.isAdmin = await adminP
     emitSpecProgress('Done', info.isAdmin ? 'Running as Administrator' : 'Not running as Administrator')
     await new Promise(r => setTimeout(r, 50))
   }
@@ -1952,10 +1978,29 @@ ipcMain.handle('startup-trace', (_, msg) => startupTrace(`[renderer] ${msg}`))
 ipcMain.handle('get-app-version', () => APP_VERSION)
 ipcMain.handle('get-system-context', () => _systemContext)
 let _sysInfoAt = 0
-ipcMain.handle('get-system-info', async (_, opts) => {
+let _sysInfoInflight = null   // one detection at a time: a second caller waits for the first instead of starting another
+const sysInfoFile = () => path.join(app.getPath('userData'), 'jt_sysinfo.json')
+ipcMain.handle('get-system-info', (_, opts) => {
   startupTrace('IPC get-system-info handler entered')
   if (cachedSysInfo && !opts?.refresh && Date.now() - _sysInfoAt < 10 * 60 * 1000) return cachedSysInfo
-  const info = await detectSystemInfo()
+  if (_sysInfoInflight) { startupTrace('get-system-info: joining the detection already running'); return _sysInfoInflight }
+  _sysInfoInflight = runSystemInfo().finally(() => { _sysInfoInflight = null })
+  return _sysInfoInflight
+})
+async function runSystemInfo() {
+  // Last known specs go out first so the loading screen can show the machine at once; live results then verify them.
+  const prev = SysStore.read(sysInfoFile())
+  let onBattery = false
+  try { onBattery = require('electron').powerMonitor.isOnBatteryPower?.() === true } catch {}
+  if (prev) emitSpecProgress('Cached', '', { cached: true, info: { ...prev.info, onBattery }, signature: prev.signature, savedAt: prev.savedAt })
+  const live = await detectSystemInfo()
+  // A failed read never replaces something we already know (the old run could overwrite good data with 'Detecting…').
+  const info = prev ? SysMerge.merge(prev.info, live) : live
+  info.signature = SysFingerprint.signature(info)
+  info.changes = prev ? SysFingerprint.diff(prev.info, live) : []
+  info.remembered = !!prev
+  SysStore.write(sysInfoFile(), info)
+  emitSpecProgress('Verified', '', { verified: true, signature: info.signature, changes: info.changes })
   _sysInfoAt = Date.now()
   startupTrace('IPC get-system-info handler: detectSystemInfo returned, sending to renderer')
   cachedSysInfo = info
@@ -1980,7 +2025,7 @@ ipcMain.handle('get-system-info', async (_, opts) => {
   if (settingsDirty) saveSettings(saved)
 
   return info
-})
+}
 
 // RigSpec: the parts list the hardware pages and the 3D rig are built from. Cached on disk for a day; detection gaps stay unknown.
 let _rigCache = null

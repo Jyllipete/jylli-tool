@@ -7,7 +7,7 @@ const Lay = require('../js/twin/layout.js')
 const stageOf = p => p.decor ? 'shell' : p.id === 'cpu' || p.id === 'cooler' ? 'cpu' : p.id.startsWith('ram') ? 'ram' : p.id === 'gpu' || p.id === 'gpu-laptop' ? 'gpu' : p.id.startsWith('drive') ? 'disk' : 'board'
 
 test('every ledger step maps to a stage and vram lands on the gpu, os only powers on', () => {
-  assert.deepStrictEqual(Object.keys(STEP_TO_STAGE), ['cpu', 'ram', 'gpu', 'vram', 'storage', 'os'])
+  assert.deepStrictEqual(Object.keys(STEP_TO_STAGE), ['cpu', 'ram', 'gpu', 'vram', 'storage', 'display', 'board', 'os'])
   assert.strictEqual(STEP_TO_STAGE.vram, STEP_TO_STAGE.gpu)
   assert.strictEqual(STEP_TO_STAGE.os, 'power')
 })

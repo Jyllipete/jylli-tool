@@ -31,6 +31,7 @@ const DIAG = !!arg('diagnostics', false)   // --diagnostics: shoot every Diagnos
 const DEBLOAT = !!arg('debloat', false)   // --debloat: shoot every Debloat scene (--db-state drift|empty|fail for the other states)
 const PULSE = !!arg('pulse', false)   // --pulse: shoot every Pulse scene: the tab, the Cockpit and the HUD (--pu-state live|idle|hitchy|debrief|fail)
 const FIVEM = !!arg('fivem', false)   // --fivem: shoot every FiveM scene (--fv-state clean|lossy|noinstall|first|fail)
+const BOOT = !!arg('boot', false)   // --boot: shoot the boot scan while it runs (--bt-state first|returning|changed|slow|fail)
 const GALLERY = !!arg('gallery', false)   // shoot tools/ui-preview/gallery.html (every component) instead of the app
 
 const PAGES = ['dashboard', 'preflight', 'fixes', 'restore-points', 'performance', 'gaming', 'network', 'privacy-cleanup', 'startup-manager', 'process-manager',
@@ -50,6 +51,7 @@ ipcMain.handle('mock', async (e, name, args) => {
   const ctx = ctxByContents.get(e.sender.id) || { lang: 'en', premium: true }
   if (/^ao[A-Z]/.test(name)) { const r = await AO.handle(name, args, e.sender, ctx); if (r !== undefined) return r }
   if (/^(pulse2|pulseGetPresets|pulseGetCoreLoads|pulseThermalAudit)/.test(name)) { const r = await require('./pulse-fixture').handle(name, args, e.sender, ctx); if (r !== undefined) return r }
+  if (name === 'getSystemInfo' && ctx.bt) { const r = await require('./boot-fixture').handle(name, args, e.sender, ctx); if (r !== undefined) return r }
   if (/^fivem2/.test(name)) { const r = await require('./fivem-fixture').handle(name, args, e.sender, ctx); if (r !== undefined) return r }
   const r = respond(name, args, ctx)
   if (r === undefined) { unknownCalls.set(name, (unknownCalls.get(name) || 0) + 1); return { ok: false, mock: 'no-fixture' } }
@@ -198,6 +200,24 @@ async function appReady(win, timeoutMs = 20000) {
   return false
 }
 
+// Boot scan: shoot the loading screen at fixed moments of the scene, then the handoff to Home.
+async function bootShots(win, dir, logs, report, ctx) {
+  const js = c => win.webContents.executeJavaScript(c).catch(() => null)
+  if (SCHEME !== 'dark') await js(`JylliTheme.applyScheme(${JSON.stringify(SCHEME)})`)
+  const marks = ctx.bt === 'slow' ? [1200, 3200, 9000, 16000] : ctx.bt === 'returning' || ctx.bt === 'changed' ? [500, 1300, 2600, 3600] : [900, 2400, 4600, 6600]
+  let at = 0
+  for (const [i, m] of marks.entries()) {
+    await sleep(Math.max(0, m - at)); at = m
+    await shot(win, path.join(dir, 'boot-' + (i + 1) + '-' + m + 'ms.png'))
+    if (LINT) report.push('rows@' + m + ': ' + await js("[...document.querySelectorAll('#loading .boot-row')].map(r => r.id.slice(6) + ':' + r.dataset.state).join(' ')"))
+  }
+  if (ctx.bt === 'slow') { await js("document.getElementById('boot-continue')?.click()") }
+  await sleep(1200)
+  report.push(`boot ${ctx.bt}: ${(await js("document.getElementById('bt-line')?.textContent")) || '(no card)'} | ${await js("document.getElementById('bt-sig')?.textContent")}`)
+  await sleep(1800)
+  await shot(win, path.join(dir, 'boot-5-home.png'))
+}
+
 async function autoOptiShots(win, dir, logs, report) {
   const js = c => win.webContents.executeJavaScript(c).catch(e => { logs.push('[ao] ' + e.message) })
   const scene = () => js("document.getElementById('auto-opti').dataset.scene")
@@ -255,8 +275,9 @@ async function main() {
   }
   for (const lang of LANGS) for (const tier of TIERS) for (const size of SIZES) {
     const name = `${TAG}/${lang}-${tier}-${size.join('x')}`
-    const ctx = { lang, premium: tier === 'premium', accent: ACCENT && ACCENT !== true ? ACCENT : null, arrival: !!arg('arrival', false), tours: !!arg('tours', false), debloat: arg('db-state', null), dx: arg('dx-state', null), pu: arg('pu-state', null), fv: arg('fv-state', null) }   // --arrival: first-launch flow; --tours: guided tours on (off by default so shots stay clean)
+    const ctx = { lang, premium: tier === 'premium', accent: ACCENT && ACCENT !== true ? ACCENT : null, arrival: !!arg('arrival', false), tours: !!arg('tours', false), debloat: arg('db-state', null), dx: arg('dx-state', null), pu: arg('pu-state', null), fv: arg('fv-state', null), bt: BOOT ? String(arg('bt-state', 'first')) : null }   // --arrival: first-launch flow; --tours: guided tours on (off by default so shots stay clean)
     const { win, logs } = await makeWindow('index.html', ctx, size)
+    if (BOOT) { await bootShots(win, path.join(OUT, name), logs, report, ctx); win.destroy(); continue }
     const ready = await appReady(win)
     if (!ready) { report.push(`${name}: APP NEVER BECAME READY`); logs.forEach(l => report.push('   ' + l)); win.destroy(); continue }
     await sleep(1800)   // boot animation + first metrics
