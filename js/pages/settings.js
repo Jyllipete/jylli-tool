@@ -198,14 +198,17 @@ function buildSettings(c) {
             // Navigate to the first mismatched tweak's category page
             const firstId = mismatches[0].id
             // Where each tweak lives: [legacy page, tab id]. Anything unlisted is a Windows tweak.
-            const W = ['windows-opti', 'windows'], HW = id => ['hardware', id], NET = ['network', 'network']
+            const W = ['windows-opti', 'windows'], HW = id => ['hardware', id], NET = ['network', 'network'], CM = HW('cpumem')
             const where = { 'gpu-hwsch': HW('gpu'), 'intel-power-plan': HW('power'), 'amd-power-plan': HW('power'), 'pcie-power': HW('power'),
-              'sysmain': W, 'power-throttling': W, 'usb-suspend': W,
+              'usb-suspend': W,
+              'sysmain': CM, 'power-throttling': CM, 'global-timer-resolution': CM, 'memory-compression': CM, 'spectre-meltdown': CM, 'cpu-parking': CM, 'cstates': CM, 'hvci-offload': CM, 'vbs-disable': CM,
+              'hypervisor-off': CM, 'full-mitigation-wipe': CM, 'pagefile-auto': CM, 'x3d-balanced': CM, 'power-balanced-restore': CM,
               'nic-interrupt-mod': NET, 'nic-flow-control': NET, 'nic-energy-efficient': NET, 'nic-offloads': NET, 'nic-rss-affinity': NET, 'nic-ndis-poll': NET }
             const [page, tab] = where[firstId] || W
             showPage(page, tab)
             setTimeout(() => {
               if (page === 'windows-opti' && window.JylliWindowsPage && JylliWindowsPage.current()) { JylliWindowsPage.reveal(firstId); return }   // the Windows tab opens the lane and flashes the row once its live read is in
+              if (page === 'hardware' && tab === 'cpumem' && window.JylliCpuMemPage && JylliCpuMemPage.current()) { JylliCpuMemPage.reveal(firstId); return }   // the CPU & Memory tab opens Tune on the row
               if (page === 'network' && window.JylliNetworkPage && JylliNetworkPage.current()) { JylliNetworkPage.reveal(firstId); return }   // same for the Network tab (Tune view)
               const el = document.getElementById(`tcw-${firstId}`) || document.querySelector(`[data-tweak-id="${firstId}"]`)
               if (el) { el.scrollIntoView({ behavior: 'smooth', block: 'center' }); el.classList.add('highlight-pulse'); setTimeout(() => el.classList.remove('highlight-pulse'), 2000) }

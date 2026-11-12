@@ -19,7 +19,6 @@
   const ADVANCED_TABS = new Set(['latency', 'processes', 'bios'])
 
   const HW_TAB_SECTIONS = {
-    cpumem: new Set(['hw-mem', 'hw-audio', 'hw-tool-topo', 'hw-tool-lat']),
     gpu: new Set(['hw-nvidia', 'hw-amd', 'hw-gpu-adv', 'hw-tool-thermal']),
     power: new Set(['hw-power', 'hw-storage', 'hw-tool-eff']),
   }
@@ -29,7 +28,7 @@
     home: c => buildDashboard(c),
     windows: c => buildWindowsOpti(c, 'full'),
     qol: c => buildWindowsOpti(c, 'qol'),
-    cpumem: c => hardwareTab(c, 'cpumem'),
+    cpumem: c => JylliCpuMemPage.mount(c),   // js/cpumem: die map, memory strata, Tune, Lab, History (free for everyone; its Premium switches lock inline)
     gpu: c => hardwareTab(c, 'gpu'),
     power: c => hardwareTab(c, 'power'),
     network: c => JylliNetworkPage.mount(c),   // js/network: the Path stage, Overview / Tune / Measure / History
@@ -56,7 +55,6 @@
     if (!settings.isPremium) { await JylliPremium.build(c, tab); if (tab === 'gpu') { const h = buildGpuHero(c, { readOnly: true }); c.appendChild(h) } return }   // the live read-only hero sits below the pitch, so the offer stays above the fold
     await buildHardware(c)
     if (tab === 'gpu') buildGpuHero(c)
-    else if (tab === 'cpumem') await buildCpuMemHero(c)
     else if (tab === 'power') await buildStorageHero(c)
     const allowed = HW_TAB_SECTIONS[tab] || new Set()
     c.querySelectorAll('.section-card[data-sec-id]').forEach(el => {

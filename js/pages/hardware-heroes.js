@@ -7,30 +7,6 @@ async function heroRig() {
 }
 const metricCell = (key, label) => `<div class="j-gpu-cell"><div class="j-stat-label">${escHtml(tUI(label))}</div><div class="j-gpu-val j-num" data-odo data-metric="${escAttr(key)}">—</div></div>`
 
-async function buildCpuMemHero(c) {
-  const rig = await heroRig()
-  const el = document.createElement('section')
-  el.id = 'cpumem-hero'; el.className = 'j-card j-gpu-hero'
-  const cpu = rig && rig.cpu
-  const sticks = rig && rig.ram ? rig.ram.sticks : []
-  const stickRows = sticks.map(s => {
-    const below = s.ratedMT && s.speedMT && s.speedMT < s.ratedMT * 0.95
-    const tip = below ? `<span class="j-badge j-badge-warning" title="${escAttr(tUI('hwMemBelowTip'))}">${escHtml(tUI('hwMemBelow'))}</span>` : (s.ratedMT && s.speedMT ? `<span class="j-badge j-badge-success">${escHtml(tUI('hwMemAtRated'))}</span>` : '')
-    return ui.row({ title: `${s.channel ? tUI('twinFactSlot') + ' ' + s.channel + ' · ' : ''}${s.sizeGB || '?'} GB ${s.type || ''}`, sub: [s.part, s.ratedMT ? tUI('twinFactRated') + ' ' + s.ratedMT + ' MT/s' : '', s.speedMT ? tUI('twinFactRunning') + ' ' + s.speedMT + ' MT/s' : ''].filter(Boolean).join(' · '), control: ui.raw(tip) })
-  }).join('')
-  el.innerHTML = String(ui.html`
-    <div class="j-twin-stage j-gpu-stage"><div class="j-twin-slot" id="cpumem-twin-slot" data-twin-view="rig:home" data-twin-focus="cpu"></div></div>
-    <div class="j-gpu-side">
-      <div class="j-gpu-strip">${[['cpu.load', 'sensorKey_cpu.load'], ['cpu.temp.package', 'sensorKey_cpu.temp.package'], ['cpu.power', 'sensorKey_cpu.power'], ['ram.used', 'sensorKey_ram.used'], ['ram.load', 'sensorKey_ram.load']].map(([k, l]) => ui.raw(metricCell(k, l)))}</div>
-      ${cpu ? ui.group('', [ui.row({ title: tUI('twinFactModel'), control: ui.html`<span class="j-num">${cpu.name}</span>` }), ui.row({ title: tUI('twinFactCores'), control: ui.html`<span class="j-num">${cpu.cores || '?'} / ${cpu.threads || '?'}</span>` })]) : ui.callout(tUI('hwNotDetected'), 'info')}
-      <div class="j-stat-label">${tUI('twinPartRam')}</div>
-      ${sticks.length ? ui.group('', ui.raw(stickRows)) : ui.callout(tUI('hwNotDetected'), 'info')}
-    </div>`)
-  c.prepend(el)
-  const slot = el.querySelector('#cpumem-twin-slot'); if (slot && window.JylliTwin) JylliTwin.attach(slot)
-  try { JylliTelemetry.applyToDom() } catch {}
-}
-
 async function buildStorageHero(c) {
   const rig = await heroRig()
   const drives = rig ? rig.drives : []

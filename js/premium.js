@@ -11,7 +11,6 @@
     latency:   { page: 'latency-monitor', icon: 'wave-square',   facts: ['cpu', 'gpu'] },
     bios:      { page: 'bios-tuner',      icon: 'microchip',     facts: ['cpu', 'form'] },
     scheduler: { page: 'scheduler',       icon: 'calendar-check', facts: ['form'] },
-    cpumem:    { page: 'hardware',        icon: 'memory',        facts: ['cpu', 'ram'] },
     gpu:       { page: 'hardware',        icon: 'display',       facts: ['gpu', 'vram'] },
     power:     { page: 'hardware',        icon: 'plug-circle-bolt', facts: ['form', 'disk'] },
   }
@@ -58,7 +57,6 @@
         <div class="jp-foot"><i class="fa fa-shield-halved"></i>${T('pvBiosVerify')}</div></div>`
       case 'scheduler': return `<div class="jp-pv"><div class="jp-week">${[0, 1, 2, 3, 4, 5, 6].map(d => `<span class="${d === 6 ? 'jp-day jp-on' : 'jp-day'}" style="--i:${d}"></span>`).join('')}</div>
         ${row(T('pvSchedClean'), T('pvSchedWeekly'), 1, 'ok')}${row(T('pvSchedRestore'), T('pvSchedMonthly'), 2)}</div>`
-      case 'cpumem': return `<div class="jp-pv"><div class="jp-cores">${Array.from({ length: 16 }, (_, i) => `<span style="--i:${i}"></span>`).join('')}</div>${row('RAM', 'DDR5', 1, 'ok')}${row('Standby list', T('pvMemFlush'), 2)}</div>`
       case 'gpu': return `<div class="jp-pv jp-split"><svg viewBox="0 0 80 50" class="jp-gauge" aria-hidden="true"><path class="jp-ring-bg" d="M8 44A32 32 0 0 1 72 44" pathLength="100"/><path class="jp-ring-fg" d="M8 44A32 32 0 0 1 72 44" pathLength="100"/></svg>
         <div class="jp-col">${row(T('pvGpuPower'), '100 %', 1, 'ok')}${row('VRAM', '4.1 / 12 GB', 2)}${row(T('pvGpuTemp'), '58 °C', 3)}</div></div>`
       case 'power': return `<div class="jp-pv">${row(T('pvPowerPlan'), 'Ultimate', 1, 'ok')}${row('NVMe', T('pvPowerTrim'), 2, 'ok')}${row(T('pvPowerSleep'), T('pvPowerSleepVal'), 3)}<div class="jp-drive">${bar(46, 4)}</div></div>`

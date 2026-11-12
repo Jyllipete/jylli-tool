@@ -40,3 +40,7 @@ A value changed after the apply asks first (`force` only after confirmation). Sw
 
 ## Not shipped
 A background guard that re-applies reverted switches. The tab tells you when Windows put something back and offers one button; it never re-applies on its own.
+
+**Moved to the CPU & Memory tab:** `power-throttling`, `global-timer-resolution`, `sysmain`, `memory-compression`, `spectre-meltdown` (see [[CPUMEM_EVIDENCE]]). The `memory` lane here now holds only `hibernate`.
+
+Back to [[Home]]

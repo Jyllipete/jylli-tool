@@ -20,7 +20,7 @@ function harness(o = {}) {
       if (o.abort) return { ok: false, aborted: true, reason: 'restore-point-failed', guidance: 'Turn on System Protection', restorePoint: { ok: false } }
       const items = req.items.map(i => {
         if (o.fail && o.fail.includes(i.tweakId)) return { id: i.tweakId, action: i.action, status: 'failed', error: 'boom' }
-        if (!o.noFlip) { if (i.tweakId === 'game-dvr') reg[DVR] = i.action === 'apply' ? '0' : '1'; if (i.tweakId === 'sysmain') reg['s|SysMain'] = i.action === 'apply' ? 'Disabled' : 'Automatic' }
+        if (!o.noFlip) { if (i.tweakId === 'game-dvr') reg[DVR] = i.action === 'apply' ? '0' : '1'; if (i.tweakId === 'compat-scanner-off') reg['s|PcaSvc'] = i.action === 'apply' ? 'Disabled' : 'Automatic' }
         settings['tweak_' + i.tweakId] = i.action === 'apply' ? 'applied' : 'restored'
         return { id: i.tweakId, action: i.action, status: 'ok', journalId: 'j_' + i.tweakId, fidelity: 'exact' }
       })
@@ -59,12 +59,12 @@ test('run: journaled batch through the manual path, then read back to verify', a
   const h = harness()
   await h.svc.scan()
   const prog = []
-  const r = await h.svc.run({ ids: ['game-dvr', 'sysmain'], action: 'apply', onProgress: p => prog.push(p.phase) })
+  const r = await h.svc.run({ ids: ['game-dvr', 'compat-scanner-off'], action: 'apply', onProgress: p => prog.push(p.phase) })
   assert.ok(r.ok)
   assert.strictEqual(h.calls.batch[0].via, 'manual')
-  assert.deepStrictEqual(h.calls.batch[0].items, [{ tweakId: 'game-dvr', action: 'apply' }, { tweakId: 'sysmain', action: 'apply' }])
+  assert.deepStrictEqual(h.calls.batch[0].items, [{ tweakId: 'game-dvr', action: 'apply' }, { tweakId: 'compat-scanner-off', action: 'apply' }])
   assert.strictEqual(h.calls.ps, 2, 'one probe before, one after')
-  assert.deepStrictEqual(r.receipt.items.map(i => [i.id, i.status, i.verified]), [['game-dvr', 'ok', true], ['sysmain', 'ok', true]])
+  assert.deepStrictEqual(r.receipt.items.map(i => [i.id, i.status, i.verified]), [['game-dvr', 'ok', true], ['compat-scanner-off', 'ok', true]])
   assert.strictEqual(r.receipt.counts.verified, 2)
   assert.deepStrictEqual(prog, ['start', 'verify', 'done'])
   assert.strictEqual(r.models.windows.items.find(i => i.id === 'game-dvr').status, 'on')
@@ -79,8 +79,8 @@ test('run: a change Windows does not show afterwards is reported as a mismatch, 
 })
 
 test('run: a failed item is reported with its reason and the others still count', async () => {
-  const h = harness({ fail: ['sysmain'] })
-  const r = await h.svc.run({ ids: ['game-dvr', 'sysmain'], action: 'apply' })
+  const h = harness({ fail: ['compat-scanner-off'] })
+  const r = await h.svc.run({ ids: ['game-dvr', 'compat-scanner-off'], action: 'apply' })
   assert.strictEqual(r.receipt.counts.ok, 1); assert.strictEqual(r.receipt.counts.failed, 1)
   assert.strictEqual(r.receipt.items[1].error, 'boom')
 })
@@ -99,7 +99,7 @@ test('run: only catalog ids, no retired apply (restore is allowed), single fligh
   const r = await h.svc.run({ ids: ['hpet'], action: 'restore' })
   assert.ok(r.ok); assert.strictEqual(h.calls.batch.at(-1).items[0].action, 'restore')
   const a = h.svc.run({ ids: ['game-dvr'], action: 'apply' })
-  assert.deepStrictEqual(await h.svc.run({ ids: ['sysmain'], action: 'apply' }), { ok: false, error: 'busy' })
+  assert.deepStrictEqual(await h.svc.run({ ids: ['compat-scanner-off'], action: 'apply' }), { ok: false, error: 'busy' })
   await a
 })
 
@@ -114,7 +114,7 @@ test('run: an applied reboot-required switch waits for a restart until after the
 test('history: Windows entries only, grouped by batch, newest first', async () => {
   const journal = [
     { id: 'e3', batchId: 'bb', tweakId: 'game-dvr', action: 'restore', via: 'undo', ts: 300, result: 'ok' },
-    { id: 'e2', batchId: 'ba', tweakId: 'sysmain', action: 'apply', via: 'manual', ts: 200, result: 'ok' },
+    { id: 'e2', batchId: 'ba', tweakId: 'compat-scanner-off', action: 'apply', via: 'manual', ts: 200, result: 'ok' },
     { id: 'e1', batchId: 'ba', tweakId: 'game-dvr', action: 'apply', via: 'manual', ts: 150, result: 'ok', undoneBy: 'u' },
     { id: 'x', batchId: 'bz', tweakId: 'nic-offloads', action: 'apply', via: 'manual', ts: 400 },
   ]

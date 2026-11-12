@@ -223,6 +223,7 @@ async function _updateSystemContext() {
       // Fire game-detected / game-exited events
       const settings = loadSettings()
       if (!wasRunning && _systemContext.gameRunning) {
+        try { cpumemSvc().gameStarted(foundGame && foundGame.exe) } catch {}
         mainWindow?.webContents.send('game-detected', { name: _systemContext.gameName, genre: _systemContext.gameGenre })
         if (settings.gameAutoOptimize) _triggerGameAutoOptimize()
         // Auto-open FiveM HUD if the detected game is FiveM/GTA5 and setting is enabled
@@ -234,6 +235,7 @@ async function _updateSystemContext() {
         if (gName.startsWith('fivem') && requiresPremium('fivem2-session')) { try { fivemSvc().gameStarted() } catch {} }
       } else if (wasRunning && !_systemContext.gameRunning) {
         try { if (_fivem) _fivem.gameEnded() } catch {}
+        try { if (_cpumem) _cpumem.gameEnded() } catch {}
         mainWindow?.webContents.send('game-exited', { name: _systemContext.gameName })
         // Auto-close FiveM HUD on game exit
         if (fivemHudWindow && !fivemHudWindow.isDestroyed()) closeFivemHud()
@@ -11896,6 +11898,77 @@ ipcMain.handle('win2-undo', async (_, req) => {
   try { return await windowsSvc().undo(target, { force: req && req.force === true }) } catch (e) { return { ok: false, error: String((e && e.message) || e).slice(0, 200) } }
 })
 
+// ─── CPU & Memory (lib/cpumem): one catalog, one read-only probe, journaled run + read-back, live sampling, Lab ────────────────
+// docs/CPUMEM_EVIDENCE.md. State lives in jt_cpumem.json; every switch change goes through journalSvc().applyBatch (label 'cpumem').
+const CpuMem = require('./lib/cpumem')
+const CmCatalog = require('./lib/cpumem/catalog')
+let _cpumem = null, _cmApplic = {}, _cmCaps = null
+function cpumemSvc() {
+  if (!_cpumem) {
+    _cpumem = CpuMem.create({
+      runPS: (s, ms) => runPS(s, ms),
+      applyBatch: req => journalSvc().applyBatch(req),
+      journalList: o => journalSvc().list(o),
+      undo: (t, o) => journalSvc().undo(t, o),
+      runRecorded: (...a) => journalSvc().runRecorded(...a),
+      tweakMeta: ids => { retireTweaks(); return journalSvc().tweakMeta(ids) },
+      applicability: () => _cmApplic,
+      caps: () => _cmCaps,
+      isPremium: () => !!auth && auth.isPremium(),
+      settings: () => loadSettings(),
+      state: { read: () => cuRead('jt_cpumem.json', null), write: v => cuWrite('jt_cpumem.json', v) },
+      bootMs: () => Date.now() - os.uptime() * 1000,
+      gameRunning: () => !!_systemContext.gameRunning,
+      gameNames: () => GAME_DATABASE.map(g => g.exe),
+      emit: cuSend,
+      spawnLive: ({ script, onLine, onExit }) => {
+        const ps = spawn('powershell.exe', ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-EncodedCommand', Buffer.from(script, 'utf16le').toString('base64')], { windowsHide: true, stdio: ['ignore', 'pipe', 'ignore'] })
+        ps.stdout.setEncoding('utf8')
+        ps.stdout.on('data', onLine)
+        ps.on('exit', onExit); ps.on('error', onExit)
+        return { kill: () => { try { ps.kill() } catch {} } }
+      },
+    })
+  }
+  return _cpumem
+}
+// The capability scan can take a while on first use: wait a few seconds for it, never longer (no rules = nothing hidden or recommended extra).
+async function cmApplicRefresh() {
+  try {
+    const profile = await Promise.race([ensureCapsProfile(false), new Promise(r => setTimeout(() => r(null), 6000))])
+    if (!profile) return
+    const caps = Caps.deriveCaps(profile), map = {}
+    for (const id of CmCatalog.ids()) if (Applic.RULES[id]) { const r = Applic.evaluate(id, caps); map[id] = { show: r.show, state: r.state, why: r.why } }
+    _cmCaps = caps; _cmApplic = map
+  } catch { /* keep the last map */ }
+}
+const cmIds = v => (Array.isArray(v) ? v.filter(x => typeof x === 'string' && CmCatalog.isKnown(x)).slice(0, 60) : [])
+const cmFail = e => ({ ok: false, error: String((e && e.message) || e).slice(0, 200) })
+const cmExe = v => (typeof v === 'string' && v.length < 90 ? v : '')
+ipcMain.handle('cpumem2-scan', async () => { try { await cmApplicRefresh(); return await cpumemSvc().scan() } catch { return { ok: false, error: 'scan-failed' } } })
+ipcMain.handle('cpumem2-cached', () => cpumemSvc().cached() || { ok: false })
+ipcMain.handle('cpumem2-run', async (_, req) => {
+  try { return await cpumemSvc().run({ ids: cmIds(req && req.ids), action: req && req.action === 'restore' ? 'restore' : 'apply', label: 'cpumem', onProgress: p => cuSend('cpumem2-progress', p) }) } catch (e) { return cmFail(e) }
+})
+ipcMain.handle('cpumem2-history', () => { try { return cpumemSvc().history() } catch { return { ok: false, error: 'history-failed' } } })
+ipcMain.handle('cpumem2-undo', async (_, req) => {
+  const t = (req && req.target) || {}, target = {}
+  for (const k of ['entryId', 'batchId']) if (typeof t[k] === 'string' && t[k].length < 64) target[k] = t[k]
+  if (!Object.keys(target).length) return { ok: false, error: 'invalid_target' }
+  try { return await cpumemSvc().undo(target, { force: req && req.force === true }) } catch (e) { return cmFail(e) }
+})
+ipcMain.handle('cpumem2-live-start', () => { try { return cpumemSvc().liveStart() } catch (e) { return cmFail(e) } })
+ipcMain.handle('cpumem2-live-beat', () => { try { return cpumemSvc().heartbeat() } catch (e) { return cmFail(e) } })
+ipcMain.handle('cpumem2-live-stop', () => { try { cpumemSvc().liveStop(); return { ok: true } } catch (e) { return cmFail(e) } })
+ipcMain.handle('cpumem2-free-standby', async () => { try { return await cpumemSvc().freeStandby() } catch (e) { return cmFail(e) } })
+ipcMain.handle('cpumem2-consumers', async () => { try { return await cpumemSvc().consumers() } catch (e) { return cmFail(e) } })
+ipcMain.handle('cpumem2-pin', async (_, req) => { try { return await cpumemSvc().pin({ exe: cmExe(req && req.exe), kind: String((req && req.kind) || ''), remember: !!(req && req.remember) }) } catch (e) { return cmFail(e) } })
+ipcMain.handle('cpumem2-unpin', async (_, req) => { try { return await cpumemSvc().unpin({ exe: cmExe(req && req.exe), forget: !!(req && req.forget) }) } catch (e) { return cmFail(e) } })
+ipcMain.handle('cpumem2-priority', async (_, req) => { try { return await cpumemSvc().priority({ exe: cmExe(req && req.exe), level: String((req && req.level) || '') }) } catch (e) { return cmFail(e) } })
+ipcMain.handle('cpumem2-priority-clear', async (_, req) => { try { return await cpumemSvc().priorityClear({ exe: cmExe(req && req.exe) }) } catch (e) { return cmFail(e) } })
+ipcMain.handle('cpumem2-priorities', async () => { try { return { ok: true, ...(await cpumemSvc().readPriorities()) } } catch (e) { return cmFail(e) } })
+app.on('will-quit', () => { try { _cpumem && _cpumem.shutdown() } catch {} })
+
 // ─── Network (lib/network): one catalog, one read-only probe, journaled run + read-back, checkup, live route trace ─────────────────
 // docs/NETWORK_EVIDENCE.md. State lives in jt_network.json; every change goes through journalSvc().applyBatch (label 'network').
 const Network2 = require('./lib/network')
@@ -12917,7 +12990,6 @@ Write-Output "GPU_VRAM_USED=$gpuVram"
 // ─── Thermal Throttle Detective ──────────────────────────────────────────────
 let _thermalTimer = null
 const _frozenPids = new Set()  // tracks PIDs suspended by freeze-process
-let _cpuPinnedExe = null       // tracks exe currently affinity-pinned
 ipcMain.handle('thermal-start', () => {
   if (_thermalTimer) return {}
   _thermalTimer = setInterval(async () => {
@@ -13521,97 +13593,7 @@ $h = (Get-Process -Id ${safePid} -EA Stop).Handle
   return { ok: r.ok, savedMs: frozeAt ? Date.now() - frozeAt : 0, error: r.ok ? null : (r.err || 'resume_failed') }
 })
 
-// ─── CPU Affinity / IRQ Pinning ───────────────────────────────────────────────
-ipcMain.handle('cpu-get-topology', async () => {
-  if (!requiresPremium('cpu-get-topology')) return { ok: false, reason: 'premium_required' }
-  const r = await runPS(`
-$cpu = Get-WmiObject Win32_Processor | Select-Object -First 1
-$name = $cpu.Name.Trim()
-$physical = [int]$cpu.NumberOfCores
-$logical  = [int]$cpu.NumberOfLogicalProcessors
-# Detect hybrid (Intel P+E core) via brand string keywords — covers gen 12-16, N-series, Core Ultra
-$isHybrid = $name -match 'i[3579]-1[2-6]\d{3}|Core Ultra|N\d{3}|Alder Lake|Raptor Lake|Meteor Lake|Arrow Lake|Lunar Lake|Panther Lake'
-# Detect AMD 3D V-Cache
-$is3DVCache = $name -match 'X3D'
-# Try Win11 22H2+ CimInstance for accurate E-core count first
-$eCores = 0
-try {
-  $eCores = [int](Get-CimInstance -Namespace root/cimv2 -ClassName Win32_Processor -EA Stop | Select-Object -First 1 -ExpandProperty NumberOfEfficientCores)
-} catch {}
-if ($isHybrid -and $eCores -eq 0) {
-  # Fallback heuristic: more logical than 2x physical means extra E-cores
-  $eCores = if ($logical -gt $physical) { [math]::Max(1, $physical - [math]::Ceiling($physical / 2)) } else { [math]::Floor($physical * 0.5) }
-}
-$pCores = if ($isHybrid) { $physical - $eCores } else { $physical }
-[PSCustomObject]@{ Name=$name; Physical=$physical; Logical=$logical; IsHybrid=[bool]$isHybrid; Is3DVCache=[bool]$is3DVCache; PCores=$pCores; ECores=$eCores } | ConvertTo-Json -Compress
-  `, 10000)
-  if (!r.ok || !r.out.trim()) return { ok: false, error: r.err || 'no_output' }
-  try {
-    const d = JSON.parse(r.out)
-    return {
-      ok: true,
-      name: d.Name,
-      physical: d.Physical,
-      logical: d.Logical,
-      isHybrid: d.IsHybrid,
-      is3DVCache: d.Is3DVCache,
-      pCores: d.PCores,
-      eCores: d.ECores,
-    }
-  } catch { return { ok: false, error: 'parse_failed' } }
-})
-
-ipcMain.handle('cpu-get-pin-status', async () => {
-  if (!requiresPremium('cpu-get-pin-status')) return { ok: false, reason: 'premium_required' }
-  // Check if any process is currently pinned by reading our in-memory state
-  if (_cpuPinnedExe) return { ok: true, active: true, state: { exe: _cpuPinnedExe } }
-  return { ok: true, active: false, state: null }
-})
-
-const _pinnedAffinity = new Map()   // pid -> original ProcessorAffinity (as string, 64-bit)
-ipcMain.handle('cpu-pin-game', async (_, req) => {
-  if (!requiresPremium('cpu-pin-game')) return { ok: false, reason: 'premium_required' }
-  const exe = String(req?.exe || '').replace(/\.exe$/i, '')
-  if (!exe) return { ok: false, error: 'no_exe' }
-  if (!V.isProcessName(exe)) return { ok: false, error: 'invalid_exe' }
-  const coreR = await runPS(`(Get-WmiObject Win32_Processor | Measure-Object -Property NumberOfLogicalProcessors -Sum).Sum`)
-  const logical = Math.min(64, parseInt(coreR.out.trim()) || 8)
-  if (logical < 4) return { ok: false, error: 'too_few_cores' }
-  // all logical processors except #0 (reserved for OS interrupts) — BigInt: a 32-bit shift overflows at 31+ threads
-  const mask = ((1n << BigInt(logical)) - 2n).toString()
-  const r = await runPS(`
-$procs = @(Get-Process | Where-Object { $_.Name -like ${V.psQuote(exe + '*')} })
-foreach ($p in $procs) {
-  try { $orig = [int64]$p.ProcessorAffinity; $p.ProcessorAffinity = [System.IntPtr]::new([int64]${mask}); Write-Output ("PIN|" + $p.Id + "|" + $orig) } catch {}
-}
-  `, 8000)
-  let pinned = 0
-  for (const line of String(r.out || '').split(/\r?\n/)) {
-    const m = /^PIN\|(\d+)\|(-?\d+)$/.exec(line.trim())
-    if (m) { pinned++; if (!_pinnedAffinity.has(m[1])) _pinnedAffinity.set(m[1], m[2]) }
-  }
-  if (pinned) _cpuPinnedExe = exe
-  return { ok: r.ok, pinned, mask, exe }
-})
-
-ipcMain.handle('cpu-unpin-game', async () => {
-  if (!requiresPremium('cpu-unpin-game')) return { ok: false, reason: 'premium_required' }
-  if (_pinnedAffinity.size) {
-    const payload = JSON.stringify(Array.from(_pinnedAffinity.entries()).map(([id, aff]) => ({ Id: Number(id), Aff: String(aff) })))
-    const r = await runPS(`
-$items = ConvertFrom-Json ${V.psQuote(payload)}
-foreach ($i in $items) { $p = Get-Process -Id $i.Id -EA SilentlyContinue; if ($p) { try { $p.ProcessorAffinity = [System.IntPtr]::new([int64]$i.Aff) } catch { Write-Output ('FAIL:' + $i.Id) } } }
-    `, 8000).catch(e => ({ ok: false, out: '', err: String(e && e.message || e) }))
-    const failedPins = String(r.out || '').split(/\r?\n/).filter(l => l.startsWith('FAIL:'))
-    if (!r.ok || failedPins.length) {
-      debugLog('[cpu-unpin] could not restore affinity: ' + (failedPins.join(',') || r.err))
-      return { ok: false, error: 'affinity_restore_failed', failed: failedPins.length }
-    }
-  }
-  _pinnedAffinity.clear()
-  _cpuPinnedExe = null
-  return { ok: true }
-})
+// (The old CPU affinity pin and regex topology handlers were replaced by the CPU & Memory tab: lib/cpumem/affinity.js + `// ─── CPU & Memory`.)
 
 // ─── FPS HUD Settings Window ──────────────────────────────────────────────────
 let _fpsHudSettingsWindow = null

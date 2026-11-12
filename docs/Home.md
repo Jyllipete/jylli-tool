@@ -7,6 +7,7 @@ Obsidian vault = this `docs/` folder. Rule across all evidence docs: **unverifie
 - [[BIOS_EVIDENCE]]: BIOS workstation / Easy mode
 - [[DEBLOAT_EVIDENCE]]: Debloat "Lean"
 - [[WINDOWS_EVIDENCE]]: Windows tab "Plumb" (live switch state, verification)
+- [[CPUMEM_EVIDENCE]]: CPU & Memory tab "Silicon" (die map, memory strata, findings, Lab)
 - [[NETWORK_EVIDENCE]]: Network tab "Signal" (Path stage, checkup thresholds, live switch state)
 - [[DIAGNOSTICS_EVIDENCE]]: Diagnostics "Vitals"
 - [[FIVEM_EVIDENCE]]: FiveM "Uplink"

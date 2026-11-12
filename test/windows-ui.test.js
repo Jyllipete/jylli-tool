@@ -64,7 +64,7 @@ test('pure: chips, counts, search, time', () => {
 function live() { const p = detect.plan(), r = {}; for (const q of detect.requests(p)) r[q.k] = q.a === 's' || q.a === 't' ? 'Automatic' : q.a === 'f' ? 'True' : q.a === 'x' ? 'True' : null; return detect.evaluate(r, p) }
 
 test('pure: verdict, switchboard, preview and warnings follow the model', () => {
-  const m = model.buildModel({ scope: 'windows', live: live(), remembered: { 'game-dvr': 'applied' }, meta: { sysmain: { safetyTier: 2 } }, applic: {} })
+  const m = model.buildModel({ scope: 'windows', live: live(), remembered: { 'game-dvr': 'applied' }, meta: { 'compat-scanner-off': { safetyTier: 2 } }, applic: {} })
   assert.strictEqual(P.verdict(m, false).key, 'vDrift')
   assert.strictEqual(P.verdict(model.buildModel({ scope: 'windows', live: null }), false).key, 'vUnread')
   const clean = model.buildModel({ scope: 'qol', live: live(), remembered: {}, meta: {}, applic: {} })
@@ -72,9 +72,9 @@ test('pure: verdict, switchboard, preview and warnings follow the model', () => 
   const b = P.board(m)
   assert.strictEqual(b.length, m.lanes.length)
   assert.strictEqual(b.reduce((n, c) => n + c.cells.length, 0), m.items.length)
-  const pv = P.previewGroups(m, ['game-dvr', 'sysmain', 'spectre-meltdown'])
+  const pv = P.previewGroups(m, ['game-dvr', 'compat-scanner-off', 'hibernate'])
   assert.strictEqual(pv.n, 3); assert.ok(pv.restorePoint); assert.deepStrictEqual(pv.expert, [])
-  const hib = m.items.find(i => i.id === 'hibernate'), sys = m.items.find(i => i.id === 'sysmain')
+  const hib = m.items.find(i => i.id === 'hibernate'), sys = { warn: [{ when: 'ramBelow', n: 12, key: 'warnLowRamSysmain' }] }
   assert.deepStrictEqual(P.warnsFor(hib, { laptop: true }).map(w => w.key), ['warnLaptopHibernate'])
   assert.deepStrictEqual(P.warnsFor(hib, { laptop: false }), [])
   assert.deepStrictEqual(P.warnsFor(sys, { ramGB: 8 }), [{ key: 'warnLowRamSysmain', vars: { n: 8 } }])

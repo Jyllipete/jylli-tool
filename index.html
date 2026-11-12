@@ -20,6 +20,7 @@
 <link rel="stylesheet" href="css/debloat.css">
 <link rel="stylesheet" href="css/windows.css">
 <link rel="stylesheet" href="css/network.css">
+<link rel="stylesheet" href="css/cpumem.css">
 <link rel="stylesheet" href="css/cleanup.css">
 <link rel="stylesheet" href="css/diagnostics.css">
 <link rel="stylesheet" href="css/fivem.css">
@@ -498,6 +499,8 @@
 <script src="js/lang/windows-fi.js"></script>
 <script src="js/lang/network-en.js"></script>
 <script src="js/lang/network-fi.js"></script>
+<script src="js/lang/cpumem-en.js"></script>
+<script src="js/lang/cpumem-fi.js"></script>
 <script src="js/lang/debloat-fi.js"></script>
 <script src="js/lang/diagnostics-en.js"></script>
 <script src="js/lang/diagnostics-fi.js"></script>
@@ -591,6 +594,13 @@
 <script src="js/network/views.js"></script>
 <script src="js/network/cards.js"></script>
 <script src="js/network/page.js"></script>
+<script src="lib/cpumem/findings.js"></script>
+<script src="lib/cpumem/memory.js"></script>
+<script src="js/cpumem/pure.js"></script>
+<script src="js/cpumem/die-view.js"></script>
+<script src="js/cpumem/mem-view.js"></script>
+<script src="js/cpumem/lab.js"></script>
+<script src="js/cpumem/page.js"></script>
 <script src="js/cleanup/core.js"></script>
 <script src="js/cleanup/extras.js"></script>
 <script src="js/cleanup/page.js"></script>
@@ -3952,6 +3962,7 @@ function syncTweakFlags() {
   document.querySelectorAll('#page-content .tweak-row[data-tweak-id]').forEach(row => { row.dataset.applied = tweakState(row.dataset.tweakId) === 'applied' ? '1' : '0' })
   if (window.JylliWindowsPage) window.JylliWindowsPage.sync()
   if (window.JylliNetworkPage) window.JylliNetworkPage.sync()
+  if (window.JylliCpuMemPage) window.JylliCpuMemPage.sync()
   if (window._hwFilter) window._hwFilter.refresh()
 }
 
@@ -5964,8 +5975,6 @@ async function buildHardware(c) {
     { secId:'hw-power', get title() { return tUI('hwSecPowerPlan') }, get sub() { return tUI('hwSecPowerPlanSub') }, cards:[
       ...(tweakCompat('intel-power-plan') ? [{ id:'intel-power-plan', name:'Intel Max Performance Power Plan', desc:'Creates a custom power plan tuned for Intel CPUs — Speed Shift (HWP) on, aggressive boost mode, no C-state idle, all cores active, PCIe and USB suspend off.', icon:'<i class="fa fa-bolt"></i>', reboot:true }] : []),
       ...(tweakCompat('amd-power-plan')   ? [{ id:'amd-power-plan',   name:'AMD Max Performance Power Plan',   desc:'Creates a custom power plan tuned for AMD CPUs — CPPC preferred cores on, aggressive boost mode, no C-state idle, all cores active, PCIe and USB suspend off.', icon:'<i class="fa fa-bolt"></i>', reboot:true }] : []),
-      ...(tweakCompat('cpu-parking')      ? [{ id:'cpu-parking',      name:'Disable CPU Core Parking',         desc:'Forces all CPU cores to stay active. Reduces wake-up latency.', icon:'<i class="fa fa-wrench"></i>', reboot:true }] : []),
-      ...(tweakCompat('cstates')          ? [{ id:'cstates',          name:'Disable CPU C-States',              desc:'Prevents CPU from entering low-power idle states. Eliminates frequency transition stutters.', icon:'<i class="fa fa-bolt"></i>', danger:true, dangerLabel:'Confirm', reboot:true }] : []),
       ...(tweakCompat('speed-shift')      ? [{ id:'speed-shift',      name:'Enable Intel Speed Shift (HWP)',    desc:'Autonomous frequency scaling for Intel CPUs. 6th gen+: reduces frequency transition latency.', icon:'<i class="fa fa-wind"></i>' }] : []),
       ...(tweakCompat('pcie-power')       ? [{ id:'pcie-power',       name:'Disable PCIe Link State Power Management', desc:'Stops the PCIe bus power-cycling your GPU and NVMe between transitions. Eliminates the latency spikes caused by waking them back up. Applies to both AC and DC.', icon:'<i class="fa fa-plug-circle-bolt"></i>', reboot:true }] : []),
     ]},
@@ -5979,15 +5988,6 @@ async function buildHardware(c) {
         { id:'nvidia-pstate-lock', name:'NVIDIA P-State Lock (P0 always)', desc:'Forces NVIDIA GPU to stay in P0 (maximum performance state) at all times via registry. Eliminates boost-clock ramp-up latency.', icon:'<i class="fa fa-trophy"></i>' },
         { id:'nvidia-profile',     name:'NVIDIA Profile Optimiser', desc:'Applies low-latency, maximum performance and pre-rendered frames settings to the NVIDIA global driver profile via registry.', icon:'<i class="fa fa-sliders"></i>' },
       ] : []),
-      { id:'hvci-offload', name:'HVCI Offload (Hypervisor Code Integrity)', desc:'Turns off Memory Integrity (HVCI). Drivers are no longer verified in isolated memory, which removes the overhead; the gain is mainly on older CPUs without mode-based execution control.', icon:'<i class="fa fa-server"></i>', danger:true, dangerLabel:'Confirm', warning:'Lowers a Windows security protection. Reboot required. Windows may turn Memory Integrity back on after an update.', reboot:true },
-      { id:'vbs-disable', name:'Disable VBS (Virtualization-Based Security)', desc:'Disables the full VBS umbrella — goes further than HVCI offload. Gain is measurable mainly on older CPUs (about 8% seen on a Ryzen 7 5800X3D under 24H2). Reboot required.', icon:'<i class="fa fa-shield-halved"></i>', danger:true, dangerLabel:'I understand the risks', warning:'SECURITY IMPACT: turns off Memory Integrity and Credential Guard-style protections. Some anti-cheats check the VBS state. Reboot required. Revert if you use virtualization.', reboot:true },
-      ...(tweakCompat('hypervisor-off') ? [{ id:'hypervisor-off', name:'Turn Off the Windows Hypervisor', desc:'Turns off the hypervisor at boot so virtualization-based features stop costing frame time.', icon:'<i class="fa fa-server"></i>', danger:true, dangerLabel:'I understand the risks', reboot:true }] : []),
-    ]},
-    { secId:'hw-mem', get title() { return tUI('hwSecMemMitigations') }, get sub() { return tUI('hwSecMemMitigationsSub') }, cards:[
-      { id:'memory-guard-tune',    name:'Memory Guard Tune', desc:'Sets MoveImages and MemoryPressureResponse policies to optimise kernel memory pressure handling and ASLR image placement.', icon:'<i class="fa fa-memory"></i>' },
-      { id:'pool-usage-max',       name:'Kernel Pool Usage Max (96%)', desc:'Raises Windows kernel non-paged pool reclaim threshold from 60% to 96%. Defers kernel pool reclaim longer, reducing DX12/Vulkan command buffer allocation stalls. Most impactful on 16GB systems running memory-heavy games (Warzone, Hogwarts Legacy).', icon:'<i class="fa fa-layer-group"></i>', safetyTier:2 },
-      { id:'full-mitigation-wipe', name:'Full Mitigation Wipe', desc:'Turns off Control Flow Guard, SEHOP, forced ASLR relocation and the Spectre/Meltdown mitigations system-wide. Valorant needs Control Flow Guard.', icon:'<i class="fa fa-triangle-exclamation"></i>', danger:true, dangerLabel:'I accept ALL risks', warning:'DANGEROUS: removes several Windows exploit protections system-wide. Never on a shared or internet-exposed PC.' },
-      { id:'process-count-reduction', name:'Process Count Reduction', desc:'Disables non-essential Windows services (sysmain, diagsvc, dmwappushservice) to reduce total running process count and free RAM.', icon:'<i class="fa fa-list-check"></i>' },
     ]},
     ...(isAmd ? [{ secId:'hw-amd', get title() { return tUI('hwSecAmdGpu') }, get sub() { return tUI('hwSecAmdGpuSub') }, cards:[
       { id:'amd-chill-off',    name:'AMD Chill Off', desc:'Disables AMD Chill (dynamic frame rate limiter) in the registry. Prevents AMD ReLive from throttling frame rate when the mouse is still.', icon:'<i class="fa fa-snowflake"></i>' },
@@ -5995,8 +5995,6 @@ async function buildHardware(c) {
       { id:'amd-service-trim', name:'AMD Service Trim', desc:'Stops and disables non-essential AMD background services (AMDLinkUpdate, AMD Crash Defender, AMD Ryzen Master SDK) that consume CPU idle time.', icon:'<i class="fa fa-scissors"></i>' },
       { id:'amd-ulps-disable', name:'Disable AMD ULPS (Ultra Low Power State)', desc:'Disables Ultra Low Power State across all AMD video registry subkeys. Reduces stutter in multi-GPU (CrossFireX) setups. Safe on single-GPU systems.', icon:'<i class="fa fa-bolt"></i>' },
     ]}] : []),
-    { secId:'hw-audio', get title() { return tUI('hwSecAudio') }, get sub() { return tUI('hwSecAudioSub') }, cards:[
-    ]},
   ]
   // Retired tweaks that were never applied are not offered, so they must not count in the 0/N badges or keep a section open.
   SECTIONS.forEach(sec => { sec.cards = sec.cards.filter(tw => !(window._tweakMeta && window._tweakMeta[tw.id] && window._tweakMeta[tw.id].retired && tweakState(tw.id) !== 'applied')) })
@@ -6044,38 +6042,6 @@ async function buildHardware(c) {
     <div class="hw-tools-divider-sub">${tUI('hwToolsDividerSub')}</div>
   `
   c.appendChild(toolsDivider)
-
-  // ── CPU Topology Optimizer panel ──────────────────────────────────────────
-  const topoSec = makeSection(tUI('hwCpuTopoTitle'), tUI('hwCpuTopoSub'))
-  topoSec.dataset.secId = 'hw-tool-topo'
-  const topoInner = document.createElement('div')
-  topoInner.className = 'hw-tool-panel'
-  topoInner.innerHTML = `
-    <div id="hw-topo-pin-indicator" style="display:none;font-size:12px;color:var(--success,var(--c-success));background:var(--success-bg);border:1px solid var(--success-bd,var(--c-success-muted));border-radius:var(--r-sm,7px);padding:7px 10px;margin-bottom:10px;display:flex;align-items:center;gap:8px">
-      <i class="fa fa-thumbtack"></i><span>${tUI('hwCpuTopoPinnedNow')} </span><span id="hw-topo-pin-indicator-exe" class="jx-149"></span>
-    </div>
-    <div id="hw-topo-rec" class="jx-13"></div>
-    <div id="hw-topo-info" class="hw-tool-desc jx-148">…</div>
-    <p class="hw-tool-desc jx-104">${tUI('hwCpuTopoDesc')}</p>
-    <div id="hw-topo-games" class="jx-38"></div>
-    <div class="jx-573">
-      <input id="hw-topo-exe" type="text" placeholder="game.exe" class="hw-tool-input jx-574">
-      <button id="hw-topo-find-btn" class="btn btn-ghost btn-sm" onclick="doCpuTopoFindGames(this)">
-        <i class="fa fa-magnifying-glass"></i> ${tUI('hwCpuTopoFindGames')}
-      </button>
-      <button id="hw-topo-pin-btn" class="btn btn-primary btn-sm" onclick="doCpuTopoPin(this)">
-        <i class="fa fa-thumbtack"></i> ${tUI('hwCpuTopoPin')}
-      </button>
-      <button id="hw-topo-unpin-btn" class="btn btn-ghost btn-sm" style="display:none" onclick="doCpuTopoUnpin(this)">
-        <i class="fa fa-xmark"></i> ${tUI('hwCpuTopoUnpin')}
-      </button>
-    </div>
-    <div class="hw-tool-detail-text jx-13">${tUI('hwCpuTopoExeHint')}</div>
-    <div id="hw-topo-status" class="jx-150"></div>
-  `
-  topoSec.appendChild(topoInner)
-  c.appendChild(topoSec)
-  hwTopoInit()
 
   // ── Thermal Throttle Detective panel ──────────────────────────────────────
   const thermalSec = makeSection(tUI('hwThermalTitle'), tUI('hwThermalSub'))
@@ -6138,28 +6104,6 @@ async function buildHardware(c) {
     if (ch) ch.style.transform = e.target.open ? 'rotate(90deg)' : ''
   })
 
-  // ── Latency Budget Visualizer panel ──────────────────────────────────────
-  const latSec = makeSection(tUI('hwLatTitle'), tUI('hwLatSub'))
-  latSec.dataset.secId = 'hw-tool-lat'
-  const latInner = document.createElement('div')
-  latInner.className = 'hw-tool-panel'
-  latInner.innerHTML = `
-    <div class="hw-tool-infobox accent-left jx-13">${tUI('hwLatSteps')}</div>
-    <div id="hw-lat-frame-count" style="font-size:12px;font-weight:600;color:var(--muted);margin-bottom:8px;display:none"></div>
-    <div id="hw-lat-bars" class="jx-582"></div>
-    <div id="hw-lat-status" class="jx-151">—</div>
-    <div id="hw-lat-sugg" class="hw-tool-infobox accent-left" style="margin-bottom:10px;display:none;line-height:1.5"></div>
-    <div class="jx-89">
-      <button id="hw-lat-start-btn" class="btn btn-primary btn-sm" onclick="doLatStart(this)">
-        <i class="fa fa-play"></i> ${tUI('hwLatStart')}
-      </button>
-      <button id="hw-lat-stop-btn" class="btn btn-ghost btn-sm" style="display:none" onclick="doLatStop(this)">
-        <i class="fa fa-stop"></i> ${tUI('hwLatStop')}
-      </button>
-    </div>
-  `
-  latSec.appendChild(latInner)
-  c.appendChild(latSec)
 }
 
 function hwRefreshCounters() {
@@ -6177,126 +6121,6 @@ function hwRefreshCounters() {
     badge.classList.toggle('spb-full', isFull)
     badge.classList.toggle('spb-partial', applied > 0 && !isFull)
   })
-}
-
-// ─── CPU Topology Optimizer UI ────────────────────────────────────────────────
-async function hwTopoInit() {
-  const infoEl   = document.getElementById('hw-topo-info')
-  const recEl    = document.getElementById('hw-topo-rec')
-  const statusEl = document.getElementById('hw-topo-status')
-  const unpinBtn = document.getElementById('hw-topo-unpin-btn')
-  try {
-    const [topo, pinStatus] = await Promise.all([api.cpuGetTopology(), api.cpuGetPinStatus()])
-    if (infoEl && topo.ok) {
-      const badge = topo.isHybrid
-        ? `<span class="jx-584">${tUI('hwCpuTopoHybrid')}</span>`
-        : topo.is3DVCache
-          ? `<span class="jx-585">${tUI('hwCpuTopo3D')}</span>`
-          : `<span class="jx-586">${tUI('hwCpuTopoStandard')}</span>`
-      const detail = topo.isHybrid
-        ? `${topo.pCores}P + ${topo.eCores}E cores · ${topo.logical} logical`
-        : `${topo.physical} cores · ${topo.logical} logical`
-      infoEl.innerHTML = `${badge}&ensp;<span class="jx-9">${topo.name}</span>&ensp;<span class="jx-28">${detail}</span>`
-    }
-    if (recEl) {
-      if (topo.isHybrid || topo.is3DVCache) {
-        recEl.innerHTML = `<div class="jx-587"><i class="fa fa-star jx-19"></i>${tUI('hwCpuTopoRecommended')}</div>`
-      } else {
-        recEl.innerHTML = `<div class="jx-588"><i class="fa fa-circle-info jx-19"></i>${tUI('hwCpuTopoStandardNote')}</div>`
-      }
-    }
-    if (pinStatus.active && pinStatus.state) {
-      if (statusEl) statusEl.innerHTML = `<span class="jx-14"><i class="fa fa-thumbtack"></i> ${tUI('hwCpuTopoActive')}: ${pinStatus.state.exe}</span>`
-      if (unpinBtn) unpinBtn.style.display = ''
-      const exeInput = document.getElementById('hw-topo-exe')
-      if (exeInput && pinStatus.state.exe) exeInput.value = pinStatus.state.exe
-      _hwTopoPinIndicatorSet(pinStatus.state.exe)
-    }
-  } catch {}
-}
-
-function _hwTopoPinIndicatorSet(exe) {
-  const ind = document.getElementById('hw-topo-pin-indicator')
-  const indExe = document.getElementById('hw-topo-pin-indicator-exe')
-  if (!ind) return
-  if (exe) {
-    ind.style.display = 'flex'
-    if (indExe) indExe.textContent = exe
-  } else {
-    ind.style.display = 'none'
-  }
-}
-
-async function doCpuTopoFindGames(btn) {
-  btn.disabled = true
-  btn.innerHTML = `<i class="fa fa-spinner fa-spin"></i> ${tUI('hwCpuTopoFindingGames')}`
-  const gamesEl = document.getElementById('hw-topo-games')
-  try {
-    const procs = await api.getProcesses()
-    const dbExes = new Set(GAME_DATABASE.map(g => g.exe.toLowerCase()))
-    const found = (procs || []).filter(p => dbExes.has((p.name || p.exe || '').toLowerCase()))
-    if (!found.length) {
-      if (gamesEl) gamesEl.innerHTML = `<div class="jx-152">${tUI('hwCpuTopoNoRunning')}</div>`
-    } else {
-      if (gamesEl) {
-        const header = `<div class="jx-589">${tUI('hwCpuTopoFoundGames').replace('{n}', found.length)}</div>`
-        const items = found.map(p => {
-          const exeName = p.name || p.exe || ''
-          const dbEntry = GAME_DATABASE.find(g => g.exe.toLowerCase() === exeName.toLowerCase())
-          const label = dbEntry?.name || exeName
-          return `<button class="btn btn-ghost btn-sm" style="font-size:11px;padding:3px 8px" onclick="document.getElementById('hw-topo-exe').value='${exeName}';document.getElementById('hw-topo-games').innerHTML=''">
-            <i class="fa fa-gamepad jx-24"></i>${label}
-          </button>`
-        }).join('')
-        gamesEl.innerHTML = `${header}<div class="jx-590">${items}</div>`
-      }
-    }
-  } finally {
-    btn.disabled = false
-    btn.innerHTML = `<i class="fa fa-magnifying-glass"></i> ${tUI('hwCpuTopoFindGames')}`
-  }
-}
-
-async function doCpuTopoPin(btn) {
-  const exeInput = document.getElementById('hw-topo-exe')
-  const exe = (exeInput?.value || '').trim()
-  if (!exe) { toast(tUI('hwCpuTopoTitle'), tUI('hwCpuTopoNoGame'), 'warn'); return }
-  btn.disabled = true
-  btn.innerHTML = `<i class="fa fa-spinner fa-spin"></i> ${tUI('hwCpuTopoPinning')}`
-  const statusEl = document.getElementById('hw-topo-status')
-  const unpinBtn = document.getElementById('hw-topo-unpin-btn')
-  try {
-    const res = await api.cpuPinGame({ exe })
-    if (res.ok) {
-      const coreLabel = res.isHybrid
-        ? `${res.pinned} process${res.pinned !== 1 ? 'es' : ''} → ${Math.round(Math.log2(res.mask + 1))} P-cores`
-        : `${res.pinned} process${res.pinned !== 1 ? 'es' : ''} → all cores`
-      const msg = tUI('hwCpuTopoPinResult').replace('{exe}', exe).replace('{n}', Math.round(Math.log2(res.mask + 1)))
-      if (statusEl) statusEl.innerHTML = `<span class="jx-14"><i class="fa fa-thumbtack"></i> ${msg}</span><span class="jx-591">(${coreLabel})</span>`
-      if (unpinBtn) unpinBtn.style.display = ''
-      _hwTopoPinIndicatorSet(exe)
-    } else {
-      if (statusEl) statusEl.innerHTML = `<span class="jx-21"><i class="fa fa-xmark"></i> ${res.error || 'Failed'}</span>`
-    }
-  } finally {
-    btn.disabled = false
-    btn.innerHTML = `<i class="fa fa-thumbtack"></i> ${tUI('hwCpuTopoPin')}`
-  }
-}
-
-async function doCpuTopoUnpin(btn) {
-  btn.disabled = true
-  const statusEl = document.getElementById('hw-topo-status')
-  const unpinBtn = document.getElementById('hw-topo-unpin-btn')
-  try {
-    const r = await api.cpuUnpinGame().catch(() => null)
-    if (!r || r.ok === false) { toast(tUI('tkFailed'), tUI('tkOpFailed'), 'err'); return }
-    if (statusEl) statusEl.innerHTML = `<span class="jx-3">${tUI('hwCpuTopoInactive')}</span>`
-    if (unpinBtn) unpinBtn.style.display = 'none'
-    _hwTopoPinIndicatorSet(null)
-  } finally {
-    btn.disabled = false
-  }
 }
 
 // ─── Thermal Throttle Detective UI ───────────────────────────────────────────
@@ -6439,100 +6263,6 @@ async function doEffStop(btn) {
     }
   }
   await api.efficiencyStop()
-}
-
-// ─── Latency Budget Visualizer UI ────────────────────────────────────────────
-let _latTickHandler = null
-let _latFrameCount = 0
-
-async function doLatStart(btn) {
-  btn.style.display = 'none'
-  const stopBtn      = document.getElementById('hw-lat-stop-btn')
-  const statusEl     = document.getElementById('hw-lat-status')
-  const frameCountEl = document.getElementById('hw-lat-frame-count')
-  if (stopBtn) stopBtn.style.display = ''
-  _latFrameCount = 0
-  const res = await api.latencyBudgetStart()
-  if (!res.ok) {
-    if (statusEl) statusEl.innerHTML = `<span class="jx-21"><i class="fa fa-xmark"></i> ${tUI('hwLatNoPresentMon')}</span>&ensp;<a href="#" onclick="event.preventDefault();api.openExternal('https://github.com/GameTechDev/PresentMon/releases')" class="jx-598"><i class="fa fa-arrow-up-right-from-square"></i> ${tUI('hwLatGetPresentMon')}</a>`
-    if (stopBtn) stopBtn.style.display = 'none'
-    btn.style.display = ''
-    return
-  }
-  if (statusEl) statusEl.innerHTML = `<span class="jx-12"><i class="fa fa-spinner fa-spin"></i> ${tUI('hwLatCapturing')}</span>`
-  if (frameCountEl) frameCountEl.style.display = ''
-  if (!_latTickHandler) {
-    _latTickHandler = api.onLatencyBudgetTick(tick => {
-      const statusEl     = document.getElementById('hw-lat-status')
-      const barsEl       = document.getElementById('hw-lat-bars')
-      const suggEl       = document.getElementById('hw-lat-sugg')
-      const frameCountEl = document.getElementById('hw-lat-frame-count')
-      if (!statusEl) return
-
-      _latFrameCount += (tick.sampleCount || 0)
-      if (frameCountEl) frameCountEl.textContent = tUI('hwLatFrameCount').replace('{n}', _latFrameCount.toLocaleString())
-
-      const bn      = tick.bottleneck
-      const bnLabel = bn === 'cpu' ? tUI('hwLatCpuBound') : bn === 'gpu' ? tUI('hwLatGpuBound') : tUI('hwLatCapturing')
-      const bnColor = bn === 'cpu' ? '#ff9800' : bn === 'gpu' ? '#4fc3f7' : '#888'
-      const frameStr = tick.frameMs  !== null ? `<span class="jx-3">${tUI('hwLatAvgFrame')} <b class="jx-9">${tick.frameMs}ms</b></span>` : ''
-      const p99Badge = tick.frameP99 !== null ? `&ensp;<span class="jx-599">${tUI('hwLatP99')} ${tick.frameP99}ms</span>` : ''
-      statusEl.innerHTML = `<span style="color:${bnColor}"><i class="fa fa-circle"></i> <b>${bnLabel}</b></span>&ensp;${frameStr}${p99Badge}`
-
-      if (suggEl) {
-        if (bn === 'cpu') {
-          suggEl.style.display = ''
-          suggEl.style.borderLeftColor = '#ff9800'
-          suggEl.innerHTML = `<i class="fa fa-microchip jx-48"></i>${tUI('hwLatSuggCpu')}`
-        } else if (bn === 'gpu') {
-          suggEl.style.display = ''
-          suggEl.style.borderLeftColor = '#4fc3f7'
-          suggEl.innerHTML = `<i class="fa fa-display jx-144"></i>${tUI('hwLatSuggGpu')}`
-        } else {
-          suggEl.style.display = 'none'
-        }
-      }
-
-      if (barsEl) {
-        const segments = [
-          { label: tUI('hwLatCpu'),  val: tick.cpuMs,  color: '#ff9800' },
-          { label: tUI('hwLatGpu'),  val: tick.gpuMs,  color: '#4fc3f7' },
-          { label: tUI('hwLatDisp'), val: tick.dispMs, color: '#ce93d8' },
-        ].filter(s => s.val !== null)
-        if (segments.length > 0) {
-          const maxMs = Math.max(...segments.map(s => s.val), 1)
-          barsEl.innerHTML = segments.map(s => {
-            const h = Math.max(8, Math.round(s.val / maxMs * 56))
-            return `<div class="jx-600">
-              <span class="jx-60">${s.val.toFixed(1)}ms</span>
-              <div class="jx-601">
-                <div style="width:40px;height:${h}px;background:${s.color};border-radius:3px"></div>
-              </div>
-              <span class="jx-602">${s.label}</span>
-            </div>`
-          }).join('')
-        }
-      }
-    })
-  }
-}
-
-async function doLatStop(btn) {
-  btn.style.display = 'none'
-  const startBtn     = document.getElementById('hw-lat-start-btn')
-  const frameCountEl = document.getElementById('hw-lat-frame-count')
-  if (startBtn) startBtn.style.display = ''
-  await api.latencyBudgetStop()
-  // Retain last status reading — just prefix it as "last capture"
-  const statusEl = document.getElementById('hw-lat-status')
-  if (statusEl && statusEl.innerHTML && !statusEl.innerHTML.includes('—')) {
-    statusEl.innerHTML = `<span class="jx-32">${tUI('hwLatLastCapture')}</span>&ensp;` + statusEl.innerHTML
-  }
-  if (frameCountEl && _latFrameCount > 0) {
-    frameCountEl.textContent = `${tUI('hwLatLastCapture')} ${tUI('hwLatFrameCount').replace('{n}', _latFrameCount.toLocaleString())}`
-  } else if (frameCountEl) {
-    frameCountEl.style.display = 'none'
-  }
 }
 
 const HW_SEARCH_SYNONYMS = {

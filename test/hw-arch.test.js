@@ -65,3 +65,12 @@ test('CPU: unknown name gives nulls', () => {
   assert.equal(c.vendor, null); assert.equal(c.gen, null)
   assert.equal(classifyCpu('Weird CPU').vendor, null)
 })
+
+test('Intel mobile 1000-series model numbers are read as 10th-13th gen, not 1st (i5-1135G7 is an 11th gen)', () => {
+  const g = n => classifyCpu(n)
+  assert.strictEqual(g('11th Gen Intel(R) Core(TM) i5-1135G7 @ 2.40GHz').gen, 11)
+  assert.strictEqual(g('Intel(R) Core(TM) i3-1005G1').gen, 10); assert.strictEqual(g('Intel(R) Core(TM) i7-1260P').gen, 12); assert.strictEqual(g('Intel(R) Core(TM) i7-1355U').gen, 13)
+  assert.strictEqual(g('Intel(R) Core(TM) i7-7700K').gen, 7); assert.strictEqual(g('Intel(R) Core(TM) i5-2500K').gen, 2)
+  const tiger = g('11th Gen Intel(R) Core(TM) i5-1135G7 @ 2.40GHz')
+  assert.strictEqual(tiger.hvciCostly, false); assert.strictEqual(tiger.mitigationCost, 'low'); assert.strictEqual(tiger.mobile, true)
+})
