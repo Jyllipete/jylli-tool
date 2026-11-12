@@ -223,3 +223,24 @@ test('index: tuning and protection alone never make an Index; the bands still sh
   assert.strictEqual(i.pillars.tuned.pct, 90)
   assert.strictEqual(i.pillars.protected.pct, 100)
 })
+
+// ── honesty of the move cards: only measured or recorded things are claimed ───────────────────
+test('moves: no invented minutes or impact labels; reversibility only where the flow is journaled', () => {
+  const ms = V.rank({ ...calm(), restore: { level: 'stale' }, drift: { count: 1, ids: ['a'] }, autoOpti: { lastAt: NOW - 40 * DAY }, cleanup: { reclaimableBytes: 6 * 1073741824, scanTs: NOW - 3 * DAY }, debloat: { safe: 5, ram: 640 * 1048576, ts: NOW - 5 * DAY }, isAdmin: false, concierge: [...conc, { id: 'batchx', tab: 'tweaks2', score: 20, impact: 'medium', action: { type: 'batch', ids: ['a'] }, titleKey: 'batchxTitle', whyKey: 'batchxWhy' }] }).all
+  for (const m of ms) assert.ok(!('minutes' in m), m.id + ' must not carry a made-up duration')
+  const by = id => ms.find(m => m.id === id)
+  assert.strictEqual(by('drift').reversible, true)
+  assert.strictEqual(by('autoOptiAgain').reversible, true)
+  assert.strictEqual(by('lean').reversible, false, 'opening the Debloat tab promises nothing')
+  assert.strictEqual(by('reclaim').reversible, false)
+  assert.strictEqual(by('protectStale').reversible, false)
+  assert.strictEqual(by('batchx').reversible, true, 'a concierge tweak batch is journaled')
+})
+
+test('moves: Lean and Cleanup carry what was measured, and when', () => {
+  const ms = V.rank({ ...calm(), cleanup: { reclaimableBytes: 6 * 1073741824, scanTs: NOW - 3 * DAY }, debloat: { safe: 5, ram: 640 * 1048576, ts: NOW - 5 * DAY } }).all
+  assert.deepStrictEqual(ms.find(m => m.id === 'lean').facts, [{ k: 'ram', bytes: 640 * 1048576 }, { k: 'scanned', ts: NOW - 5 * DAY }])
+  assert.deepStrictEqual(ms.find(m => m.id === 'reclaim').facts, [{ k: 'scanned', ts: NOW - 3 * DAY }])
+  const none = V.rank({ ...calm(), debloat: { safe: 5, ram: null, ts: null } }).all.find(m => m.id === 'lean')
+  assert.deepStrictEqual(none.facts, [], 'no measurement, no chip')
+})

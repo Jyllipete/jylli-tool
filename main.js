@@ -1310,7 +1310,7 @@ foreach ($id in @(${ids.join(',')})) { try { [ProcFreeze]::NtResumeProcess((Get-
 // Every background timer / child process Jylli Tool starts. Windows does not kill children when the parent exits.
 function shutdownBackground() {
   for (const t of [discordRetryTimer, _contextDetectorTimer, discordOverrideCycleTimer, _sensorHzTimer, _metricsInterval, _tierRefreshInterval, _hudPingInterval,
-                   _livePingInterval, gameWatcherInterval, _thermalTimer, _effTimer, _latTimer, _historySamplerTimer, _ariaTimer, _ariaFpsTimer, _updateGuardTimer]) {
+                   gameWatcherInterval, _thermalTimer, _effTimer, _latTimer, _historySamplerTimer, _ariaTimer, _ariaFpsTimer, _updateGuardTimer]) {
     try { if (t) { clearInterval(t); clearTimeout(t) } } catch {}
   }
   try { gameShieldShutdown() } catch {}
@@ -11066,13 +11066,14 @@ ipcMain.handle('run-ping-tests-v2', async (_, opts = {}) => {
 
 
 // ─── DNS Benchmarker ──────────────────────────────────────────────────────────
-ipcMain.handle('benchmark-dns', async () => {
-  const providers = [
-    { name: 'Cloudflare', server: '1.1.1.1',       tweak: 'dns-cloudflare' },
-    { name: 'Google',     server: '8.8.8.8',       tweak: 'dns-google' },
-    { name: 'Quad9',      server: '9.9.9.9',       tweak: 'dns-quad9' },
-    { name: 'AdGuard',    server: '94.140.14.14',  tweak: 'dns-adguard' },
-  ]
+const DNS_BENCH_PROVIDERS = [
+  { name: 'Cloudflare', server: '1.1.1.1',       tweak: 'dns-cloudflare' },
+  { name: 'Google',     server: '8.8.8.8',       tweak: 'dns-google' },
+  { name: 'Quad9',      server: '9.9.9.9',       tweak: 'dns-quad9' },
+  { name: 'AdGuard',    server: '94.140.14.14',  tweak: 'dns-adguard' },
+]
+// Shared by the legacy handler below and the Network checkup (lib/network): providers = [{ name, server (IPv4 literal), ... }] -> same rows with fail/median/min/max.
+async function benchDnsList(providers) {
   const makeScript = (server) => `
 $times = [System.Collections.Generic.List[double]]::new()
 1..5 | ForEach-Object {
@@ -11110,8 +11111,9 @@ if ($times.Count -gt 0) {
 } else { Write-Output "FAIL" }
 `
 
-  const results = await Promise.all(providers.map(async (p) => {
+  return Promise.all(providers.map(async (p) => {
     try {
+      if (!/^\d{1,3}(\.\d{1,3}){3}$/.test(String(p.server))) return { ...p, fail: true, median: 9999 }   // the address goes into a script: IPv4 literals only
       const r = await runPS(makeScript(p.server), 20000)
       const lines = r.out.split('\n').map(l => l.trim())
       if (lines.some(l => l === 'FAIL')) return { ...p, fail: true, median: 9999 }
@@ -11119,195 +11121,14 @@ if ($times.Count -gt 0) {
       return { ...p, fail: false, median: get('MED'), min: get('MIN'), max: get('MAX') }
     } catch { return { ...p, fail: true, median: 9999 } }
   }))
-
+}
+ipcMain.handle('benchmark-dns', async () => {
+  const results = await benchDnsList(DNS_BENCH_PROVIDERS)
   results.sort((a, b) => a.median - b.median)
   return { ok: true, results }
 })
 
-// ─── Live Ping Monitor ────────────────────────────────────────────────────────
-let _livePingInterval = null
-
-ipcMain.handle('start-live-ping', (_, { host } = {}) => {
-  if (_livePingInterval) { clearInterval(_livePingInterval); _livePingInterval = null }
-  const target = (host || '1.1.1.1').replace(/[^a-zA-Z0-9.\-:]/g, '')
-  _livePingInterval = setInterval(async () => {
-    try {
-      const r = await runPS(`
-        $p = New-Object System.Net.NetworkInformation.Ping
-        $t = [System.Collections.Generic.List[int]]::new()
-        1..3 | ForEach-Object {
-          try {
-            $r = $p.Send('${target}', 2000)
-            if ($r.Status -eq 'Success') { $t.Add([int]$r.RoundtripTime) }
-          } catch {}
-        }
-        if ($t.Count -gt 0) {
-          $s = $t | Sort-Object
-          Write-Output $s[[math]::Floor($s.Count / 2)]
-        } else { Write-Output 'timeout' }
-      `, 8000)
-      const raw = r.out.trim()
-      const rtt = raw === 'timeout' ? null : parseInt(raw)
-      mainWindow?.webContents.send('live-ping-tick', { rtt, ts: Date.now(), host: target })
-    } catch {}
-  }, 3000)
-  return { ok: true }
-})
-
-ipcMain.handle('stop-live-ping', () => {
-  if (_livePingInterval) { clearInterval(_livePingInterval); _livePingInterval = null }
-  return { ok: true }
-})
-
-// ─── Network Health Check ─────────────────────────────────────────────────────
-ipcMain.handle('run-net-health', async () => {
-  const results = {}
-
-  // Step 1: Gateway RTT (20 pings)
-  const gwScript = `
-$gw = try { (Get-NetRoute -DestinationPrefix '0.0.0.0/0' -EA SilentlyContinue | Sort-Object RouteMetric | Select-Object -First 1).NextHop } catch { $null }
-if (-not $gw) { Write-Output "GW_FAIL"; exit }
-Write-Output "GW_IP=$gw"
-$rtts = [System.Collections.Generic.List[int]]::new()
-1..20 | ForEach-Object {
-  try {
-    $p = New-Object System.Net.NetworkInformation.Ping
-    $r = $p.Send($gw, 2000)
-    if ($r.Status -eq 'Success') { $rtts.Add([int]$r.RoundtripTime) } else { $rtts.Add(9999) }
-  } catch { $rtts.Add(9999) }
-  Start-Sleep -Milliseconds 100
-}
-$good = $rtts | Where-Object { $_ -ne 9999 }
-$loss = $rtts | Where-Object { $_ -eq 9999 }
-if ($good.Count -gt 0) {
-  $avg = [math]::Round(($good | Measure-Object -Average).Average, 1)
-  $min = ($good | Measure-Object -Minimum).Minimum
-  $max = ($good | Measure-Object -Maximum).Maximum
-  $jitter = if ($good.Count -gt 1) { [math]::Round([math]::Sqrt((($good | ForEach-Object { ($_ - $avg) * ($_ - $avg) }) | Measure-Object -Sum).Sum / $good.Count), 1) } else { 0 }
-  Write-Output "GW_AVG=$avg"
-  Write-Output "GW_MIN=$min"
-  Write-Output "GW_MAX=$max"
-  Write-Output "GW_JITTER=$jitter"
-  Write-Output "GW_LOSS=$([math]::Round($loss.Count / 20 * 100, 0))"
-} else { Write-Output "GW_FAIL" }
-`
-
-  // Step 2: DNS resolution time (5 samples, with warmup to avoid cold-cache penalty)
-  const dnsScript = `
-$times = [System.Collections.Generic.List[double]]::new()
-try { [System.Net.Dns]::GetHostAddresses('google.com') | Out-Null } catch {}
-Start-Sleep -Milliseconds 20
-1..5 | ForEach-Object {
-  try {
-    $sw = [System.Diagnostics.Stopwatch]::StartNew()
-    [System.Net.Dns]::GetHostAddresses('google.com') | Out-Null
-    $sw.Stop()
-    $times.Add($sw.Elapsed.TotalMilliseconds)
-  } catch {}
-  Start-Sleep -Milliseconds 50
-}
-if ($times.Count -gt 0) {
-  $sorted = $times | Sort-Object
-  $median = if ($sorted.Count % 2 -eq 1) { $sorted[($sorted.Count - 1) / 2] } else { ($sorted[$sorted.Count/2 - 1] + $sorted[$sorted.Count/2]) / 2 }
-  Write-Output "DNS_MED=$([math]::Round($median, 1))"
-  Write-Output "DNS_MIN=$([math]::Round(($sorted | Select-Object -First 1), 1))"
-  Write-Output "DNS_MAX=$([math]::Round(($sorted | Select-Object -Last 1), 1))"
-} else { Write-Output "DNS_FAIL" }
-`
-
-  // Step 3: ISP first 3 hops via tracert
-  const tracertScript = `
-$output = tracert -d -h 3 -w 2000 8.8.8.8 2>$null | Select-Object -Skip 4
-$hop = 0
-foreach ($line in $output) {
-  if ($line -match '^\\s*(\\d+)\\s') {
-    $hop++
-    $rtts = [regex]::Matches($line, '(\\d+)\\s*ms') | ForEach-Object { [int]$_.Groups[1].Value }
-    $ip   = [regex]::Match($line, '(\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3})').Value
-    if ($rtts.Count -gt 0) {
-      $avg = [math]::Round(($rtts | Measure-Object -Average).Average, 1)
-      Write-Output "HOP${hop}_IP=$ip"
-      Write-Output "HOP${hop}_AVG=$avg"
-    } else {
-      Write-Output "HOP${hop}_IP=*"
-      Write-Output "HOP${hop}_AVG=*"
-    }
-    if ($hop -ge 3) { break }
-  }
-}
-`
-
-  // Step 4: Packet loss to 1.1.1.1 (20 pings)
-  const lossScript = `
-$lost = 0
-1..20 | ForEach-Object {
-  try {
-    $p = New-Object System.Net.NetworkInformation.Ping
-    $r = $p.Send('1.1.1.1', 2000)
-    if ($r.Status -ne 'Success') { $lost++ }
-  } catch { $lost++ }
-  Start-Sleep -Milliseconds 100
-}
-Write-Output "CF_LOSS=$([math]::Round($lost / 20 * 100, 0))"
-`
-
-  // Run steps 1 and 2 in parallel, then 3 and 4 in parallel
-  const [gwR, dnsR] = await Promise.all([
-    runPS(gwScript, 30000).catch(() => ({ out: '' })),
-    runPS(dnsScript, 15000).catch(() => ({ out: '' })),
-  ])
-  const [tracertR, lossR] = await Promise.all([
-    runPS(tracertScript, 30000).catch(() => ({ out: '' })),
-    runPS(lossScript, 30000).catch(() => ({ out: '' })),
-  ])
-
-  // Parse gateway
-  const gwLines = gwR.out.split('\n').map(l => l.trim())
-  const gw = {}
-  for (const l of gwLines) {
-    if (l === 'GW_FAIL') { gw.fail = true; break }
-    const [k, v] = l.split('='); if (!k || !v) continue
-    if (k === 'GW_IP') gw.ip = v
-    if (k === 'GW_AVG') gw.avg = parseFloat(v)
-    if (k === 'GW_MIN') gw.min = parseFloat(v)
-    if (k === 'GW_MAX') gw.max = parseFloat(v)
-    if (k === 'GW_JITTER') gw.jitter = parseFloat(v)
-    if (k === 'GW_LOSS') gw.loss = parseInt(v)
-  }
-  results.gateway = gw
-
-  // Parse DNS
-  const dns = {}
-  for (const l of dnsR.out.split('\n').map(s => s.trim())) {
-    if (l === 'DNS_FAIL') { dns.fail = true; break }
-    const [k, v] = l.split('='); if (!k || !v) continue
-    if (k === 'DNS_MED') dns.median = parseFloat(v)
-    if (k === 'DNS_MIN') dns.min = parseFloat(v)
-    if (k === 'DNS_MAX') dns.max = parseFloat(v)
-  }
-  results.dns = dns
-
-  // Parse tracert hops
-  const hops = []
-  const tLines = tracertR.out.split('\n').map(l => l.trim())
-  const hopMap = {}
-  for (const l of tLines) {
-    const m = l.match(/^(HOP\d+)_(\w+)=(.+)/)
-    if (m) {
-      const [, hopKey, field, val] = m
-      if (!hopMap[hopKey]) hopMap[hopKey] = {}
-      hopMap[hopKey][field.toLowerCase()] = val
-    }
-  }
-  for (const key of Object.keys(hopMap).sort()) hops.push(hopMap[key])
-  results.hops = hops
-
-  // Parse loss
-  const cfLossLine = lossR.out.split('\n').find(l => l.trim().startsWith('CF_LOSS='))
-  results.cloudflare = { loss: cfLossLine ? parseInt(cfLossLine.split('=')[1]) : null }
-
-  return { ok: true, results }
-})
+// (The live ping monitor and the network health check were replaced by the Network tab checkup and live trace: lib/network, // ─── Network.)
 
 // ─── Game Detection ───────────────────────────────────────────────────────────
 ipcMain.handle('detect-games', async () => {
@@ -12028,6 +11849,114 @@ async function cleanupAutopilot() {
   } catch {}
 }
 app.whenReady().then(() => setTimeout(cleanupAutopilot, 120000))
+
+// ─── Windows (lib/windows): one catalog, one read-only probe, journaled batch run, read-back verification ───────────────────
+const Windows2 = require('./lib/windows')
+const WinCatalog = require('./lib/windows/catalog')
+let _windows = null, _winApplic = {}
+function windowsSvc() {
+  if (!_windows) {
+    _windows = Windows2.create({
+      runPS: (s, ms) => runPS(s, ms),
+      applyBatch: req => journalSvc().applyBatch(req),
+      journalList: o => journalSvc().list(o),
+      undo: (t, o) => journalSvc().undo(t, o),
+      tweakMeta: ids => { retireTweaks(); return journalSvc().tweakMeta(ids) },
+      applicability: () => _winApplic,
+      settings: () => loadSettings(),
+      state: { read: () => cuRead('jt_windows.json', null), write: v => cuWrite('jt_windows.json', v) },
+      bootMs: () => Date.now() - os.uptime() * 1000,
+    })
+  }
+  return _windows
+}
+// The capability scan can take a while on first use: wait a few seconds for it, never longer (no rules = nothing hidden or recommended extra).
+async function winApplicRefresh() {
+  try {
+    const profile = await Promise.race([ensureCapsProfile(false), new Promise(r => setTimeout(() => r(null), 6000))])
+    if (!profile) return
+    const caps = Caps.deriveCaps(profile), map = {}
+    for (const id of WinCatalog.ids()) if (Applic.RULES[id]) { const r = Applic.evaluate(id, caps); map[id] = { show: r.show, state: r.state, why: r.why } }
+    _winApplic = map
+  } catch { /* keep the last map */ }
+}
+const winIds = v => (Array.isArray(v) ? v.filter(x => typeof x === 'string' && WinCatalog.isKnown(x)).slice(0, 120) : [])
+ipcMain.handle('win2-scan', async () => { try { await winApplicRefresh(); return await windowsSvc().scan() } catch { return { ok: false, error: 'scan-failed' } } })
+ipcMain.handle('win2-cached', () => windowsSvc().cached() || { ok: false })
+ipcMain.handle('win2-run', async (_, req) => {
+  try {
+    return await windowsSvc().run({ ids: winIds(req && req.ids), action: req && req.action === 'restore' ? 'restore' : 'apply', label: 'windows', onProgress: p => cuSend('win2-progress', p) })
+  } catch (e) { return { ok: false, error: String((e && e.message) || e).slice(0, 200) } }
+})
+ipcMain.handle('win2-history', () => { try { return windowsSvc().history() } catch { return { ok: false, error: 'history-failed' } } })
+ipcMain.handle('win2-undo', async (_, req) => {
+  const t = (req && req.target) || {}, target = {}
+  for (const k of ['entryId', 'batchId']) if (typeof t[k] === 'string' && t[k].length < 64) target[k] = t[k]
+  if (!Object.keys(target).length) return { ok: false, error: 'invalid_target' }
+  try { return await windowsSvc().undo(target, { force: req && req.force === true }) } catch (e) { return { ok: false, error: String((e && e.message) || e).slice(0, 200) } }
+})
+
+// ─── Network (lib/network): one catalog, one read-only probe, journaled run + read-back, checkup, live route trace ─────────────────
+// docs/NETWORK_EVIDENCE.md. State lives in jt_network.json; every change goes through journalSvc().applyBatch (label 'network').
+const Network2 = require('./lib/network')
+const NetCatalog = require('./lib/network/catalog')
+let _network = null, _netApplic = {}
+function networkSvc() {
+  if (!_network) {
+    const transport = require('./lib/fivem/server').nodeTransport()
+    _network = Network2.create({
+      runPS: (s, ms) => runPS(s, ms),
+      applyBatch: req => journalSvc().applyBatch(req),
+      journalList: o => journalSvc().list(o),
+      undo: (t, o) => journalSvc().undo(t, o),
+      tweakMeta: ids => { retireTweaks(); return journalSvc().tweakMeta(ids) },
+      applicability: () => _netApplic,
+      settings: () => loadSettings(),
+      saveSettings: patch => saveSettings({ ...loadSettings(), ...patch }),
+      state: { read: () => cuRead('jt_network.json', null), write: v => cuWrite('jt_network.json', v) },
+      bootMs: () => Date.now() - os.uptime() * 1000,
+      benchDns: list => benchDnsList(list),
+      speedHistory: () => { try { return JSON.parse(fs.readFileSync(SPEED_HISTORY(), 'utf8')) } catch { return [] } },
+      spawn: require('child_process').spawn,
+      lookup4: h => transport.lookup4(h),
+      emit: cuSend,
+    })
+  }
+  return _network
+}
+async function netApplicRefresh() {
+  try {
+    const profile = await Promise.race([ensureCapsProfile(false), new Promise(r => setTimeout(() => r(null), 6000))])
+    if (!profile) return
+    const caps = Caps.deriveCaps(profile), map = {}
+    for (const id of NetCatalog.ids()) if (Applic.RULES[id]) { const r = Applic.evaluate(id, caps); map[id] = { show: r.show, state: r.state, why: r.why } }
+    _netApplic = map
+  } catch { /* keep the last map */ }
+}
+const netIds = v => (Array.isArray(v) ? v.filter(x => typeof x === 'string' && NetCatalog.isKnown(x)).slice(0, 60) : [])
+const netFail = e => ({ ok: false, error: String((e && e.message) || e).slice(0, 200) })
+ipcMain.handle('net2-scan', async () => { try { await netApplicRefresh(); return await networkSvc().scan() } catch { return { ok: false, error: 'scan-failed' } } })
+ipcMain.handle('net2-cached', () => { try { return networkSvc().cached() || { ok: false } } catch { return { ok: false } } })
+ipcMain.handle('net2-run', async (_, req) => {
+  try { return await networkSvc().run({ ids: netIds(req && req.ids), action: req && req.action === 'restore' ? 'restore' : 'apply', label: 'network', onProgress: p => cuSend('net2-progress', p) }) } catch (e) { return netFail(e) }
+})
+ipcMain.handle('net2-dns-set', async (_, req) => {
+  const preset = req && typeof req.preset === 'string' ? req.preset : ''
+  const c = req && req.custom && typeof req.custom === 'object' ? req.custom : {}
+  try { return await networkSvc().dnsSet({ preset, custom: { primary: String(c.primary || '').slice(0, 20), secondary: String(c.secondary || '').slice(0, 20) }, onProgress: p => cuSend('net2-progress', p) }) } catch (e) { return netFail(e) }
+})
+ipcMain.handle('net2-checkup', async () => { try { await netApplicRefresh(); return await networkSvc().checkup() } catch (e) { return netFail(e) } })
+ipcMain.handle('net2-route-start', async (_, req) => { try { return await networkSvc().routeStart(req && typeof req.host === 'string' ? req.host.slice(0, 253) : '') } catch (e) { return netFail(e) } })
+ipcMain.handle('net2-route-stop', () => { try { return networkSvc().routeStop() } catch (e) { return netFail(e) } })
+ipcMain.handle('net2-route-snapshot', () => { try { return networkSvc().routeSnapshot() } catch (e) { return netFail(e) } })
+ipcMain.handle('net2-history', () => { try { return networkSvc().history() } catch { return { ok: false, error: 'history-failed' } } })
+ipcMain.handle('net2-undo', async (_, req) => {
+  const t = (req && req.target) || {}, target = {}
+  for (const k of ['entryId', 'batchId']) if (typeof t[k] === 'string' && t[k].length < 64) target[k] = t[k]
+  if (!Object.keys(target).length) return { ok: false, error: 'invalid_target' }
+  try { return await networkSvc().undo(target, { force: req && req.force === true }) } catch (e) { return netFail(e) }
+})
+app.on('will-quit', () => { try { _network && _network.shutdown() } catch {} })
 
 // ─── Debloat (lib/debloat): one catalog, one probe, journaled run, Guard, Way back ───────────────────────────
 const Debloat2 = require('./lib/debloat')

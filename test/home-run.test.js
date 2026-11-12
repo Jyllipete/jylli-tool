@@ -123,3 +123,11 @@ test('a broken state file does not break the snapshot', async () => {
   assert.strictEqual(s.ok, true)
   assert.strictEqual(s.index.pillars.health.pct, 82)
 })
+
+test('facts: the Debloat memory and the age of both scans come from what was recorded', async () => {
+  const { svc } = make({ debloatSummary: () => ({ count: 9, safe: 4, safeRam: 733 * 1048576, ts: NOW - 2 * DAY }) })
+  const f = (await svc.snapshot()).facts
+  assert.deepStrictEqual([f.debloat.ram, f.debloat.ts, f.cleanup.scanTs], [733 * 1048576, NOW - 2 * DAY, NOW - DAY])
+  const { svc: s2 } = make({ debloatSummary: () => ({ count: 9, safe: 4, ts: NOW }) })
+  assert.strictEqual((await s2.snapshot()).facts.debloat.ram, null, 'an older summary without a measurement shows none')
+})

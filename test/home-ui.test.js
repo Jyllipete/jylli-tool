@@ -84,7 +84,7 @@ test('copy: every key the Home code asks for exists', () => {
   const used = new Set()
   for (const m of src.matchAll(/\bT\('([A-Za-z0-9_-]+)'/g)) if (!m[1].endsWith('_')) used.add(m[1])   // 'p_' + key style prefixes are covered by the loops below
   for (const k of ['p_', 'pd_', 'sub_']) for (const s of (k === 'sub_' ? ['stability', 'storage', 'memory', 'cpu', 'gpu', 'drivers', 'windows', 'security', 'network', 'config'] : ['health', 'tuned', 'protected'])) used.add(k + s)
-  for (const s of ['high', 'medium', 'low']) used.add('impact_' + s)
+  used.add('chipRam'); used.add('chipScanned')
   for (const s of ['restore', 'autoOpti', 'tab', 'batch', 'drift', 'admin', 'ai']) used.add('btn_' + s)
   for (const s of ['fresh', 'stale', 'never', 'unknown']) used.add('rp_' + s)
   for (const s of ['manual', 'stage', 'auto-opti', 'spw', 'ai', 'game-watcher', 'scheduler', 'safety-revert', 'undo']) used.add('via_' + s)

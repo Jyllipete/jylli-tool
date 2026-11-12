@@ -36,10 +36,13 @@
   }
 
   function chips(T, m) {
-    const imp = `<span class="hm-chip" data-impact="${m.impact}">${esc(T('impact_' + m.impact))}</span>`
-    const mins = m.minutes ? `<span class="hm-chip">${ic('clock')} ${esc(T('minutes', { n: m.minutes }))}</span>` : ''
+    const facts = (m.facts || []).map(f => {
+      if (f.k === 'ram') { const b = P().bytes(f.bytes); return b ? `<span class="hm-chip">${ic('memory')} ${esc(T('chipRam', { size: b.n + ' ' + b.u }))}</span>` : '' }
+      if (f.k === 'scanned') { const a = P().ago(f.ts, Date.now()); return a ? `<span class="hm-chip">${ic('clock')} ${esc(T('chipScanned', { ago: T(a.key, { n: a.n }) }))}</span>` : '' }
+      return ''
+    }).join('')
     const rev = m.reversible ? `<span class="hm-chip" data-ok="1">${ic('rotate-left')} ${esc(T('reversible'))}</span>` : ''
-    return imp + mins + rev
+    return facts + rev
   }
 
   /** copy = { title, why } already translated. */
@@ -69,7 +72,7 @@
   function nextRow(T, m, copy) {
     return `<li><button type="button" class="hm-next-r" data-act="run" data-move="${esc(m.id)}">
       <span class="hm-next-i">${ic(BTN_ICON[m.action.type] || 'arrow-right')}</span>
-      <span class="hm-next-t">${esc(copy.title)}</span><span class="hm-next-m">${esc(T('minutes', { n: m.minutes || 1 }))}</span>${ic('chevron-right', 'hm-next-c')}
+      <span class="hm-next-t">${esc(copy.title)}</span>${ic('chevron-right', 'hm-next-c')}
     </button></li>`
   }
 

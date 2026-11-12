@@ -51,7 +51,7 @@ function svc(ctx) {
     cleanupHistory: () => (w.first ? [] : [{ ts: Date.now() - 6 * DAY, freedBytes: 3.4 * GB, itemCount: 12 }, { ts: Date.now() - 41 * DAY, freedBytes: 1.1 * GB, itemCount: 7 }]),
     cleanupScans: () => (w.first ? [] : [{ ts: Date.now() - 2 * H, sizes: { 'clean-temp': w.healthy ? 90 * MB : 4.2 * GB } }]),
     cleanupLane: () => 'safe',
-    debloatSummary: () => (w.first ? null : { count: w.healthy ? 14 : 3, safe: w.healthy ? 0 : 6, ram: 640, disk: null }),
+    debloatSummary: () => (w.first ? null : { count: w.healthy ? 14 : 3, safe: w.healthy ? 0 : 42, safeRam: 640 * MB, ts: Date.now() - 5 * DAY, ram: 900 * MB, disk: null }),
     journal: () => w.journal,
     game: () => null,
     driftCheck: async () => ({ checked: 6, reverted: w.healthy ? [] : ['disable-fso', 'gpu-hwsch'] }),

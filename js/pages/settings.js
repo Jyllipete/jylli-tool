@@ -205,6 +205,8 @@ function buildSettings(c) {
             const [page, tab] = where[firstId] || W
             showPage(page, tab)
             setTimeout(() => {
+              if (page === 'windows-opti' && window.JylliWindowsPage && JylliWindowsPage.current()) { JylliWindowsPage.reveal(firstId); return }   // the Windows tab opens the lane and flashes the row once its live read is in
+              if (page === 'network' && window.JylliNetworkPage && JylliNetworkPage.current()) { JylliNetworkPage.reveal(firstId); return }   // same for the Network tab (Tune view)
               const el = document.getElementById(`tcw-${firstId}`) || document.querySelector(`[data-tweak-id="${firstId}"]`)
               if (el) { el.scrollIntoView({ behavior: 'smooth', block: 'center' }); el.classList.add('highlight-pulse'); setTimeout(() => el.classList.remove('highlight-pulse'), 2000) }
             }, 300)

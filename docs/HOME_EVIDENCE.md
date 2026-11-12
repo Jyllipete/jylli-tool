@@ -35,6 +35,8 @@ Home ("Helm") only says what other engines recorded. It runs no scan of its own.
 | AI suggestions | The local model is loaded and a recommendation scores 70 % or more | 35 |
 | Watch this game | A game is running | 30 |
 
+**What a move card claims.** Only measured or recorded things. There is no estimated duration and no impact label (the ranking uses an internal weight that is never shown). Chips: how old the Cleanup or Debloat scan is, and the memory the Debloat items were using when scanned (a measurement, not a promise of what removing them frees). "Recorded, so you can undo it" appears only on moves whose flow writes to the journal (Auto-Optimize, tweak batches, drift re-apply, AI suggestions); opening a tab promises nothing, and Lean's count is the number of items its in-use checks ticked by default, worded "safe to switch off", never "you do not use".
+
 "Not now" snoozes a move for 3 days (`settings.homeSnooze`). It never dismisses it for good.
 
 ## Proof Ledger

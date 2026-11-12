@@ -32,6 +32,8 @@ const DEBLOAT = !!arg('debloat', false)   // --debloat: shoot every Debloat scen
 const PULSE = !!arg('pulse', false)   // --pulse: shoot every Pulse scene: the tab, the Cockpit and the HUD (--pu-state live|idle|hitchy|debrief|fail)
 const FIVEM = !!arg('fivem', false)   // --fivem: shoot every FiveM scene (--fv-state clean|lossy|noinstall|first|fail)
 const HOME = !!arg('home', false)   // --home: shoot Home on the real lib/home service (--hm-state attention|healthy|first|fail)
+const WIN2 = !!arg('win2', false)   // --win2: shoot every Windows tab scene on the real lib/windows service (--wn-state open|applied|first|fail)
+const NET2 = !!arg('net2', false)   // --net2: shoot every Network tab scene on the real lib/network service (--nt-state ethernet|wifi-weak|lossy|first|fail)
 const BOOT = !!arg('boot', false)   // --boot: shoot the boot scan while it runs (--bt-state first|returning|changed|slow|fail)
 const GALLERY = !!arg('gallery', false)   // shoot tools/ui-preview/gallery.html (every component) instead of the app
 
@@ -54,6 +56,8 @@ ipcMain.handle('mock', async (e, name, args) => {
   if (/^(pulse2|pulseGetPresets|pulseGetCoreLoads|pulseThermalAudit)/.test(name)) { const r = await require('./pulse-fixture').handle(name, args, e.sender, ctx); if (r !== undefined) return r }
   if (name === 'getSystemInfo' && ctx.bt) { const r = await require('./boot-fixture').handle(name, args, e.sender, ctx); if (r !== undefined) return r }
   if (/^(home2|journalList$|getMetricsHistory$|listSessions$|aiGet|telemetrySubscribe$|telemetrySeries$)/.test(name)) { const r = await require('./home-fixture').handle(name, args, e.sender, ctx); if (r !== undefined) return r }
+  if (/^win2/.test(name)) { const r = await require('./windows-fixture').handle(name, args, e.sender, ctx); if (r !== undefined) return r }
+  if (/^(net2|netTopology$|getSpeedHistory$|benchmarkDns$|runSpeedTest$|runPingTestsV2$)/.test(name)) { const r = await require('./network-fixture').handle(name, args, e.sender, ctx); if (r !== undefined) return r }
   if (/^fivem2/.test(name)) { const r = await require('./fivem-fixture').handle(name, args, e.sender, ctx); if (r !== undefined) return r }
   const r = respond(name, args, ctx)
   if (r === undefined) { unknownCalls.set(name, (unknownCalls.get(name) || 0) + 1); return { ok: false, mock: 'no-fixture' } }
@@ -76,6 +80,76 @@ async function diagShots(win, dir, logs, report) {
   await shot(win, path.join(dir, 'dx-4-findings.png'))
   for (const [i, v] of ['timeline', 'drivers', 'bench', 'report'].entries()) { await js("document.querySelector('.dx .j-seg-item[data-id=\"" + v + "\"]')?.click()"); await sleep(700); await shot(win, path.join(dir, 'dx-' + (5 + i) + '-' + v + '.png')) }
   if (LINT) { const r = await js(require('./lint-page')).catch(e => 'lint failed: ' + e.message); report.push('LINT diagnostics: ' + r) }
+}
+
+// Windows tab: the stage, rows opened, filters, the preview sheet, a run + receipt, history, and the Quality of life tab.
+async function windowsShots(win, dir, logs, report) {
+  const js = c => win.webContents.executeJavaScript(c)
+  const until = async (cond, ms = 15000) => { const t0 = Date.now(); while (Date.now() - t0 < ms) { if (await js(cond).catch(() => false)) return true; await sleep(150) } report.push('timeout: ' + cond); return false }
+  await js("showPage('windows-opti','windows')").catch(e => logs.push('[showPage] ' + e.message))
+  await sleep(250)
+  await shot(win, path.join(dir, 'win-1-scanning.png'))
+  await until("document.querySelector('.wn-stage')?.dataset.state === 'ready'"); await sleep(900)
+  await shot(win, path.join(dir, 'win-2-ready.png'))
+  await js("document.querySelector('.wn-lane [data-act=\\\"open\\\"]')?.click(); document.querySelector('.wn-tools')?.scrollIntoView({ block: 'start' })"); await sleep(500)
+  await shot(win, path.join(dir, 'win-3-row-open.png'))
+  await js("document.querySelector('[data-chip=\\\"rec\\\"]')?.click()"); await sleep(400)
+  await shot(win, path.join(dir, 'win-4-filter-recommended.png'))
+  await js("document.querySelector('[data-chip=\\\"rec\\\"]')?.click(); document.querySelector('.wn-stage')?.scrollIntoView({ block: 'start' }); document.querySelector('.wn-verdict [data-act=\\\"recommended\\\"],.wn-verdict [data-act=\\\"putback\\\"]')?.click()"); await sleep(600)
+  await shot(win, path.join(dir, 'win-5-preview.png'))
+  await js("document.querySelector('[data-go]')?.click()"); await sleep(250)
+  await shot(win, path.join(dir, 'win-6-running.png'))
+  await until("!!document.querySelector('.wn-receipt')"); await sleep(600)
+  await shot(win, path.join(dir, 'win-7-receipt.png'))
+  await js("document.querySelector('.wn-bar [data-id=\\\"history\\\"]')?.click()"); await sleep(900)
+  await shot(win, path.join(dir, 'win-8-history.png'))
+  await js("showPage('windows-opti','qol')"); await sleep(2200)
+  await shot(win, path.join(dir, 'win-9-qol.png'))
+  if (LINT) { const r = await js(require('./lint-page')).catch(e => 'lint failed: ' + e.message); report.push('LINT windows: ' + r) }
+  logs.forEach(l => report.push('   ' + l))
+}
+
+// Network tab: the stage before anything is traced, a checkup (running, then the findings), Tune with the resolver card and a row open,
+// the custom-DNS sheet, a batch preview + run + receipt, Measure, and History.
+async function networkShots(win, dir, logs, report) {
+  const js = c => win.webContents.executeJavaScript(c)
+  const until = async (cond, ms = 20000) => { const t0 = Date.now(); while (Date.now() - t0 < ms) { if (await js(cond).catch(() => false)) return true; await sleep(150) } report.push('timeout: ' + cond); return false }
+  const seg = id => js("document.querySelector('.nt-bar .j-seg-item[data-id=\\\"" + id + "\\\"]')?.click()")
+  await js("showPage('network')").catch(e => logs.push('[showPage] ' + e.message))
+  await sleep(250)
+  await shot(win, path.join(dir, 'net-1-scanning.png'))
+  await until("document.querySelector('.nt-stage')?.dataset.state === 'ready'"); await sleep(900)
+  await shot(win, path.join(dir, 'net-2-ready.png'))
+  await js("document.querySelector('[data-act=checkup]')?.click()"); await sleep(1600)
+  await shot(win, path.join(dir, 'net-3-checkup-running.png'))
+  await until("!!document.querySelector('.nt-find, .nt-healthy, .nt-warnbox')"); await sleep(900)
+  await shot(win, path.join(dir, 'net-4-findings.png'))
+  await seg('tune'); await sleep(600)
+  await shot(win, path.join(dir, 'net-5-tune.png'))
+  await js("document.querySelector('.nt-lane [data-act=open]')?.click(); document.querySelector('.nt-tools')?.scrollIntoView({ block: 'start' })"); await sleep(500)
+  await shot(win, path.join(dir, 'net-6-row-open.png'))
+  await js("document.querySelector('.nt-preset[data-preset=custom]')?.click()"); await sleep(500)
+  await js("const i = document.querySelector('.nt-sheet [data-f=primary]'); if (i) { i.value = '9.9'; i.dispatchEvent(new Event('input', { bubbles: true })) }"); await sleep(300)
+  await shot(win, path.join(dir, 'net-7-dns-sheet.png'))
+  await js("document.querySelector('.nt-sheet [data-close]')?.click()"); await sleep(400)
+  await js("document.querySelector('.nt-stage')?.scrollIntoView({ block: 'start' }); document.querySelector('.nt-verdict [data-act=recommended], .nt-verdict [data-act=putback]')?.click()"); await sleep(600)
+  await shot(win, path.join(dir, 'net-8-preview.png'))
+  await js("document.querySelector('[data-go]')?.click()"); await sleep(250)
+  await shot(win, path.join(dir, 'net-9-running.png'))
+  await until("!!document.querySelector('.nt-receipt')"); await sleep(600)
+  await shot(win, path.join(dir, 'net-10-receipt.png'))
+  await js("document.querySelector('.nt-preset[data-preset=cloudflare]')?.click()"); await sleep(1500)
+  await js("document.querySelector('.nt-resolver')?.scrollIntoView({ block: 'center' })"); await sleep(300)
+  await shot(win, path.join(dir, 'net-11-resolver-set.png'))
+  await seg('measure'); await sleep(600)
+  await js("document.querySelector('[data-m=games]')?.click(); document.querySelector('[data-m=live]')?.click()"); await sleep(3200)
+  await shot(win, path.join(dir, 'net-12-measure.png'))
+  await js("document.querySelector('.nt-stage')?.scrollIntoView({ block: 'start' })"); await sleep(300)
+  await shot(win, path.join(dir, 'net-13-live-stage.png'))
+  await seg('history'); await sleep(900)
+  await shot(win, path.join(dir, 'net-14-history.png'))
+  if (LINT) { const r = await js(require('./lint-page')).catch(e => 'lint failed: ' + e.message); report.push('LINT network: ' + r) }
+  logs.forEach(l => report.push('   ' + l))
 }
 
 // Debloat: every view of the tab, plus the run and the receipt (the mock run answers instantly; the real timing is only visible in the app).
@@ -277,7 +351,7 @@ async function main() {
   }
   for (const lang of LANGS) for (const tier of TIERS) for (const size of SIZES) {
     const name = `${TAG}/${lang}-${tier}-${size.join('x')}`
-    const ctx = { hm: HOME || arg('hm-state', null) ? String(arg('hm-state', 'attention')) : null, lang, premium: tier === 'premium', accent: ACCENT && ACCENT !== true ? ACCENT : null, arrival: !!arg('arrival', false), tours: !!arg('tours', false), debloat: arg('db-state', null), dx: arg('dx-state', null), pu: arg('pu-state', null), fv: arg('fv-state', null), bt: BOOT ? String(arg('bt-state', 'first')) : null }   // --arrival: first-launch flow; --tours: guided tours on (off by default so shots stay clean)
+    const ctx = { hm: HOME || arg('hm-state', null) ? String(arg('hm-state', 'attention')) : null, lang, premium: tier === 'premium', accent: ACCENT && ACCENT !== true ? ACCENT : null, arrival: !!arg('arrival', false), tours: !!arg('tours', false), debloat: arg('db-state', null), nt: NET2 || arg('nt-state', null) ? String(arg('nt-state', 'ethernet')) : null, wn: WIN2 || arg('wn-state', null) ? String(arg('wn-state', 'open')) : null, dx: arg('dx-state', null), pu: arg('pu-state', null), fv: arg('fv-state', null), bt: BOOT ? String(arg('bt-state', 'first')) : null }   // --arrival: first-launch flow; --tours: guided tours on (off by default so shots stay clean)
     const { win, logs } = await makeWindow('index.html', ctx, size)
     if (BOOT) { await bootShots(win, path.join(OUT, name), logs, report, ctx); win.destroy(); continue }
     const ready = await appReady(win)
@@ -287,6 +361,8 @@ async function main() {
     if (DIAG) { await diagShots(win, path.join(OUT, name), logs, report); win.destroy(); continue }
     if (PULSE) { await pulseShots(win, path.join(OUT, name), logs, report, ctx, size); win.destroy(); continue }
     if (FIVEM) { await fivemShots(win, path.join(OUT, name), logs, report); win.destroy(); continue }
+    if (NET2) { await networkShots(win, path.join(OUT, name), logs, report); win.destroy(); continue }
+    if (WIN2) { await windowsShots(win, path.join(OUT, name), logs, report); win.destroy(); continue }
     if (DEBLOAT) { await debloatShots(win, path.join(OUT, name), logs, report); win.destroy(); continue }
     if (AUTO_OPTI) { await (arg('ao-max', false) ? autoOptiMaxShots : autoOptiShots)(win, path.join(OUT, name), logs, report); win.destroy(); continue }
     for (const page of (ONLY_PAGES || (HOME ? ['dashboard'] : PAGES))) {

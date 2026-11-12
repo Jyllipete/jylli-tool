@@ -6,6 +6,8 @@ Obsidian vault = this `docs/` folder. Rule across all evidence docs: **unverifie
 - [[TWEAK_EVIDENCE]]: why each tweak is in or out
 - [[BIOS_EVIDENCE]]: BIOS workstation / Easy mode
 - [[DEBLOAT_EVIDENCE]]: Debloat "Lean"
+- [[WINDOWS_EVIDENCE]]: Windows tab "Plumb" (live switch state, verification)
+- [[NETWORK_EVIDENCE]]: Network tab "Signal" (Path stage, checkup thresholds, live switch state)
 - [[DIAGNOSTICS_EVIDENCE]]: Diagnostics "Vitals"
 - [[FIVEM_EVIDENCE]]: FiveM "Uplink"
 - [[PULSE_EVIDENCE]]: Pulse "Flow"
