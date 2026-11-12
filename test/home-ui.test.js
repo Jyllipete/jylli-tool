@@ -94,6 +94,15 @@ test('copy: every key the Home code asks for exists', () => {
   const ids = new Set(Moves.candidates({ restore: { level: 'never' }, diag: null, drift: { count: 1 }, autoOpti: null, cleanup: { reclaimableBytes: 9e9 }, debloat: { safe: 5 }, isAdmin: false, game: { running: true }, now: 1 }).map(m => m.id))
   for (const lvl of ['stale']) for (const m of Moves.candidates({ restore: { level: lvl }, diag: { findings: [{ severity: 'high', id: 'x' }] }, autoOpti: { lastAt: 1 }, now: 1e12 })) ids.add(m.id)
   for (const id of ids) if (!id.startsWith('ai-')) { used.add('m_' + id + 'Title'); used.add('m_' + id + 'Why') }
+  const Pr = require('../lib/home/processes'), Tr = require('../lib/home/trace')
+  for (const id of Pr.IDS) { used.add('pn_' + id); used.add('pr_' + id) }
+  for (const id of Tr.TAB_IDS) used.add('trTab_' + id)
+  for (const w of Object.keys(Tr.WINDOWS)) used.add('trWin_' + w)
+  for (const r of ['needs_driver', 'no_sensor', 'not_supported', 'stale']) used.add('nar_why_' + r)
+  for (const k of ['trLoad', 'trTemp', 'trPower', 'trVram', 'trClock', 'trUsed', 'trTotal', 'trRead', 'trWrite', 'trRx', 'trTx', 'trActive', 'trDriveTemp']) used.add(k)
+  for (const st of [{ unavailable: { reason: 'x' } }, { spike: { ageS: 1, flag: { type: 'process', name: 'a', value: 1 } } }, { spike: { ageS: 1, flag: { type: 'spread' } } }, { spike: { ageS: 1, flag: { type: 'game' } } },
+    { spike: { ageS: 1, flag: { type: 'none' } } }, { spike: { ageS: 1 } }, { now: { secondary: 99 }, ceiling: 95 }, { cmp: { kind: 'high', ratio: 2 } }, { cmp: { kind: 'low' } }, { cmp: { kind: 'normal' } }, {}]) used.add(Tr.narrate(st).key)
+  used.add('nar_week')
   const missing = [...used].filter(k => !(k in en))
   assert.deepStrictEqual(missing, [])
 })

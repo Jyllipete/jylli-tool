@@ -53,7 +53,7 @@ ipcMain.handle('mock', async (e, name, args) => {
   if (/^ao[A-Z]/.test(name)) { const r = await AO.handle(name, args, e.sender, ctx); if (r !== undefined) return r }
   if (/^(pulse2|pulseGetPresets|pulseGetCoreLoads|pulseThermalAudit)/.test(name)) { const r = await require('./pulse-fixture').handle(name, args, e.sender, ctx); if (r !== undefined) return r }
   if (name === 'getSystemInfo' && ctx.bt) { const r = await require('./boot-fixture').handle(name, args, e.sender, ctx); if (r !== undefined) return r }
-  if (/^(home2|journalList$|getMetricsHistory$|listSessions$|aiGet|telemetrySubscribe$)/.test(name)) { const r = await require('./home-fixture').handle(name, args, e.sender, ctx); if (r !== undefined) return r }
+  if (/^(home2|journalList$|getMetricsHistory$|listSessions$|aiGet|telemetrySubscribe$|telemetrySeries$)/.test(name)) { const r = await require('./home-fixture').handle(name, args, e.sender, ctx); if (r !== undefined) return r }
   if (/^fivem2/.test(name)) { const r = await require('./fivem-fixture').handle(name, args, e.sender, ctx); if (r !== undefined) return r }
   const r = respond(name, args, ctx)
   if (r === undefined) { unknownCalls.set(name, (unknownCalls.get(name) || 0) + 1); return { ok: false, mock: 'no-fixture' } }

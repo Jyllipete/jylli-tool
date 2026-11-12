@@ -82,3 +82,29 @@ test('hub: no sensor running gives "no-sensor"; ring buffer is bounded; snapshot
   assert.ok(hub.series('cpu.load', 1000).length <= 11)
   assert.ok(hub.snapshot().seq < hub.snapshot().seq)
 })
+
+test('hub: the default ring keeps ten minutes for the Home timeline backfill', () => {
+  let t = 0
+  const hub = createHub({ now: () => t })
+  for (let i = 0; i <= 700; i++) { t = i * 1000; hub.ingest('os', { 'cpu.load': i % 100 }) }
+  const s = hub.series('cpu.load', 600)
+  assert.ok(s.length >= 600 && s.length <= 602)
+  assert.strictEqual(s[s.length - 1].t, 700000)
+  assert.ok(s[0].t >= 100000)
+})
+
+test('hub: the history follows the winning source only, so two sources never zigzag one line', () => {
+  let t = 0
+  const hub = createHub({ now: () => t })
+  for (let i = 0; i < 10; i++) {
+    t = i * 1000
+    hub.ingest('sensor', { 'cpu.load': 20 })    // wins while it reports
+    hub.ingest('os', { 'cpu.load': 80 })        // lower priority
+  }
+  const s = hub.series('cpu.load', 60)
+  assert.ok(s.length >= 10 && s.every(p => p.v === 20), 'only the sensor line is kept')
+  // when the winner goes quiet the other source takes over after the stale window
+  t = 30000
+  hub.ingest('os', { 'cpu.load': 55 })
+  assert.strictEqual(hub.series('cpu.load', 60).pop().v, 55)
+})

@@ -13,7 +13,7 @@
     if (/\.rpm$/.test(key)) return 'rpm'
     if (/(\.vram\.(used|total))$/.test(key)) return 'mb'
     if (/^(ram|disk\.c)\.(used|total)$/.test(key)) return 'gb'
-    if (/(^|\.)(rx|tx)$/.test(key)) return 'bps'
+    if (/(^|\.)(rx|tx)$/.test(key) || /^disk\.(read|write)$/.test(key)) return 'bps'
     return ''
   }
 

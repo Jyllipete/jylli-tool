@@ -887,7 +887,7 @@ function stopSensorBridge() {
 ipcMain.handle('telemetry-subscribe', () => { telemetrySvc().start(); telemetrySvc().subscribe(); return { ok: true, snapshot: _hub.snapshot() } })
 ipcMain.handle('telemetry-unsubscribe', () => { telemetrySvc().unsubscribe(); return { ok: true } })
 ipcMain.handle('telemetry-capabilities', () => ({ capabilities: _hub.capabilities(TELEMETRY_EXPECTED_KEYS), context: _hub.getContext() }))
-const TELEMETRY_EXPECTED_KEYS = ['cpu.load', 'cpu.temp.package', 'cpu.power', 'ram.used', 'gpu0.load', 'gpu0.temp.core', 'gpu0.temp.hotspot', 'gpu0.power', 'gpu0.clock.core', 'gpu0.vram.used', 'gpu0.fan.rpm', 'gpu0.fan.pct', 'net.rx', 'net.tx']
+const TELEMETRY_EXPECTED_KEYS = ['cpu.load', 'cpu.temp.package', 'cpu.power', 'ram.used', 'gpu0.load', 'gpu0.temp.core', 'gpu0.temp.hotspot', 'gpu0.power', 'gpu0.clock.core', 'gpu0.vram.used', 'gpu0.fan.rpm', 'gpu0.fan.pct', 'net.rx', 'net.tx', 'disk.load', 'disk.read', 'disk.write']
 // ─── ONNX Local AI Advisor ────────────────────────────────────────────────────
 let _ort        = null
 let _ortSession = null
@@ -12674,6 +12674,41 @@ ipcMain.handle('home2-cached', () => { try { return homeSvc().cached() } catch {
 ipcMain.handle('home2-snapshot', async () => { try { return await homeSvc().snapshot() } catch { return { ok: false, error: 'snapshot-failed' } } })
 ipcMain.handle('home2-drift', async () => { try { return await homeSvc().drift() } catch { return { ok: false, error: 'check-failed' } } })
 // The quick score is only the fallback for a PC without a Vitals checkup; it takes a few seconds, so Home asks for it once and in the background.
+// ─── Home Timeline (lib/home/trace.js, processes.js): backfill from the hub's ring, and "what caused this spike" ───────────
+// telemetry-series: the last N seconds of up to 16 keys, thinned so a spike survives. The chart opens full instead of empty.
+const HomeTrace = require('./lib/home/trace')
+const HomeProc = require('./lib/home/processes')
+ipcMain.handle('telemetry-series', (_, req) => {
+  const keys = (req && Array.isArray(req.keys) ? req.keys : []).filter(k => typeof k === 'string' && k.length < 40).slice(0, 16)
+  const seconds = Math.min(600, Math.max(5, parseInt(req && req.seconds, 10) || 60))
+  const out = {}
+  for (const k of keys) out[k] = HomeTrace.decimate(_hub.series(k, seconds), 300).map(p => [p.t, p.v])
+  return { ok: true, t: Date.now(), series: out }
+})
+// home2-culprit: the heaviest programs right now, one PowerShell read of the per-process counters. Never while a game runs, one read at
+// most every 6 s, and a result is reused for 3 s, so a spike storm cannot become a load of its own.
+const CULPRIT_PS = {
+  cpu: "$n=[Environment]::ProcessorCount; Get-CimInstance Win32_PerfFormattedData_PerfProc_Process -EA SilentlyContinue | Where-Object { $_.Name -notin '_Total','Idle','System','Memory Compression' } | Sort-Object PercentProcessorTime -Descending | Select-Object -First 25 | ForEach-Object { \"$($_.Name)|$([math]::Round($_.PercentProcessorTime / $n, 1))\" }",
+  ram: "Get-CimInstance Win32_PerfFormattedData_PerfProc_Process -EA SilentlyContinue | Where-Object { $_.Name -notin '_Total','Idle','System','Memory Compression' } | Sort-Object WorkingSetPrivate -Descending | Select-Object -First 25 | ForEach-Object { \"$($_.Name)|$([math]::Round($_.WorkingSetPrivate / 1MB))\" }",
+  disk: "Get-CimInstance Win32_PerfFormattedData_PerfProc_Process -EA SilentlyContinue | Where-Object { $_.Name -notin '_Total','Idle','System','Memory Compression' } | Sort-Object { $_.IOReadBytesPersec + $_.IOWriteBytesPersec } -Descending | Select-Object -First 25 | ForEach-Object { \"$($_.Name)|$($_.IOReadBytesPersec + $_.IOWriteBytesPersec)\" }",
+}
+let _culpritAt = 0, _culpritLast = null
+ipcMain.handle('home2-culprit', async (_, req) => {
+  try {
+    const metric = req && req.metric
+    if (!CULPRIT_PS[metric]) return { ok: false, reason: 'unsupported' }
+    if (_systemContext.gameRunning) return { ok: true, game: true }
+    const t = Date.now()
+    if (_culpritLast && _culpritLast.metric === metric && t - _culpritAt < 3000) return _culpritLast.result
+    if (t - _culpritAt < 6000) return { ok: false, reason: 'throttled' }
+    _culpritAt = t
+    const r = await runPS(CULPRIT_PS[metric], 8000)
+    if (!r.ok) return { ok: false, reason: 'read-failed' }
+    const result = { ok: true, ...HomeProc.parseTop(r.out, 3), metric, at: Date.now() }
+    _culpritLast = { metric, result }
+    return result
+  } catch { return { ok: false, reason: 'read-failed' } }
+})
 ipcMain.handle('home2-legacy', async () => {
   try {
     const r = await healthScoreCore(loadSettings())

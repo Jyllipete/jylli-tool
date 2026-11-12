@@ -84,7 +84,7 @@
     return `<section class="hm-why-p" data-tone="${w[k].tone}" id="hm-why-${k}"><header>${ic(PILLAR_ICON[k])}<h4>${esc(T('p_' + k))}</h4><span class="hm-why-w">${esc(T('weight', { n: w[k].weight }))}</span></header>
         <p class="hm-why-s">${esc(T('pd_' + k))}</p>
         <ul>${r.items.map(i => `<li data-state="${i.state}"><span>${esc(i.label)}</span><b>${esc(i.value)}</b></li>`).join('')}</ul>
-        ${r.action ? `<button type="button" class="j-btn j-btn-sm" data-act="${r.action.act}">${esc(r.action.label)}</button>` : ''}</section>`
+        ${r.extra || ''}${r.action ? `<button type="button" class="j-btn j-btn-sm" data-act="${r.action.act}">${esc(r.action.label)}</button>` : ''}</section>`
   }).join('')}</div>${trendText ? `<p class="hm-why-t">${esc(trendText)}</p>` : ''}`
   }
 
@@ -122,43 +122,26 @@
     return `<div class="hm-empty">${ic('flask-vial')}<div><b>${esc(T('proofEmptyT'))}</b><p>${esc(T('proofEmptyB'))}</p></div></div>`
   }
 
-  // ── Subsystem grades ─────────────────────────────────────────────────────────────
-  function grades(T, g) {
-    return `<ul class="hm-grades-l">${SUBS.map(s => {
+  // ── Subsystem grades: a compact list inside the Health column of the Why drawer (they are what Health is made of) ──
+  function gradesMini(T, g, takenText) {
+    return `<div class="hm-gm"><div class="hm-gm-h"><span>${esc(T('gradesTitle'))}</span><span>${esc(takenText || '')}</span></div>
+      <ul class="hm-gm-l">${SUBS.map(s => {
       const v = g && typeof g[s] === 'number' ? g[s] : null
-      return `<li><button type="button" class="hm-grade" data-act="open-diag" data-tone="${P().tone(v)}" title="${esc(T('gradeOpen'))}">
-        <span class="hm-grade-n">${esc(T('sub_' + s))}</span><b class="hm-num">${v == null ? '–' : v}</b>
-        <span class="hm-bar" aria-hidden="true"><i style="width:${v == null ? 0 : v}%"></i></span></button></li>`
-    }).join('')}</ul>`
+      return `<li data-tone="${P().tone(v)}"><span>${esc(T('sub_' + s))}</span><b class="hm-num">${v == null ? '–' : v}</b><span class="hm-bar" aria-hidden="true"><i style="width:${v == null ? 0 : v}%"></i></span></li>`
+    }).join('')}</ul></div>`
   }
 
-  // ── Live instruments ─────────────────────────────────────────────────────────────
-  // key = telemetry key shown as the value (data-metric formats it and says "Not available" when a sensor is missing).
-  function instrument(T, id, label, key, subKeys, opts) {
-    opts = opts || {}
-    return `<li class="hm-inst" id="mtile-${id}" data-inst="${id}" data-tone="idle">
-      <button type="button" class="hm-inst-b" data-act="inst" data-inst="${id}" aria-expanded="false" title="${esc(T('instMore'))}">
-        <span class="hm-inst-l">${esc(label)}</span>
-        <span class="hm-inst-v"><span class="hm-num" data-metric="${key}"${opts.odo ? ' data-odo' : ''}>–</span></span>
-        <span class="hm-inst-s">${subKeys.map(s => `<span><i>${esc(s.label)}</i> <span data-metric="${s.key}">–</span></span>`).join('')}</span>
-        <svg class="hm-spark" viewBox="0 0 120 28" preserveAspectRatio="none" aria-hidden="true"><path class="hm-spark-a" d=""/><path class="hm-spark-l" d=""/></svg>
-      </button>
-      <div class="hm-inst-d" hidden><dl><div><dt>${esc(T('instNow'))}</dt><dd data-stat="now">–</dd></div><div><dt>${esc(T('instAvg'))}</dt><dd data-stat="avg">–</dd></div><div><dt>${esc(T('instPeak'))}</dt><dd data-stat="peak">–</dd></div></dl>
-      <p>${esc(T('instNote'))}</p></div></li>`
-  }
-
-  function instruments(T) {
-    return [
-      instrument(T, 'cpu', 'CPU', 'cpu.load', [{ label: T('instTemp'), key: 'cpu.temp.package' }, { label: T('instProcs'), key: 'sys.processes' }], { odo: true }),
-      instrument(T, 'gpu', 'GPU', 'gpu0.load', [{ label: T('instTemp'), key: 'gpu0.temp.core' }, { label: 'VRAM', key: 'gpu0.vram.pct' }], { odo: true }),
-      instrument(T, 'ram', 'RAM', 'ram.load', [{ label: T('instUsed'), key: 'ram.used' }, { label: T('instTotal'), key: 'ram.total' }], { odo: true }),
-      instrument(T, 'net', 'NET ↓', 'net.rx', [{ label: '↑', key: 'net.tx' }]),
-      instrument(T, 'disk', 'DISK C:', 'disk.c.pct', [{ label: T('instUsed'), key: 'disk.c.used' }, { label: T('instTotal'), key: 'disk.c.total' }]),
-    ].join('')
+  // ── Timeline ─────────────────────────────────────────────────────────────────────
+  const TL_TABS = ['cpu', 'gpu', 'ram', 'disk', 'net']
+  const TL_WINS = ['1m', '10m', '7d']
+  function timelineHead(T) {
+    return `<div class="hm-tl-bar"><div class="hm-tabs" role="tablist" aria-label="${esc(T('trTitle'))}">${TL_TABS.map(id => `<button type="button" role="tab" class="hm-tab" data-act="tl-tab" data-tab="${id}" aria-selected="false">
+        <span class="hm-tab-n">${esc(T('trTab_' + id))}</span><span class="hm-tab-v hm-num" data-tab-v="${id}">–</span><span class="hm-tab-s hm-num" data-tab-s="${id}"></span></button>`).join('')}</div>
+      <div class="hm-seg" role="group" aria-label="${esc(T('trTitle'))}">${TL_WINS.map(w => `<button type="button" class="hm-seg-b" data-act="tl-win" data-win="${w}" aria-pressed="false">${esc(T('trWin_' + w))}</button>`).join('')}</div></div>`
   }
 
   // ── Quick actions ────────────────────────────────────────────────────────────────
-  function dock(T, isAdmin) {
+  function dock(T, isAdmin) {   // borderless chips; the page adds the Ctrl K hint
     const b = (act, icon, label, extra) => `<button type="button" class="hm-dock-b" data-act="${act}"${extra || ''}>${ic(icon)}<span>${esc(label)}</span></button>`
     return [
       b('dns', 'trash', T('dockDns')), b('temp', 'broom', T('dockTemp')), b('ram', 'memory', T('dockRam'), ' id="btn-ram-clean"'),
@@ -167,5 +150,5 @@
     ].join('')
   }
 
-  root.JylliHomeViews = { esc, ic, SUBS, PILLARS, dialSvg, pillarRow, moveCard, allClear, nextRow, whyDrawer, ledger, ledgerEmpty, grades, instruments, dock, chips }
+  root.JylliHomeViews = { esc, ic, SUBS, PILLARS, dialSvg, pillarRow, moveCard, allClear, nextRow, whyDrawer, ledger, ledgerEmpty, gradesMini, timelineHead, TL_TABS, TL_WINS, dock, chips }
 })(typeof window !== 'undefined' ? window : globalThis)

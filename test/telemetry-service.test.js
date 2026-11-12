@@ -51,3 +51,12 @@ test('missing nvidia-smi is recorded, not an error', () => {
   svc.start()
   assert.strictEqual(hub.getContext().nvidiaPresent, false)
 })
+
+test('os line: drive activity keys exist only when the counters reported', () => {
+  const s = osSamples({ cpuLoad: 7, diskIdle: 92.5, diskRead: 1000, diskWrite: 250 })
+  assert.strictEqual(s['disk.load'], 7.5)
+  assert.strictEqual(s['disk.read'], 1000)
+  assert.strictEqual(s['disk.write'], 250)
+  const none = osSamples({ cpuLoad: 7 })
+  assert.ok(!('disk.load' in none) && !('disk.read' in none) && !('disk.write' in none))
+})

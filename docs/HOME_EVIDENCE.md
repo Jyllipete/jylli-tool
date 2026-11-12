@@ -50,15 +50,33 @@ Home ("Helm") only says what other engines recorded. It runs no scan of its own.
 
 Not shown, on purpose: an estimate of "what you can gain". No source measures it before a run.
 
-## Rewind strip
-`lib/home/rewind.js`. 7 days from `get-metrics-history` (one sample a minute: CPU and RAM only; temperatures were never recorded, so none are shown) and one mark per journal batch. Buckets with no sample stay empty. Undo goes through `auto-opti-undo` for Auto-Optimize batches and `journal-undo` for the rest, so the same conflict rules apply.
+## Timeline
+`lib/home/trace.js` (tabs, spikes, your normal, narrator, pins), `lib/home/processes.js` (the process list), `js/home/trace-view.js` (canvas). One surface for live data and for the recorded week.
 
-## Live instruments
-The telemetry hub (`twin-telemetry`, `JylliTelemetry`), not the old 3 s `get-metrics` poll, which reports 0 for a missing value. A sensor that is not there says "Not available". The sparklines and the Now / Average / Peak values cover the time since Home was opened.
+**Sources**
+- Live (1 min / 10 min): the telemetry hub. `telemetry-series` backfills up to 10 minutes from its ring, then `twin-telemetry` (4 Hz) follows. The ring keeps only the source that currently wins a key (the same rule as the snapshot), because the OS counter and the sensor bridge report CPU load at different rates and scales and would zigzag one line.
+- Disk activity (`disk.load`, `disk.read`, `disk.write`): the PhysicalDisk `_Total` performance counters in `lib/os-poller.ps1`. A PC with those counters switched off has no such keys and the Disk tab says so.
+- 7 days: `get-metrics-history` (CPU and RAM only, one sample a minute) and the journal. GPU, Disk and Network were never recorded, so those tabs are disabled in that window.
+- A missing sensor reads "Not available" with its reason (no driver, no sensor, needs administrator rights). A gap of more than 3 s breaks the line. Nothing is interpolated.
+- The 10-minute window smooths percentage lines with a 5-sample moving average for display only. Spike detection and the crosshair readout use the raw samples.
+
+**Spike rule** (`spikes()`, thresholds per tab in `TABS`): a rise of 25 points or more within 5 s that ends at 60 % or higher (CPU), or 85 % or higher held for 5 s. Memory and disk have their own thresholds. One event, one flag: nothing new fires for 20 s.
+
+**What caused it**: one per-process read (`home2-culprit`, `Win32_PerfFormattedData_PerfProc_Process`), taken 2 s after the spike starts so the counters have a full interval. Instances of one program are added up (twenty Chrome processes are one browser). A process is named only when it clearly stands out: 15 % of the CPU, 300 MB of private memory, or 2 MB/s of disk transfer. Below that the flag says the load is spread across many. During a game nothing is read (the read would add load) and the flag says so. A read must finish within 12 s of the spike or it is discarded. At most one read every 6 s. Spikes from before Home was opened are pinned too, marked "the cause was not recorded".
+
+**The process list** (`processes.js`, about 23 entries): Windows Defender, the search indexer, Windows Update, the compatibility check, service hosts, the shell, the common browsers, game launchers, OneDrive, Teams, Discord, VS Code, NVIDIA services, PowerShell and Jylli Tool itself. Each has a name and a sentence that says "usually": it describes what the program normally does, never a claim about this moment. A process not in the list is shown by its executable name and nothing else. PowerShell is worded "this can include Jylli Tool's own readings", because the app uses PowerShell to read the PC.
+
+**Your normal**: the 25th to 75th percentile of that metric around this hour of the day (plus or minus one hour), from earlier days only. It needs samples on 3 or more different days, otherwise it is not shown and the narrator does not compare. "High" means above the 75th percentile by 25 % and by at least 10 points.
+
+**Throttle limit**: the line on the temperature axis is `THERMAL_LIMIT` in `lib/pulse/attribution.js` (CPU 95 °C, GPU 87 °C), the same numbers Pulse uses to call a hitch thermal.
+
+**Pins**: Jylli changes (journal batches), game start and end, restore points, spikes. Changes can be undone from the 7-day view through `auto-opti-undo` or `journal-undo`.
+
+**The sentence under the chart**: `narrate()`. Order: a missing reading (with the reason), a spike in the last 30 s (with its cause only if measured), heat within 5 °C of the limit, your normal, otherwise "Nothing unusual". Ordinary text changes at most every 5 s; a spike shows at once, with its age in 5-second steps.
 
 ## Retired from the old Home
 - The quick score's slow PowerShell scan is only a fallback now (`home2-legacy`, once, in the background).
 - `settings.lastHealthScore` and `aom_run_days` were never written, so the weekly report always showed 0. Its job now belongs to the index history and the ledger.
-- The Quick Health card and the Windows health button. The Vitals checkup covers Windows integrity.
+- The Quick Health card, the Windows health button and the five small instrument tiles (replaced by the Timeline). The Vitals checkup covers Windows integrity.
 
 Back to [[Home]]

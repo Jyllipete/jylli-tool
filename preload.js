@@ -375,6 +375,8 @@ contextBridge.exposeInMainWorld('api', {
   home2Snapshot:        ()           => ipcRenderer.invoke('home2-snapshot'),
   home2Drift:           ()           => ipcRenderer.invoke('home2-drift'),
   home2Legacy:          ()           => ipcRenderer.invoke('home2-legacy'),
+  home2Culprit:         (req)        => ipcRenderer.invoke('home2-culprit', req),
+  telemetrySeries:      (req)        => ipcRenderer.invoke('telemetry-series', req),
   diag2Scan:            (req)        => ipcRenderer.invoke('diag2-scan', req),
   diag2Abort:           ()           => ipcRenderer.invoke('diag2-abort'),
   diag2Cached:          ()           => ipcRenderer.invoke('diag2-cached'),

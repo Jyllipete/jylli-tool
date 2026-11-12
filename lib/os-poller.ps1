@@ -15,6 +15,10 @@ function New-Counters($cat, $counter, $filter) {
 }
 $cpuC = $null
 try { $cpuC = New-Object Diagnostics.PerformanceCounter('Processor Information', '% Processor Utility', '_Total', $true); $null = $cpuC.NextValue() } catch {}
+$dIdle = $null; $dRd = $null; $dWr = $null   # whole-system drive activity; a PC with the PhysicalDisk counters turned off simply has no disk activity keys
+try { $dIdle = New-Object Diagnostics.PerformanceCounter('PhysicalDisk', '% Idle Time', '_Total', $true); $null = $dIdle.NextValue() } catch {}
+try { $dRd = New-Object Diagnostics.PerformanceCounter('PhysicalDisk', 'Disk Read Bytes/sec', '_Total', $true); $null = $dRd.NextValue() } catch {}
+try { $dWr = New-Object Diagnostics.PerformanceCounter('PhysicalDisk', 'Disk Write Bytes/sec', '_Total', $true); $null = $dWr.NextValue() } catch {}
 $rx = @(); $tx = @(); $gpuC = @(); $tick = 0; $lastInst = [DateTime]::MinValue
 while ($true) {
   if (([DateTime]::UtcNow - $lastInst).TotalSeconds -gt 10) {   # adapters and GPU engines come and go; refresh the instance lists
@@ -29,6 +33,9 @@ while ($true) {
   if ($os) { $o.ramTotalGB = [math]::Round($os.TotalVisibleMemorySize / 1MB, 2); $o.ramUsedGB = [math]::Round(($os.TotalVisibleMemorySize - $os.FreePhysicalMemory) / 1MB, 2) }
   if ($os) { $o.uptimeSec = [int]((Get-Date) - $os.LastBootUpTime).TotalSeconds }
   try { $d = New-Object IO.DriveInfo ($env:SystemDrive); $o.diskTotalGB = [math]::Round($d.TotalSize / 1GB, 1); $o.diskUsedGB = [math]::Round(($d.TotalSize - $d.AvailableFreeSpace) / 1GB, 1) } catch {}
+  if ($dIdle) { $o.diskIdle = [math]::Round([math]::Max(0, [math]::Min(100, $dIdle.NextValue())), 1) }
+  if ($dRd) { $o.diskRead = [math]::Round($dRd.NextValue()) }
+  if ($dWr) { $o.diskWrite = [math]::Round($dWr.NextValue()) }
   $nets = [ordered]@{}
   foreach ($p in $rx) { $nets[$p[0]] = @([math]::Round($p[1].NextValue()), 0) }
   foreach ($p in $tx) { if ($nets.Contains($p[0])) { $nets[$p[0]][1] = [math]::Round($p[1].NextValue()) } else { $null = $p[1].NextValue() } }
