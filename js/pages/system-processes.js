@@ -1,6 +1,6 @@
 'use strict'
 // System > Processes: CPU hog rail (ProcessFreeze) and the live process table.
-// The data/logic (loadProcesses, sortProcesses, filterProcesses, freeze handlers) stays in index.html; this file owns the markup.
+// loadProcesses, sortProcesses and filterProcesses stay in index.html; the hog rail + freeze handlers live at the bottom of this file.
 
 function buildProcessManager(c) {
   const { html } = ui
@@ -62,4 +62,76 @@ function renderProcessTable(data) {
     </tr>`)
   }).join('')
   _updateSortIndicators()
+}
+
+// ─── ProcessFreeze: CPU hog rail logic (restored: the Pulse 2.0 commit removed it from index.html while this tab still calls it) ───
+let _pfHogInterval = null
+let _pfFrozenLocal = {}  // pid → { name, frozenAt, lastCpu }
+let _pfFrozenSavings = {} // pid → savedMs (populated on defrost)
+
+function startPfHogRail() {
+  if (_pfHogInterval) return
+  _pfUpdateHogRail()
+  _pfHogInterval = setInterval(_pfUpdateHogRail, 3000)
+}
+
+function stopPfHogRail() {
+  if (_pfHogInterval) { clearInterval(_pfHogInterval); _pfHogInterval = null }
+}
+
+let _pfHogBusy = false
+async function _pfUpdateHogRail() {
+  const container = document.getElementById('pf-hog-cards')
+  if (!container) { stopPfHogRail(); return }
+  if (_pfHogBusy || document.hidden) return   // never stack process scans; skip while the window is hidden
+  _pfHogBusy = true
+  try {
+    const procs = await api.getProcesses()
+    if (!Array.isArray(procs)) return
+    const [fInfo] = await Promise.all([api.freezeGetPids()])
+    const frozenPids = new Set(fInfo?.frozenPids || [])
+    const hogs = procs
+      .filter(p => (p.CPU > 1 || frozenPids.has(p.Id)) && p.Name)
+      .sort((a, b) => (frozenPids.has(b.Id) ? 1 : b.CPU) - (frozenPids.has(a.Id) ? 1 : a.CPU))
+      .slice(0, 6)
+    if (hogs.length === 0) {
+      container.innerHTML = `<div class="j-muted">${tUI('pmNoHogs')}</div>`
+      return
+    }
+    container.innerHTML = hogs.map(p => {
+      const frozen = frozenPids.has(p.Id)
+      const savings = _pfFrozenSavings[p.Id] ? ` · ${tG('procx', 'saved', { n: Math.round(_pfFrozenSavings[p.Id] / 1000) })}` : ''
+      return pfHogCardHtml(p, frozen, savings)
+    }).join('')
+  } catch {} finally { _pfHogBusy = false }
+}
+
+async function pfToggleFreeze(pid, name, cpuPct) {
+  try {
+    const fInfo = await api.freezeGetPids()
+    const frozen = (fInfo?.frozenPids || []).includes(pid)
+    if (frozen) {
+      const r = await api.defrostProcess(pid)
+      if (r?.savedMs) _pfFrozenSavings[pid] = r.savedMs
+      delete _pfFrozenLocal[pid]
+      toast(tUI('pmDefrostedToast').replace('{name}', name), '', 'info')
+    } else {
+      await api.freezeProcess(pid)
+      await api.freezeSetStat({ pid, name, cpuPct })
+      _pfFrozenLocal[pid] = { name, frozenAt: Date.now(), lastCpu: cpuPct }
+      toast(tUI('pmFrozeToast').replace('{name}', name), '', 'ok')
+    }
+    _pfUpdateHogRail()
+  } catch (e) {
+    toast(tG('procx', 'freezeErr'), e?.message || tG('procx', 'ipcFailed'), 'err')
+  }
+}
+
+// Show session report after game exit
+function pfShowSessionReport(frozenStats) {
+  const el = document.getElementById('pf-session-report')
+  if (!el || !frozenStats || Object.keys(frozenStats).length === 0) return
+  const lines = Object.entries(frozenStats).map(([n, ms]) => `${n}: ${tUI('pmCpuFreed').replace('{s}', Math.round(ms/1000))}`)
+  el.innerHTML = `<i class="fa fa-check-circle" aria-hidden="true"></i><div><strong>${tUI('pmSessionSavings')}</strong> ${lines.map(escHtml).join(' · ')}</div>`
+  el.style.display = 'block'
 }
