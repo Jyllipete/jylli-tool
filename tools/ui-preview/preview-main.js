@@ -352,14 +352,15 @@ async function makeWindow(file, ctx, [w, h]) {
   const win = new BrowserWindow({
     width: w, height: h, show: false, frame: false, backgroundColor: '#0d0d0d',
     // offscreen: the page paints and runs timers/animations at full speed without ever appearing on the user's screen
-    webPreferences: { preload: path.join(__dirname, 'preview-preload.js'), contextIsolation: true, nodeIntegration: false, sandbox: true, backgroundThrottling: false, offscreen: true },
+    webPreferences: { preload: path.join(__dirname, 'preview-preload.js'), contextIsolation: true, nodeIntegration: false, sandbox: true, backgroundThrottling: false, offscreen: !arg('gl', false) },
   })
-  win.webContents.setFrameRate(30)
+  if (!arg('gl', false)) win.webContents.setFrameRate(30)   // --gl: real (hidden, non-offscreen) window so hardware WebGL works and the 3D rig renders
   ctxByContents.set(win.webContents.id, ctx)
   const logs = []
   win.webContents.on('console-message', (_e, level, message, line, source) => { if (level >= 2) logs.push(`[${level === 3 ? 'error' : 'warn'}] ${message} (${path.basename(source || '')}:${line})`) })
   win.webContents.on('render-process-gone', (_e, d) => logs.push(`[crash] ${d.reason}`))
   await win.loadFile(path.join(ROOT, file), { query: { lang: ctx.lang, scheme: SCHEME } })
+  if (Number(arg('zoom', 0))) win.webContents.setZoomFactor(Number(arg('zoom')))   // --zoom 1.36 with a bigger --size: same layout, more pixels (sharp stills for video zooms)
   return { win, logs }
 }
 

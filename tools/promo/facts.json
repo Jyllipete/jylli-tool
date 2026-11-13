@@ -1,0 +1,22 @@
+{
+ "views": {
+  "value": 14,
+  "source": "release notes 1.6.0: \"New tabs and pages\" (14 entries)"
+ },
+ "heroTabs": {
+  "value": 12,
+  "source": "release notes 1.6.0: \"Per-tab changes / Hero headers\" (12 tabs)"
+ },
+ "languages": {
+  "value": 2,
+  "source": "js/lang has 12 en and 12 fi string files (the app ships English + Finnish)"
+ },
+ "version": {
+  "value": "1.6.0",
+  "source": "package.json version"
+ },
+ "tests": {
+  "value": 979,
+  "source": "node --test test/*.test.js: 979 pass, 0 fail (2026-11-13)"
+ }
+}

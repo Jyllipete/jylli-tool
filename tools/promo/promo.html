@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="fi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Jylli Tool 1.6.0</title>
+<link rel="stylesheet" href="../../css/fonts.css">
+<link rel="stylesheet" href="promo.css">
+</head>
+<body>
+<div id="viewport">
+  <div id="stage" aria-label="Jylli Tool 1.6.0 -esittely">
+    <div class="bg" id="bg"><i class="blob b1"></i><i class="blob b2"></i><i class="blob b3"></i><i class="grain"></i></div>
+    <div id="scenes"></div>
+    <div class="vignette"></div>
+    <div class="flash" id="flash"></div>
+    <div class="blackout" id="blackout"></div>
+    <div class="dbg" id="dbg" hidden></div>
+  </div>
+</div>
+<div id="bar" class="ctl">
+  <button id="play" aria-label="Toista / tauko">▶</button>
+  <input id="seek" type="range" min="0" max="1000" value="0" aria-label="Aikajana">
+  <span id="time">0:00</span>
+  <button id="mute" aria-label="Ääni">♪</button>
+</div>
+<script src="timeline.js"></script>
+<script src="copy-fi.js"></script>
+<script src="scenes.js"></script>
+<script src="promo.js"></script>
+</body>
+</html>

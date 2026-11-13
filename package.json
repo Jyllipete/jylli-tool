@@ -12,7 +12,10 @@
     "preview": "electron tools/ui-preview/preview-main.js",
     "build:uninstaller": "powershell -NoProfile -ExecutionPolicy Bypass -File tools/installer/build.ps1 -Uninstaller",
     "build:installer": "powershell -NoProfile -ExecutionPolicy Bypass -File tools/installer/build.ps1",
-    "dist": "npm run build:uninstaller && npm run build && npm run build:installer"
+    "dist": "npm run build:uninstaller && npm run build && npm run build:installer",
+    "promo:analyze": "node tools/promo/analyze.js",
+    "promo:shoot": "node tools/promo/shoot.js",
+    "promo:render": "electron tools/promo/render.js"
   },
   "build": {
     "appId": "com.jylli.tool",
@@ -74,6 +77,7 @@
     "electron": "^45.0.0",
     "electron-builder": "^26.18.0",
     "esbuild": "0.24.2",
+    "ffmpeg-static": "^5.3.0",
     "three": "0.170.0"
   },
   "dependencies": {

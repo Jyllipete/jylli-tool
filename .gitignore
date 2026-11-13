@@ -1,7 +1,6 @@
 node_modules/
 dist/*
-# the branded installer is always committed once built
-!dist/Jylli-Tool-Installer.exe
+# installers (setup + branded) ship as GitHub release assets, never in git (GitHub rejects files over 100 MB)
 *.log
 .claude/
 bot.js
@@ -16,3 +15,8 @@ assets/scewin/
 build/extra/
 tools/installer/BuildInfo.cs
 preview-out/
+
+# release video (tools/promo)
+tools/promo/media/
+tools/promo/shots/
+tools/promo/out/

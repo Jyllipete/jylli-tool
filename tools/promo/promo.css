@@ -1,0 +1,58 @@
+/* Jylli Tool 1.6.0 release video stage: 1920x1080 design size, scaled to any viewport. Motion is driven from JS by t (no CSS transitions). */
+:root {
+  --bg: #07070b; --ink: #f4f3fb; --ink2: rgba(244,243,251,.62); --accent: #8B7CF6; --accent2: #a99cff;
+  --glass: rgba(18,18,28,.62); --line: rgba(255,255,255,.12);
+  --font: 'Geist', system-ui, 'Segoe UI', sans-serif; --mono: 'Geist Mono', ui-monospace, monospace;
+}
+* { box-sizing: border-box; margin: 0 }
+html, body { height: 100%; background: var(--bg); color: var(--ink); font-family: var(--font); overflow: hidden }
+#viewport { position: fixed; inset: 0; background: #000 }
+#stage { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; transform-origin: 0 0; overflow: hidden; background: var(--bg); perspective: 2200px; perspective-origin: 50% 46% }
+.bg, .vignette, .flash, .blackout, #scenes { position: absolute; inset: 0 }
+.bg { overflow: hidden; background: radial-gradient(120% 90% at 50% 40%, #12101f 0%, #08080d 70%) }
+.blob { position: absolute; left: 0; top: 0; width: 1500px; height: 1500px; border-radius: 50%; filter: blur(150px); will-change: transform, opacity }
+.b1 { background: radial-gradient(closest-side, #6b5cf0, transparent 70%) }
+.b2 { background: radial-gradient(closest-side, #2f4bd8, transparent 70%) }
+.b3 { background: radial-gradient(closest-side, #8a3fd0, transparent 70%) }
+.grain { position: absolute; inset: 0; opacity: .05; mix-blend-mode: overlay; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E") }
+.vignette { pointer-events: none; background: radial-gradient(90% 85% at 50% 50%, transparent 52%, rgba(0,0,0,.55) 100%) }
+.flash { pointer-events: none; opacity: 0; background: radial-gradient(70% 70% at 50% 45%, #fff 0%, #cfc7ff 45%, rgba(139,124,246,.6) 100%); mix-blend-mode: screen }
+.blackout { pointer-events: none; background: #000; opacity: 0 }
+
+.scene { position: absolute; inset: 0; opacity: 0; transform-style: preserve-3d }
+.head { position: absolute; left: 0; right: 0; top: 64px; text-align: center; font-weight: 600; font-size: 84px; line-height: 1.04; letter-spacing: -.028em; text-wrap: balance; padding: 0 120px }
+.head em { font-style: normal; color: var(--accent2) }
+.sub { position: absolute; left: 0; right: 0; top: 176px; text-align: center; font-size: 30px; font-weight: 400; letter-spacing: -.005em; color: var(--ink2) }
+.scene.compact .head { font-size: 72px }
+
+.win { position: absolute; left: 50%; top: 636px; width: 1280px; height: 750px; margin: -375px 0 0 -640px; transform-style: preserve-3d; will-change: transform }
+.win .glow { position: absolute; inset: 40px -10px -30px; border-radius: 40px; background: radial-gradient(closest-side, rgba(139,124,246,.55), transparent 75%); filter: blur(60px); opacity: .5 }
+.win .in { position: absolute; inset: 0; border-radius: 20px; overflow: hidden; background: #0c0c10; border: 1px solid var(--line); box-shadow: 0 50px 120px -30px rgba(0,0,0,.85), 0 0 0 1px rgba(0,0,0,.6), inset 0 1px 0 rgba(255,255,255,.08) }
+.win img { object-fit: cover; position: absolute; left: 0; top: 0; width: 100%; height: 100%; transform-origin: 0 0; display: block }
+.win .gloss { position: absolute; inset: 0; border-radius: 20px; pointer-events: none; background: linear-gradient(115deg, rgba(255,255,255,.07) 0%, transparent 32%, transparent 70%, rgba(139,124,246,.08) 100%) }
+.win.side { opacity: .55; filter: saturate(.85) }
+.win.side .in { box-shadow: 0 30px 80px -20px rgba(0,0,0,.8) }
+
+.proof { position: absolute; left: 0; right: 0; top: 330px; display: flex; justify-content: center; gap: 56px; padding: 0 90px }
+.stat { width: 480px; padding: 44px 36px 40px; text-align: center; border-radius: 26px; background: var(--glass); border: 1px solid var(--line); box-shadow: 0 40px 100px -30px rgba(0,0,0,.8), inset 0 1px 0 rgba(255,255,255,.08) }
+.stat b { display: block; font-size: 190px; line-height: 1; font-weight: 700; letter-spacing: -.045em; font-variant-numeric: tabular-nums; color: var(--ink) }
+.stat span { display: block; margin-top: 22px; font-size: 30px; line-height: 1.25; color: var(--ink2); text-wrap: balance }
+
+.wall { position: absolute; left: 50%; top: 600px; width: 0; height: 0; transform-style: preserve-3d }
+.wall .win { position: absolute; width: 560px; height: 350px; margin: 0; left: 0; top: 0 }
+
+.logo { position: absolute; left: 50%; top: 50%; width: 330px; height: 330px; margin: -250px 0 0 -165px }
+.logo img { width: 100%; height: 100%; display: block; mix-blend-mode: screen; border-radius: 28% }
+.word { position: absolute; left: 0; right: 0; top: 640px; text-align: center; font-size: 112px; font-weight: 600; letter-spacing: -.035em }
+.ver { position: absolute; left: 0; right: 0; top: 780px; text-align: center; font-size: 44px; font-weight: 500; letter-spacing: .38em; color: var(--accent2); text-transform: uppercase }
+.kicker { position: absolute; left: 0; right: 0; top: 860px; text-align: center; font-size: 26px; letter-spacing: .3em; color: var(--ink2); text-transform: uppercase }
+
+.dbg { position: absolute; left: 0; right: 0; bottom: 0; padding: 10px 16px; font: 20px/1.3 var(--mono); color: #9f9; background: rgba(0,0,0,.6); pointer-events: none; white-space: pre }
+
+.ctl { position: fixed; left: 0; right: 0; bottom: 0; display: flex; gap: 12px; align-items: center; padding: 10px 16px calc(10px + env(safe-area-inset-bottom)); background: linear-gradient(transparent, rgba(0,0,0,.75)); opacity: 0; transition: opacity .25s; z-index: 5 }
+body:hover .ctl, .ctl:focus-within { opacity: 1 }
+.ctl button { all: unset; cursor: pointer; width: 40px; height: 40px; display: grid; place-items: center; border-radius: 10px; background: rgba(255,255,255,.1); font-size: 16px }
+.ctl button:focus-visible { outline: 2px solid var(--accent2) }
+.ctl input { flex: 1; accent-color: var(--accent) }
+.ctl span { font: 14px var(--mono); min-width: 44px; text-align: right }
+body.render .ctl { display: none }
