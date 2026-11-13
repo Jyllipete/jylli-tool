@@ -10,7 +10,7 @@
       { id: 'windows', page: 'windows-opti' },
       { id: 'qol', page: 'windows-opti' },
       { id: 'cpumem', page: 'hardware' },
-      { id: 'gpu', page: 'hardware', premium: true },
+      { id: 'gpu', page: 'hardware' },
       { id: 'power', page: 'hardware', premium: true },
       { id: 'network', page: 'network' },
       { id: 'fixes', page: 'fixes' },

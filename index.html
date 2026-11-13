@@ -21,6 +21,7 @@
 <link rel="stylesheet" href="css/windows.css">
 <link rel="stylesheet" href="css/network.css">
 <link rel="stylesheet" href="css/cpumem.css">
+<link rel="stylesheet" href="css/gpu.css">
 <link rel="stylesheet" href="css/cleanup.css">
 <link rel="stylesheet" href="css/diagnostics.css">
 <link rel="stylesheet" href="css/fivem.css">
@@ -501,6 +502,8 @@
 <script src="js/lang/network-fi.js"></script>
 <script src="js/lang/cpumem-en.js"></script>
 <script src="js/lang/cpumem-fi.js"></script>
+<script src="js/lang/gpu-en.js"></script>
+<script src="js/lang/gpu-fi.js"></script>
 <script src="js/lang/debloat-fi.js"></script>
 <script src="js/lang/diagnostics-en.js"></script>
 <script src="js/lang/diagnostics-fi.js"></script>
@@ -561,7 +564,6 @@
 <script src="js/pages/settings.js"></script>
 <script src="js/pages/system-processes.js"></script>
 <script src="js/pages/system-history.js"></script>
-<script src="js/pages/gpu-hero.js"></script>
 <script src="js/pages/gaming-replay.js"></script>
 <script src="js/pages/games-carousel.js"></script>
 <script src="js/pages/hardware-heroes.js"></script>
@@ -601,6 +603,14 @@
 <script src="js/cpumem/mem-view.js"></script>
 <script src="js/cpumem/lab.js"></script>
 <script src="js/cpumem/page.js"></script>
+<script src="lib/gpu/limiter.js"></script>
+<script src="lib/gpu/findings.js"></script>
+<script src="js/gpu/pure.js"></script>
+<script src="js/gpu/headroom.js"></script>
+<script src="js/gpu/loadtest.js"></script>
+<script src="js/gpu/power.js"></script>
+<script src="js/gpu/display.js"></script>
+<script src="js/gpu/page.js"></script>
 <script src="js/cleanup/core.js"></script>
 <script src="js/cleanup/extras.js"></script>
 <script src="js/cleanup/page.js"></script>
@@ -5943,9 +5953,6 @@ async function buildHardware(c) {
   const isLaptop = si.isLaptop
   const gpu = (si.gpu || '').toLowerCase()
   const cpu = (si.cpu || '').toLowerCase()
-  const isNvidia = /nvidia|geforce|rtx|gtx/.test(gpu)
-  const isAmd    = /amd|radeon|\brx\b/.test(gpu)
-  const isIntel  = cpu.includes('intel')
 
 
   const warn = document.createElement('div')
@@ -5967,11 +5974,6 @@ async function buildHardware(c) {
   c.appendChild(hwTb.el)
 
   const SECTIONS = [
-    ...(isNvidia ? [{ secId:'hw-nvidia', get title() { return tUI('hwSecNvidiaGpu') }, get sub() { return tUI('hwSecNvidiaGpuSub') }, cards:[
-      { id:'nvidia-max-perf',    name:'Force Maximum Performance Mode', desc:'Sets PowerMizerLevel=1 in GPU class registry. Keeps GPU at max clocks at all times. Reboot required.', icon:'<i class="fa fa-gamepad"></i>', reboot:true },
-      { id:'nvidia-low-latency', name:'NVIDIA Ultra Low-Latency Mode',  desc:'Sets D3PCLatency=1, F1MaxLatency=0 — equivalent to "Ultra" in NVIDIA Control Panel.', icon:'<i class="fa fa-bolt"></i>' },
-      { id:'disable-hdcp',       name:'Disable HDCP (DRM overhead)',    desc:'May break HDMI audio on some monitors. Reboot required.', icon:'<i class="fa fa-lock-open"></i>', danger:true, dangerLabel:'Confirm HDCP off', reboot:true },
-    ]}] : []),
     { secId:'hw-power', get title() { return tUI('hwSecPowerPlan') }, get sub() { return tUI('hwSecPowerPlanSub') }, cards:[
       ...(tweakCompat('intel-power-plan') ? [{ id:'intel-power-plan', name:'Intel Max Performance Power Plan', desc:'Creates a custom power plan tuned for Intel CPUs — Speed Shift (HWP) on, aggressive boost mode, no C-state idle, all cores active, PCIe and USB suspend off.', icon:'<i class="fa fa-bolt"></i>', reboot:true }] : []),
       ...(tweakCompat('amd-power-plan')   ? [{ id:'amd-power-plan',   name:'AMD Max Performance Power Plan',   desc:'Creates a custom power plan tuned for AMD CPUs — CPPC preferred cores on, aggressive boost mode, no C-state idle, all cores active, PCIe and USB suspend off.', icon:'<i class="fa fa-bolt"></i>', reboot:true }] : []),
@@ -5981,19 +5983,6 @@ async function buildHardware(c) {
     ...(tweakCompat('nvme-latency') ? [{ secId:'hw-storage', get title() { return tUI('hwSecStorage') }, get sub() { return tUI('hwSecStorageSub') }, cards:[
       { id:'nvme-latency',       name:'NVMe StorPort Latency Tweak',     desc:'Disables performance timer and BusyPauseTime in StorPort driver. Reduces random read latency.', icon:'<i class="fa fa-hard-drive"></i>' },
       { id:'directstorage-nvme', name:'DirectStorage + NVMe Queue Depth', desc:'Raises NVMe driver queue depth from 32 to 64 commands — allows DirectStorage to pipeline more parallel reads. Also enables DirectStorageEnabled and GDeflateEnabled hints for Windows 11. GDeflate hardware decompression active on NVIDIA 30-series+ and AMD RDNA3+.', icon:'<i class="fa fa-database"></i>' },
-    ]}] : []),
-    { secId:'hw-gpu-adv', get title() { return tUI('hwSecGpuAdvanced') }, get sub() { return tUI('hwSecGpuAdvancedSub') }, cards:[
-      { id:'gpu-hags-off', name:'GPU HAGS Off (Hardware Accelerated GPU Scheduling)', desc:'Disables HAGS (WDDM 3.0 hardware scheduling). Some games perform better with HAGS off — eliminates scheduling overhead on older drivers.', icon:'<i class="fa fa-display"></i>', danger:true, dangerLabel:'Confirm', warning:'Disables a Windows 10+ performance feature. Only beneficial on specific GPU/driver combos — test before keeping.' },
-      ...(isNvidia ? [
-        { id:'nvidia-pstate-lock', name:'NVIDIA P-State Lock (P0 always)', desc:'Forces NVIDIA GPU to stay in P0 (maximum performance state) at all times via registry. Eliminates boost-clock ramp-up latency.', icon:'<i class="fa fa-trophy"></i>' },
-        { id:'nvidia-profile',     name:'NVIDIA Profile Optimiser', desc:'Applies low-latency, maximum performance and pre-rendered frames settings to the NVIDIA global driver profile via registry.', icon:'<i class="fa fa-sliders"></i>' },
-      ] : []),
-    ]},
-    ...(isAmd ? [{ secId:'hw-amd', get title() { return tUI('hwSecAmdGpu') }, get sub() { return tUI('hwSecAmdGpuSub') }, cards:[
-      { id:'amd-chill-off',    name:'AMD Chill Off', desc:'Disables AMD Chill (dynamic frame rate limiter) in the registry. Prevents AMD ReLive from throttling frame rate when the mouse is still.', icon:'<i class="fa fa-snowflake"></i>' },
-      { id:'amd-power-hold',   name:'AMD Power Hold (Max performance state)', desc:'Sets AMD GPU power state to always stay at maximum clock via registry. Prevents downclocking during GPU-light scenes.', icon:'<i class="fa fa-fire"></i>' },
-      { id:'amd-service-trim', name:'AMD Service Trim', desc:'Stops and disables non-essential AMD background services (AMDLinkUpdate, AMD Crash Defender, AMD Ryzen Master SDK) that consume CPU idle time.', icon:'<i class="fa fa-scissors"></i>' },
-      { id:'amd-ulps-disable', name:'Disable AMD ULPS (Ultra Low Power State)', desc:'Disables Ultra Low Power State across all AMD video registry subkeys. Reduces stutter in multi-GPU (CrossFireX) setups. Safe on single-GPU systems.', icon:'<i class="fa fa-bolt"></i>' },
     ]}] : []),
   ]
   // Retired tweaks that were never applied are not offered, so they must not count in the 0/N badges or keep a section open.
@@ -6042,35 +6031,6 @@ async function buildHardware(c) {
     <div class="hw-tools-divider-sub">${tUI('hwToolsDividerSub')}</div>
   `
   c.appendChild(toolsDivider)
-
-  // ── Thermal Throttle Detective panel ──────────────────────────────────────
-  const thermalSec = makeSection(tUI('hwThermalTitle'), tUI('hwThermalSub'))
-  thermalSec.dataset.secId = 'hw-tool-thermal'
-  const thermalInner = document.createElement('div')
-  thermalInner.className = 'hw-tool-panel'
-  thermalInner.innerHTML = `
-    <div id="hw-thermal-cta" class="hw-tool-infobox accent-left" style="margin-bottom:12px;transition:opacity .3s">
-      <i class="fa fa-circle-info jx-575"></i>${tUI('hwThermalBeforeStart')}
-    </div>
-    <div id="hw-thermal-legend" class="jx-576">
-      <span class="jx-577">● ${tUI('hwThermalLegendOk')}</span>
-      <span class="jx-578">● ${tUI('hwThermalLegendPower')}</span>
-      <span class="jx-579">● ${tUI('hwThermalLegendThermal')}</span>
-    </div>
-    <div id="hw-thermal-timeline" class="hw-tool-chart" style="display:none;height:48px;margin-bottom:8px"></div>
-    <div id="hw-thermal-status" class="jx-151"></div>
-    <div id="hw-thermal-sugg" class="hw-tool-infobox accent-left" style="margin-bottom:10px;display:none"></div>
-    <div class="jx-89">
-      <button id="hw-thermal-start-btn" class="btn btn-primary btn-sm" onclick="doThermalStart(this)">
-        <i class="fa fa-play"></i> ${tUI('hwThermalStart')}
-      </button>
-      <button id="hw-thermal-stop-btn" class="btn btn-ghost btn-sm" style="display:none" onclick="doThermalStop(this)">
-        <i class="fa fa-stop"></i> ${tUI('hwThermalStop')}
-      </button>
-    </div>
-  `
-  thermalSec.appendChild(thermalInner)
-  c.appendChild(thermalSec)
 
   // ── Power Efficiency Tracker panel ────────────────────────────────────────
   const effSec = makeSection(tUI('hwEffTitle'), tUI('hwEffSub'))
@@ -6121,81 +6081,6 @@ function hwRefreshCounters() {
     badge.classList.toggle('spb-full', isFull)
     badge.classList.toggle('spb-partial', applied > 0 && !isFull)
   })
-}
-
-// ─── Thermal Throttle Detective UI ───────────────────────────────────────────
-let _thermalTickHandler = null
-let _thermalThrottleCount = 0
-let _thermalTemps = []
-
-async function doThermalStart(btn) {
-  btn.style.display = 'none'
-  const stopBtn     = document.getElementById('hw-thermal-stop-btn')
-  const ctaEl       = document.getElementById('hw-thermal-cta')
-  const timelineEl  = document.getElementById('hw-thermal-timeline')
-  if (stopBtn)    stopBtn.style.display = ''
-  if (ctaEl)      { ctaEl.style.opacity = '0.4'; ctaEl.title = tUI('hwThermalMonitoring') }
-  if (timelineEl) timelineEl.style.display = 'flex'
-  _thermalThrottleCount = 0
-  _thermalTemps = []
-  await api.thermalStart()
-  if (!_thermalTickHandler) {
-    _thermalTickHandler = api.onThermalTick(tick => {
-      const statusEl   = document.getElementById('hw-thermal-status')
-      const timelineEl = document.getElementById('hw-thermal-timeline')
-      const suggEl     = document.getElementById('hw-thermal-sugg')
-      if (!statusEl) return
-      const causeKey = tick.cause === 'thermal' ? 'hwThermalCauseThermal'
-        : tick.cause === 'power-limit' ? 'hwThermalCausePowerLimit'
-        : 'hwThermalCauseOk'
-      const color = tick.cause === 'thermal' ? '#f44336'
-        : tick.cause === 'power-limit' ? '#ff9800'
-        : '#4caf50'
-      if (tick.cause !== 'ok') _thermalThrottleCount++
-      if (tick.cpuTemp !== null) {
-        _thermalTemps.push(tick.cpuTemp)
-        if (_thermalTemps.length > 60) _thermalTemps.shift()
-      }
-      const tempStr  = tick.cpuTemp !== null ? ` · CPU ${tick.cpuTemp}°C` : ''
-      const loadStr  = tick.cpuLoad !== null ? ` · ${Math.round(tick.cpuLoad)}% load` : ''
-      const countStr = _thermalThrottleCount > 0 ? `&ensp;<span class="jx-32">${tUI('hwThermalThrottleCount').replace('{n}', _thermalThrottleCount)}</span>` : ''
-      let minMaxStr = ''
-      if (_thermalTemps.length > 1) {
-        const minT = Math.min(..._thermalTemps), maxT = Math.max(..._thermalTemps)
-        const avgT = Math.round(_thermalTemps.reduce((a, b) => a + b, 0) / _thermalTemps.length)
-        minMaxStr = `&ensp;<span class="jx-32">${tUI('hwThermalMinMaxAvg').replace('{min}', minT).replace('{avg}', avgT).replace('{max}', maxT)}</span>`
-      }
-      statusEl.innerHTML = `<span style="color:${color}"><i class="fa fa-circle"></i> ${tUI(causeKey)}${tempStr}${loadStr}</span>${countStr}${minMaxStr}`
-      if (suggEl) {
-        if (tick.cause === 'thermal') {
-          suggEl.style.display = ''
-          suggEl.style.borderLeftColor = '#f44336'
-          suggEl.innerHTML = `<i class="fa fa-fire jx-592"></i>${tUI('hwThermalSuggThermal')}`
-        } else if (tick.cause === 'power-limit') {
-          suggEl.style.display = ''
-          suggEl.style.borderLeftColor = '#ff9800'
-          suggEl.innerHTML = `<i class="fa fa-bolt jx-48"></i>${tUI('hwThermalSuggPower')}`
-        } else {
-          suggEl.style.display = 'none'
-        }
-      }
-      if (timelineEl) {
-        const bar = document.createElement('div')
-        bar.style.cssText = `width:6px;min-height:3px;border-radius:1px;background:${color};height:${Math.min(44, 4 + (tick.cpuLoad || 0) * 0.40)}px;flex-shrink:0`
-        timelineEl.appendChild(bar)
-        while (timelineEl.children.length > 30) timelineEl.removeChild(timelineEl.firstChild)
-      }
-    })
-  }
-}
-
-async function doThermalStop(btn) {
-  btn.style.display = 'none'
-  const startBtn = document.getElementById('hw-thermal-start-btn')
-  const ctaEl    = document.getElementById('hw-thermal-cta')
-  if (startBtn) startBtn.style.display = ''
-  if (ctaEl)    { ctaEl.style.opacity = ''; ctaEl.title = '' }
-  await api.thermalStop()
 }
 
 // ─── Power Efficiency Tracker UI ─────────────────────────────────────────────

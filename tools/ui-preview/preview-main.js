@@ -35,6 +35,7 @@ const HOME = !!arg('home', false)   // --home: shoot Home on the real lib/home s
 const WIN2 = !!arg('win2', false)   // --win2: shoot every Windows tab scene on the real lib/windows service (--wn-state open|applied|first|fail)
 const NET2 = !!arg('net2', false)   // --net2: shoot every Network tab scene on the real lib/network service (--nt-state ethernet|wifi-weak|lossy|first|fail)
 const CPUMEM = !!arg('cpumem', false)   // --cpumem: shoot every CPU & Memory tab scene on the real lib/cpumem service (--cm-state x3d|hybrid|pressure|first|fail)
+const GPUP = !!arg('gpu', false)   // --gpu: shoot every GPU tab scene on the real lib/gpu service (--gp-state nvidia|hybrid|hot|amd|first|fail)
 const BOOT = !!arg('boot', false)   // --boot: shoot the boot scan while it runs (--bt-state first|returning|changed|slow|fail)
 const GALLERY = !!arg('gallery', false)   // shoot tools/ui-preview/gallery.html (every component) instead of the app
 
@@ -58,6 +59,7 @@ ipcMain.handle('mock', async (e, name, args) => {
   if (name === 'getSystemInfo' && ctx.bt) { const r = await require('./boot-fixture').handle(name, args, e.sender, ctx); if (r !== undefined) return r }
   if (/^(home2|journalList$|getMetricsHistory$|listSessions$|aiGet|telemetrySubscribe$|telemetrySeries$)/.test(name)) { const r = await require('./home-fixture').handle(name, args, e.sender, ctx); if (r !== undefined) return r }
   if (/^(cpumem2|getProcesses$|latencyBudget(Start|Stop)$|biosRamStress$|cpuzReadTimings$)/.test(name)) { const r = await require('./cpumem-fixture').handle(name, args, e.sender, ctx); if (r !== undefined) return r }
+  if (/^(gpu2|gpuPowerLimit)/.test(name)) { const r = await require('./gpu-fixture').handle(name, args, e.sender, ctx); if (r !== undefined) return r }
   if (/^win2/.test(name)) { const r = await require('./windows-fixture').handle(name, args, e.sender, ctx); if (r !== undefined) return r }
   if (/^(net2|netTopology$|getSpeedHistory$|benchmarkDns$|runSpeedTest$|runPingTestsV2$)/.test(name)) { const r = await require('./network-fixture').handle(name, args, e.sender, ctx); if (r !== undefined) return r }
   if (/^fivem2/.test(name)) { const r = await require('./fivem-fixture').handle(name, args, e.sender, ctx); if (r !== undefined) return r }
@@ -116,6 +118,39 @@ async function cpumemShots(win, dir, logs, report, ctx) {
   await js("document.querySelector('.nt-bar [data-id=\\\"history\\\"]')?.click()"); await sleep(900)
   await shot(win, path.join(dir, 'cm-10-history.png'))
   if (LINT) { const r = await js(require('./lint-page')).catch(e => 'lint failed: ' + e.message); report.push('LINT cpumem: ' + r) }
+  logs.forEach(l => report.push('   ' + l))
+}
+
+// GPU tab: the stage with live rails, the overview cards, the Headroom test, Tune (rows, preview, run + receipt), Display (keep / revert), History.
+async function gpuShots(win, dir, logs, report, ctx) {
+  const js = c => win.webContents.executeJavaScript(c)
+  const until = async (cond, ms = 15000) => { const t0 = Date.now(); while (Date.now() - t0 < ms) { if (await js(cond).catch(() => false)) return true; await sleep(150) } report.push('timeout: ' + cond); return false }
+  await js("showPage('hardware','gpu')").catch(e => logs.push('[showPage] ' + e.message))
+  await sleep(250)
+  await shot(win, path.join(dir, 'gp-1-scanning.png'))
+  await until("document.querySelector('.gp-stage')?.dataset.state === 'ready'"); await sleep(4200)
+  await shot(win, path.join(dir, 'gp-2-overview.png'))
+  await js("document.querySelector('.gp-testcard')?.scrollIntoView({ block: 'center' })"); await sleep(400)
+  await shot(win, path.join(dir, 'gp-3-cards.png'))
+  await js("document.querySelector('[data-t=\"start\"]')?.click()"); await sleep(3500)
+  await shot(win, path.join(dir, 'gp-4-test-running.png'))
+  if (arg('gp-full', false)) { await until("!!document.querySelector('.gp-rep') || !!document.querySelector('.gp-test-abort')", 40000); await sleep(500); await shot(win, path.join(dir, 'gp-5-test-report.png')) }
+  else { await js("document.querySelector('[data-t=\"stop\"]')?.click()"); await sleep(900); await shot(win, path.join(dir, 'gp-5-test-stopped.png')) }
+  await js("window.scrollTo(0, 0); document.querySelector('.nt-bar [data-id=\"tune\"]')?.click()"); await sleep(800)
+  await shot(win, path.join(dir, 'gp-6-tune.png'))
+  await js("document.querySelector('.nt-row .nt-head')?.click()"); await sleep(400)
+  await shot(win, path.join(dir, 'gp-7-row-open.png'))
+  await js("document.querySelector('[data-id=\"tdr-delay\"][data-act=\"flip\"]')?.click()"); await sleep(1800)
+  await shot(win, path.join(dir, 'gp-8-flipped.png'))
+  await js("window.scrollTo(0, 0); document.querySelector('.nt-bar [data-id=\"display\"]')?.click()"); await sleep(800)
+  await shot(win, path.join(dir, 'gp-9-display.png'))
+  await js("document.querySelector('.gp-mon-note [data-hz]')?.click()"); await sleep(1800)
+  await shot(win, path.join(dir, 'gp-10-confirm.png'))
+  await js("document.querySelector('[data-keep]')?.click()"); await sleep(1600)
+  await shot(win, path.join(dir, 'gp-11-kept.png'))
+  await js("document.querySelector('.nt-bar [data-id=\"history\"]')?.click()"); await sleep(900)
+  await shot(win, path.join(dir, 'gp-12-history.png'))
+  if (LINT) { const r = await js(require('./lint-page')).catch(e => 'lint failed: ' + e.message); report.push('LINT gpu: ' + r) }
   logs.forEach(l => report.push('   ' + l))
 }
 
@@ -388,7 +423,7 @@ async function main() {
   }
   for (const lang of LANGS) for (const tier of TIERS) for (const size of SIZES) {
     const name = `${TAG}/${lang}-${tier}-${size.join('x')}`
-    const ctx = { hm: HOME || arg('hm-state', null) ? String(arg('hm-state', 'attention')) : null, lang, premium: tier === 'premium', accent: ACCENT && ACCENT !== true ? ACCENT : null, arrival: !!arg('arrival', false), tours: !!arg('tours', false), debloat: arg('db-state', null), nt: NET2 || arg('nt-state', null) ? String(arg('nt-state', 'ethernet')) : null, cm: CPUMEM || arg('cm-state', null) ? String(arg('cm-state', 'x3d')) : null, wn: WIN2 || arg('wn-state', null) ? String(arg('wn-state', 'open')) : null, dx: arg('dx-state', null), pu: arg('pu-state', null), fv: arg('fv-state', null), bt: BOOT ? String(arg('bt-state', 'first')) : null }   // --arrival: first-launch flow; --tours: guided tours on (off by default so shots stay clean)
+    const ctx = { hm: HOME || arg('hm-state', null) ? String(arg('hm-state', 'attention')) : null, lang, premium: tier === 'premium', accent: ACCENT && ACCENT !== true ? ACCENT : null, arrival: !!arg('arrival', false), tours: !!arg('tours', false), debloat: arg('db-state', null), nt: NET2 || arg('nt-state', null) ? String(arg('nt-state', 'ethernet')) : null, cm: CPUMEM || arg('cm-state', null) ? String(arg('cm-state', 'x3d')) : null, gp: GPUP || arg('gp-state', null) ? String(arg('gp-state', 'nvidia')) : null, wn: WIN2 || arg('wn-state', null) ? String(arg('wn-state', 'open')) : null, dx: arg('dx-state', null), pu: arg('pu-state', null), fv: arg('fv-state', null), bt: BOOT ? String(arg('bt-state', 'first')) : null }   // --arrival: first-launch flow; --tours: guided tours on (off by default so shots stay clean)
     const { win, logs } = await makeWindow('index.html', ctx, size)
     if (BOOT) { await bootShots(win, path.join(OUT, name), logs, report, ctx); win.destroy(); continue }
     const ready = await appReady(win)
@@ -398,6 +433,7 @@ async function main() {
     if (DIAG) { await diagShots(win, path.join(OUT, name), logs, report); win.destroy(); continue }
     if (PULSE) { await pulseShots(win, path.join(OUT, name), logs, report, ctx, size); win.destroy(); continue }
     if (FIVEM) { await fivemShots(win, path.join(OUT, name), logs, report); win.destroy(); continue }
+    if (GPUP) { await gpuShots(win, path.join(OUT, name), logs, report, ctx); win.destroy(); continue }
     if (CPUMEM) { await cpumemShots(win, path.join(OUT, name), logs, report, ctx); win.destroy(); continue }
     if (NET2) { await networkShots(win, path.join(OUT, name), logs, report); win.destroy(); continue }
     if (WIN2) { await windowsShots(win, path.join(OUT, name), logs, report); win.destroy(); continue }

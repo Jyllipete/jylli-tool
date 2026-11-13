@@ -111,7 +111,7 @@ function twinOpenGpu() {
   const vt = document.startViewTransition(async () => {
     go()
     await new Promise(r => setTimeout(r, 450))
-    const s2 = document.getElementById('gpu-hero')?.querySelector('.j-twin-stage')
+    const s2 = document.querySelector('.gp-stage')
     if (s2) s2.style.viewTransitionName = 'part-gpu'
   })
   vt.finished.finally(() => { document.querySelectorAll('.j-twin-stage').forEach(e => { e.style.viewTransitionName = '' }) })

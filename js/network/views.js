@@ -41,7 +41,8 @@
     wrap.addEventListener('click', e => { if (e.target.closest('[data-close]')) closeSheet(null) })
     return { wrap, p }
   }
-  V.closeSheet = () => closeSheet(null)
+  V.closeSheet = r => closeSheet(r === undefined ? null : r)
+  V.openSheet = openSheet   // shared with the GPU tab (keep / revert refresh rate)
 
   // ── custom resolver ──
   V.dnsSheet = function (ctx, cur) {

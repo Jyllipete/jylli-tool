@@ -21,7 +21,7 @@ test('wrapper pages open their first tab; tab ids select within the section', ()
   assert.strictEqual(R.resolve('hardware', 'gpu').page, 'hardware')
   assert.strictEqual(R.resolve('hardware', 'nope').tab, 'cpumem')
   assert.strictEqual(R.resolve('hardware').premium, false, 'CPU & Memory opens for everyone; its Premium switches lock inline')
-  assert.strictEqual(R.resolve('hardware', 'gpu').premium, true)
+  assert.strictEqual(R.resolve('hardware', 'gpu').premium, false, 'the GPU tab opens for everyone; HAGS off locks inline')
   assert.strictEqual(R.resolve('unknown-page'), null)
 })
 

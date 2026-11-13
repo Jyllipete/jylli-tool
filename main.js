@@ -224,6 +224,7 @@ async function _updateSystemContext() {
       const settings = loadSettings()
       if (!wasRunning && _systemContext.gameRunning) {
         try { cpumemSvc().gameStarted(foundGame && foundGame.exe) } catch {}
+        try { gpuSvc().gameStarted() } catch {}
         mainWindow?.webContents.send('game-detected', { name: _systemContext.gameName, genre: _systemContext.gameGenre })
         if (settings.gameAutoOptimize) _triggerGameAutoOptimize()
         // Auto-open FiveM HUD if the detected game is FiveM/GTA5 and setting is enabled
@@ -236,6 +237,7 @@ async function _updateSystemContext() {
       } else if (wasRunning && !_systemContext.gameRunning) {
         try { if (_fivem) _fivem.gameEnded() } catch {}
         try { if (_cpumem) _cpumem.gameEnded() } catch {}
+        try { if (_gpu) _gpu.gameEnded() } catch {}
         mainWindow?.webContents.send('game-exited', { name: _systemContext.gameName })
         // Auto-close FiveM HUD on game exit
         if (fivemHudWindow && !fivemHudWindow.isDestroyed()) closeFivemHud()
@@ -11968,6 +11970,83 @@ ipcMain.handle('cpumem2-priority', async (_, req) => { try { return await cpumem
 ipcMain.handle('cpumem2-priority-clear', async (_, req) => { try { return await cpumemSvc().priorityClear({ exe: cmExe(req && req.exe) }) } catch (e) { return cmFail(e) } })
 ipcMain.handle('cpumem2-priorities', async () => { try { return { ok: true, ...(await cpumemSvc().readPriorities()) } } catch (e) { return cmFail(e) } })
 app.on('will-quit', () => { try { _cpumem && _cpumem.shutdown() } catch {} })
+
+// ─── GPU (lib/gpu): one catalog, one read-only probe, journaled run + read-back, live sampling, monitor refresh, Headroom test ────────────────
+// docs/GPU_EVIDENCE.md. State lives in jt_gpu.json; every switch change goes through journalSvc().applyBatch (label 'gpu'). The NVIDIA power limit stays in lib/gpu-power-limit.js.
+const Gpu = require('./lib/gpu')
+const GpCatalog = require('./lib/gpu/catalog')
+let _gpu = null, _gpApplic = {}, _gpCaps = null
+function gpuSvc() {
+  if (!_gpu) {
+    const spawnTool = (exe, args, { onLine, onExit }) => {
+      const p = spawn(exe, args, { windowsHide: true, stdio: ['ignore', 'pipe', 'ignore'] })
+      p.stdout.setEncoding('utf8')
+      p.stdout.on('data', onLine)
+      p.on('exit', onExit); p.on('error', onExit)
+      return { kill: () => { try { p.kill() } catch {} } }
+    }
+    _gpu = Gpu.create({
+      runPS: (s, ms) => runPS(s, ms),
+      applyBatch: req => journalSvc().applyBatch(req),
+      journalList: o => journalSvc().list(o),
+      undo: (t, o) => journalSvc().undo(t, o),
+      runRecorded: (...a) => journalSvc().runRecorded(...a),
+      tweakMeta: ids => { retireTweaks(); return journalSvc().tweakMeta(ids) },
+      applicability: () => _gpApplic,
+      caps: () => _gpCaps,
+      isPremium: () => !!auth && auth.isPremium(),
+      settings: () => loadSettings(),
+      state: { read: () => cuRead('jt_gpu.json', null), write: v => cuWrite('jt_gpu.json', v) },
+      bootMs: () => Date.now() - os.uptime() * 1000,
+      gameRunning: () => !!_systemContext.gameRunning,
+      hub: keys => Object.fromEntries(keys.map(k => [k, _hub.value(k)])),
+      power: () => powerLimitSvc().get(),
+      emit: cuSend,
+      spawnLive: ({ script, onLine, onExit }) => spawnTool('powershell.exe', ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-EncodedCommand', Buffer.from(script, 'utf16le').toString('base64')], { onLine, onExit }),
+      spawnSmi: ({ args, onLine, onExit }) => (fs.existsSync(Smi.exePath()) ? spawnTool(Smi.exePath(), args, { onLine, onExit }) : { kill() {} }),
+    })
+  }
+  return _gpu
+}
+// Same rule as the CPU & Memory tab: wait a few seconds for the capability scan, never longer.
+async function gpApplicRefresh() {
+  try {
+    const profile = await Promise.race([ensureCapsProfile(false), new Promise(r => setTimeout(() => r(null), 6000))])
+    if (!profile) return
+    const caps = Caps.deriveCaps(profile), map = {}
+    for (const id of GpCatalog.ids()) if (Applic.RULES[id]) { const r = Applic.evaluate(id, caps); map[id] = { show: r.show, state: r.state, why: r.why } }
+    _gpCaps = caps; _gpApplic = map
+  } catch { /* keep the last map */ }
+}
+const gpIds = v => (Array.isArray(v) ? v.filter(x => typeof x === 'string' && GpCatalog.isKnown(x)).slice(0, 60) : [])
+const gpFail = e => ({ ok: false, error: String((e && e.message) || e).slice(0, 200) })
+const gpInt = v => (Number.isInteger(v) ? v : NaN)
+ipcMain.handle('gpu2-scan', async () => { try { await gpApplicRefresh(); return await gpuSvc().scan() } catch { return { ok: false, error: 'scan-failed' } } })
+ipcMain.handle('gpu2-cached', async () => { try { return (await gpuSvc().cached()) || { ok: false } } catch { return { ok: false } } })
+ipcMain.handle('gpu2-run', async (_, req) => {
+  try { return await gpuSvc().run({ ids: gpIds(req && req.ids), action: req && req.action === 'restore' ? 'restore' : 'apply', label: 'gpu', onProgress: p => cuSend('gpu2-progress', p) }) } catch (e) { return gpFail(e) }
+})
+ipcMain.handle('gpu2-history', () => { try { return gpuSvc().history() } catch { return { ok: false, error: 'history-failed' } } })
+ipcMain.handle('gpu2-undo', async (_, req) => {
+  const t = (req && req.target) || {}, target = {}
+  for (const k of ['entryId', 'batchId']) if (typeof t[k] === 'string' && t[k].length < 64) target[k] = t[k]
+  if (!Object.keys(target).length) return { ok: false, error: 'invalid_target' }
+  try { return await gpuSvc().undo(target, { force: req && req.force === true }) } catch (e) { return gpFail(e) }
+})
+ipcMain.handle('gpu2-live-start', () => { try { return gpuSvc().liveStart() } catch (e) { return gpFail(e) } })
+ipcMain.handle('gpu2-live-beat', () => { try { return gpuSvc().heartbeat() } catch (e) { return gpFail(e) } })
+ipcMain.handle('gpu2-live-stop', () => { try { gpuSvc().liveStop(); return { ok: true } } catch (e) { return gpFail(e) } })
+ipcMain.handle('gpu2-display-set', async (_, req) => { try { return await gpuSvc().displaySet({ device: String((req && req.device) || ''), w: gpInt(req && req.w), h: gpInt(req && req.h), hz: gpInt(req && req.hz) }) } catch (e) { return gpFail(e) } })
+ipcMain.handle('gpu2-display-answer', (_, req) => { try { return gpuSvc().displayAnswer({ keep: !!(req && req.keep) }) } catch (e) { return gpFail(e) } })
+ipcMain.handle('gpu2-test-start', () => { try { return gpuSvc().testStart() } catch (e) { return gpFail(e) } })
+ipcMain.handle('gpu2-test-stop', () => { try { return gpuSvc().testStop('stopped') } catch (e) { return gpFail(e) } })
+ipcMain.handle('gpu2-test-finish', (_, req) => {
+  const n = v => (typeof v === 'number' && Number.isFinite(v) ? v : null)
+  try { return gpuSvc().testFinish({ work: n(req && req.work), frames: n(req && req.frames), renderer: typeof (req && req.renderer) === 'string' ? req.renderer.slice(0, 160) : null }) } catch (e) { return gpFail(e) }
+})
+ipcMain.handle('gpu2-tests', () => { try { return gpuSvc().tests() } catch (e) { return gpFail(e) } })
+app.on('will-quit', () => { try { _gpu && _gpu.shutdown() } catch {} })
+
 
 // ─── Network (lib/network): one catalog, one read-only probe, journaled run + read-back, checkup, live route trace ─────────────────
 // docs/NETWORK_EVIDENCE.md. State lives in jt_network.json; every change goes through journalSvc().applyBatch (label 'network').

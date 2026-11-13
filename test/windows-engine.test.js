@@ -101,7 +101,7 @@ test('model: one recommended rule (open, not retired, not tier 3, no restart, no
   assert.ok(m.recommendedIds.includes('game-dvr'))
   assert.ok(!m.recommendedIds.includes('disable-fso'), 'caution is never recommended')
   assert.ok(!m.recommendedIds.includes('spectre-meltdown'))
-  assert.ok(!m.recommendedIds.includes('gpu-hwsch'), 'not in the recommended set')
+  assert.ok(!m.recommendedIds.includes('hibernate'), 'not in the recommended set')
   assert.deepStrictEqual(m.recommendedIds, m.items.filter(i => i.rec).map(i => i.id))
   // a switch that Windows already has is not offered again
   const live = liveFor({ 'r|HKCU:\\System\\GameConfigStore|GameDVR_Enabled': '0' })
@@ -112,9 +112,9 @@ test('model: one recommended rule (open, not retired, not tier 3, no restart, no
 
 test('model: drift is found, restart is held back, retired shows only when applied', () => {
   const live = liveFor()
-  const m = model.buildModel({ scope: 'windows', live, remembered: { 'game-dvr': 'applied', 'gpu-hwsch': 'applied', hpet: 'applied' }, restart: ['gpu-hwsch'], meta: { hpet: { retired: 'because' } }, applic: {} })
+  const m = model.buildModel({ scope: 'windows', live, remembered: { 'game-dvr': 'applied', 'sticky-keys-guard': 'applied', hpet: 'applied' }, restart: ['sticky-keys-guard'], meta: { hpet: { retired: 'because' } }, applic: {} })
   assert.deepStrictEqual(m.drifted, ['game-dvr'])
-  assert.deepStrictEqual(m.pendingRestart, ['gpu-hwsch'])
+  assert.deepStrictEqual(m.pendingRestart, ['sticky-keys-guard'])
   assert.ok(m.items.find(i => i.id === 'hpet' && i.retired && i.lane === 'retired' && i.retiredWhy === 'because'))
   assert.ok(!m.items.some(i => i.id === 'mmcss'), 'retired and never applied: not shown')
   assert.strictEqual(m.verdict.kind, 'attention')
@@ -122,8 +122,8 @@ test('model: drift is found, restart is held back, retired shows only when appli
 })
 
 test('model: applicability hides what does not apply, qol scope is separate, unread has no live verdict', () => {
-  const m = model.buildModel({ scope: 'windows', live: liveFor(), remembered: {}, meta: {}, applic: { 'msi-mode': { show: false, state: 'hidden' } } })
-  assert.ok(!m.items.some(i => i.id === 'msi-mode'))
+  const m = model.buildModel({ scope: 'windows', live: liveFor(), remembered: {}, meta: {}, applic: { 'compat-tasks-off': { show: false, state: 'hidden' } } })
+  assert.ok(!m.items.some(i => i.id === 'compat-tasks-off'))
   const q = model.buildModel({ scope: 'qol', live: liveFor(), remembered: {}, meta: {}, applic: {} })
   assert.deepStrictEqual(q.lanes.map(l => l.id), ['qol-search', 'qol-quiet', 'qol-explorer'])
   assert.ok(q.items.every(i => catalog.scopeOf(i.id) === 'qol'))

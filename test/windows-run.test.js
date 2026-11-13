@@ -40,7 +40,7 @@ test('scan: one read-only probe, models for both tabs, remembered state persiste
   const r = await h.svc.scan()
   assert.ok(r.ok && r.read && !r.stale)
   assert.strictEqual(h.calls.ps, 1)
-  assert.ok(r.models.windows.items.length > 30 && r.models.qol.items.length === 12)
+  assert.ok(r.models.windows.items.length > 25 && r.models.qol.items.length === 12)
   assert.ok(h.store.v.last.readings)
 })
 
@@ -104,11 +104,11 @@ test('run: only catalog ids, no retired apply (restore is allowed), single fligh
 })
 
 test('run: an applied reboot-required switch waits for a restart until after the next boot', async () => {
-  const h = harness({ meta: { 'gpu-hwsch': {} } })
-  const r = await h.svc.run({ ids: ['gpu-hwsch'], action: 'apply' })   // the fake PC never flips its registry value: the live value still reads default
+  const h = harness({ meta: { 'sticky-keys-guard': { risk: { reboot: true } } } })
+  const r = await h.svc.run({ ids: ['sticky-keys-guard'], action: 'apply' })   // the fake PC never flips its registry value: the live value still reads default
   assert.strictEqual(r.receipt.items[0].live, 'restart')
   assert.strictEqual(r.receipt.items[0].verified, null)
-  assert.deepStrictEqual(r.receipt.restartNeeded, ['gpu-hwsch'])
+  assert.deepStrictEqual(r.receipt.restartNeeded, ['sticky-keys-guard'])
 })
 
 test('history: Windows entries only, grouped by batch, newest first', async () => {
@@ -139,5 +139,5 @@ test('summary: from the last read, null before any', async () => {
   assert.strictEqual(h.svc.summary(), null)
   await h.svc.scan()
   const s = h.svc.summary()
-  assert.ok(s.total > 30 && s.rec > 0)
+  assert.ok(s.total > 25 && s.rec > 0)
 })

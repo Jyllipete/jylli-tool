@@ -11,7 +11,6 @@
     latency:   { page: 'latency-monitor', icon: 'wave-square',   facts: ['cpu', 'gpu'] },
     bios:      { page: 'bios-tuner',      icon: 'microchip',     facts: ['cpu', 'form'] },
     scheduler: { page: 'scheduler',       icon: 'calendar-check', facts: ['form'] },
-    gpu:       { page: 'hardware',        icon: 'display',       facts: ['gpu', 'vram'] },
     power:     { page: 'hardware',        icon: 'plug-circle-bolt', facts: ['form', 'disk'] },
   }
   const ORDER = Object.keys(TABS)

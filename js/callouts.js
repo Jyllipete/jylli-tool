@@ -34,7 +34,7 @@
 
   // ── runtime ──────────────────────────────────────────────────────────────────────
   // which parts carry a plate in which hero window; the heat tint reads the part's temperature key (only when a reading exists)
-  const WINDOWS = { 'home-twin-slot': ['cpu', 'cooler', 'gpu', 'ram0', 'drive0'], 'gpu-twin-slot': ['gpu'], 'cpumem-twin-slot': ['cpu', 'cooler', 'ram0'], 'storage-twin-slot': ['drive0'] }
+  const WINDOWS = { 'home-twin-slot': ['cpu', 'cooler', 'gpu', 'ram0', 'drive0'], 'cpumem-twin-slot': ['cpu', 'cooler', 'ram0'], 'storage-twin-slot': ['drive0'] }
   const HEAT_KEY = { cpu: 'cpu.temp.package', gpu: 'gpu0.temp.core' }
   const NS = 'http://www.w3.org/2000/svg'
   let box, svg, items = [], tick = 0, lastWin = null
