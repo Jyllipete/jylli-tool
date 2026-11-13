@@ -15,6 +15,7 @@ function buildSettings(c) {
     ['gaming', 'settingsCatGaming', 'gamepad'],
     ['sensors', 'settingsCatSensors', 'microchip'],
     ['privacy', 'settingsCatPrivacy', 'user-shield'],
+    ['discord', 'dpCat', 'tower-broadcast'],
     ['account', 'settingsDiscordAccount', 'circle-user'],
     ['about', 'settingsAbout', 'circle-info'],
   ]
@@ -37,7 +38,6 @@ function buildSettings(c) {
         row(html`${tUI('language')} / Kieli`, '', html`<div class="j-seg"><button type="button" class="${ui.cls('j-seg-item', lang === 'en' && 'j-seg-active')}" onclick="setLanguage('en')">EN</button><button type="button" class="${ui.cls('j-seg-item', lang === 'fi' && 'j-seg-active')}" onclick="setLanguage('fi')">FI</button></div>`),
         row(tUI('settingsStartup'), tUI('settingsStartupDesc'), sw('settings-startup-check', 'settingsToggleStartup(this.checked)', tUI('settingsStartup'))),
         row(tUI('settingsAdvanced'), tUI('settingsAdvancedDesc'), html`<span id="settings-adv-pill">${sw('settings-adv-check', 'toggleAdvancedMode()', tUI('settingsAdvanced'))}</span>`),
-        row(tUI('settingsDiscordRpc'), tUI('settingsDiscordRpcDesc'), sw('settings-rpc-check', 'settingsToggleDiscordRpc(this.checked)', tUI('settingsDiscordRpc'))),
         row(tUI('applyMode'), tUI('applyModeDesc'), html`<div class="j-seg">${['immediate', 'review'].map(v => html`<button type="button" data-applymode="${v}" class="${ui.cls('j-seg-item', (settings.applyMode || 'immediate') === v && 'j-seg-active')}" onclick="settingsSetApplyMode('${v}')">${tUI('applyMode_' + v)}</button>`)}</div>`),
         row(tUI('settingsUiSounds'), tUI('settingsUiSoundsDesc'), sw('settings-sounds-check', 'settingsToggleUiSounds(this.checked)', tUI('settingsUiSounds'))),
       ])}
@@ -79,6 +79,18 @@ function buildSettings(c) {
         row(tUI('settingsAnalytics'), tUI('settingsAnalyticsDesc'), sw('settings-analytics-check', 'settingsToggleAnalytics(this.checked)', tUI('settingsAnalytics'))),
         row(tUI('exportReportLabel'), tUI('exportReportDesc'), ui.button({ label: tUI('exportReportBtn'), icon: 'file-arrow-down', size: 'sm', onclick: 'doExportReport(this)' })),
       ])}`)}
+
+    ${section('discord', 'dpCat', html`
+      <p class="j-muted j-settings-hint">${tUI('dpIntro')}</p>
+      <div class="j-dp-live" id="dp-live" aria-live="polite"></div>
+      ${ui.group('', [
+        row(tUI('settingsDiscordRpc'), tUI('settingsDiscordRpcDesc'), sw('settings-rpc-check', 'settingsToggleDiscordRpc(this.checked)', tUI('settingsDiscordRpc'))),
+        row(tUI('dpDetail'), tUI('dpDetailDesc'), html`<div class="j-seg">${['full', 'minimal'].map(v => html`<button type="button" data-dp-detail="${v}" class="j-seg-item" onclick="settingsDpSet('detail','${v}')">${tUI(v === 'full' ? 'dpFull' : 'dpMinimal')}</button>`)}</div>`),
+        row(tUI('dpShowGame'), tUI('dpShowGameDesc'), sw('dp-showgame-check', "settingsDpSet('showGame', this.checked)", tUI('dpShowGame'))),
+        row(tUI('dpTray'), tUI('dpTrayDesc'), html`<div class="j-seg">${['clear', 'keep'].map(v => html`<button type="button" data-dp-hidden="${v}" class="j-seg-item" onclick="settingsDpSet('whenHidden','${v}')">${tUI(v === 'clear' ? 'dpTrayClear' : 'dpTrayKeep')}</button>`)}</div>`),
+        row(tUI('dpButtons'), tUI('dpButtonsDesc'), sw('dp-buttons-check', "settingsDpSet('buttons', this.checked)", tUI('dpButtons'))),
+      ])}
+      ${ui.callout(tUI('dpPrivacy'), 'info', 'user-shield')}`)}
 
     ${section('account', 'settingsDiscordAccount', html`
       ${ui.group('', [
@@ -162,6 +174,7 @@ function buildSettings(c) {
   // Initial switch states
   const setChecked = (id, v) => { const el = document.getElementById(id); if (el) el.checked = v }
   setChecked('settings-rpc-check', settings.discordRpcEnabled !== false)
+  settingsDiscordInit(c)
   setChecked('settings-sounds-check', !!settings.uiSounds)
   setChecked('settings-tours-check', !!settings.toursEnabled)
   setChecked('settings-aria-check', settings.ariaEnabled === true)
@@ -268,4 +281,58 @@ function settingsSetApplyMode(v) {
   api.saveSettings(settings)
   document.querySelectorAll('[data-applymode]').forEach(b => b.classList.toggle('j-seg-active', b.dataset.applymode === settings.applyMode))
   if (settings.applyMode === 'immediate' && window.JylliStage && JylliStage.count) JylliStage.discard()
+}
+
+// Settings › Discord status: live state + a preview of exactly what Discord receives (the main process sends its own status).
+let _dpStatus = null
+function settingsDiscordInit(c) {
+  const un = api.onDiscordPresenceStatus ? api.onDiscordPresenceStatus(st => settingsDiscordRender(st)) : null
+  const tick = setInterval(settingsDiscordTick, 1000)
+  registerPageCleanup('settings', () => { clearInterval(tick); if (typeof un === 'function') un(); _dpStatus = null })
+  api.discordPresenceStatus().then(settingsDiscordRender).catch(() => settingsDiscordRender({ state: 'off', activity: null, prefs: {} }))
+}
+const _dpFmt = ms => { const t = Math.max(0, Math.floor(ms / 1000)), h = Math.floor(t / 3600), m = Math.floor(t % 3600 / 60), s = t % 60; return (h ? h + ':' + String(m).padStart(2, '0') : String(m)) + ':' + String(s).padStart(2, '0') }
+function settingsDiscordRender(st) {
+  const box = document.getElementById('dp-live')
+  if (!box || !st) return
+  _dpStatus = st
+  const { html } = ui
+  const tones = { off: 'neutral', connecting: 'info', waiting: 'warn', live: 'ok', paused: 'info' }
+  const names = { off: 'dpStateOff', connecting: 'dpStateConnecting', waiting: 'dpStateWaiting', live: 'dpStateLive', paused: 'dpStatePaused' }
+  const state = names[st.state] ? st.state : 'off'
+  const a = st.activity
+  const card = a ? html`<div class="j-dp-card">
+      <div class="j-dp-head">${tUI('dpCardHead')}</div>
+      <div class="j-dp-body"><img class="j-dp-art" src="assets/icon.png" alt="">
+        <div class="j-dp-text"><b>Jylli Tool</b>${a.details ? html`<span>${a.details}</span>` : ''}${a.state ? html`<span>${a.state}</span>` : ''}${a.startTimestamp ? html`<span class="j-num" id="dp-elapsed" data-since="${a.startTimestamp}"></span>` : ''}</div></div>
+      ${a.buttons ? html`<div class="j-dp-btns">${a.buttons.map(b => html`<div class="j-dp-btn">${b.label}</div>`)}</div>` : ''}
+    </div>` : html`<div class="j-dp-none">${tUI('dpNoPreview')}</div>`
+  box.innerHTML = String(html`<div class="j-dp-top"><span class="j-dp-label">${tUI('dpLive')}</span>${ui.badge(tUI(names[state]), tones[state])}</div>
+    ${state === 'off' ? '' : card}
+    <p class="j-dp-help" id="dp-help"></p>
+    ${state === 'waiting' ? html`<div>${ui.button({ label: tUI('dpRetry'), icon: 'rotate', size: 'sm', onclick: 'settingsDiscordRetry()' })}</div>` : ''}`)
+  const p = st.prefs || {}
+  const setC = (id, v) => { const el = document.getElementById(id); if (el) el.checked = !!v }
+  setC('dp-showgame-check', p.showGame !== false); setC('dp-buttons-check', p.buttons !== false)
+  setC('settings-rpc-check', state !== 'off')
+  document.querySelectorAll('[data-dp-detail]').forEach(b => b.classList.toggle('j-seg-active', b.dataset.dpDetail === (p.detail || 'full')))
+  document.querySelectorAll('[data-dp-hidden]').forEach(b => b.classList.toggle('j-seg-active', b.dataset.dpHidden === (p.whenHidden || 'clear')))
+  settingsDiscordTick()
+}
+function settingsDiscordTick() {
+  const st = _dpStatus
+  if (!st) return
+  const el = document.getElementById('dp-elapsed')
+  if (el) el.textContent = tUIf('dpElapsed', { t: _dpFmt(Date.now() - Number(el.dataset.since)) })
+  const help = document.getElementById('dp-help')
+  if (!help) return
+  const secs = st.nextRetryAt ? Math.max(0, Math.ceil((st.nextRetryAt - Date.now()) / 1000)) : 0
+  const key = st.state === 'off' ? 'dpHelpOff' : st.state === 'connecting' ? 'dpHelpConnecting' : st.state === 'live' ? 'dpHelpLive'
+    : st.state === 'paused' ? (st.reason === 'silent' ? 'dpHelpPausedSilent' : 'dpHelpPausedHidden')
+    : st.reason === 'lost' ? 'dpHelpLost' : st.reason === 'send-failed' ? 'dpHelpFailed' : 'dpHelpWaiting'
+  help.textContent = tUIf(key, { s: secs })
+}
+function settingsDiscordRetry() { api.discordPresenceRetry().then(settingsDiscordRender).catch(() => {}) }
+function settingsDpSet(key, value) {
+  api.discordPresenceConfig({ [key]: value }).then(settingsDiscordRender).catch(() => {})
 }

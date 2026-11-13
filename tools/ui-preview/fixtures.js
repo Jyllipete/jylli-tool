@@ -165,6 +165,14 @@ function respond(name, args, ctx) {
     case 'pulseDetectGame': return { ok: true, game: null }
     case 'detectAv': return null
     case 'analyticsPageVisit': case 'analyticsTweakApplied': case 'discordSetPage': case 'startupTrace': return { ok: true }
+    // Discord status: the REAL presence builder, so the Settings preview shows exactly what Discord would receive
+    case 'discordPresenceStatus': case 'discordPresenceConfig': case 'discordPresenceRetry': {
+      const P = require('../../lib/discord/presence')
+      const prefs = P.normalizePrefs(args && args[0])
+      const r = P.build({ lang: 'en', route: { tab: 'settings' }, tweaks: 12, sessionStart: now - 754000 }, prefs)
+      return { state: 'live', reason: null, since: now - 754000, nextRetryAt: null, mode: r.mode, activity: r.activity, prefs }
+    }
+    case 'discordSetSilent': case 'discordSetAppliedCount': return { ok: true }
     // Debloat: the REAL probe parser, model, classifier and footprint on a synthetic gaming desktop (printer, 2 Bluetooth devices, Xbox controller, OBS)
     case 'debloat2Scan': {
       const D = require('../../lib/debloat'), now = Date.now(), H = 3600000, DAY = 24 * H

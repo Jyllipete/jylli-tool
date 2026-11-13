@@ -919,8 +919,6 @@ async function init(isPremium = false) {
   const applied = Object.entries(settings).filter(([k,v]) => k.startsWith('tweak_') && v === 'applied')
   if (applied.length) appendLog(`  ${applied.length} tweak(s) previously applied — badges restored.`, 'info')
   updateDiscordScore()
-  // Detect FiveM for small image indicator
-  api.discordSetFiveM(!!sysInfo.fivemInstalled).catch(() => {})
   // Heavy capability probe: only now that detection is done (it used to compete with it for PowerShell slots)
   api.getApplicability?.().then(r => { if (r && r.ok) window._applic = r.map }).catch(() => {})
   // Re-send when RPC connects (it's async — ready fires after this code runs)
@@ -1008,7 +1006,7 @@ async function init(isPremium = false) {
       if (metricsInterval) { clearInterval(metricsInterval); metricsInterval = null }
       // Silent Mode: silence Jylli's own overhead during gaming
       if (settings.silentModeEnabled) {
-        if (settings.discordRpcEnabled !== false) api.setDiscordRpc(false)
+        api.discordSetSilent(true).catch(() => {})   // clears the Discord status for the game; the connection stays up
         api.setFocusAssist(true).catch(() => {})
         api.setSelfPriority(true).catch(() => {})
         window._silentModeActive = true
@@ -1026,7 +1024,7 @@ async function init(isPremium = false) {
       // Silent Mode: restore Jylli's overhead after gaming
       if (window._silentModeActive) {
         window._silentModeActive = false
-        if (settings.discordRpcEnabled !== false) api.setDiscordRpc(true)
+        api.discordSetSilent(false).catch(() => {})
         api.setFocusAssist(false).catch(() => {})
         api.setSelfPriority(false).catch(() => {})
       }
@@ -1459,7 +1457,7 @@ function showPage(page, tabId) {
   if (metricsInterval && page !== 'dashboard' && page !== 'process-manager') { clearInterval(metricsInterval); metricsInterval = null }
   if (page === 'dashboard' || page === 'process-manager') startMetrics()
   if (page !== 'latency-monitor') stopLatencyPolling()
-  api.discordSetPage(page).catch(() => {})
+  api.discordSetPage(page, route && route.tab).catch(() => {})
   api.analyticsPageVisit(page).catch(() => {})
 
   const c = document.getElementById('page-content')

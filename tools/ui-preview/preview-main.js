@@ -479,6 +479,7 @@ async function main() {
       await win.webContents.executeJavaScript(`showPage(${JSON.stringify(page)})`).catch(e => logs.push('[showPage] ' + e.message))
       await sleep(1100)
       await shot(win, path.join(OUT, name, `${page}.png`))
+      if (page === 'settings') { await win.webContents.executeJavaScript("document.getElementById('set-sec-discord')?.scrollIntoView({ block: 'start' })").catch(() => {}); await sleep(500); await shot(win, path.join(OUT, name, 'settings-discord.png')) }
       if (LINT) { const r = await win.webContents.executeJavaScript(require('./lint-page')).catch(e => 'lint failed: ' + e.message); report.push(`LINT ${name}/${page}: ${r}`) }
       if (logs.length) { report.push(`${name}/${page}:`); logs.forEach(l => report.push('   ' + l)) }
     }

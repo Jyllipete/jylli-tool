@@ -51,17 +51,11 @@ const DISCORD_CLIENT_ID  = '1504472893818667152'
 const DISCORD_INVITE     = 'https://discord.gg/jylligraffat'
 const DISCORD_DOWNLOAD   = 'https://discord.com/channels/1295856827388399779/1295856828160282746'
 
-let discordRPC            = null
-let discordReady          = false
-let discordStartTimestamp = null
-let discordRetryTimer     = null
-
-// State tracked by the renderer via IPC
-let discordCurrentPage    = 'dashboard'
-let discordTweaksApplied  = 0
-let discordHasFiveM       = false
-let discordPulseGame      = null   // name of game Pulse is active for, or null
-let discordActiveGame     = null   // game watcher detected game, or null
+// The whole feature lives in lib/discord/ (presence.js = what is published, controller.js = connection + throttle); this file only feeds it.
+const DiscordController = require('./lib/discord/controller')
+const JylliRoutes       = require('./js/routes.js')
+let presence = null
+let _presenceLast = 'off'
 let cachedSysInfo         = null   // cached after first get-system-info call, used by Pulse
 
 // ─── System Context Detector ──────────────────────────────────────────────────
@@ -219,6 +213,7 @@ async function _updateSystemContext() {
       _systemContext.videoCallActive = videoCall
       _systemContext.mediaRendering  = mediaRendering
       _systemContext.launcherActive  = launcherActive
+      presenceRefresh()
 
       // Fire game-detected / game-exited events
       const settings = loadSettings()
@@ -295,187 +290,45 @@ function _triggerGameAutoOptimize() {
   debugLog('[game-auto-optimize] disabled: automatic silent tweaks are not applied; ' + gamingIds.length + ' candidates')
 }
 
-// Override state for active operations (null = idle, use page-based presence)
-let discordActivityOverride = null   // { details, state, imageKey, imageText }
-let discordOverrideCycleTimer = null // for cycling text during long operations
-
-// Per-page presence config
-const PAGE_PRESENCE = {
-  'dashboard':        { details: 'On the Dashboard',          image: 'jylli_logo'  },
-  'windows-opti':     { details: 'Tweaking Windows',          image: 'jylli_logo'  },
-  'hardware':         { details: 'Tweaking Hardware',         image: 'jylli_logo'  },
-  'network':          { details: 'Tweaking Network',          image: 'jylli_logo'  },
-  'fivem':            { details: 'Optimizing FiveM',          image: 'jylli_logo'  },
-  'game-opti':        { details: 'Optimizing Games',          image: 'jylli_logo'  },
-  'debloater':        { details: 'Removing Bloatware',        image: 'jylli_logo'  },
-  'preflight':        { details: 'Running Pre-Flight',        image: 'jylli_logo'  },
-  'fixes':            { details: 'Applying Fixes',            image: 'jylli_logo'  },
-  'process-manager':  { details: 'Viewing Processes',          image: 'jylli_logo'  },
-  'cleaner':          { details: 'Cleaning System',           image: 'jylli_logo'  },
-  'scheduler':        { details: 'Scheduling Tweaks',         image: 'jylli_logo'  },
-  'changelog':        { details: 'Reading Changelog',         image: 'jylli_logo'  },
-  'restore-points':   { details: 'Managing Restore Points',   image: 'jylli_logo'  },
-  'startup-manager':  { details: 'Managing Startup Apps',     image: 'jylli_logo'  },
-  'ping-test':        { details: 'Testing Network Ping',      image: 'jylli_logo'  },
-  'app-optimizer':    { details: 'Optimizing Apps',           image: 'jylli_logo'  },
-  'pulse':            { details: 'Configuring Pulse',          image: 'jylli_logo'  },
-}
-
-// Cycling phrases shown during long scans
-const SCAN_PHRASES  = ['Scanning system…', 'Checking processes…', 'Analysing files…', 'Reading registry…']
-const HEALTH_PHRASES = ['Checking system health…', 'Running SFC scan…', 'Checking DISM…', 'Checking disk SMART…']
-const OPTI_PHRASES  = ['Auto-Optimizing…', 'Applying tweaks…', 'Writing registry…', 'Configuring system…']
-let cycleIndex = 0
-
-function initDiscordRPC() {
-  try {
-    const RPC = require('discord-rpc')
-    discordRPC = new RPC.Client({ transport: 'ipc' })
-    discordStartTimestamp = new Date()
-
-    discordRPC.on('ready', () => {
-      discordReady = true
-      if (discordRetryTimer) { clearInterval(discordRetryTimer); discordRetryTimer = null }
-      mainWindow?.webContents.send('discord-rpc-ready')
-      updateDiscordPresence()
-    })
-
-    discordRPC.on('disconnected', () => {
-      discordReady = false
-      scheduleDiscordRetry()
-    })
-
-    connectDiscordRPC()
-  } catch (_) { discordRPC = null }
-}
-
-function scheduleDiscordRetry() {
-  if (!discordRetryTimer) {
-    discordRetryTimer = setInterval(() => {
-      if (!discordReady) connectDiscordRPC()
-    }, 15000)
-  }
-}
-
-function connectDiscordRPC() {
-  if (!discordRPC) return
-  discordRPC.login({ clientId: DISCORD_CLIENT_ID }).catch(() => {
-    // Login failed (Discord not running yet) — start retry loop
-    scheduleDiscordRetry()
+// ─── Discord Rich Presence wiring ─────────────────────────────────────────────
+function presenceSvc() {
+  if (presence) return presence
+  const s = SETTINGS_PATH ? loadSettings() : {}
+  presence = DiscordController.create({
+    createClient: () => new (require('discord-rpc').Client)({ transport: 'ipc' }),
+    clientId: DISCORD_CLIENT_ID,
+    prefs: s.discordPresence,
+    log: m => debugLog('[Discord] ' + m),
+    onStatus: st => {
+      try {
+        mainWindow?.webContents.send('discord-presence-status', st)
+        if (st.state === 'live' && _presenceLast !== 'live') mainWindow?.webContents.send('discord-rpc-ready')   // the renderer re-sends the tweak count
+        _presenceLast = st.state
+      } catch {}
+    },
   })
+  presence.set({ lang: s.language === 'fi' ? 'fi' : 'en', hidden: mainWindow && !mainWindow.isDestroyed() ? !mainWindow.isVisible() : false })
+  return presence
 }
+const presenceSet = patch => { try { presenceSvc().set(patch) } catch {} }
+const discordTaskBegin = kind => { try { return presenceSvc().beginTask(kind) } catch { return 0 } }
+const discordTaskProgress = (t, p) => { try { presenceSvc().progress(t, p) } catch {} }
+const discordTaskEnd = t => { try { presenceSvc().endTask(t) } catch {} }
+const presenceShutdown = () => (presence ? presence.shutdown() : Promise.resolve())
 
-function updateDiscordPresence() {
-  if (!discordRPC || !discordReady) return
-
-  let details, state, imageKey, imageText, smallKey, smallText
-
-  if (discordActivityOverride) {
-    // Active long operation (auto-opti, health scan, etc.) takes top priority
-    details   = discordActivityOverride.details
-    state     = discordActivityOverride.state
-    imageKey  = discordActivityOverride.imageKey  || 'jylli_logo'
-    imageText = discordActivityOverride.imageText || 'Jylli Tool'
-    smallKey  = 'jylli_logo'
-    smallText = 'Jylli Tool'
-  } else if (discordPulseGame) {
-    // Pulse is active for a specific game
-    details   = `⚡ Pulse Active — ${discordPulseGame}`
-    const elapsed = pulseStartTimestamp ? Math.floor((Date.now() - pulseStartTimestamp) / 1000) : 0
-    const elMin = Math.floor(elapsed / 60), elSec = String(elapsed % 60).padStart(2, '0')
-    const elapsedStr = elapsed > 0 ? `${elMin}m ${elSec}s` : null
-    state     = elapsedStr
-      ? `${discordPulseGame} · Active ${elapsedStr}`
-      : `${discordTweaksApplied} tweak${discordTweaksApplied !== 1 ? 's' : ''} applied`
-    imageKey  = 'jylli_logo'
-    imageText = 'Jylli Tool — PC Optimizer'
-    smallKey  = 'jylli_small'
-    smallText = '⚡ Pulse Active'
-  } else if (discordActiveGame) {
-    // Game watcher detected a running game
-    details   = `🎮 In-Game — ${discordActiveGame}`
-    state     = `${discordTweaksApplied} tweak${discordTweaksApplied !== 1 ? 's' : ''} applied`
-    imageKey  = 'jylli_logo'
-    imageText = 'Jylli Tool — PC Optimizer'
-    smallKey  = discordHasFiveM ? 'fivem_icon' : 'jylli_small'
-    smallText = discordHasFiveM ? 'FiveM detected' : 'Jylli Tool'
-  } else {
-    // Idle — show current page
-    const p   = PAGE_PRESENCE[discordCurrentPage] || { details: 'Using Jylli Tool', image: 'jylli_logo' }
-    details   = p.details
-    state     = discordTweaksApplied > 0
-      ? `${discordTweaksApplied} tweak${discordTweaksApplied !== 1 ? 's' : ''} applied`
-      : 'discord.gg/jylligraffat'
-    imageKey  = p.image
-    imageText = 'Jylli Tool — PC Optimizer'
-    smallKey  = discordHasFiveM ? 'fivem_icon' : 'jylli_small'
-    smallText = discordHasFiveM ? 'FiveM detected' : 'Jylli Tool'
-  }
-
-  // Elapsed session time shown as "elapsed" timer (counts up from session start)
-  discordRPC.setActivity({
-    details,
-    state,
-    startTimestamp: discordStartTimestamp,
-    largeImageKey:  imageKey,
-    largeImageText: imageText,
-    smallImageKey:  smallKey,
-    smallImageText: smallText,
-    buttons: [
-      { label: 'Join Discord',        url: DISCORD_INVITE   },
-      { label: 'Download Jylli Tool', url: DISCORD_DOWNLOAD },
-    ],
-    instance: false,
-  }).catch(() => {})
-}
-
-// Start a cycling "active operation" override (clears after calling clearDiscordOverride)
-function setDiscordOverride(phrases, stepLabel) {
-  cycleIndex = 0
-  if (discordOverrideCycleTimer) { clearInterval(discordOverrideCycleTimer); discordOverrideCycleTimer = null }
-  discordActivityOverride = { details: phrases[0], state: stepLabel || '', imageKey: 'jylli_logo' }
-  updateDiscordPresence()
-  discordOverrideCycleTimer = setInterval(() => {
-    cycleIndex = (cycleIndex + 1) % phrases.length
-    if (discordActivityOverride) {
-      discordActivityOverride.details = phrases[cycleIndex]
-      if (stepLabel !== undefined) discordActivityOverride.state = stepLabel
-    }
-    updateDiscordPresence()
-  }, 4000)
-}
-
-function updateDiscordOverrideState(stepLabel) {
-  if (discordActivityOverride) {
-    discordActivityOverride.state = stepLabel
-    updateDiscordPresence()
-  }
-}
-
-function clearDiscordOverride() {
-  if (discordOverrideCycleTimer) { clearInterval(discordOverrideCycleTimer); discordOverrideCycleTimer = null }
-  discordActivityOverride = null
-  updateDiscordPresence()
-}
-
-async function destroyDiscordRPC() {
-  clearDiscordOverride()
-  if (discordRetryTimer) { clearInterval(discordRetryTimer); discordRetryTimer = null }
-  if (discordRPC) {
-    try {
-      if (discordReady) {
-        // Clear twice — first call clears the activity, second confirms it
-        await discordRPC.clearActivity().catch(() => {})
-        await new Promise(r => setTimeout(r, 300))
-        await discordRPC.clearActivity().catch(() => {})
-        // Give Discord time to propagate the clear before the socket tears down
-        await new Promise(r => setTimeout(r, 800))
-      }
-      await discordRPC.destroy().catch(() => {})
-    } catch (_) {}
-    discordRPC = null
-    discordReady = false
-  }
+// The game shown in Discord: the game watcher's game, else the Pulse preset, else the context detector's. Names come only from the
+// built-in lists (PULSE_PRESETS / GAME_DATABASE), never from exe names, paths or user-added games.
+let _presenceGame = { name: null, since: 0 }
+function presenceRefresh() {
+  try {
+    let name = null
+    if (activeGameProfile && PULSE_PRESETS[activeGameProfile]) name = PULSE_PRESETS[activeGameProfile].name
+    else if (pulseActivePreset && PULSE_PRESETS[pulseActivePreset]) name = PULSE_PRESETS[pulseActivePreset].name
+    else if (_systemContext.gameRunning && _systemContext.gameName) name = _systemContext.gameName
+    if (name !== _presenceGame.name) _presenceGame = { name, since: Date.now() }
+    const pulse = pulseActivePreset && PULSE_PRESETS[pulseActivePreset] ? { name: PULSE_PRESETS[pulseActivePreset].name, since: pulseStartTimestamp || Date.now() } : null
+    presenceSet({ game: name ? { name, since: _presenceGame.since, isFivem: /fivem/i.test(name) } : null, pulse })
+  } catch {}
 }
 
 // ─── Analytics ───────────────────────────────────────────────────────────────
@@ -1056,8 +909,10 @@ function createWindow() {
     mainWindow.hide()
     pauseBackgroundPolling()
     updateTrayMenu()
-    if (discordReady) discordRPC.clearActivity().catch(() => {})
   })
+  // Discord status follows the window: hidden (tray) clears it, shown brings it back — whichever path hid or showed the window
+  mainWindow.on('show', () => presenceSet({ hidden: false }))
+  mainWindow.on('hide', () => presenceSet({ hidden: true }))
 
   // X button quits the app fully
   mainWindow.on('close', () => {
@@ -1182,8 +1037,8 @@ function updateTrayMenu() {
     {
       label: shown ? 'Hide window' : 'Show window',
       click: () => {
-        if (shown) { mainWindow.hide(); pauseBackgroundPolling(); if (discordReady) discordRPC.clearActivity().catch(() => {}) }
-        else if (mainWindow) { mainWindow.show(); mainWindow.focus(); resumeBackgroundPolling(); updateDiscordPresence() }
+        if (shown) { mainWindow.hide(); pauseBackgroundPolling() }
+        else if (mainWindow) { mainWindow.show(); mainWindow.focus(); resumeBackgroundPolling() }
         updateTrayMenu()
       },
     },
@@ -1209,7 +1064,7 @@ function createTray() {
   tray.on('click', () => {
     if (mainWindow) {
       if (mainWindow.isVisible()) { mainWindow.focus() }
-      else { mainWindow.show(); mainWindow.focus(); resumeBackgroundPolling(); updateDiscordPresence() }
+      else { mainWindow.show(); mainWindow.focus(); resumeBackgroundPolling() }
     }
     updateTrayMenu()
   })
@@ -1241,7 +1096,7 @@ app.whenReady().then(async () => {
   startupTrace('createWindow starting')
   createWindow(); createTray()
   startupTrace('createWindow done')
-  if (loadSettings().discordRpcEnabled !== false) initDiscordRPC()
+  { const p = presenceSvc(); if (loadSettings().discordRpcEnabled !== false) p.setEnabled(true).catch(() => {}) }
   setStartupTask(!!loadSettings().startAtLogin).catch(() => {})
   startLhm()
   startSensorBridge()
@@ -1274,6 +1129,7 @@ app.on('window-all-closed', () => { /* stay alive in tray */ })
 // Re-enforce USB selective suspend after sleep/wake — Windows resets per-device state on resume
 const { powerMonitor } = require('electron')
 powerMonitor.on('resume', async () => {
+  try { if (presence) presence.retryNow() } catch {}   // the Discord pipe may have died during sleep
   try {
     const raw = fs.existsSync(SETTINGS_PATH) ? fs.readFileSync(SETTINGS_PATH, 'utf8') : '{}'
     const saved = JSON.parse(raw)
@@ -1314,7 +1170,7 @@ foreach ($id in @(${ids.join(',')})) { try { [ProcFreeze]::NtResumeProcess((Get-
 
 // Every background timer / child process Jylli Tool starts. Windows does not kill children when the parent exits.
 function shutdownBackground() {
-  for (const t of [discordRetryTimer, _contextDetectorTimer, discordOverrideCycleTimer, _sensorHzTimer, _metricsInterval, _tierRefreshInterval, _hudPingInterval,
+  for (const t of [...(presence ? presence.timers() : []), _contextDetectorTimer, _sensorHzTimer, _metricsInterval, _tierRefreshInterval, _hudPingInterval,
                    gameWatcherInterval, _thermalTimer, _latTimer, _historySamplerTimer, _ariaTimer, _ariaFpsTimer, _updateGuardTimer]) {
     try { if (t) { clearInterval(t); clearTimeout(t) } } catch {}
   }
@@ -1345,7 +1201,7 @@ app.on('will-quit', (e) => {
   const sessionEndPromise = duration > 10000
     ? webhookSessionEnd(duration, sessionPageVisits, sessionTweaksCount)
     : Promise.resolve()
-  const cleanup = Promise.all([(sessionEndPromise || Promise.resolve()).finally(() => destroyDiscordRPC().catch(() => {})), resumeAllFrozen(), (_powerLimit ? _powerLimit.onQuit().catch(() => {}) : null), snapshots?.load('update-guard') ? setUpdateGuard(false) : null])
+  const cleanup = Promise.all([(sessionEndPromise || Promise.resolve()).finally(() => presenceShutdown().catch(() => {})), resumeAllFrozen(), (_powerLimit ? _powerLimit.onQuit().catch(() => {}) : null), snapshots?.load('update-guard') ? setUpdateGuard(false) : null])
   const timeout = new Promise(resolve => setTimeout(resolve, 6500))
   Promise.race([cleanup, timeout]).finally(() => {
     if (_updateReady && autoUpdater) {
@@ -2171,7 +2027,7 @@ ipcMain.handle('get-tweak-states', async () => {
 // read tokens nor write a premium flag.
 const PROTECTED_SETTINGS = ['authToken', 'hmacSecret', 'discordUserId', 'authExpiry', 'isPremium', 'settingsHmac']
 // Written by the main process itself; a stale copy held by the renderer must never overwrite them.
-const MAIN_OWNED_SETTINGS = ['declaredRig', 'lastRestorePointAt', 'lastAutoSnapshot', 'thermalLastAudit', 'aria_insights', 'gameShieldEnabled', 'gameShieldExclusions', 'updateGuardEnabled']
+const MAIN_OWNED_SETTINGS = ['discordPresence', 'declaredRig', 'lastRestorePointAt', 'lastAutoSnapshot', 'thermalLastAudit', 'aria_insights', 'gameShieldEnabled', 'gameShieldExclusions', 'updateGuardEnabled']
 ipcMain.handle('load-settings', () => {
   startupTrace('IPC load-settings handler called')
   const s = { ...loadSettings() }
@@ -2189,7 +2045,9 @@ ipcMain.handle('save-settings', (_, data) => {
   clean = mergeIncoming(clean, _settingsWriteLog.recent())
   const current = loadSettings()
   for (const k of MAIN_OWNED_SETTINGS) { if (k in current) clean[k] = current[k]; else delete clean[k] }
-  return saveSettings(clean)
+  const saved = saveSettings(clean)
+  if (saved && typeof clean.language === 'string') presenceSet({ lang: clean.language === 'fi' ? 'fi' : 'en' })
+  return saved
 
 })
 ipcMain.handle('set-startup', (_, enabled) => {
@@ -2403,29 +2261,20 @@ ipcMain.handle('open-path', async (_, p) => {
 })
 
 // ─── Discord RPC update handlers ──────────────────────────────────────────────
-ipcMain.handle('set-discord-rpc', async (_, enabled) => {
-  if (enabled) {
-    if (!discordRPC) initDiscordRPC()
-  } else {
-    await destroyDiscordRPC()
-  }
+ipcMain.handle('set-discord-rpc', async (_, enabled) => { await presenceSvc().setEnabled(!!enabled); return presenceSvc().status() })
+ipcMain.handle('discord-set-page', (_, page, tab) => {
+  const r = JylliRoutes.resolve(String(page || '').slice(0, 40), tab ? String(tab).slice(0, 40) : undefined)
+  presenceSet({ route: r ? { tab: r.tab } : null })
 })
-ipcMain.handle('discord-set-page', (_, page) => {
-  discordCurrentPage = page
-  if (!discordActivityOverride) updateDiscordPresence()
+ipcMain.handle('discord-set-applied-count', (_, count) => { const n = Number(count); presenceSet({ tweaks: Number.isFinite(n) ? Math.max(0, Math.min(9999, Math.floor(n))) : 0 }) })
+ipcMain.handle('discord-set-silent', (_, on) => { presenceSet({ silent: !!on }) })
+ipcMain.handle('discord-presence-status', () => presenceSvc().status())
+ipcMain.handle('discord-presence-config', (_, cfg) => {
+  const next = presenceSvc().setPrefs(cfg && typeof cfg === 'object' ? cfg : {})
+  saveSettings({ ...loadSettings(), discordPresence: next })
+  return presenceSvc().status()
 })
-ipcMain.handle('discord-set-applied-count', (_, count) => {
-  discordTweaksApplied = count
-  if (!discordActivityOverride) updateDiscordPresence()
-})
-ipcMain.handle('discord-set-fivem', (_, hasFiveM) => {
-  discordHasFiveM = hasFiveM
-  updateDiscordPresence()
-})
-ipcMain.handle('discord-set-pulse-game', (_, gameName) => {
-  discordPulseGame = gameName  // null to clear
-  updateDiscordPresence()
-})
+ipcMain.handle('discord-presence-retry', () => { presenceSvc().retryNow(); return presenceSvc().status() })
 // ─── Tweak execution handler ──────────────────────────────────────────────────
 ipcMain.handle('run-tweak', async (_, req) => {
   const { id, action } = req || {}
@@ -3750,8 +3599,8 @@ ipcMain.handle('auto-opti-run', async (_, req) => {
   const findings = AutoOpti.findings.findings(sc.profile, fc)
   const plan = AutoOpti.plan.plan(findings, aoPlanCtx(req))
   const needsYou = findings.filter(f => f.kind === 'manual').map(f => f.id)
-  setDiscordOverride(OPTI_PHRASES, 'Starting…')
-  try { return await aoRunner().run({ plan, profile: sc.profile, needsYou }) } finally { clearDiscordOverride(); _aoScan = null }
+  const dTask = discordTaskBegin('auto-opti')
+  try { return await aoRunner().run({ plan, profile: sc.profile, needsYou }) } finally { discordTaskEnd(dTask); _aoScan = null }
 })
 ipcMain.handle('auto-opti-confirm', (_, req) => aoRunner().confirm(aoStr(req && req.stepId, 80), !!(req && req.keep)))
 ipcMain.handle('auto-opti-stop', () => aoRunner().stop())
@@ -3807,17 +3656,20 @@ ipcMain.handle('run-auto-opti', async (_, sysInfo) => {
   const batchId = require('crypto').randomBytes(6).toString('hex')
   try { return await journalSvc().withContext({ via: sysInfo?.via === 'spw' ? 'spw' : 'auto-opti', batchId }, () => runAutoOptiInner(sysInfo, batchId)) } finally { _autoOptiRunning = false }
 })
+let _dAutoTask = 0
 async function runAutoOptiInner(sysInfo, batchId = null) {
+  const t = discordTaskBegin('auto-opti')
+  _dAutoTask = t
+  try { return await runAutoOptiBody(sysInfo, batchId) } finally { discordTaskEnd(t) }
+}
+async function runAutoOptiBody(sysInfo, batchId = null) {
   const send = (msg, level) => mainWindow?.webContents.send('log', { msg, level, ts: new Date().toLocaleTimeString() })
   const progress = (step, total, label, id = '', status = 'running') => mainWindow?.webContents.send('auto-opti-progress', { step, total, label, id, status })
-
-  setDiscordOverride(OPTI_PHRASES, 'Starting…')
 
   const runMode = sysInfo?.runMode || 'smart'
 
   // Block deep clean while a game is running
   if (runMode === 'deep' && _systemContext.gameRunning) {
-    clearDiscordOverride()
     return { ok: false, aborted: true, reason: 'game-running' }
   }
 
@@ -3825,7 +3677,6 @@ async function runAutoOptiInner(sysInfo, batchId = null) {
   progress(0, 1, 'Creating Restore Point…')
   const rp = await createRestorePointInternal(send)
   if (!rp.ok) {
-    clearDiscordOverride()
     send('✗ Aborting — no tweaks were applied. Fix the restore point issue and try again.', 'err')
     progress(0, 1, 'Aborted — restore point failed')
     return { ok: false, aborted: true, reason: rp.reason }
@@ -3879,7 +3730,7 @@ async function runAutoOptiInner(sysInfo, batchId = null) {
       const tweak = TWEAKS[id]
       const label = tweak?.name || id
       progress(i + 1, selected.length, label, id, 'running')
-      updateDiscordOverrideState(`Step ${i + 1} / ${selected.length}`)
+      discordTaskProgress(_dAutoTask, { step: i + 1, total: selected.length })
       send(`  [${i+1}/${selected.length}] ${id}`, 'info')
       if (tweak?.apply) {
         try {
@@ -3945,7 +3796,6 @@ async function runAutoOptiInner(sysInfo, batchId = null) {
   }
   send('✓ Auto-Optimization complete! Reboot recommended.', 'ok')
   progress(999, 999, 'Complete!', '', 'ok')
-  clearDiscordOverride()
 
   // Analytics
   const tweakCount     = selected?.length || 0
@@ -8038,10 +7888,14 @@ ipcMain.handle('run-fix', async (_, fixId) => {
 
 // ─── Windows Health Check (SFC + DISM + disk) ────────────────────────────────
 ipcMain.handle('run-windows-health', async () => {
+  const t = discordTaskBegin('health')
+  try { return await runWindowsHealth(t) } finally { discordTaskEnd(t) }
+})
+async function runWindowsHealth(dTask) {
   const send = (msg, level = 'info', pct = null) =>
     mainWindow?.webContents.send('windows-health-progress', { msg, level, pct })
 
-  setDiscordOverride(HEALTH_PHRASES, 'Checking DISM…')
+  discordTaskProgress(dTask, { key: 'dism' })
   const results = { sfc: null, dism: null, disk: null, ok: true, issues: [] }
 
   // 1. DISM /CheckHealth (fast, ~5s — just reads the component store flag)
@@ -8065,7 +7919,7 @@ ipcMain.handle('run-windows-health', async () => {
   }
 
   // 2. SFC /verifyonly (read-only scan, ~60-120s — does not modify files)
-  updateDiscordOverrideState('Running SFC scan…')
+  discordTaskProgress(dTask, { key: 'sfc' })
   send('Running SFC /verifyonly — scanning protected system files… (this takes 1–2 min)', 'info', 30)
   const sfcOut = await runPS('sfc /verifyonly 2>&1', 180000)
   const sfcText = sfcOut.out || ''
@@ -8087,7 +7941,7 @@ ipcMain.handle('run-windows-health', async () => {
   }
 
   // 3. Quick disk health (SMART status via WMI — instant)
-  updateDiscordOverrideState('Checking disk SMART…')
+  discordTaskProgress(dTask, { key: 'smart' })
   send('Checking disk SMART status…', 'info', 75)
   const diskOut = await runPS(`Get-WmiObject -Namespace root\\wmi -Class MSStorageDriver_FailurePredictStatus -EA SilentlyContinue | Select-Object InstanceName,PredictFailure | ConvertTo-Json -Compress`)
   let diskIssue = false
@@ -8107,13 +7961,15 @@ ipcMain.handle('run-windows-health', async () => {
   }
 
   send(results.ok ? '✓ Windows Health check complete — no issues found' : `⚠ Health check complete — ${results.issues.length} issue(s) found`, results.ok ? 'ok' : 'warn', 100)
-  clearDiscordOverride()
   return results
-})
+}
 
 // ─── Pre-Flight Diagnostic ────────────────────────────────────────────────────
 async function runPreflightCore() {
-  setDiscordOverride(SCAN_PHRASES, 'Scanning system…')
+  const t = discordTaskBegin('scan')
+  try { return await runPreflightBody() } finally { discordTaskEnd(t) }
+}
+async function runPreflightBody() {
   const send = (msg, pct) => mainWindow?.webContents.send('preflight-progress', { msg, pct })
   const detections = []
   let score = 100
@@ -8600,7 +8456,6 @@ async function runPreflightCore() {
     detections.unshift({ name: 'Stock Windows Install', detail: 'No custom OS detected — all tweaks are safe to apply.', severity: 'bonus' })
   }
 
-  clearDiscordOverride()
   return {
     osType,
     osLabel,
@@ -10595,8 +10450,7 @@ public class TimerRes { [DllImport("ntdll.dll")] public static extern int NtSetT
   send(`  ${_pulseDeprioritised.length} background process(es) deprioritised`, 'ok')
 
   send(`◆ Pulse active — ${preset.name}`, 'head')
-  discordPulseGame = preset.name
-  updateDiscordPresence()
+  presenceRefresh()
   mainWindow?.webContents.send('pulse-tick', { preset: presetId, active: true })
   updateTrayMenu()
   pulseSvc().syncBoost(true, presetId, preset.name)
@@ -10606,8 +10460,7 @@ public class TimerRes { [DllImport("ntdll.dll")] public static extern int NtSetT
 
 async function deactivatePulse(send) {
   pulseActivePreset = null
-  discordPulseGame = null
-  updateDiscordPresence()
+  presenceRefresh()
   await pulseRestoreAll(send)
   mainWindow?.webContents.send('pulse-tick', { active: false })
   updateTrayMenu()
@@ -11282,9 +11135,7 @@ ipcMain.handle('start-game-watcher', async () => {
       }
       mainWindow?.webContents.send('log', { msg: `🎮 Game detected: ${presetName} — applying optimizations…`, level: 'head', ts: new Date().toLocaleTimeString() })
 
-      // Update Discord presence to show the active game
-      discordActiveGame = detectedGame
-      updateDiscordPresence()
+      presenceRefresh()   // Discord shows the game
 
       // FiveM: silently ensure fullscreen compat flag is set on every session start
       if (detectedGame === 'fivem') {
@@ -11425,9 +11276,7 @@ ipcMain.handle('start-game-watcher', async () => {
         _ariaSessionPeaks = { cpu: 0, gpu: 0, ram: 0, cpuTemp: 0 }
       }
 
-      // Clear game from Discord presence
-      discordActiveGame = null
-      updateDiscordPresence()
+      presenceRefresh()   // game closed (activeGameProfile is already null)
 
       const wSend = (msg, level) => mainWindow?.webContents.send('log', { msg, level, ts: new Date().toLocaleTimeString() })
 
@@ -11464,8 +11313,7 @@ ipcMain.handle('start-game-watcher', async () => {
 ipcMain.handle('stop-game-watcher', async () => {
   if (gameWatcherInterval) { clearInterval(gameWatcherInterval); gameWatcherInterval = null }
   activeGameProfile = null
-  discordActiveGame = null
-  updateDiscordPresence()
+  presenceRefresh()
   // If auto-pulse was active, deactivate it
   if (autoPulseTriggeredPreset) {
     autoPulseTriggeredPreset = null
