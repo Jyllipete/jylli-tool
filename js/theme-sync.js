@@ -2,7 +2,7 @@
 // Themes only change the accent: surfaces come from css/tokens.css. Muted/ring/glow tints derive from --c-accent-rgb there.
 // Secondary windows apply the saved accent on load; the main window sets <html data-theme-sync="manual"> and calls JylliTheme.applyAccent itself.
 (function () {
-  const ACCENTS = { jylli: '#8B7CF6', midnight: '#3B82F6', forest: '#22C55E', violet: '#9B59FF', slate: '#06B6D4', amber: '#F59E0B', rose: '#FB7185', neon: '#22D3EE' }
+  const ACCENTS = { jylli: '#8B7CF6', midnight: '#3B82F6', forest: '#22C55E', violet: '#9B59FF', slate: '#06B6D4', amber: '#F59E0B', rose: '#FB7185', neon: '#22D3EE', liquid: '#7CB8FF' }
   function applyAccent(hex) {
     if (!/^#[0-9a-f]{6}$/i.test(hex)) return false
     const rgb = [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16)).join(',')

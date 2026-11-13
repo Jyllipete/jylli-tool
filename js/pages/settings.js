@@ -102,8 +102,9 @@ function buildSettings(c) {
     const card = document.createElement('button')
     card.type = 'button'
     card.className = 'j-theme' + (key === theme ? ' j-theme-active' : '')
+    card.dataset.theme = key
     card.style.setProperty('--swatch', t.accent)
-    card.innerHTML = String(html`<span class="j-theme-dot"></span><span class="j-theme-name">${t.label}</span><span class="j-theme-desc">${t.desc}</span>`)
+    card.innerHTML = String(html`<span class="j-theme-dot"></span><span class="j-theme-name">${t.labelKey ? tUI(t.labelKey) : t.label}</span><span class="j-theme-desc">${t.descKey ? tUI(t.descKey) : t.desc}</span>`)
     card.onclick = () => {
       document.querySelectorAll('.j-theme').forEach(x => x.classList.remove('j-theme-active'))
       card.classList.add('j-theme-active')
@@ -199,7 +200,7 @@ function buildSettings(c) {
             const firstId = mismatches[0].id
             // Where each tweak lives: [legacy page, tab id]. Anything unlisted is a Windows tweak.
             const W = ['windows-opti', 'windows'], HW = id => ['hardware', id], NET = ['network', 'network'], CM = HW('cpumem'), GP = HW('gpu')
-            const where = { 'gpu-hwsch': GP, 'gpu-hags-off': GP, 'msi-mode': GP, 'disable-mpo': GP, 'vrr-borderless': GP, 'gpu-per-app-preference': GP, 'tdr-delay': GP, 'intel-power-plan': HW('power'), 'amd-power-plan': HW('power'), 'pcie-power': HW('power'),
+            const where = { 'gpu-hwsch': GP, 'gpu-hags-off': GP, 'msi-mode': GP, 'disable-mpo': GP, 'vrr-borderless': GP, 'gpu-per-app-preference': GP, 'tdr-delay': GP, 'intel-power-plan': HW('power'), 'amd-power-plan': HW('power'), 'pcie-power': HW('power'), 'trim-enable': HW('power'), 'fast-startup-off': HW('power'),
               'usb-suspend': W,
               'sysmain': CM, 'power-throttling': CM, 'global-timer-resolution': CM, 'memory-compression': CM, 'spectre-meltdown': CM, 'cpu-parking': CM, 'cstates': CM, 'hvci-offload': CM, 'vbs-disable': CM,
               'hypervisor-off': CM, 'full-mitigation-wipe': CM, 'pagefile-auto': CM, 'x3d-balanced': CM, 'power-balanced-restore': CM,
@@ -209,6 +210,7 @@ function buildSettings(c) {
             setTimeout(() => {
               if (page === 'windows-opti' && window.JylliWindowsPage && JylliWindowsPage.current()) { JylliWindowsPage.reveal(firstId); return }   // the Windows tab opens the lane and flashes the row once its live read is in
               if (page === 'hardware' && tab === 'gpu' && window.JylliGpuPage && JylliGpuPage.current()) { JylliGpuPage.reveal(firstId); return }   // the GPU tab opens Tune on the row
+              if (page === 'hardware' && tab === 'power' && window.JylliPowerPage && JylliPowerPage.current()) { JylliPowerPage.reveal(firstId); return }   // the Power tab opens Tune on the row
               if (page === 'hardware' && tab === 'cpumem' && window.JylliCpuMemPage && JylliCpuMemPage.current()) { JylliCpuMemPage.reveal(firstId); return }   // the CPU & Memory tab opens Tune on the row
               if (page === 'network' && window.JylliNetworkPage && JylliNetworkPage.current()) { JylliNetworkPage.reveal(firstId); return }   // same for the Network tab (Tune view)
               const el = document.getElementById(`tcw-${firstId}`) || document.querySelector(`[data-tweak-id="${firstId}"]`)

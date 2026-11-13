@@ -11,7 +11,6 @@
     latency:   { page: 'latency-monitor', icon: 'wave-square',   facts: ['cpu', 'gpu'] },
     bios:      { page: 'bios-tuner',      icon: 'microchip',     facts: ['cpu', 'form'] },
     scheduler: { page: 'scheduler',       icon: 'calendar-check', facts: ['form'] },
-    power:     { page: 'hardware',        icon: 'plug-circle-bolt', facts: ['form', 'disk'] },
   }
   const ORDER = Object.keys(TABS)
   const STORE_FALLBACK = 'https://jyllitool.netlify.app/'
@@ -58,7 +57,6 @@
         ${row(T('pvSchedClean'), T('pvSchedWeekly'), 1, 'ok')}${row(T('pvSchedRestore'), T('pvSchedMonthly'), 2)}</div>`
       case 'gpu': return `<div class="jp-pv jp-split"><svg viewBox="0 0 80 50" class="jp-gauge" aria-hidden="true"><path class="jp-ring-bg" d="M8 44A32 32 0 0 1 72 44" pathLength="100"/><path class="jp-ring-fg" d="M8 44A32 32 0 0 1 72 44" pathLength="100"/></svg>
         <div class="jp-col">${row(T('pvGpuPower'), '100 %', 1, 'ok')}${row('VRAM', '4.1 / 12 GB', 2)}${row(T('pvGpuTemp'), '58 °C', 3)}</div></div>`
-      case 'power': return `<div class="jp-pv">${row(T('pvPowerPlan'), 'Ultimate', 1, 'ok')}${row('NVMe', T('pvPowerTrim'), 2, 'ok')}${row(T('pvPowerSleep'), T('pvPowerSleepVal'), 3)}<div class="jp-drive">${bar(46, 4)}</div></div>`
       default: return ''
     }
   }

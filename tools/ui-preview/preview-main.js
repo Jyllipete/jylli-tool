@@ -23,6 +23,7 @@ const OVERLAYS = !OVERLAY_SRC ? [] : String(arg('overlay')).startsWith('@') ? [[
   : OVERLAY_SRC.split(';').map(x => { const i = x.indexOf('='); return [x.slice(0, i), x.slice(i + 1)] })
 const ACCENT = arg('accent', null)
 const SCHEME = String(arg('scheme', 'dark'))   // dark | light | system
+const THEME = arg('theme', null)   // --theme <preset key>, e.g. liquid
 const SCALE = Number(arg('scale', 1)) || 1        // <1 shrinks screenshots (cheaper to view)
 const LINT = !!arg('lint', false)                 // run tools/ui-preview/lint-page.js on every page and put the text report in report.txt
 const NOSHOT = !!arg('noshot', false)             // skip PNGs (use with --lint)
@@ -36,6 +37,7 @@ const WIN2 = !!arg('win2', false)   // --win2: shoot every Windows tab scene on 
 const NET2 = !!arg('net2', false)   // --net2: shoot every Network tab scene on the real lib/network service (--nt-state ethernet|wifi-weak|lossy|first|fail)
 const CPUMEM = !!arg('cpumem', false)   // --cpumem: shoot every CPU & Memory tab scene on the real lib/cpumem service (--cm-state x3d|hybrid|pressure|first|fail)
 const GPUP = !!arg('gpu', false)   // --gpu: shoot every GPU tab scene on the real lib/gpu service (--gp-state nvidia|hybrid|hot|amd|first|fail)
+const POWERP = !!arg('power', false)   // --power: shoot every Power tab scene on the real lib/power service (--pw-state desktop|laptop|clutter|blocked|first|fail)
 const BOOT = !!arg('boot', false)   // --boot: shoot the boot scan while it runs (--bt-state first|returning|changed|slow|fail)
 const GALLERY = !!arg('gallery', false)   // shoot tools/ui-preview/gallery.html (every component) instead of the app
 
@@ -59,6 +61,7 @@ ipcMain.handle('mock', async (e, name, args) => {
   if (name === 'getSystemInfo' && ctx.bt) { const r = await require('./boot-fixture').handle(name, args, e.sender, ctx); if (r !== undefined) return r }
   if (/^(home2|journalList$|getMetricsHistory$|listSessions$|aiGet|telemetrySubscribe$|telemetrySeries$)/.test(name)) { const r = await require('./home-fixture').handle(name, args, e.sender, ctx); if (r !== undefined) return r }
   if (/^(cpumem2|getProcesses$|latencyBudget(Start|Stop)$|biosRamStress$|cpuzReadTimings$)/.test(name)) { const r = await require('./cpumem-fixture').handle(name, args, e.sender, ctx); if (r !== undefined) return r }
+  if (/^power2/.test(name)) { const r = await require('./power-fixture').handle(name, args, e.sender, ctx); if (r !== undefined) return r }
   if (/^(gpu2|gpuPowerLimit)/.test(name)) { const r = await require('./gpu-fixture').handle(name, args, e.sender, ctx); if (r !== undefined) return r }
   if (/^win2/.test(name)) { const r = await require('./windows-fixture').handle(name, args, e.sender, ctx); if (r !== undefined) return r }
   if (/^(net2|netTopology$|getSpeedHistory$|benchmarkDns$|runSpeedTest$|runPingTestsV2$)/.test(name)) { const r = await require('./network-fixture').handle(name, args, e.sender, ctx); if (r !== undefined) return r }
@@ -118,6 +121,36 @@ async function cpumemShots(win, dir, logs, report, ctx) {
   await js("document.querySelector('.nt-bar [data-id=\\\"history\\\"]')?.click()"); await sleep(900)
   await shot(win, path.join(dir, 'cm-10-history.png'))
   if (LINT) { const r = await js(require('./lint-page')).catch(e => 'lint failed: ' + e.message); report.push('LINT cpumem: ' + r) }
+  logs.forEach(l => report.push('   ' + l))
+}
+
+// Power tab: the stage (flow, live), Overview, Plans (compare, tidy sheet), Sleep & wake, Energy (a session), Tune (a switch), History (undo).
+async function powerShots(win, dir, logs, report, ctx) {
+  const js = c => win.webContents.executeJavaScript(c)
+  const until = async (cond, ms = 15000) => { const t0 = Date.now(); while (Date.now() - t0 < ms) { if (await js(cond).catch(() => false)) return true; await sleep(150) } report.push('timeout: ' + cond); return false }
+  const view = async id => { await js("window.scrollTo(0, 0); document.querySelector('.nt-bar [data-id=\"" + id + "\"]')?.click()"); await sleep(700) }
+  await js("showPage('hardware','power')").catch(e => logs.push('[showPage] ' + e.message))
+  await sleep(250)
+  await shot(win, path.join(dir, 'pw-1-scanning.png'))
+  await until("document.querySelector('.pw-stage')?.dataset.state === 'ready'"); await sleep(3200)
+  await shot(win, path.join(dir, 'pw-2-overview.png'))
+  await view('plans'); await shot(win, path.join(dir, 'pw-3-plans.png'))
+  await js("document.querySelector('[data-act=\"plan-compare\"]')?.click()"); await sleep(500)
+  await shot(win, path.join(dir, 'pw-4-compare.png'))
+  await js("document.querySelector('[data-act=\"tidy\"]')?.click()"); await sleep(700)
+  await shot(win, path.join(dir, 'pw-5-tidy.png'))
+  await js("document.querySelector('.nt-sheet [data-go]')?.click()"); await sleep(2800)
+  await shot(win, path.join(dir, 'pw-6-tidied.png'))
+  await view('sleep'); await shot(win, path.join(dir, 'pw-7-sleep.png'))
+  await view('energy'); await sleep(1800)
+  await js("document.querySelector('[data-act=\"session-start\"]')?.click()"); await sleep(4500)
+  await shot(win, path.join(dir, 'pw-8-energy-session.png'))
+  await js("document.querySelector('[data-act=\"session-stop\"]')?.click()"); await sleep(800)
+  await view('tune'); await shot(win, path.join(dir, 'pw-9-tune.png'))
+  await js("document.querySelector('[data-id=\"trim-enable\"][data-act=\"flip\"], [data-id=\"fast-startup-off\"][data-act=\"flip\"]')?.click()"); await sleep(1800)
+  await shot(win, path.join(dir, 'pw-10-flipped.png'))
+  await view('history'); await sleep(500); await shot(win, path.join(dir, 'pw-11-history.png'))
+  if (LINT) { const r = await js(require('./lint-page')).catch(e => 'lint failed: ' + e.message); report.push('LINT power: ' + r) }
   logs.forEach(l => report.push('   ' + l))
 }
 
@@ -423,16 +456,18 @@ async function main() {
   }
   for (const lang of LANGS) for (const tier of TIERS) for (const size of SIZES) {
     const name = `${TAG}/${lang}-${tier}-${size.join('x')}`
-    const ctx = { hm: HOME || arg('hm-state', null) ? String(arg('hm-state', 'attention')) : null, lang, premium: tier === 'premium', accent: ACCENT && ACCENT !== true ? ACCENT : null, arrival: !!arg('arrival', false), tours: !!arg('tours', false), debloat: arg('db-state', null), nt: NET2 || arg('nt-state', null) ? String(arg('nt-state', 'ethernet')) : null, cm: CPUMEM || arg('cm-state', null) ? String(arg('cm-state', 'x3d')) : null, gp: GPUP || arg('gp-state', null) ? String(arg('gp-state', 'nvidia')) : null, wn: WIN2 || arg('wn-state', null) ? String(arg('wn-state', 'open')) : null, dx: arg('dx-state', null), pu: arg('pu-state', null), fv: arg('fv-state', null), bt: BOOT ? String(arg('bt-state', 'first')) : null }   // --arrival: first-launch flow; --tours: guided tours on (off by default so shots stay clean)
+    const ctx = { hm: HOME || arg('hm-state', null) ? String(arg('hm-state', 'attention')) : null, lang, premium: tier === 'premium', accent: ACCENT && ACCENT !== true ? ACCENT : null, arrival: !!arg('arrival', false), tours: !!arg('tours', false), debloat: arg('db-state', null), nt: NET2 || arg('nt-state', null) ? String(arg('nt-state', 'ethernet')) : null, cm: CPUMEM || arg('cm-state', null) ? String(arg('cm-state', 'x3d')) : null, gp: GPUP || arg('gp-state', null) ? String(arg('gp-state', 'nvidia')) : null, pw: POWERP || arg('pw-state', null) ? String(arg('pw-state', 'desktop')) : null, wn: WIN2 || arg('wn-state', null) ? String(arg('wn-state', 'open')) : null, dx: arg('dx-state', null), pu: arg('pu-state', null), fv: arg('fv-state', null), bt: BOOT ? String(arg('bt-state', 'first')) : null }   // --arrival: first-launch flow; --tours: guided tours on (off by default so shots stay clean)
     const { win, logs } = await makeWindow('index.html', ctx, size)
     if (BOOT) { await bootShots(win, path.join(OUT, name), logs, report, ctx); win.destroy(); continue }
     const ready = await appReady(win)
     if (!ready) { report.push(`${name}: APP NEVER BECAME READY`); logs.forEach(l => report.push('   ' + l)); win.destroy(); continue }
     await sleep(1800)   // boot animation + first metrics
     if (SCHEME !== 'dark') await win.webContents.executeJavaScript(`JylliTheme.applyScheme(${JSON.stringify(SCHEME)})`).catch(() => {})
+    if (THEME && THEME !== true) await win.webContents.executeJavaScript(`settings.theme=${JSON.stringify(THEME)}; applyTheme(${JSON.stringify(THEME)}); try { JylliWorld.apply() } catch {}`).catch(() => {})
     if (DIAG) { await diagShots(win, path.join(OUT, name), logs, report); win.destroy(); continue }
     if (PULSE) { await pulseShots(win, path.join(OUT, name), logs, report, ctx, size); win.destroy(); continue }
     if (FIVEM) { await fivemShots(win, path.join(OUT, name), logs, report); win.destroy(); continue }
+    if (POWERP) { await powerShots(win, path.join(OUT, name), logs, report, ctx); win.destroy(); continue }
     if (GPUP) { await gpuShots(win, path.join(OUT, name), logs, report, ctx); win.destroy(); continue }
     if (CPUMEM) { await cpumemShots(win, path.join(OUT, name), logs, report, ctx); win.destroy(); continue }
     if (NET2) { await networkShots(win, path.join(OUT, name), logs, report); win.destroy(); continue }

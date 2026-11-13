@@ -752,6 +752,7 @@ LANG.en = {
       settingsAbout:'About', settingsDiscordAccount:'Discord Account',
       settingsThemeHint:'Choose a theme — sets background palette and accent color together.',
       settingsThemePresetsLabel:'Theme Presets',
+      themeLiquidName:'Liquid Glass', themeLiquidDesc:'Translucent, layered chrome with soft light-catching edges',
       settingsCustomAccent:'Custom Accent Color',
       settingsAccentHint:'Override the accent color used across all UI elements',
       settingsReset:'Reset',

@@ -252,6 +252,10 @@ body.motion-smooth {
   color-scheme: dark;
 }
 
+/* Native <select> popups paint with the option colours; give them an opaque, scheme-aware surface. */
+select option, select optgroup { background-color: var(--surface-1); color: var(--c-text-primary); }
+select option:disabled { color: var(--c-text-tertiary); }
+
 /* ── Light scheme: <html data-scheme="light"> (set by js/theme-sync.js from settings.colorScheme or the OS) ── */
 :root[data-scheme="light"] {
   color-scheme: light;

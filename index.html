@@ -22,6 +22,7 @@
 <link rel="stylesheet" href="css/network.css">
 <link rel="stylesheet" href="css/cpumem.css">
 <link rel="stylesheet" href="css/gpu.css">
+<link rel="stylesheet" href="css/power.css">
 <link rel="stylesheet" href="css/cleanup.css">
 <link rel="stylesheet" href="css/diagnostics.css">
 <link rel="stylesheet" href="css/fivem.css">
@@ -30,6 +31,7 @@
 <link rel="stylesheet" href="css/bios.css">
 <link rel="stylesheet" href="css/premium.css">
 <link rel="stylesheet" href="css/boot.css">
+<link rel="stylesheet" href="css/liquid-glass.css">
 </head>
 <body>
 
@@ -504,6 +506,8 @@
 <script src="js/lang/cpumem-fi.js"></script>
 <script src="js/lang/gpu-en.js"></script>
 <script src="js/lang/gpu-fi.js"></script>
+<script src="js/lang/power-en.js"></script>
+<script src="js/lang/power-fi.js"></script>
 <script src="js/lang/debloat-fi.js"></script>
 <script src="js/lang/diagnostics-en.js"></script>
 <script src="js/lang/diagnostics-fi.js"></script>
@@ -566,7 +570,6 @@
 <script src="js/pages/system-history.js"></script>
 <script src="js/pages/gaming-replay.js"></script>
 <script src="js/pages/games-carousel.js"></script>
-<script src="js/pages/hardware-heroes.js"></script>
 <script src="js/pages/system-scheduler.js"></script>
 <script src="js/pages/optimize-fixes.js"></script>
 <script src="js/pages/gaming-latency.js"></script>
@@ -611,6 +614,12 @@
 <script src="js/gpu/power.js"></script>
 <script src="js/gpu/display.js"></script>
 <script src="js/gpu/page.js"></script>
+<script src="lib/power/plans.js"></script>
+<script src="lib/power/findings.js"></script>
+<script src="js/power/pure.js"></script>
+<script src="js/power/flow.js"></script>
+<script src="js/power/views.js"></script>
+<script src="js/power/page.js"></script>
 <script src="js/cleanup/core.js"></script>
 <script src="js/cleanup/extras.js"></script>
 <script src="js/cleanup/page.js"></script>
@@ -1548,6 +1557,10 @@ const THEMES = {
   neon:    { label: 'Neon',         desc: 'Electric cyan on deep dark — high contrast',
     bg: '#060a0d', panel: '#080d11', card: '#0d1318', card2: '#10171d', dark: '#040709', sidebar: '#070b0e', border: '#0f1f28',
     accent: '#22D3EE', accentHover: '#06B6D4', accentDim: 'rgba(34,211,238,0.12)', accentGlow: 'rgba(34,211,238,0.25)', accentRgb: '34,211,238' },
+  // The only preset with a material: css/liquid-glass.css is scoped to <html data-material="liquid">, which applyTheme sets and removes.
+  liquid:  { label: 'Liquid Glass', labelKey: 'themeLiquidName', desc: 'Translucent, layered chrome with soft light-catching edges', descKey: 'themeLiquidDesc', material: 'liquid',
+    bg: '#0b0d12', panel: '#0e1117', card: '#131722', card2: '#171c28', dark: '#080a0e', sidebar: '#0b0e14', border: '#1c2230',
+    accent: '#7CB8FF', accentHover: '#5FA5F5', accentDim: 'rgba(124,184,255,0.12)', accentGlow: 'rgba(124,184,255,0.20)', accentRgb: '124,184,255' },
 }
 
 function applyTheme(themeKey, { animate = true } = {}) {
@@ -1560,6 +1573,9 @@ function applyTheme(themeKey, { animate = true } = {}) {
   }
   // Themes only change the accent: surfaces come from one neutral system (css/tokens.css) so every page and window matches.
   applyAccentColor(t.accent)
+  // Material (optional): one attribute scopes every Liquid Glass rule, so any other preset removes its effects cleanly.
+  if (t.material) document.documentElement.dataset.material = t.material
+  else delete document.documentElement.dataset.material
 }
 
 function applyAccentColor(hex) { JylliTheme.applyAccent(hex) }
@@ -1935,38 +1951,6 @@ async function reapplyReverted(ids) {
   toast(failedN ? tUI('tweakFailedTitle') : tUIf('tkReapplied', { n: done }), failedN ? `${done}/${ids.length} · ${firstErr}`.slice(0, 300) : '', failedN ? 'warn' : 'ok', failedN ? 8000 : 3500)
   const healthEl = document.getElementById('settings-health-result')
   if (healthEl) healthEl.innerHTML = failedN ? `<span class="jx-96">⚠ ${done}/${ids.length} tweak(s) re-applied</span>` : `<span class="jx-96">✓ ${done} tweak(s) re-applied</span>`
-}
-
-async function doCleanPowerPlans(btn) {
-  btn.disabled = true
-  btn.innerHTML = '<i class="fa fa-rotate fa-spin"></i> Cleaning…'
-  const r = await api.cleanPowerPlans().catch(() => ({ ok: false }))
-  btn.disabled = false
-  btn.innerHTML = `<i class="fa fa-trash-can"></i> ${tUI('hwCleanPowerPlans')}`
-  if (r.ok) toast(r.deleted > 0 ? `Removed ${r.deleted} old power plan(s)` : 'No old plans to remove', 'Balanced plan is now active', r.deleted > 0 ? 'ok' : 'info')
-  else toast(tUI('powerPlanCleanFail'), '', 'err')
-}
-
-async function hwCreateAndConfirmRP() {
-  const banner = document.getElementById('hw-warn-banner')
-  const btn = banner?.querySelector('button.btn-primary')
-  if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i>' }
-  try {
-    const r = await api.createRestorePoint('JylliTool_Quick').catch(() => ({ ok: false }))
-    if (r.ok) {
-      localStorage.setItem('hw_rp_confirmed', Date.now())
-      if (banner) {
-        banner.style.background = 'var(--success-bg,var(--surface-2))'
-        banner.style.borderColor = 'var(--c-success-ring)'
-        banner.innerHTML = `<span class="jx-97"><i class="fa fa-shield-halved"></i></span><div class="hw-warn-text jx-98">${tUI('hwRpConfirmedText')}</div><button class="btn btn-ghost btn-sm" style="flex-shrink:0" onclick="document.getElementById('hw-warn-banner').style.display='none'" title="${tUI('hwRpDismiss')}"><i class="fa fa-xmark"></i></button>`
-      }
-      appendLog('Restore point created', 'ok')
-    } else {
-      if (btn) { btn.disabled = false; btn.innerHTML = `<i class="fa fa-shield-halved"></i> ${tUI('hwCreateRP')}` }
-    }
-  } catch {
-    if (btn) { btn.disabled = false; btn.innerHTML = `<i class="fa fa-shield-halved"></i> ${tUI('hwCreateRP')}` }
-  }
 }
 
 async function autoHealthCheck() {
@@ -5929,234 +5913,6 @@ function spwBuildTweakList() {
   // Same allowlist as Auto-Optimize (served by main): low-value, side-effect-prone and security-touching tweaks never go in an automatic run
   const allowed = window._aoAllowed
   return [...ids].filter(id => tweakCompat(id) && tweakState(id) !== 'applied' && (!allowed || allowed.has(id)))
-}
-
-// ─── Page: Hardware ───────────────────────────────────────────────────────────
-async function buildHardware(c) {
-  if (!settings.isPremium) { await JylliPremium.build(c, 'cpumem'); return }
-  const si = sysInfo
-  if (!si || (!si.gpu && !si.cpu)) {
-    c.innerHTML = '<div class="jx-563"><i class="fa fa-spinner fa-spin jx-564"></i>Loading hardware info…</div>'
-    // One request in flight, at most three tries, then a retry button. (It used to re-render every 900 ms forever, one more loop per tab switch.)
-    if (window._hwInfoFailed) {
-      c.innerHTML = `<div class="jx-563">${tUI('hwInfoFailed')} <button class="btn btn-sm" onclick="window._hwInfoFailed=false;showPage('hardware')">${tUI('hwInfoRetry')}</button></div>`
-    } else if (!window._hwInfoFetch) {
-      window._hwInfoFetch = (async () => {
-        for (let i = 0; i < 3 && !(sysInfo && (sysInfo.gpu || sysInfo.cpu)); i++) {
-          try { const r = await api.getSystemInfo({ refresh: i > 0 }); if (r && (r.cpu || r.gpu)) { sysInfo = { ...sysInfo, ...r }; window._sysInfoAssigned = true } } catch {}
-        }
-        if (!(sysInfo && (sysInfo.gpu || sysInfo.cpu))) window._hwInfoFailed = true
-      })().finally(() => { window._hwInfoFetch = null; if (currentPage === 'hardware') showPage('hardware') })
-    }
-    return
-  }
-  const isLaptop = si.isLaptop
-  const gpu = (si.gpu || '').toLowerCase()
-  const cpu = (si.cpu || '').toLowerCase()
-
-
-  const warn = document.createElement('div')
-  warn.className = 'hw-warn-banner'
-  warn.id = 'hw-warn-banner'
-  const _rpConfirmed = localStorage.getItem('hw_rp_confirmed')
-  if (_rpConfirmed) {
-    warn.style.background = 'var(--success-bg,var(--surface-2))'
-    warn.style.borderColor = 'var(--c-success-ring)'
-    warn.innerHTML = `<span class="jx-97"><i class="fa fa-shield-halved"></i></span><div class="hw-warn-text jx-98">${tUI('hwRpConfirmedText')}</div><button class="btn btn-ghost btn-sm" style="flex-shrink:0" onclick="this.closest('#hw-warn-banner').style.display='none'" title="${tUI('hwRpDismiss')}"><i class="fa fa-xmark"></i></button>`
-  } else {
-    warn.innerHTML = `<span class="jx-568"><i class="fa fa-shield-halved"></i></span><div class="hw-warn-text">${tUI('hwWarnText')}</div><button class="btn btn-primary btn-sm" onclick="hwCreateAndConfirmRP()">${tUI('hwCreateRP')}</button>`
-  }
-  c.appendChild(warn)
-
-
-  const hwTb = JylliTab.toolbar({ placeholder: tUI('genSearchPlaceholder') })
-  hwTb.el.id = 'hw-search-wrap'
-  c.appendChild(hwTb.el)
-
-  const SECTIONS = [
-    { secId:'hw-power', get title() { return tUI('hwSecPowerPlan') }, get sub() { return tUI('hwSecPowerPlanSub') }, cards:[
-      ...(tweakCompat('intel-power-plan') ? [{ id:'intel-power-plan', name:'Intel Max Performance Power Plan', desc:'Creates a custom power plan tuned for Intel CPUs — Speed Shift (HWP) on, aggressive boost mode, no C-state idle, all cores active, PCIe and USB suspend off.', icon:'<i class="fa fa-bolt"></i>', reboot:true }] : []),
-      ...(tweakCompat('amd-power-plan')   ? [{ id:'amd-power-plan',   name:'AMD Max Performance Power Plan',   desc:'Creates a custom power plan tuned for AMD CPUs — CPPC preferred cores on, aggressive boost mode, no C-state idle, all cores active, PCIe and USB suspend off.', icon:'<i class="fa fa-bolt"></i>', reboot:true }] : []),
-      ...(tweakCompat('speed-shift')      ? [{ id:'speed-shift',      name:'Enable Intel Speed Shift (HWP)',    desc:'Autonomous frequency scaling for Intel CPUs. 6th gen+: reduces frequency transition latency.', icon:'<i class="fa fa-wind"></i>' }] : []),
-      ...(tweakCompat('pcie-power')       ? [{ id:'pcie-power',       name:'Disable PCIe Link State Power Management', desc:'Stops the PCIe bus power-cycling your GPU and NVMe between transitions. Eliminates the latency spikes caused by waking them back up. Applies to both AC and DC.', icon:'<i class="fa fa-plug-circle-bolt"></i>', reboot:true }] : []),
-    ]},
-    ...(tweakCompat('nvme-latency') ? [{ secId:'hw-storage', get title() { return tUI('hwSecStorage') }, get sub() { return tUI('hwSecStorageSub') }, cards:[
-      { id:'nvme-latency',       name:'NVMe StorPort Latency Tweak',     desc:'Disables performance timer and BusyPauseTime in StorPort driver. Reduces random read latency.', icon:'<i class="fa fa-hard-drive"></i>' },
-      { id:'directstorage-nvme', name:'DirectStorage + NVMe Queue Depth', desc:'Raises NVMe driver queue depth from 32 to 64 commands — allows DirectStorage to pipeline more parallel reads. Also enables DirectStorageEnabled and GDeflateEnabled hints for Windows 11. GDeflate hardware decompression active on NVIDIA 30-series+ and AMD RDNA3+.', icon:'<i class="fa fa-database"></i>' },
-    ]}] : []),
-  ]
-  // Retired tweaks that were never applied are not offered, so they must not count in the 0/N badges or keep a section open.
-  SECTIONS.forEach(sec => { sec.cards = sec.cards.filter(tw => !(window._tweakMeta && window._tweakMeta[tw.id] && window._tweakMeta[tw.id].retired && tweakState(tw.id) !== 'applied')) })
-  window._hwSections = SECTIONS
-
-  const _hwFrag = document.createDocumentFragment()
-  SECTIONS.forEach(sec => {
-    const card = makeSection(sec.title, sec.sub || '', sec.secId || '')
-    const grid = document.createElement('div')
-    grid.className = 'tweak-card-grid'
-    sec.cards.forEach(tw => grid.appendChild(makeCard(tw)))
-    card.appendChild(grid)
-    // A section whose cards are all hidden (retired, or not for this hardware) would be an empty header.
-    if (!sec.cards.length) card.style.display = 'none'
-    try {
-      if (sec.secId && localStorage.getItem('sec_col_' + sec.secId) === '1') {
-        grid.classList.add('sec-collapsed')
-        const btn = document.getElementById('scb-' + sec.secId)
-        if (btn) btn.classList.add('collapsed')
-      }
-    } catch {}
-    _hwFrag.appendChild(card)
-  })
-  c.appendChild(_hwFrag)
-  hwRefreshCounters()
-
-  // Inject "Clean up old power plans" button into whichever power plan card is present
-  for (const cardId of ['tcw-amd-power-plan', 'tcw-intel-power-plan']) {
-    const pc = document.getElementById(cardId)
-    if (!pc) continue
-    const row = document.createElement('div')
-    row.className = 'hw-card-extra-row'
-    row.innerHTML = `<button class="btn btn-ghost btn-sm jx-571" onclick="doCleanPowerPlans(this)"><i class="fa fa-trash-can"></i> ${tUI('hwCleanPowerPlans')}</button>`
-    pc.appendChild(row)
-  }
-
-  // ── Advanced Tools divider ─────────────────────────────────────────────────
-  const toolsDivider = document.createElement('div')
-  toolsDivider.className = 'hw-tools-divider'
-  toolsDivider.innerHTML = `
-    <div class="hw-tools-divider-label">
-      <i class="fa fa-flask-vial"></i>
-      <span>${tUI('hwToolsDividerLabel')}</span>
-    </div>
-    <div class="hw-tools-divider-sub">${tUI('hwToolsDividerSub')}</div>
-  `
-  c.appendChild(toolsDivider)
-
-  // ── Power Efficiency Tracker panel ────────────────────────────────────────
-  const effSec = makeSection(tUI('hwEffTitle'), tUI('hwEffSub'))
-  effSec.dataset.secId = 'hw-tool-eff'
-  const effInner = document.createElement('div')
-  effInner.className = 'hw-tool-panel'
-  effInner.innerHTML = `
-    <details class="jx-13">
-      <summary class="hw-tool-summary-text">
-        <i class="fa fa-chevron-right" style="font-size:11px;transition:transform .2s" id="hw-eff-chevron"></i> ${tUI('hwEffHowTo').split(':')[0]}
-      </summary>
-      <div class="hw-tool-infobox">${tUI('hwEffHowTo')}</div>
-    </details>
-    <div id="hw-eff-sensor" class="hw-tool-detail-text jx-38"></div>
-    <div id="hw-eff-big" style="font-size:22px;font-weight:700;margin-bottom:4px;display:none"></div>
-    <div id="hw-eff-context" class="jx-580"></div>
-    <div id="hw-eff-chart" class="hw-tool-chart jx-581"></div>
-    <div class="jx-89">
-      <button id="hw-eff-start-btn" class="btn btn-primary btn-sm" onclick="doEffStart(this)">
-        <i class="fa fa-play"></i> ${tUI('hwEffStart')}
-      </button>
-      <button id="hw-eff-stop-btn" class="btn btn-ghost btn-sm" style="display:none" onclick="doEffStop(this)">
-        <i class="fa fa-stop"></i> ${tUI('hwEffStop')}
-      </button>
-    </div>
-  `
-  effSec.appendChild(effInner)
-  c.appendChild(effSec)
-  effInner.querySelector('details').addEventListener('toggle', e => {
-    const ch = document.getElementById('hw-eff-chevron')
-    if (ch) ch.style.transform = e.target.open ? 'rotate(90deg)' : ''
-  })
-
-}
-
-function hwRefreshCounters() {
-  const secs = window._hwSections
-  if (!secs) return
-  secs.forEach(sec => {
-    if (!sec.secId) return
-    const ids = (sec.cards || []).map(c => c.id)
-    const applied = ids.filter(id => settings[`tweak_${id}`] === 'applied').length
-    const badge = document.getElementById('spb-' + sec.secId)
-    if (!badge) return
-    const isFull = applied === ids.length && ids.length > 0
-    badge.textContent = `${applied}/${ids.length}`
-    badge.style.display = ids.length > 0 ? '' : 'none'
-    badge.classList.toggle('spb-full', isFull)
-    badge.classList.toggle('spb-partial', applied > 0 && !isFull)
-  })
-}
-
-// ─── Power Efficiency Tracker UI ─────────────────────────────────────────────
-let _effTickHandler = null
-let _effReadings = []
-let _effLastAvg = null
-
-async function doEffStart(btn) {
-  btn.style.display = 'none'
-  const stopBtn   = document.getElementById('hw-eff-stop-btn')
-  const sensorEl  = document.getElementById('hw-eff-sensor')
-  if (stopBtn) stopBtn.style.display = ''
-  _effReadings = []
-  let _effChartMax = 100
-  const res = await api.efficiencyStart()
-  if (sensorEl) {
-    if (res.hasNvidiaSmi) {
-      sensorEl.innerHTML = `<span class="jx-593"><i class="fa fa-circle jx-153"></i> ${tUI('hwEffNvidiaSmi')}</span>`
-    } else {
-      sensorEl.innerHTML = `<span class="jx-594"><i class="fa fa-circle-half-stroke jx-153"></i> ${tUI('hwEffNeutralAmd')}</span><div class="jx-595">${tUI('hwEffAccuracyNote')}</div>`
-    }
-  }
-  if (!_effTickHandler) {
-    _effTickHandler = api.onEfficiencyTick(tick => {
-      const chartEl   = document.getElementById('hw-eff-chart')
-      const bigEl     = document.getElementById('hw-eff-big')
-      const contextEl = document.getElementById('hw-eff-context')
-      if (tick.powerW !== null) {
-        _effReadings.push(tick.powerW)
-        if (_effReadings.length > 60) _effReadings.shift()
-        _effChartMax = Math.max(_effChartMax, tick.powerW * 1.25)
-        const avg = Math.round(_effReadings.reduce((a, b) => a + b, 0) / _effReadings.length * 10) / 10
-        _effLastAvg = avg
-        const color = avg < 200 ? '#4caf50' : avg < 350 ? '#ff9800' : '#f44336'
-        if (bigEl) {
-          bigEl.style.display = ''
-          bigEl.innerHTML = `<span style="color:${color}">${avg.toFixed(1)}<span class="jx-596"> W avg</span></span>`
-        }
-        if (contextEl) {
-          contextEl.innerHTML = `<span class="jx-32">${tUI('hwEffSampleInfo').replace('{n}', _effReadings.length)}</span>`
-        }
-        if (chartEl) {
-          const bar = document.createElement('div')
-          const h = Math.min(36, Math.max(2, Math.round(tick.powerW * 36 / _effChartMax)))
-          bar.style.cssText = `width:4px;height:${h}px;min-height:2px;border-radius:1px;background:${color};flex-shrink:0`
-          chartEl.appendChild(bar)
-          while (chartEl.children.length > 40) chartEl.removeChild(chartEl.firstChild)
-        }
-      }
-    })
-  }
-}
-
-async function doEffStop(btn) {
-  btn.style.display = 'none'
-  const startBtn = document.getElementById('hw-eff-start-btn')
-  const bigEl    = document.getElementById('hw-eff-big')
-  if (startBtn) startBtn.style.display = ''
-  if (bigEl) {
-    if (_effLastAvg !== null) {
-      bigEl.style.display = ''
-      bigEl.innerHTML = `<span class="jx-12">${_effLastAvg.toFixed(1)}<span class="jx-597"> ${tUI('hwEffLastSession')}</span></span>`
-    } else {
-      bigEl.style.display = 'none'
-    }
-  }
-  await api.efficiencyStop()
-}
-
-const HW_SEARCH_SYNONYMS = {
-  lag:'latency dpc irq affinity', stutter:'latency frame pcie cstate parking',
-  interrupt:'irq dpc msi affinity', freeze:'cstate parking pcie',
-  heat:'thermal throttle power cstate', frame:'latency presentmon budget',
-  overclock:'power plan boost cstate', crash:'mitigation vbs hvci cstate',
-  anticheat:'vbs hvci', buffer:'wasapi audio exclusive pool latency',
-  power:'efficiency watt tdp power plan', driver:'nvidia amd gpu profile',
 }
 
 // ─── Page: Network — see js/network/ (page.js, views.js, cards.js, path-view.js) and lib/network/ ───────────────

@@ -730,6 +730,7 @@ LANG.fi = {
       settingsAbout:'Tietoja', settingsDiscordAccount:'Discord-tili',
       settingsThemeHint:'Valitse teema — asettaa taustan väripaletin ja korostusvärin yhdessä.',
       settingsThemePresetsLabel:'Teemat',
+      themeLiquidName:'Liquid Glass', themeLiquidDesc:'Läpikuultava, kerroksellinen kehys ja valoa heijastavat reunat',
       settingsCustomAccent:'Mukautettu korostusväri',
       settingsAccentHint:'Korvaa korostusväri kaikissa käyttöliittymän elementeissä',
       settingsReset:'Nollaa',

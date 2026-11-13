@@ -36,7 +36,7 @@ test('facts come only from real readings', () => {
   assert.deepStrictEqual(P.factsFor('games', { games: 0 }), [])
   const f = P.factsFor('latency', { cpu: 'AMD Ryzen 7 7800X3D 8-Core Processor', ramGB: 32, ramType: 'DDR5' })
   assert.deepStrictEqual(f, [{ k: 'cpu', v: 'AMD Ryzen 7 7800X3D' }])
-  assert.deepStrictEqual(P.factsFor('power', { isLaptop: true, diskType: 'NVMe SSD' }), [{ k: 'form', v: 'laptop' }, { k: 'disk', v: 'NVMe SSD' }])
+  assert.deepStrictEqual(P.factsFor('scheduler', { isLaptop: true, diskType: 'NVMe SSD' }), [{ k: 'form', v: 'laptop' }])
   assert.deepStrictEqual(P.factsFor('nope', { cpu: 'x' }), [])
 })
 

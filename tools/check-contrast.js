@@ -46,7 +46,7 @@ const TEXT = [
 ]
 
 // accent presets: --on-accent text on the accent fill, and --c-accent-fg as text (accent is mixed toward white/black; approximate with the mix)
-const ACCENTS = { jylli: '#8B7CF6', midnight: '#3B82F6', forest: '#22C55E', violet: '#9B59FF', slate: '#06B6D4', amber: '#F59E0B', rose: '#FB7185', neon: '#22D3EE' }
+const ACCENTS = { jylli: '#8B7CF6', midnight: '#3B82F6', forest: '#22C55E', violet: '#9B59FF', slate: '#06B6D4', amber: '#F59E0B', rose: '#FB7185', neon: '#22D3EE', liquid: '#7CB8FF' }
 const mix = (hex, toward, pct) => { const a = parse(hex, {}), b = toward === 'white' ? [255, 255, 255] : [0, 0, 0]; return [0, 1, 2].map(i => a[i] * pct + b[i] * (1 - pct)).concat(1) }
 
 let fail = 0
@@ -90,6 +90,22 @@ for (const [sel, label] of GLASS_RULES) {
   for (const tok of ['--c-text-primary', '--c-text-secondary', '--c-text-tertiary']) {
     const r = ratio(over(parse(dark[tok], dark), worst), worst)
     if (r < 4.5) { fail++; console.log('✗ glass ' + label + ': ' + tok + ' over a bright backdrop = ' + r.toFixed(2) + ' (< 4.5)') }
+  }
+}
+// Liquid Glass preset (css/liquid-glass.css): chrome, sidebar pane and floating surfaces must keep text at AA over a worst-case backdrop, in both schemes.
+// Dark is composited over the same bright rig sample as above; light over a dark one (content scrolled under a floating surface). The lens is tested over the pane.
+const lg = fs.readFileSync(path.join(__dirname, '..', 'css', 'liquid-glass.css'), 'utf8')
+const lgTokens = sel => { const i = lg.indexOf('\n' + sel + ' {'); if (i < 0) return null; const o = {}; for (const d of lg.slice(i, lg.indexOf('}', i)).matchAll(/(--lg-[\w-]+)\s*:\s*(rgba?\([^)]*\))/g)) o[d[1]] = parse(d[2], {}); return o }
+for (const [label, sel, vars, backdrop] of [['dark', ':root[data-material="liquid"]', dark, BRIGHT], ['light', ':root[data-material="liquid"][data-scheme="light"]', light, [24, 24, 32, 1]]]) {
+  const t = lgTokens(sel)
+  if (!t) { fail++; console.log('✗ liquid: token block not found for ' + label); continue }
+  const surfaces = { chrome: over(t['--lg-chrome'], backdrop), pane: over(t['--lg-pane'], backdrop), float: over(t['--lg-float'], backdrop) }
+  surfaces.lens = over(t['--lg-lens'], surfaces.pane)
+  for (const [name, bg] of Object.entries(surfaces)) {
+    for (const tok of name === 'lens' ? ['--c-text-primary', '--c-text-secondary'] : ['--c-text-primary', '--c-text-secondary', '--c-text-tertiary']) {
+      const r = ratio(over(parse(vars[tok], vars), bg), bg)
+      if (r < 4.5) { fail++; console.log('✗ liquid ' + label + ' ' + name + ': ' + tok + ' = ' + r.toFixed(2) + ' (< 4.5)') }
+    }
   }
 }
 if (fail) { console.error(`\ncontrast: ${fail} failing pair(s)`); process.exit(1) }

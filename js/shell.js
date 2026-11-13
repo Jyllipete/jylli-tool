@@ -18,10 +18,6 @@
   // Tabs that were behind the "Advanced mode" switch in the old sidebar
   const ADVANCED_TABS = new Set(['latency', 'processes', 'bios'])
 
-  const HW_TAB_SECTIONS = {
-    power: new Set(['hw-power', 'hw-storage', 'hw-tool-eff']),
-  }
-
   // tab id -> async (container) builder. Each runs exactly what the matching legacy page ran, so behaviour is unchanged.
   const TAB_BUILDERS = {
     home: c => buildDashboard(c),
@@ -29,7 +25,7 @@
     qol: c => buildWindowsOpti(c, 'qol'),
     cpumem: c => JylliCpuMemPage.mount(c),   // js/cpumem: die map, memory strata, Tune, Lab, History (free for everyone; its Premium switches lock inline)
     gpu: c => JylliGpuPage.mount(c),   // js/gpu: Headroom stage, Overview / Tune / Display / History (free for everyone; its Premium parts lock inline)
-    power: c => hardwareTab(c, 'power'),
+    power: c => JylliPowerPage.mount(c),   // js/power: Current stage, Overview / Plans / Sleep & wake / Energy / Tune / History (free for everyone; its Premium switches lock inline)
     network: c => JylliNetworkPage.mount(c),   // js/network: the Path stage, Overview / Tune / Measure / History
     fixes: c => buildFixes(c),
     pulse: c => buildPulse(c),
@@ -48,36 +44,6 @@
     restore: c => buildRestorePoints(c),
     history: c => buildChangelog(c),
     settings: c => buildSettings(c),
-  }
-
-  async function hardwareTab(c, tab) {
-    if (!settings.isPremium) { await JylliPremium.build(c, tab); return }
-    await buildHardware(c)
-    if (tab === 'power') await buildStorageHero(c)
-    const allowed = HW_TAB_SECTIONS[tab] || new Set()
-    c.querySelectorAll('.section-card[data-sec-id]').forEach(el => {
-      const mine = allowed.has(el.dataset.secId)
-      // a tweak section with no cards (Audio, or Power on a PC where none of its tweaks apply) is never shown
-      const empty = !!el.querySelector('.tweak-card-grid') && !el.querySelector('.tweak-card')
-      el.dataset.tabOff = (mine && !empty) ? '' : '1'
-      if (!el.dataset.tabOff) delete el.dataset.tabOff
-      el.style.display = (mine && !empty) ? '' : 'none'
-    })
-    const tb = c.querySelector('.tk-toolbar')
-    if (tb && root.JylliFilter) {
-      if (root._hwFilter) root._hwFilter.destroy()
-      root._hwFilter = JylliFilter.mount(c, {
-        item: '.tweak-card', section: '.section-card[data-sec-id]', skip: '[data-tab-off]', input: tb.querySelector('input'), chipsEl: tb.querySelector('.tk-chips'),
-        expand: q => String((typeof HW_SEARCH_SYNONYMS !== 'undefined' && HW_SEARCH_SYNONYMS[q]) || '').split(' ').filter(Boolean),
-        onResult: r => {
-          let nm = c.querySelector('.tk-nomatch')
-          if (r.total > 0 && r.shown === 0) { if (!nm) { nm = JylliTab.noMatch(r.q, () => root._hwFilter.set({ q: '', chip: 'all' })); c.appendChild(nm) } else nm.querySelector('.j-empty-sub').textContent = tG('tab', 'noMatchSub', { q: r.q }) }
-          else if (nm) nm.remove()
-        },
-      })
-      registerPageCleanup('hardware', () => { if (root._hwFilter) root._hwFilter.destroy(); root._hwFilter = null })
-      hwRefreshCounters()
-    }
   }
 
   const sectionLabel = id => tUI(SECTION_KEYS[id])

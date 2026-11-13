@@ -32,6 +32,8 @@ Visual reference: `design-preview.html` (approved 2026-10-30). Tokens live in `c
 
 Rules: accent text always uses `--accent-text` (contrast); status colours are never used as row borders; text never uses opacity to get a grey. `tools/check-contrast.js` verifies every text/surface pair at AA (4.5:1 body, 3:1 large and UI) in both schemes.
 
+Theme presets change only the accent, with one exception: a preset may carry a `material` (today only **Liquid Glass**). `applyTheme` sets `<html data-material>` for it and removes it for every other preset; all of its styling is in `css/liquid-glass.css`, every rule scoped to that attribute. It floats the sidebar as a glass pane and gives chrome, selected nav/segments and floating surfaces (menus, palette, dialogs, drawer) a translucent fill, lit edge and restrained blur. Cards and content stay as they are. It layers on the colour scheme and UI style (no blur in Light style or while a game runs), and `tools/check-contrast.js` tests its fills at AA in both schemes.
+
 ## Spacing, shape, depth
 - 4px grid: 4 / 8 / 12 / 16 / 20 / 24 / 32. Page gutter 32px, card padding 16px, list row min-height 56px.
 - Radius: 6 (small controls), 7–8 (buttons, inputs), 12 (cards, lists), 14 (modals).

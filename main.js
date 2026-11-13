@@ -225,6 +225,7 @@ async function _updateSystemContext() {
       if (!wasRunning && _systemContext.gameRunning) {
         try { cpumemSvc().gameStarted(foundGame && foundGame.exe) } catch {}
         try { gpuSvc().gameStarted() } catch {}
+        try { powerSvc().gameStarted() } catch {}
         mainWindow?.webContents.send('game-detected', { name: _systemContext.gameName, genre: _systemContext.gameGenre })
         if (settings.gameAutoOptimize) _triggerGameAutoOptimize()
         // Auto-open FiveM HUD if the detected game is FiveM/GTA5 and setting is enabled
@@ -238,6 +239,7 @@ async function _updateSystemContext() {
         try { if (_fivem) _fivem.gameEnded() } catch {}
         try { if (_cpumem) _cpumem.gameEnded() } catch {}
         try { if (_gpu) _gpu.gameEnded() } catch {}
+        try { if (_power) _power.gameEnded() } catch {}
         mainWindow?.webContents.send('game-exited', { name: _systemContext.gameName })
         // Auto-close FiveM HUD on game exit
         if (fivemHudWindow && !fivemHudWindow.isDestroyed()) closeFivemHud()
@@ -1066,7 +1068,6 @@ function createWindow() {
   mainWindow.on('closed', () => {
     mainWindow = null
     if (_thermalTimer)  { clearInterval(_thermalTimer);  _thermalTimer  = null }
-    if (_effTimer)      { clearInterval(_effTimer);      _effTimer      = null }
     if (_latTimer)      { clearInterval(_latTimer);      _latTimer      = null }
     if (_ariaTimer)     { clearInterval(_ariaTimer);     _ariaTimer     = null }
     if (_ariaFpsTimer)  { clearInterval(_ariaFpsTimer);  _ariaFpsTimer  = null }
@@ -1314,7 +1315,7 @@ foreach ($id in @(${ids.join(',')})) { try { [ProcFreeze]::NtResumeProcess((Get-
 // Every background timer / child process Jylli Tool starts. Windows does not kill children when the parent exits.
 function shutdownBackground() {
   for (const t of [discordRetryTimer, _contextDetectorTimer, discordOverrideCycleTimer, _sensorHzTimer, _metricsInterval, _tierRefreshInterval, _hudPingInterval,
-                   gameWatcherInterval, _thermalTimer, _effTimer, _latTimer, _historySamplerTimer, _ariaTimer, _ariaFpsTimer, _updateGuardTimer]) {
+                   gameWatcherInterval, _thermalTimer, _latTimer, _historySamplerTimer, _ariaTimer, _ariaFpsTimer, _updateGuardTimer]) {
     try { if (t) { clearInterval(t); clearTimeout(t) } } catch {}
   }
   try { gameShieldShutdown() } catch {}
@@ -3150,6 +3151,28 @@ const autoOptiUndoHandlers = {
     restore: async c => { try { fs.copyFileSync(c.backup, c.file); return true } catch { return false } },
   },
 }
+// Undo handlers for the Power tab: a removed plan comes back from its export, a disarmed wake device is armed again.
+const powerUndoHandlers = {
+  'power-plan-file': {
+    read: async c => { const r = await runCmd('powercfg /list'); return String((r && r.out) || '').toLowerCase().includes(String(c.guid || '').toLowerCase()) ? { exists: true, value: c.guid } : { exists: false, value: null } },
+    restore: async c => {
+      if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(c.guid || '')) || !c.file || !fs.existsSync(c.file)) return false
+      const r = await runCmd('powercfg /import "' + c.file + '" ' + c.guid)
+      if (!r || r.ok === false) return false
+      // An export made without full privileges can lose the plan's name: put the recorded one back.
+      if (c.name && /^[^"&|<>^%\x00-\x1f]{1,80}$/.test(String(c.name))) await runCmd('powercfg /changename ' + c.guid + ' "' + c.name + '"')
+      return true
+    },
+  },
+  'power-wake': {
+    read: async c => { const r = await runCmd('powercfg /devicequery wake_armed'); const armed = String((r && r.out) || '').split(/\r?\n/).map(l => l.trim()).includes(c.device); return { exists: true, value: armed ? 'armed' : 'disarmed' } },
+    restore: async c => {
+      if (!require('./lib/power').DEVICE_OK.test(String(c.device || ''))) return false
+      const r = await runCmd('powercfg /device' + (c.before && c.before.value === 'armed' ? 'enable' : 'disable') + 'wake "' + c.device + '"')
+      return !!r && r.ok !== false
+    },
+  },
+}
 let _journalSvc = null
 function journalSvc() {
   if (!_journalSvc) {
@@ -3160,7 +3183,7 @@ function journalSvc() {
       emit: (ch, payload) => mainWindow?.webContents.send(ch, payload),
       loadSettings, saveSettings, writeLog: debugLog,
       noteSettingsWrites: patch => { for (const [k, v] of Object.entries(patch)) _settingsWriteLog.note(k, v) },
-      handlers: { 'gpu-power-limit': powerLimitSvc().undoHandler, dns: dnsUndoHandler, ...autoOptiUndoHandlers, ...debloatSvc().handlers, ...fivemSvc().handlers() },
+      handlers: { 'gpu-power-limit': powerLimitSvc().undoHandler, dns: dnsUndoHandler, ...autoOptiUndoHandlers, ...powerUndoHandlers, ...debloatSvc().handlers, ...fivemSvc().handlers() },
       manifest: (() => { try { return require('./lib/tweak-manifest.json') } catch { return {} } })(),
     })
     try { _journalSvc.journal.rotate() } catch {}
@@ -8732,33 +8755,10 @@ ipcMain.handle('install-update', () => {
   autoUpdater?.quitAndInstall(false, true)
 })
 
-ipcMain.handle('clean-power-plans', async () => {
-  const send = (msg, level = 'info') => mainWindow?.webContents.send('log', { msg, level, ts: new Date().toLocaleTimeString() })
-  const PROTECTED = new Set([
-    '381b4222-f694-41f0-9685-ff5bb260df2e', // Balanced
-    '8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c', // High Performance
-    'a1841308-3541-4fab-bc81-f71556f20b4a', // Power Saver
-    'e9a42b02-d5df-448d-aa00-03f14749eb61', // Ultimate Performance
-  ])
-  const list = await runCmd('powercfg /list')
-  const GUID_RX = /([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/gi
-  const all = [...(list.out.matchAll(GUID_RX))].map(m => m[1].toLowerCase())
-  const toDelete = all.filter(g => !PROTECTED.has(g))
-  if (toDelete.length === 0) { send('No custom power plans to remove.', 'info'); return { ok: true, deleted: 0 } }
-  await runCmd('powercfg -setactive 381b4222-f694-41f0-9685-ff5bb260df2e')
-  let deleted = 0
-  for (const g of toDelete) {
-    const r = await runCmd(`powercfg /delete ${g}`)
-    if (r.ok) { send(`Deleted plan: ${g}`, 'ok'); deleted++ }
-    else { send(`Could not delete ${g}: ${r.err}`, 'warn') }
-  }
-  send(`Done — removed ${deleted} custom power plan(s). Balanced is now active.`, 'ok')
-  return { ok: true, deleted }
-})
-
 // What's New content
 const WHATS_NEW = [
   { version: '1.6.0', date: 'Nov 2026', items: [
+    'New — Power tab rebuilt: live power flow, plan comparison and safe tidy, sleep and wake diagnosis, battery health and energy sessions with cost, every change undoable',
     'New — Pulse: frame river, Limiter (what limits your FPS right now), session debriefs, boost receipt, cockpit window and in-game HUD',
     'New — Rebuilt tabs: Cleanup, Bloatware, Diagnostics and FiveM (route radar, session recorder) with measured results and undoable changes',
     'New — BIOS workstation: HP support, SCEWIN import, risk tiers, verified writes and automatic revert, Easy mode',
@@ -12047,6 +12047,86 @@ ipcMain.handle('gpu2-test-finish', (_, req) => {
 ipcMain.handle('gpu2-tests', () => { try { return gpuSvc().tests() } catch (e) { return gpFail(e) } })
 app.on('will-quit', () => { try { _gpu && _gpu.shutdown() } catch {} })
 
+// ─── Power (lib/power): one catalog, one read-only probe, journaled switches + plan switch/tidy/timeouts/wake/mode, live draw, energy sessions ────────
+// docs/POWER_EVIDENCE.md. State lives in jt_power.json; switches go through journalSvc().applyBatch (label 'power'); everything else through journalSvc().runRecorded ('power2:*').
+const Power = require('./lib/power')
+const PwCatalog = require('./lib/power/catalog')
+let _power = null, _pwApplic = {}
+function powerSvc() {
+  if (!_power) {
+    const spawnTool = (exe, args, { onLine, onExit }) => {
+      const p = spawn(exe, args, { windowsHide: true, stdio: ['ignore', 'pipe', 'ignore'] })
+      p.stdout.setEncoding('utf8')
+      p.stdout.on('data', onLine)
+      p.on('exit', onExit); p.on('error', onExit)
+      return { kill: () => { try { p.kill() } catch {} } }
+    }
+    const planDir = path.join(app.getPath('userData'), 'power-plans')
+    try { fs.mkdirSync(planDir, { recursive: true }) } catch {}
+    _power = Power.create({
+      runPS: (s, ms) => runPS(s, ms),
+      runCmd: (c, ms) => runCmd(c, ms),
+      applyBatch: req => journalSvc().applyBatch(req),
+      journalList: o => journalSvc().list(o),
+      undo: (t, o) => journalSvc().undo(t, o),
+      runRecorded: (...a) => journalSvc().runRecorded(...a),
+      tweakMeta: ids => { retireTweaks(); return journalSvc().tweakMeta(ids) },
+      applicability: () => _pwApplic,
+      isPremium: () => !!auth && auth.isPremium(),
+      settings: () => loadSettings(),
+      state: { read: () => cuRead('jt_power.json', null), write: v => cuWrite('jt_power.json', v) },
+      planDir,
+      fileExists: p => fs.existsSync(p),
+      bootMs: () => Date.now() - os.uptime() * 1000,
+      gameRunning: () => !!_systemContext.gameRunning,
+      gameName: () => _systemContext.gameName || null,
+      hub: keys => Object.fromEntries(keys.map(k => [k, _hub.value(k)])),
+      emit: cuSend,
+      spawnLive: ({ script, onLine, onExit }) => spawnTool('powershell.exe', ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-EncodedCommand', Buffer.from(script, 'utf16le').toString('base64')], { onLine, onExit }),
+      spawnSmi: ({ args, onLine, onExit }) => (fs.existsSync(Smi.exePath()) ? spawnTool(Smi.exePath(), args, { onLine, onExit }) : { kill() {} }),
+    })
+  }
+  return _power
+}
+// Same rule as the GPU tab: wait a few seconds for the capability scan, never longer.
+async function pwApplicRefresh() {
+  try {
+    const profile = await Promise.race([ensureCapsProfile(false), new Promise(r => setTimeout(() => r(null), 6000))])
+    if (!profile) return
+    const caps = Caps.deriveCaps(profile), map = {}
+    for (const id of PwCatalog.ids()) if (Applic.RULES[id]) { const r = Applic.evaluate(id, caps); map[id] = { show: r.show, state: r.state, why: r.why } }
+    _pwApplic = map
+  } catch { /* keep the last map */ }
+}
+const pwIds = v => (Array.isArray(v) ? v.filter(x => typeof x === 'string' && PwCatalog.isKnown(x)).slice(0, 60) : [])
+const pwFail = e => ({ ok: false, error: String((e && e.message) || e).slice(0, 200) })
+const pwStr = (v, n) => (typeof v === 'string' && v.length <= n ? v : '')
+ipcMain.handle('power2-scan', async () => { try { await pwApplicRefresh(); return await powerSvc().scan() } catch { return { ok: false, error: 'scan-failed' } } })
+ipcMain.handle('power2-cached', () => { try { return powerSvc().cached() || { ok: false } } catch { return { ok: false } } })
+ipcMain.handle('power2-run', async (_, req) => {
+  try { return await powerSvc().run({ ids: pwIds(req && req.ids), action: req && req.action === 'restore' ? 'restore' : 'apply', label: 'power', onProgress: p => cuSend('power2-progress', p) }) } catch (e) { return pwFail(e) }
+})
+ipcMain.handle('power2-plan-set', async (_, req) => { try { return await powerSvc().planSet({ guid: pwStr(req && req.guid, 64) }) } catch (e) { return pwFail(e) } })
+ipcMain.handle('power2-timeout-set', async (_, req) => { try { return await powerSvc().timeoutSet({ id: pwStr(req && req.id, 20), side: pwStr(req && req.side, 3), seconds: Number.isInteger(req && req.seconds) ? req.seconds : -1 }) } catch (e) { return pwFail(e) } })
+ipcMain.handle('power2-plan-tidy', async (_, req) => { try { return await powerSvc().planTidy({ guids: Array.isArray(req && req.guids) ? req.guids.filter(g => typeof g === 'string' && g.length <= 64).slice(0, 12) : [] }) } catch (e) { return pwFail(e) } })
+ipcMain.handle('power2-wake-set', async (_, req) => { try { return await powerSvc().wakeSet({ device: pwStr(req && req.device, 140), enable: !!(req && req.enable) }) } catch (e) { return pwFail(e) } })
+ipcMain.handle('power2-mode-set', async (_, req) => { try { return await powerSvc().modeSet({ overlay: pwStr(req && req.overlay, 64) }) } catch (e) { return pwFail(e) } })
+ipcMain.handle('power2-history', () => { try { return powerSvc().history() } catch { return { ok: false, error: 'history-failed' } } })
+ipcMain.handle('power2-undo', async (_, req) => {
+  const t = (req && req.target) || {}, target = {}
+  for (const k of ['entryId', 'batchId']) if (typeof t[k] === 'string' && t[k].length < 64) target[k] = t[k]
+  if (!Object.keys(target).length) return { ok: false, error: 'invalid_target' }
+  try { return await powerSvc().undo(target, { force: req && req.force === true }) } catch (e) { return pwFail(e) }
+})
+ipcMain.handle('power2-live-start', () => { try { return powerSvc().liveStart() } catch (e) { return pwFail(e) } })
+ipcMain.handle('power2-live-beat', () => { try { return powerSvc().heartbeat() } catch (e) { return pwFail(e) } })
+ipcMain.handle('power2-live-stop', () => { try { powerSvc().liveStop(); return { ok: true } } catch (e) { return pwFail(e) } })
+ipcMain.handle('power2-session-start', (_, req) => { try { return powerSvc().sessionStart({ label: pwStr(req && req.label, 40) }) } catch (e) { return pwFail(e) } })
+ipcMain.handle('power2-session-stop', () => { try { return powerSvc().sessionStop('stopped') } catch (e) { return pwFail(e) } })
+ipcMain.handle('power2-price-set', (_, req) => { try { return powerSvc().priceSet({ perKwh: req && req.perKwh === null ? null : (typeof (req && req.perKwh) === 'number' ? req.perKwh : NaN), currency: pwStr(req && req.currency, 4) || 'EUR' }) } catch (e) { return pwFail(e) } })
+ipcMain.handle('power2-sessions-clear', () => { try { return powerSvc().sessionsClear() } catch (e) { return pwFail(e) } })
+app.on('will-quit', () => { try { _power && _power.shutdown() } catch {} })
+
 
 // ─── Network (lib/network): one catalog, one read-only probe, journaled run + read-back, checkup, live route trace ─────────────────
 // docs/NETWORK_EVIDENCE.md. State lives in jt_network.json; every change goes through journalSvc().applyBatch (label 'network').
@@ -13103,42 +13183,6 @@ Write-Output "CLK_MAX=$clkMax"
 })
 ipcMain.handle('thermal-stop', () => {
   if (_thermalTimer) { clearInterval(_thermalTimer); _thermalTimer = null }
-  return {}
-})
-
-// ─── Power Efficiency Tracker ─────────────────────────────────────────────────
-let _effTimer = null
-ipcMain.handle('efficiency-start', async () => {
-  const nvTest = await runPS('& nvidia-smi --query-gpu=power.draw --format=csv,noheader,nounits 2>$null | Select-Object -First 1', 4000)
-  const hasNvidiaSmi = !isNaN(parseFloat(nvTest.out.trim()))
-  if (_effTimer) clearInterval(_effTimer)
-  _effTimer = setInterval(async () => {
-    let powerW = null
-    if (hasNvidiaSmi) {
-      const r = await runPS('& nvidia-smi --query-gpu=power.draw --format=csv,noheader,nounits 2>$null | Select-Object -First 1', 3000)
-      const v = parseFloat(r.out.trim())
-      if (!isNaN(v)) powerW = Math.round(v * 10) / 10
-    } else {
-      const r = await runPS(`
-$ns = 'root\\LibreHardwareMonitor'
-$s = try { Get-WmiObject -Namespace $ns -Class Sensor -EA Stop } catch { $null }
-if ($s) {
-  $cpuW = ($s | Where-Object { $_.SensorType -eq 'Power' -and $_.Name -match 'CPU Package|Package' } | Select-Object -First 1).Value
-  $gpuW = ($s | Where-Object { $_.SensorType -eq 'Power' -and ($_.Identifier -match '/gpu' -or $_.Name -match 'GPU') } | Select-Object -First 1).Value
-  if ($cpuW) { Write-Output "CPU_W=$cpuW" }
-  if ($gpuW) { Write-Output "GPU_W=$gpuW" }
-}
-      `, 4000)
-      const cpuW = parseFloat(r.out.match(/CPU_W=([\d.]+)/)?.[1] || '0')
-      const gpuW = parseFloat(r.out.match(/GPU_W=([\d.]+)/)?.[1] || '0')
-      if (cpuW > 0 || gpuW > 0) powerW = Math.round((cpuW + gpuW) * 10) / 10
-    }
-    mainWindow?.webContents.send('efficiency-tick', { powerW })
-  }, 3000)
-  return { hasNvidiaSmi }
-})
-ipcMain.handle('efficiency-stop', () => {
-  if (_effTimer) { clearInterval(_effTimer); _effTimer = null }
   return {}
 })
 
