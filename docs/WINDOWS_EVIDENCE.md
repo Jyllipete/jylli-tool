@@ -44,3 +44,28 @@ A background guard that re-applies reverted switches. The tab tells you when Win
 **Moved to the CPU & Memory tab:** `power-throttling`, `global-timer-resolution`, `sysmain`, `memory-compression`, `spectre-meltdown` (see [[CPUMEM_EVIDENCE]]). The `memory` lane here now holds only `hibernate`.
 
 Back to [[Home]]
+
+## Round 2 (2026-11-14, LuminApp comparison)
+14 policy/registry switches added. All are tier 1, apply through the journal, and undo removes the value (Windows default).
+Sources: Microsoft Policy CSP / ADMX names; written from policy documentation, **not yet run on a real PC**.
+
+| Switch | Value written | Evidence |
+|---|---|---|
+| activity-history-off (rec) | Policies\...\System EnableActivityFeed / PublishUserActivities / UploadUserActivities = 0 | Policy CSP Privacy; EnableActivityFeed location confirmed |
+| ceip-policy-off (rec) | Policies\Microsoft\SQMClient\Windows CEIPEnable = 0 | ADMX SQM |
+| typing-insights-off | HKCU Input\TIPC Enabled, Input\Settings InsightsEnabled = 0 | Settings toggle values (user scope) |
+| wer-policy-off | Policies\...\Windows Error Reporting Disabled = 1 | ADMX WER |
+| appcompat-inventory-off | Policies\...\AppCompat DisableInventory, DisableUAR = 1 | ADMX AppCompat |
+| recall-off | Policies\...\WindowsAI DisableAIDataAnalysis = 1 | Policy CSP WindowsAI. Shown only on build 26100+. AllowRecallEnablement left out: not found as a registry policy |
+| search-highlights-off (rec) | Policies\...\Windows Search EnableDynamicContentInWSB = 0 | ADMX Search |
+| toasts-off | HKCU PushNotifications ToastEnabled = 0 | Settings toggle value |
+| lockscreen-toasts-off | HKCU Notifications\Settings NOC_GLOBAL_SETTING_ALLOW_TOASTS_ABOVE_LOCK = 0 | Settings toggle value |
+| cross-device-off | Policies\...\System EnableCdp, AllowCrossDeviceClipboard = 0 | ADMX System |
+| long-paths-on | FileSystem LongPathsEnabled = 1 | Microsoft file-path docs |
+| driver-updates-off | Policies\...\WindowsUpdate ExcludeWUDriversInQualityUpdate = 1 | Policy CSP Update; sources disagree on HKCU use, only HKLM is written |
+| auto-restart-guard | WindowsUpdate\AU NoAutoRebootWithLoggedOnUsers = 1 | Documented: no effect when Configure Automatic Updates is disabled; user-scheduled restart overrides |
+| remote-assist-off (rec) | Remote Assistance fAllowToGetHelp = 0 | Long-standing registry value |
+
+### Not shipped (unverified)
+- **paint-ai-off** (DisableCocreator/GenerativeFill/ImageCreator): Microsoft documents these as Policy CSP only; the registry path in guides (`HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Paint`) is community-sourced.
+- **onesettings-off** (DisableOneSettingsDownloads): no source confirmed this round.

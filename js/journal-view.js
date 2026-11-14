@@ -61,6 +61,8 @@
       const m = /^debloat:((?:app|svc|task|ad|feat):.+)$/.exec(c); if (m && typeof tG === 'function') return tG('debloat2', 'n_' + m[1])
       const f = /^fivem2:([w-]+)$/.exec(c)       // FiveM: the tweak's name, or the file that was edited
       if (f && typeof tG === 'function') return tG('fivem2', f[1] === 'ini' ? 'iniT' : f[1] === 'gfx' ? 'seg_graphics' : 'n_' + f[1])
+      const gcm = /^gamecfg:(\w+)$/.exec(c)   // game settings: the game's name
+      if (gcm && typeof tG === 'function') return tG('gamecfg', 'journal') + ': ' + tG('gamecfg', 'n_' + gcm[1])
       return c
     }
     const opts = ['', ...VIA_KEYS].map(v => `<option value="${attr(v)}"${v === filterVia ? ' selected' : ''}>${esc(v ? tUI('journalVia_' + v) : tUI('journalViaAll'))}</option>`).join('')

@@ -1376,6 +1376,199 @@
   "untracked": 0,
   "fidelity": "exact"
  },
+ "activity-history-off": {
+  "touches": [
+   {
+    "kind": "reg",
+    "target": "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\System\\EnableActivityFeed",
+    "after": "0"
+   },
+   {
+    "kind": "reg",
+    "target": "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\System\\PublishUserActivities",
+    "after": "0"
+   },
+   {
+    "kind": "reg",
+    "target": "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\System\\UploadUserActivities",
+    "after": "0"
+   }
+  ],
+  "dynamic": false,
+  "untracked": 0,
+  "fidelity": "exact"
+ },
+ "ceip-policy-off": {
+  "touches": [
+   {
+    "kind": "reg",
+    "target": "HKLM:\\SOFTWARE\\Policies\\Microsoft\\SQMClient\\Windows\\CEIPEnable",
+    "after": "0"
+   }
+  ],
+  "dynamic": false,
+  "untracked": 0,
+  "fidelity": "exact"
+ },
+ "typing-insights-off": {
+  "touches": [
+   {
+    "kind": "reg",
+    "target": "HKCU:\\Software\\Microsoft\\Input\\TIPC\\Enabled",
+    "after": "0"
+   },
+   {
+    "kind": "reg",
+    "target": "HKCU:\\Software\\Microsoft\\Input\\Settings\\InsightsEnabled",
+    "after": "0"
+   }
+  ],
+  "dynamic": false,
+  "untracked": 0,
+  "fidelity": "exact"
+ },
+ "wer-policy-off": {
+  "touches": [
+   {
+    "kind": "reg",
+    "target": "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\Windows Error Reporting\\Disabled",
+    "after": "1"
+   }
+  ],
+  "dynamic": false,
+  "untracked": 0,
+  "fidelity": "exact"
+ },
+ "appcompat-inventory-off": {
+  "touches": [
+   {
+    "kind": "reg",
+    "target": "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\AppCompat\\DisableInventory",
+    "after": "1"
+   },
+   {
+    "kind": "reg",
+    "target": "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\AppCompat\\DisableUAR",
+    "after": "1"
+   }
+  ],
+  "dynamic": false,
+  "untracked": 0,
+  "fidelity": "exact"
+ },
+ "recall-off": {
+  "touches": [
+   {
+    "kind": "reg",
+    "target": "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\WindowsAI\\DisableAIDataAnalysis",
+    "after": "1"
+   }
+  ],
+  "dynamic": false,
+  "untracked": 0,
+  "fidelity": "exact"
+ },
+ "search-highlights-off": {
+  "touches": [
+   {
+    "kind": "reg",
+    "target": "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\Windows Search\\EnableDynamicContentInWSB",
+    "after": "0"
+   }
+  ],
+  "dynamic": false,
+  "untracked": 0,
+  "fidelity": "exact"
+ },
+ "toasts-off": {
+  "touches": [
+   {
+    "kind": "reg",
+    "target": "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\PushNotifications\\ToastEnabled",
+    "after": "0"
+   }
+  ],
+  "dynamic": false,
+  "untracked": 0,
+  "fidelity": "exact"
+ },
+ "lockscreen-toasts-off": {
+  "touches": [
+   {
+    "kind": "reg",
+    "target": "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Notifications\\Settings\\NOC_GLOBAL_SETTING_ALLOW_TOASTS_ABOVE_LOCK",
+    "after": "0"
+   }
+  ],
+  "dynamic": false,
+  "untracked": 0,
+  "fidelity": "exact"
+ },
+ "cross-device-off": {
+  "touches": [
+   {
+    "kind": "reg",
+    "target": "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\System\\EnableCdp",
+    "after": "0"
+   },
+   {
+    "kind": "reg",
+    "target": "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\System\\AllowCrossDeviceClipboard",
+    "after": "0"
+   }
+  ],
+  "dynamic": false,
+  "untracked": 0,
+  "fidelity": "exact"
+ },
+ "long-paths-on": {
+  "touches": [
+   {
+    "kind": "reg",
+    "target": "HKLM:\\SYSTEM\\CurrentControlSet\\Control\\FileSystem\\LongPathsEnabled",
+    "after": "1"
+   }
+  ],
+  "dynamic": false,
+  "untracked": 0,
+  "fidelity": "exact"
+ },
+ "driver-updates-off": {
+  "touches": [
+   {
+    "kind": "reg",
+    "target": "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\WindowsUpdate\\ExcludeWUDriversInQualityUpdate",
+    "after": "1"
+   }
+  ],
+  "dynamic": false,
+  "untracked": 0,
+  "fidelity": "exact"
+ },
+ "auto-restart-guard": {
+  "touches": [
+   {
+    "kind": "reg",
+    "target": "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\WindowsUpdate\\AU\\NoAutoRebootWithLoggedOnUsers",
+    "after": "1"
+   }
+  ],
+  "dynamic": false,
+  "untracked": 0,
+  "fidelity": "exact"
+ },
+ "remote-assist-off": {
+  "touches": [
+   {
+    "kind": "reg",
+    "target": "HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Remote Assistance\\fAllowToGetHelp",
+    "after": "0"
+   }
+  ],
+  "dynamic": false,
+  "untracked": 0,
+  "fidelity": "exact"
+ },
  "nudge-blocker": {
   "touches": [],
   "dynamic": true,

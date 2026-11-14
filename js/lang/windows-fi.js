@@ -46,3 +46,38 @@ LANG.fi.windows2 = {
   act_apply: 'Asetettu', act_restore: 'Palautettu',
   via_manual: 'Käsin', via_stage: 'Tarkista ensin', 'via_auto-opti': 'Auto-Optimize', via_spw: 'Pikamuutos', via_ai: 'Avustaja', 'via_game-watcher': 'Pelivahti', via_scheduler: 'Ajastin', 'via_safety-revert': 'Turvapalautus', via_undo: 'Peruutus',
 }
+
+// Round 2 switches (LuminApp comparison)
+Object.assign(LANG.fi.windows2, { lane_ai: "Windowsin tekoäly", lane_updates: "Päivitykset ja etäyhteys", laneSub_ai: "Windowsin tekoälyominaisuudet koneellasi", laneSub_updates: "Miten Windows asentaa päivitykset ja päästää muita sisään" })
+Object.assign(LANG.fi.tweakNames, {
+  "activity-history-off": "Activity-historia pois",
+  "ceip-policy-off": "Käyttökokemusohjelma pois",
+  "typing-insights-off": "Kirjoitusanalytiikka pois",
+  "wer-policy-off": "Virheraportointi pois",
+  "appcompat-inventory-off": "Yhteensopivuuskartoitus ja Steps Recorder pois",
+  "recall-off": "Recall-tilannekuvat pois",
+  "search-highlights-off": "Haun kohokohdat pois",
+  "toasts-off": "Ilmoitusikkunat pois",
+  "lockscreen-toasts-off": "Lukitusnäytön ilmoitukset pois",
+  "cross-device-off": "Laitteiden välinen synkronointi pois",
+  "long-paths-on": "Pitkät tiedostopolut",
+  "driver-updates-off": "Windows Updaten ajurit pois",
+  "auto-restart-guard": "Ei pakotettua uudelleenkäynnistystä sisäänkirjautuneena",
+  "remote-assist-off": "Etäapu pois",
+})
+Object.assign(LANG.fi.tweakDescs, {
+  "activity-history-off": "Estää Windowsia tallentamasta sovellus- ja tiedostotoimintaasi aikajanalle ja lähettämästä sitä Microsoftille käytännöllä.",
+  "ceip-policy-off": "Poistaa koneen Customer Experience Improvement -ohjelmasta käytännöllä.",
+  "typing-insights-off": "Poistaa käytöstä kirjoitus- ja käsinkirjoitustiedon keräämisen ehdotusten parantamiseksi.",
+  "wer-policy-off": "Estää Windowsin virheraportoinnin lähettämästä kaatumis- ja jumiutumisraportteja. Ajurivikoihin saa tästä vähemmän apua Microsoftilta.",
+  "appcompat-inventory-off": "Poistaa sovelluskartoituksen ja Steps Recorderin käytöstä käytännöllä.",
+  "recall-off": "Estää Windowsia tallentamasta Recallin näyttökuvia (käytäntö Turn off saving snapshots). Näkyy vain Windows 11 24H2:ssa tai uudemmassa.",
+  "search-highlights-off": "Poistaa päivän kohokohdat ja kuvitukset hakuruudusta.",
+  "toasts-off": "Poistaa ilmoitusikkunat käyttäjätililtäsi. Voit ottaa ne takaisin milloin tahansa.",
+  "lockscreen-toasts-off": "Piilottaa sovellusten ilmoitukset lukitusnäytöltä.",
+  "cross-device-off": "Estää Windowsia jakamasta toimintaa ja leikepöytää muiden laitteidesi kanssa.",
+  "long-paths-on": "Sallii yli 260 merkin tiedostopolut sovelluksille, jotka tukevat niitä.",
+  "driver-updates-off": "Estää Windows Updatea asentamasta ajureita, jolloin se ei korvaa valitsemaasi näytönohjaimen ajuria. Päivität ajurit itse.",
+  "auto-restart-guard": "Windows ei käynnistä itseään uudelleen päivitysten jälkeen kun olet kirjautuneena. Ei vaikutusta, jos automaattiset päivitykset on poistettu käytöstä käytännöllä.",
+  "remote-assist-off": "Estää etäapukutsut tälle koneelle.",
+})

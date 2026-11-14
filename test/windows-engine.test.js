@@ -33,7 +33,7 @@ test('catalog: nothing tier 3 is recommended, and every recommended id has a tie
 })
 
 test('catalog: QoL ids are the quality-of-life tab, the rest the Windows tab', () => {
-  assert.deepStrictEqual(catalog.ids('qol').sort(), ['boot-sound-off', 'cloud-sync-off', 'cortana', 'cortana-blackout', 'cortana-remnant-off', 'explorer-perf', 'nudge-blocker', 'search-box-local', 'search-cloud-off', 'security-quiet', 'security-toast-off', 'win-tips'])
+  assert.deepStrictEqual(catalog.ids('qol').sort(), ['boot-sound-off', 'cloud-sync-off', 'cortana', 'cortana-blackout', 'cortana-remnant-off', 'cross-device-off', 'explorer-perf', 'lockscreen-toasts-off', 'long-paths-on', 'nudge-blocker', 'search-box-local', 'search-cloud-off', 'search-highlights-off', 'security-quiet', 'security-toast-off', 'toasts-off', 'win-tips'])
 })
 
 test('detect: the script only reads', () => {

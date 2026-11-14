@@ -26,6 +26,7 @@
 <link rel="stylesheet" href="css/cleanup.css">
 <link rel="stylesheet" href="css/diagnostics.css">
 <link rel="stylesheet" href="css/fivem.css">
+<link rel="stylesheet" href="css/gameconfig.css">
 <link rel="stylesheet" href="css/pulse.css">
 <link rel="stylesheet" href="css/home.css">
 <link rel="stylesheet" href="css/bios.css">
@@ -513,6 +514,8 @@
 <script src="js/lang/diagnostics-fi.js"></script>
 <script src="js/lang/fivem-en.js"></script>
 <script src="js/lang/fivem-fi.js"></script>
+<script src="js/lang/gamecfg-en.js"></script>
+<script src="js/lang/gamecfg-fi.js"></script>
 <script src="js/lang/pulse-en.js"></script>
 <script src="js/lang/pulse-fi.js"></script>
 <script src="js/lang/home-en.js"></script>
@@ -637,6 +640,7 @@
 <script src="lib/fivem/route-verdict.js"></script>
 <script src="js/fivem/radar.js"></script>
 <script src="js/fivem/page.js"></script>
+<script src="js/gameconfig/sheet.js"></script>
 <script src="js/fivem/views.js"></script>
 <script src="lib/pulse/attribution.js"></script>
 <script src="lib/pulse/frames.js"></script>
@@ -6358,6 +6362,7 @@ function renderGPDetail(g) {
         <button class="btn-gp-restore" onclick="doGPApply('${g.id}','restore')"><i class="fa fa-rotate-left"></i> ${tUI('gpRestoreDefaults')}</button>
         ${g.id === 'arma-reforger' ? `<button class="btn btn-info btn-sm" onclick="api.openArmaSettings()"><i class="fa fa-sliders"></i> Graphics Settings</button>` : ''}
       </div>
+      ${['cs2', 'apex', 'fortnite', 'minecraft'].includes(g.id) && g.installed ? `<div id="gc-host-${g.id}"></div>` : ''}
       ${tip ? `<div class="gp-tip-v2"><i class="fa fa-lightbulb jx-623"></i>${tip}</div>` : ''}
       ${g.installPath ? `<div class="jx-95"><button class="btn btn-ghost btn-sm" onclick="api.openPath(${jsArg(g.installPath)})" ><i class="fa fa-folder-open"></i> ${tUI('gpOpenFolder')}</button></div>` : ''}
       <div class="gp-section-lbl">${tUI('gpAutoProfile')}</div>
@@ -6377,6 +6382,7 @@ function renderGPDetail(g) {
     </div>`
   // Populate per-game profile assignment select (async — must be awaited internally)
   ;(async () => { await populateGameProfileSelect(g.id) })()
+  { const gcHost = document.getElementById('gc-host-' + g.id); if (gcHost && window.JylliGameCfg) window.JylliGameCfg.mount(gcHost, g.id) }
 }
 
 async function populateGameProfileSelect(gameId) {

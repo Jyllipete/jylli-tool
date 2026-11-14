@@ -40,7 +40,7 @@ test('scan: one read-only probe, models for both tabs, remembered state persiste
   const r = await h.svc.scan()
   assert.ok(r.ok && r.read && !r.stale)
   assert.strictEqual(h.calls.ps, 1)
-  assert.ok(r.models.windows.items.length > 20 && r.models.qol.items.length === 12)
+  assert.ok(r.models.windows.items.length > 20 && r.models.qol.items.length === 17)
   assert.ok(h.store.v.last.readings)
 })
 

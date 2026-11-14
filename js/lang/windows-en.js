@@ -113,3 +113,38 @@ Object.assign(LANG.en.tweakDescs, {
   "bcd-tweaks": "Sets boot menu timeout to 0 for instant OS selection and disables boot logging (ntbtlog.txt). Reduces POST-to-desktop time by 2–8s on fast NVMe SSDs. Reboot required.",
   "disable-auto-maintenance": "Prevents Windows from running disk scans, defrag and security checks mid-session. Eliminates the frame time spikes caused by background maintenance tasks.",
 })
+
+// Round 2 switches (LuminApp comparison)
+Object.assign(LANG.en.windows2, { lane_ai: "Windows AI", lane_updates: "Updates & remote access", laneSub_ai: "AI features Windows adds to your PC", laneSub_updates: "How Windows installs updates and lets others in" })
+Object.assign(LANG.en.tweakNames, {
+  "activity-history-off": "Activity history off",
+  "ceip-policy-off": "Customer experience program off",
+  "typing-insights-off": "Typing insights off",
+  "wer-policy-off": "Crash reporting off",
+  "appcompat-inventory-off": "Compatibility inventory and Steps Recorder off",
+  "recall-off": "Recall snapshots off",
+  "search-highlights-off": "Search highlights off",
+  "toasts-off": "Notification pop-ups off",
+  "lockscreen-toasts-off": "Lock screen alerts off",
+  "cross-device-off": "Cross-device sync off",
+  "long-paths-on": "Long file paths",
+  "driver-updates-off": "Windows Update drivers off",
+  "auto-restart-guard": "No forced restart while signed in",
+  "remote-assist-off": "Remote Assistance off",
+})
+Object.assign(LANG.en.tweakDescs, {
+  "activity-history-off": "Stops Windows recording your app and file activity for the Timeline and uploading it to Microsoft, by policy.",
+  "ceip-policy-off": "Opts the PC out of the Customer Experience Improvement Program by policy.",
+  "typing-insights-off": "Turns off the typing and inking data Windows collects to improve suggestions.",
+  "wer-policy-off": "Stops Windows Error Reporting from sending crash and hang reports. Driver problems then get less help from Microsoft.",
+  "appcompat-inventory-off": "Turns off the application inventory collector and Steps Recorder by policy.",
+  "recall-off": "Stops Windows saving screen snapshots for Recall (policy Turn off saving snapshots). Only shown on Windows 11 24H2 or newer.",
+  "search-highlights-off": "Removes the daily highlights and doodles from the search box.",
+  "toasts-off": "Turns off toast pop-ups for your account. You can turn them back on any time.",
+  "lockscreen-toasts-off": "Hides app notifications on the lock screen.",
+  "cross-device-off": "Stops Windows sharing activity and the clipboard with your other devices (continue-on-PC, cloud clipboard).",
+  "long-paths-on": "Lets apps that support it use file paths longer than 260 characters.",
+  "driver-updates-off": "Stops Windows Update from installing drivers, so it cannot replace a graphics driver you chose. You then update drivers yourself.",
+  "auto-restart-guard": "Windows will not restart by itself after updates while you are signed in. It has no effect if Automatic Updates is switched off by policy.",
+  "remote-assist-off": "Blocks Remote Assistance invitations to this PC.",
+})

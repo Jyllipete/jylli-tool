@@ -42,6 +42,7 @@ Search for these section markers instead of reading the file:
 - Theme presets: `THEMES` + `applyTheme` in index.html (accent only; a preset with `material` also sets `<html data-material>`), `js/theme-sync.js` `ACCENTS` (secondary windows, keep in step; `test/theme-presets.test.js` guards it), Settings grid in `js/pages/settings.js`. "Liquid Glass" = `css/liquid-glass.css`, every rule scoped to `:root[data-material="liquid"]`; `npm run preview -- --pages settings --theme liquid [--scheme light]`
 <!-- Add these marker comments to index.html once; the map is only useful if they exist. -->
 
+- Game settings: engine `lib/gameconfig/` (`formats.js` byte-preserving kv/options/ini patchers, `catalog.js` = the only list of games and keys, `index.js` service: locate, read, preview, apply through the journal (`gamecfg:<id>`, kind `game-config-file`), undo, launch); IPC `gamecfg-*` in main.js (`// ─── Game settings`, Premium); UI `js/gameconfig/sheet.js` (mounted in the Games detail panel, `renderGPDetail` in index.html) + `css/gameconfig.css` (prefix `gc-`), LANG files `js/lang/gamecfg-{en,fi}.js` (group `gamecfg`, `k_<key>` row labels); `docs/GAMECONFIG_EVIDENCE.md`
 - Docs vault: `docs/` is an Obsidian vault (start at `docs/Home.md`; `.obsidian/` is gitignored). Put design notes and decisions there, use `[[wikilinks]]`
 ## Translations (EN & FI)
 All UI text needs both `en` and `fi` in the `LANG` object.

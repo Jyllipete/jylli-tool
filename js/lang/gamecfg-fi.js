@@ -1,0 +1,26 @@
+'use strict'
+// Pelin asetukset -paneeli Pelit-välilehdellä (js/gameconfig/sheet.js). Ryhmä `gamecfg`.
+LANG.fi.gamecfg = {
+  title: 'Pelin asetukset', loading: 'Luetaan pelin tiedostoa…', noFile: 'Asetustiedostoa ei löytynyt. Käynnistä peli kerran, niin se luo sellaisen.', readFail: 'Pelin tiedostoa ei voitu lukea.',
+  noRows: 'Tiedostossasi ei ole tämän tyyppisiä asetuksia.', on: 'päällä', off: 'pois', launch: 'Käynnistä', undo: 'Peru viimeisin muutos',
+  g_all: 'Kaikki', g_display: 'Näyttö', g_graphics: 'Grafiikka', g_performance: 'Suorituskyky',
+  running: '{name} on käynnissä. Sulje se ensin: peli kirjoittaa asetustiedostonsa uudelleen sulkeutuessaan.',
+  recommends: 'Jylli suosittelee: {v}', recSet: 'Asetettu suosituksen mukaan', why_vsync: 'V-Sync lisää yhden ruudun viiveen ja rajoittaa kuvataajuutta', why_motionBlur: 'vähemmän sumeutta, selkeämpi kuva tähtäillessä',
+  applyRec: 'Käytä suosituksia ({n})', review: 'Tarkista muutokset ({n})', reviewTitle: 'Nämä rivit muuttuvat pelin tiedostossa', reviewNone: 'Mikään ei muuttuisi.', reviewMissing: '{n} asetusta ei ole tässä tiedoston versiossa, ja ne ohitetaan.',
+  back: 'Takaisin', apply: 'Käytä ({n})',
+  applied: 'Pelin asetukset tallennettu', appliedMsg: '{n} muutosta kirjoitettu: {name}. Varmuuskopio säilytettiin.', undone: 'Pelin asetukset palautettu', undoFail: 'Peruminen ei onnistunut', undoFailMsg: 'Tiedosto on muuttunut sen jälkeen, tai varmuuskopio puuttuu.', launchFail: 'Käynnistysohjelmaa ei voitu avata',
+  errTitle: 'Mitään ei muutettu', 'err_game-running': 'Peli on käynnissä. Sulje se ensin.', 'err_no-file': 'Asetustiedosto puuttuu.',
+  'err_bad-value': 'Arvo ei ole sallittu tälle asetukselle.', 'err_out-of-range': 'Luku on sallitun alueen ulkopuolella.', 'err_verify-failed': 'Tiedosto ei lukeutunut takaisin oikein, joten alkuperäinen palautettiin.',
+  'err_write-failed': 'Tiedostoa ei voitu kirjoittaa, joten alkuperäinen säilytettiin.', 'err_unknown-key': 'Tuntematon asetus.', err_other: 'Jokin meni pieleen.',
+  journal: 'Pelin asetukset',
+  n_cs2: 'Counter-Strike 2', n_apex: 'Apex Legends', n_fortnite: 'Fortnite', n_minecraft: 'Minecraft',
+  k_setting_fullscreen: 'Koko näyttö', k_setting_nowindowborder: 'Reunaton ikkuna', k_setting_defaultres: 'Tarkkuuden leveys', k_setting_defaultresheight: 'Tarkkuuden korkeus',
+  k_setting_mat_vsync: 'V-Sync', k_setting_mat_vsync_mode: 'V-Sync', k_setting_msaa_samples: 'Moninäytteistys (MSAA)', k_setting_r_csgo_cmaa_enable: 'CMAA2-reunanpehmennys',
+  k_setting_videocfg_shadow_detail: 'Varjojen laatu', k_setting_videocfg_texture_detail: 'Tekstuurien tarkkuus', k_setting_videocfg_particle_detail: 'Hiukkasten tarkkuus',
+  k_setting_videocfg_ao_detail: 'Ambient occlusion', k_setting_videocfg_fsr_detail: 'FidelityFX Super Resolution',
+  k_FullscreenMode: 'Ikkunatila', k_ResolutionSizeX: 'Tarkkuuden leveys', k_ResolutionSizeY: 'Tarkkuuden korkeus', k_bUseVSync: 'V-Sync', k_bMotionBlur: 'Liikesumennus', k_bShowGrass: 'Ruoho',
+  k_sg_ViewDistanceQuality: 'Näkyvyysetäisyys', k_sg_ShadowQuality: 'Varjot', k_sg_AntiAliasingQuality: 'Reunanpehmennys', k_sg_TextureQuality: 'Tekstuurit', k_sg_EffectsQuality: 'Tehosteet',
+  k_sg_PostProcessQuality: 'Jälkikäsittely', k_sg_FoliageQuality: 'Kasvillisuus', k_FrameRateLimit: 'Kuvataajuusraja',
+  k_fullscreen: 'Koko näyttö', k_enableVsync: 'V-Sync', k_maxFps: 'Kuvataajuusraja', k_renderDistance: 'Piirtoetäisyys', k_simulationDistance: 'Simulointietäisyys',
+  k_particles: 'Hiukkaset', k_entityShadows: 'Olioiden varjot', k_mipmapLevels: 'Mipmap-tasot',
+}

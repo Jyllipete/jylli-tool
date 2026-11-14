@@ -12,7 +12,7 @@
     unknown: { glyph: 'circle-question',    tone: 'idle' },
   }
   const LANE_ICON = { gaming: 'gamepad', input: 'computer-mouse', quiet: 'volume-xmark', graphics: 'display', memory: 'memory', privacy: 'user-shield', expert: 'triangle-exclamation', retired: 'box-archive',
-    'qol-search': 'magnifying-glass', 'qol-quiet': 'bell-slash', 'qol-explorer': 'folder-open' }
+    ai: 'camera-retro', updates: 'arrows-rotate', 'qol-search': 'magnifying-glass', 'qol-quiet': 'bell-slash', 'qol-explorer': 'folder-open' }
   const CHIPS = ['all', 'rec', 'set', 'open', 'drifted', 'restart', 'risky']
 
   const statusLook = s => STATUS[s] || STATUS.unknown

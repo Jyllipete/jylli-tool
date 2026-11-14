@@ -3032,7 +3032,7 @@ function journalSvc() {
       emit: (ch, payload) => mainWindow?.webContents.send(ch, payload),
       loadSettings, saveSettings, writeLog: debugLog,
       noteSettingsWrites: patch => { for (const [k, v] of Object.entries(patch)) _settingsWriteLog.note(k, v) },
-      handlers: { 'gpu-power-limit': powerLimitSvc().undoHandler, dns: dnsUndoHandler, ...autoOptiUndoHandlers, ...powerUndoHandlers, ...debloatSvc().handlers, ...fivemSvc().handlers() },
+      handlers: { 'gpu-power-limit': powerLimitSvc().undoHandler, dns: dnsUndoHandler, ...autoOptiUndoHandlers, ...powerUndoHandlers, ...debloatSvc().handlers, ...fivemSvc().handlers(), ...gamecfgSvc().handlers() },
       manifest: (() => { try { return require('./lib/tweak-manifest.json') } catch { return {} } })(),
     })
     try { _journalSvc.journal.rotate() } catch {}
@@ -6855,6 +6855,181 @@ if ($r.Count -eq 0) { Write-Output "NONE_FOUND" } else { foreach ($x in $r) { Wr
     restore: async (s, ps) => {
       await ps('Remove-ItemProperty -Path "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\DeliveryOptimization" -Name DODownloadMode -EA SilentlyContinue')
       s('Delivery Optimization restored to default.', 'ok')
+    }
+  },
+  'activity-history-off': {
+    safetyTier: 1,
+    apply: async (s, ps) => {
+      await ps('New-Item -Path "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\System" -Force -EA SilentlyContinue | Out-Null')
+      await ps('Set-ItemProperty -Path "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\System" -Name EnableActivityFeed -Value 0 -Force')
+      await ps('Set-ItemProperty -Path "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\System" -Name PublishUserActivities -Value 0 -Force')
+      await ps('Set-ItemProperty -Path "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\System" -Name UploadUserActivities -Value 0 -Force')
+      s('Activity history off: applied.', 'ok')
+    },
+    restore: async (s, ps) => {
+      await ps('Remove-ItemProperty -Path "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\System" -Name EnableActivityFeed,PublishUserActivities,UploadUserActivities -EA SilentlyContinue')
+      s('Activity history off: back to the Windows default.', 'ok')
+    }
+  },
+  'ceip-policy-off': {
+    safetyTier: 1,
+    apply: async (s, ps) => {
+      await ps('New-Item -Path "HKLM:\\SOFTWARE\\Policies\\Microsoft\\SQMClient\\Windows" -Force -EA SilentlyContinue | Out-Null')
+      await ps('Set-ItemProperty -Path "HKLM:\\SOFTWARE\\Policies\\Microsoft\\SQMClient\\Windows" -Name CEIPEnable -Value 0 -Force')
+      s('Customer experience program off: applied.', 'ok')
+    },
+    restore: async (s, ps) => {
+      await ps('Remove-ItemProperty -Path "HKLM:\\SOFTWARE\\Policies\\Microsoft\\SQMClient\\Windows" -Name CEIPEnable -EA SilentlyContinue')
+      s('Customer experience program off: back to the Windows default.', 'ok')
+    }
+  },
+  'typing-insights-off': {
+    safetyTier: 1,
+    apply: async (s, ps) => {
+      await ps('New-Item -Path "HKCU:\\Software\\Microsoft\\Input\\TIPC" -Force -EA SilentlyContinue | Out-Null')
+      await ps('New-Item -Path "HKCU:\\Software\\Microsoft\\Input\\Settings" -Force -EA SilentlyContinue | Out-Null')
+      await ps('Set-ItemProperty -Path "HKCU:\\Software\\Microsoft\\Input\\TIPC" -Name Enabled -Value 0 -Force')
+      await ps('Set-ItemProperty -Path "HKCU:\\Software\\Microsoft\\Input\\Settings" -Name InsightsEnabled -Value 0 -Force')
+      s('Typing insights off: applied.', 'ok')
+    },
+    restore: async (s, ps) => {
+      await ps('Remove-ItemProperty -Path "HKCU:\\Software\\Microsoft\\Input\\TIPC" -Name Enabled -EA SilentlyContinue')
+      await ps('Remove-ItemProperty -Path "HKCU:\\Software\\Microsoft\\Input\\Settings" -Name InsightsEnabled -EA SilentlyContinue')
+      s('Typing insights off: back to the Windows default.', 'ok')
+    }
+  },
+  'wer-policy-off': {
+    safetyTier: 1,
+    apply: async (s, ps) => {
+      await ps('New-Item -Path "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\Windows Error Reporting" -Force -EA SilentlyContinue | Out-Null')
+      await ps('Set-ItemProperty -Path "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\Windows Error Reporting" -Name Disabled -Value 1 -Force')
+      s('Crash reporting off: applied.', 'ok')
+    },
+    restore: async (s, ps) => {
+      await ps('Remove-ItemProperty -Path "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\Windows Error Reporting" -Name Disabled -EA SilentlyContinue')
+      s('Crash reporting off: back to the Windows default.', 'ok')
+    }
+  },
+  'appcompat-inventory-off': {
+    safetyTier: 1,
+    apply: async (s, ps) => {
+      await ps('New-Item -Path "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\AppCompat" -Force -EA SilentlyContinue | Out-Null')
+      await ps('Set-ItemProperty -Path "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\AppCompat" -Name DisableInventory -Value 1 -Force')
+      await ps('Set-ItemProperty -Path "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\AppCompat" -Name DisableUAR -Value 1 -Force')
+      s('Compatibility inventory and Steps Recorder off: applied.', 'ok')
+    },
+    restore: async (s, ps) => {
+      await ps('Remove-ItemProperty -Path "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\AppCompat" -Name DisableInventory,DisableUAR -EA SilentlyContinue')
+      s('Compatibility inventory and Steps Recorder off: back to the Windows default.', 'ok')
+    }
+  },
+  'recall-off': {
+    safetyTier: 1,
+    apply: async (s, ps) => {
+      await ps('New-Item -Path "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\WindowsAI" -Force -EA SilentlyContinue | Out-Null')
+      await ps('Set-ItemProperty -Path "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\WindowsAI" -Name DisableAIDataAnalysis -Value 1 -Force')
+      s('Recall snapshots off: applied.', 'ok')
+    },
+    restore: async (s, ps) => {
+      await ps('Remove-ItemProperty -Path "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\WindowsAI" -Name DisableAIDataAnalysis -EA SilentlyContinue')
+      s('Recall snapshots off: back to the Windows default.', 'ok')
+    }
+  },
+  'search-highlights-off': {
+    safetyTier: 1,
+    apply: async (s, ps) => {
+      await ps('New-Item -Path "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\Windows Search" -Force -EA SilentlyContinue | Out-Null')
+      await ps('Set-ItemProperty -Path "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\Windows Search" -Name EnableDynamicContentInWSB -Value 0 -Force')
+      s('Search highlights off: applied.', 'ok')
+    },
+    restore: async (s, ps) => {
+      await ps('Remove-ItemProperty -Path "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\Windows Search" -Name EnableDynamicContentInWSB -EA SilentlyContinue')
+      s('Search highlights off: back to the Windows default.', 'ok')
+    }
+  },
+  'toasts-off': {
+    safetyTier: 1,
+    apply: async (s, ps) => {
+      await ps('New-Item -Path "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\PushNotifications" -Force -EA SilentlyContinue | Out-Null')
+      await ps('Set-ItemProperty -Path "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\PushNotifications" -Name ToastEnabled -Value 0 -Force')
+      s('Notification pop-ups off: applied.', 'ok')
+    },
+    restore: async (s, ps) => {
+      await ps('Remove-ItemProperty -Path "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\PushNotifications" -Name ToastEnabled -EA SilentlyContinue')
+      s('Notification pop-ups off: back to the Windows default.', 'ok')
+    }
+  },
+  'lockscreen-toasts-off': {
+    safetyTier: 1,
+    apply: async (s, ps) => {
+      await ps('New-Item -Path "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Notifications\\Settings" -Force -EA SilentlyContinue | Out-Null')
+      await ps('Set-ItemProperty -Path "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Notifications\\Settings" -Name NOC_GLOBAL_SETTING_ALLOW_TOASTS_ABOVE_LOCK -Value 0 -Force')
+      s('Lock screen alerts off: applied.', 'ok')
+    },
+    restore: async (s, ps) => {
+      await ps('Remove-ItemProperty -Path "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Notifications\\Settings" -Name NOC_GLOBAL_SETTING_ALLOW_TOASTS_ABOVE_LOCK -EA SilentlyContinue')
+      s('Lock screen alerts off: back to the Windows default.', 'ok')
+    }
+  },
+  'cross-device-off': {
+    safetyTier: 1,
+    apply: async (s, ps) => {
+      await ps('New-Item -Path "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\System" -Force -EA SilentlyContinue | Out-Null')
+      await ps('Set-ItemProperty -Path "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\System" -Name EnableCdp -Value 0 -Force')
+      await ps('Set-ItemProperty -Path "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\System" -Name AllowCrossDeviceClipboard -Value 0 -Force')
+      s('Cross-device sync off: applied.', 'ok')
+    },
+    restore: async (s, ps) => {
+      await ps('Remove-ItemProperty -Path "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\System" -Name EnableCdp,AllowCrossDeviceClipboard -EA SilentlyContinue')
+      s('Cross-device sync off: back to the Windows default.', 'ok')
+    }
+  },
+  'long-paths-on': {
+    safetyTier: 1,
+    apply: async (s, ps) => {
+      await ps('New-Item -Path "HKLM:\\SYSTEM\\CurrentControlSet\\Control\\FileSystem" -Force -EA SilentlyContinue | Out-Null')
+      await ps('Set-ItemProperty -Path "HKLM:\\SYSTEM\\CurrentControlSet\\Control\\FileSystem" -Name LongPathsEnabled -Value 1 -Force')
+      s('Long file paths: applied.', 'ok')
+    },
+    restore: async (s, ps) => {
+      await ps('Remove-ItemProperty -Path "HKLM:\\SYSTEM\\CurrentControlSet\\Control\\FileSystem" -Name LongPathsEnabled -EA SilentlyContinue')
+      s('Long file paths: back to the Windows default.', 'ok')
+    }
+  },
+  'driver-updates-off': {
+    safetyTier: 1,
+    apply: async (s, ps) => {
+      await ps('New-Item -Path "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\WindowsUpdate" -Force -EA SilentlyContinue | Out-Null')
+      await ps('Set-ItemProperty -Path "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\WindowsUpdate" -Name ExcludeWUDriversInQualityUpdate -Value 1 -Force')
+      s('Windows Update drivers off: applied.', 'ok')
+    },
+    restore: async (s, ps) => {
+      await ps('Remove-ItemProperty -Path "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\WindowsUpdate" -Name ExcludeWUDriversInQualityUpdate -EA SilentlyContinue')
+      s('Windows Update drivers off: back to the Windows default.', 'ok')
+    }
+  },
+  'auto-restart-guard': {
+    safetyTier: 1,
+    apply: async (s, ps) => {
+      await ps('New-Item -Path "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\WindowsUpdate\\AU" -Force -EA SilentlyContinue | Out-Null')
+      await ps('Set-ItemProperty -Path "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\WindowsUpdate\\AU" -Name NoAutoRebootWithLoggedOnUsers -Value 1 -Force')
+      s('No forced restart while signed in: applied.', 'ok')
+    },
+    restore: async (s, ps) => {
+      await ps('Remove-ItemProperty -Path "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\WindowsUpdate\\AU" -Name NoAutoRebootWithLoggedOnUsers -EA SilentlyContinue')
+      s('No forced restart while signed in: back to the Windows default.', 'ok')
+    }
+  },
+  'remote-assist-off': {
+    safetyTier: 1,
+    apply: async (s, ps) => {
+      await ps('New-Item -Path "HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Remote Assistance" -Force -EA SilentlyContinue | Out-Null')
+      await ps('Set-ItemProperty -Path "HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Remote Assistance" -Name fAllowToGetHelp -Value 0 -Force')
+      s('Remote Assistance off: applied.', 'ok')
+    },
+    restore: async (s, ps) => {
+      await ps('Remove-ItemProperty -Path "HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Remote Assistance" -Name fAllowToGetHelp -EA SilentlyContinue')
+      s('Remote Assistance off: back to the Windows default.', 'ok')
     }
   },
   'nudge-blocker': {
@@ -12460,6 +12635,44 @@ fvHandle('fivem2-connect', (a, s) => {
   const url = sv.code ? `fivem://connect/cfx.re/join/${sv.code}` : `fivem://connect/${sv.host}:${sv.port}`
   try { execFile('explorer.exe', [url], { windowsHide: true }); return { ok: true } } catch { return { ok: false, error: 'launch-failed' } }
 })
+
+// ─── Game settings (lib/gameconfig): a game's own config file, read and written through the change journal (control `gamecfg:<id>`) ──
+// docs/GAMECONFIG_EVIDENCE.md. Premium. Never writes while the game runs; Launch only opens the URL the catalog builds.
+const GameCfg = require('./lib/gameconfig')
+let _gamecfg = null
+function gamecfgSvc() {
+  if (!_gamecfg) {
+    _gamecfg = GameCfg.create({
+      fs, path, env: process.env,
+      steamRoot: () => steamRoot(),
+      backupDir: path.join(app.getPath('userData'), 'gamecfg-backups'),
+      isRunning: async procs => {
+        const names = (procs || []).filter(n => /^[\w.\- ]{1,60}$/.test(n)).map(n => "'" + n.replace(/\.exe$/i, '') + "'").join(',')
+        if (!names) return false
+        return /running/.test((await runPS(`if (Get-Process -Name ${names} -EA SilentlyContinue) { 'running' }`, 5000)).out || '')
+      },
+      runRecorded: (...a) => journalSvc().runRecorded(...a),
+      undoControl: c => journalSvc().undoControl(c),
+      // explorer.exe starts the launcher without this app's elevation, like the FiveM connect button.
+      open: async url => { execFile('explorer.exe', [url], { windowsHide: true }) },
+    })
+  }
+  return _gamecfg
+}
+const gcMap = o => { const out = {}; if (o && typeof o === 'object' && !Array.isArray(o)) for (const k of Object.keys(o).slice(0, 40)) if (typeof k === 'string' && k.length <= 120 && (typeof o[k] === 'string' || typeof o[k] === 'number')) out[k] = String(o[k]).slice(0, 40); return out }
+function gcHandle(name, fn) {
+  ipcMain.handle(name, async (_, a) => {
+    if (!requiresPremium(name)) return { ok: false, reason: 'premium_required' }
+    try { return await fn(a && typeof a === 'object' ? a : {}, gamecfgSvc()) } catch (e) { return { ok: false, error: String((e && e.message) || e).slice(0, 160) } }
+  })
+}
+const gcId = v => (typeof v === 'string' ? v.slice(0, 24) : '')
+gcHandle('gamecfg-list', (a, s) => s.list())
+gcHandle('gamecfg-read', (a, s) => s.read(gcId(a.id)))
+gcHandle('gamecfg-preview', async (a, s) => { const r = await s.preview(gcId(a.id), gcMap(a.changes)); return r.ok ? { ok: true, changed: r.changed, missing: r.missing } : r })
+gcHandle('gamecfg-apply', (a, s) => s.apply(gcId(a.id), gcMap(a.changes)))
+gcHandle('gamecfg-undo', (a, s) => s.undo(gcId(a.id)))
+gcHandle('gamecfg-launch', (a, s) => s.launch(gcId(a.id)))
 
 // Premium explorers (read-only) and the one deleting action they have: send to the Recycle Bin.
 let _cuMapCtl = null
