@@ -171,7 +171,9 @@
     // only the part of the window that is on screen counts: a hero scrolled mostly out of view lets the rig drift back to the middle
     const top = Math.max(r.top, w.top), bottom = Math.min(r.bottom, w.bottom), vis = bottom - top
     if (vis < r.height * 0.35 || vis < 80) { H.engine.setCenter(null); return }
-    const zoom = Math.max(0.4, Math.min(1, (vis / Math.max(w.height, 1)) * 1.05))
+    // the rig fills ~the whole canvas height at zoom 1, so scale to 0.86 of the visible window: it keeps a margin inside the frame
+    // (at 1.05 it overflowed the hero top and bottom on 1080p screens, and the header cut it off)
+    const zoom = Math.max(0.4, Math.min(1, (vis / Math.max(w.height, 1)) * 0.86))
     H.engine.setCenter(r.left + r.width / 2 - w.left, (top + bottom) / 2 - w.top, snap, zoom)
   }
   /** Leave world mode (Classic, light scheme): the canvas goes back to the park and pages host it in their own slots again. */

@@ -45,6 +45,7 @@ function respond(name, args, ctx) {
   const lang = ctx.lang, premium = ctx.premium
   if (/^diag2/.test(name)) return require('./diag-fixture').respond(name, args, ctx)
   if (/^compete[A-Z]/.test(name)) return require('./compete-fixture').respond(name, args, ctx)
+  if (/^games2|^getGameCover$/.test(name)) return require('./games-fixture').respond(name, args, ctx)
   switch (name) {
     // BIOS workstation: runs the REAL model/doctor code on synthetic data (HP-style rows plus a few hundred generated ones to exercise the virtual grid)
     case 'bios2Status': {

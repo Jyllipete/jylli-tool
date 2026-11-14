@@ -380,6 +380,7 @@ const SpeedTest = require('./lib/speedtest')
 const SpeedTransport = require('./lib/speedtest-transport')
 const Ssdp = require('./lib/ssdp')
 const GamesRegistry = require('./lib/games-registry')
+const GamesKnown = require('./lib/games/known')
 const SessionRec = require('./lib/session-recorder')
 const FrameStats = require('./lib/frame-stats')
 const { createWriteLog, mergeIncoming } = require('./lib/settings-merge')
@@ -3179,7 +3180,7 @@ async function getGamesRegistry(refresh) {
   if (_gamesCache && !refresh && Date.now() - _gamesCache.t < 5 * 60 * 1000) return _gamesCache
   const root = await steamRoot()
   const presets = {}
-  for (const id of Object.keys(GAME_EXE_MAP)) presets[id] = id
+  for (const k of GamesKnown.KNOWN) presets[k.id] = k.name   // names, not ids: the registry matches by name ("Counter-Strike 2" -> cs2)
   const epicDir = path.join(process.env.PROGRAMDATA || 'C:\\ProgramData', 'Epic', 'EpicGamesLauncher', 'Data', 'Manifests')
   let xbox = []
   try {
@@ -3224,7 +3225,7 @@ let _sessionRec = null, _sessionTimer = null
 function sessionRecStart(gameId) {
   try {
     _sessionRec = SessionRec.createRecorder()
-    _sessionRec.start({ gameId, gameName: gameId })
+    _sessionRec.start({ gameId, gameName: (PULSE_PRESETS[gameId] && PULSE_PRESETS[gameId].name) || gameId })
     _puGameExe = String((PULSE_PRESETS[gameId] && PULSE_PRESETS[gameId].exe) || '').replace(/\*$/, '').replace(/\.exe$/i, '') || null
     pulseSvc().gameStarted(gameId, PULSE_PRESETS[gameId] && PULSE_PRESETS[gameId].name)
     puBgEnsure()
@@ -9998,7 +9999,7 @@ const GAME_EXE_MAP = {
   'pubg':          ['TslGame.exe', 'TslGame_BE.exe'],
 }
 
-ipcMain.handle('apply-game-tweak', async (_, { gameId, action, installPath }) => {
+async function applyGameTweakImpl({ gameId, action, installPath }) {
   if (!requiresPremium('apply-game-tweak')) return { ok: false, reason: 'premium_required' }
   const send = (msg, level) => mainWindow?.webContents.send('log', { msg, level, ts: new Date().toLocaleTimeString() })
   const exes = GAME_EXE_MAP[gameId] || []
@@ -10007,72 +10008,36 @@ ipcMain.handle('apply-game-tweak', async (_, { gameId, action, installPath }) =>
 
   send(`◆ Game Tweak [${gameId}] — ${action}`, 'head')
 
-  if (action === 'apply') {
-    // Journaled: every value the profile changes (IFEO, MMCSS, FSO flags, Game DVR) is recorded with its real before-value,
-    // so Restore can put exactly those back instead of leaving MMCSS, FSO and DVR in place.
-    await journalSvc().runRecorded(`game-tweak:${gameId}`, 'apply', { via: 'manual' }, async (ps) => {
-      // Set HIGH CPU + IO priority for each exe via IFEO
-      for (const exe of exes) {
-        await ps(`New-Item -Path "${ifeoBase}\\${exe}\\PerfOptions" -Force -EA SilentlyContinue | Out-Null; Set-ItemProperty -Path "${ifeoBase}\\${exe}\\PerfOptions" -Name CpuPriorityClass -Value 3 -Force; Set-ItemProperty -Path "${ifeoBase}\\${exe}\\PerfOptions" -Name IoPriority -Value 3 -Force`)
-        send(`  ${exe}: HIGH CPU + IO priority`, 'ok')
-      }
-      // MMCSS GPU priority
-      await ps(`Set-ItemProperty -Path "${mmcssBase}" -Name SystemResponsiveness -Value 10 -Force`)
-      await ps(`Set-ItemProperty -Path "${mmcssBase}\\Tasks\\Games" -Name "GPU Priority" -Value 8 -Force`)
-      await ps(`Set-ItemProperty -Path "${mmcssBase}\\Tasks\\Games" -Name "Priority" -Value 6 -Force`)
-      await ps(`Set-ItemProperty -Path "${mmcssBase}\\Tasks\\Games" -Name "Scheduling Category" -Value "High" -Force`)
-      await ps(`Set-ItemProperty -Path "${mmcssBase}\\Tasks\\Games" -Name "Clock Rate" -Value 10000 -Force`)
-      send('MMCSS game scheduling applied.', 'ok')
+  // Retired: the profile added an unjournaled Defender exclusion, launcher priorities and global MMCSS / Game DVR writes. The Games tab (lib/games) owns per-game changes now;
+  // only `restore` stays, so a profile applied by an older version can still be taken back.
+  if (action === 'apply') return { ok: false, reason: 'retired' }
+  // Restore: write the journaled before-values back (IFEO, MMCSS, FSO, Game DVR). Profiles applied before the journal existed
+  // only have the legacy path below, which cannot know what MMCSS/DVR used to be and so leaves them alone.
+  const undone = await journalSvc().undoControl(`game-tweak:${gameId}`).catch(() => ({ ok: false, found: 0 }))
+  if (undone.found > 0 && undone.ok) send(`${gameId}: all journaled changes restored (priorities, MMCSS, fullscreen optimizations, Game DVR).`, 'ok')
+  else if (undone.found > 0) send(`${gameId}: some journaled changes could not be restored — see the History tab.`, 'warn')
+  else send(`${gameId}: no journal entry (applied by an older version) — restoring priorities only; MMCSS/Game DVR are left as they are.`, 'warn')
+  if (undone.found === 0) {
+    const compatK = 'HKCU:\\Software\\Microsoft\\Windows NT\\CurrentVersion\\AppCompatFlags\\Layers'
+    for (const exe of exes) await runPS(`Remove-ItemProperty -Path "${compatK}" -Name "${exe}" -EA SilentlyContinue`)
+  }
+  // Restore: set Normal priority
+  if (undone.found === 0) for (const exe of exes) {
+    // Removing the values returns the program to Windows' own defaults (writing 'Normal' explicitly would pin it)
+    await runPS(`Remove-ItemProperty -Path "${ifeoBase}\\${exe}\\PerfOptions" -Name CpuPriorityClass -EA SilentlyContinue`)
+    await runPS(`Remove-ItemProperty -Path "${ifeoBase}\\${exe}\\PerfOptions" -Name IoPriority -EA SilentlyContinue`)
+  }
+  send(`${gameId} priorities restored to Normal.`, 'ok')
 
-      // Disable fullscreen optimizations for each exe
-      const compat = 'HKCU:\\Software\\Microsoft\\Windows NT\\CurrentVersion\\AppCompatFlags\\Layers'
-      for (const exe of exes) {
-        await ps(`New-Item -Path "${compat}" -Force -EA SilentlyContinue | Out-Null; Set-ItemProperty -Path "${compat}" -Name "${exe}" -Value "~ DISABLEDXMAXIMIZEDWINDOWEDMODE" -Force`)
-      }
-      send('Fullscreen Optimizations disabled for game exes.', 'ok')
-
-      // Game DVR off
-      await ps('Set-ItemProperty -Path "HKCU:\\System\\GameConfigStore" -Name GameDVR_Enabled -Value 0 -Force')
-      send('Game DVR disabled.', 'ok')
-
-      // Defender exclusion for install path
-      if (installPath && V.isSafeGamePath(installPath) && fs.existsSync(installPath)) {
-        await ps(`Add-MpPreference -ExclusionPath ${V.psQuote(installPath)} -ErrorAction SilentlyContinue`)
-        send(`Defender exclusion added: ${installPath}`, 'ok')
-      } else if (installPath) {
-        send('Defender exclusion skipped: install path is not a valid game folder.', 'warn')
-      }
-
-      send(`✓ ${gameId} optimizations applied!`, 'ok')
-    })
-  } else {
-    // Restore: write the journaled before-values back (IFEO, MMCSS, FSO, Game DVR). Profiles applied before the journal existed
-    // only have the legacy path below, which cannot know what MMCSS/DVR used to be and so leaves them alone.
-    const undone = await journalSvc().undoControl(`game-tweak:${gameId}`).catch(() => ({ ok: false, found: 0 }))
-    if (undone.found > 0 && undone.ok) send(`${gameId}: all journaled changes restored (priorities, MMCSS, fullscreen optimizations, Game DVR).`, 'ok')
-    else if (undone.found > 0) send(`${gameId}: some journaled changes could not be restored — see the History tab.`, 'warn')
-    else send(`${gameId}: no journal entry (applied by an older version) — restoring priorities only; MMCSS/Game DVR are left as they are.`, 'warn')
-    if (undone.found === 0) {
-      const compatK = 'HKCU:\\Software\\Microsoft\\Windows NT\\CurrentVersion\\AppCompatFlags\\Layers'
-      for (const exe of exes) await runPS(`Remove-ItemProperty -Path "${compatK}" -Name "${exe}" -EA SilentlyContinue`)
-    }
-    // Restore: set Normal priority
-    if (undone.found === 0) for (const exe of exes) {
-      // Removing the values returns the program to Windows' own defaults (writing 'Normal' explicitly would pin it)
-      await runPS(`Remove-ItemProperty -Path "${ifeoBase}\\${exe}\\PerfOptions" -Name CpuPriorityClass -EA SilentlyContinue`)
-      await runPS(`Remove-ItemProperty -Path "${ifeoBase}\\${exe}\\PerfOptions" -Name IoPriority -EA SilentlyContinue`)
-    }
-    send(`${gameId} priorities restored to Normal.`, 'ok')
-
-    // Remove Defender exclusion
-    if (installPath && V.isSafeGamePath(installPath)) {
-      await runPS(`Remove-MpPreference -ExclusionPath ${V.psQuote(installPath)} -ErrorAction SilentlyContinue`)
-      send(`Defender exclusion removed: ${installPath}`, 'ok')
-    }
+  // Remove Defender exclusion
+  if (installPath && V.isSafeGamePath(installPath)) {
+    await runPS(`Remove-MpPreference -ExclusionPath ${V.psQuote(installPath)} -ErrorAction SilentlyContinue`)
+    send(`Defender exclusion removed: ${installPath}`, 'ok')
   }
 
   return { ok: true }
-})
+}
+ipcMain.handle('apply-game-tweak', (_, req) => applyGameTweakImpl(req || {}))
 
 // Clean temp files
 // ─── Process Manager ──────────────────────────────────────────────────────────
@@ -11454,6 +11419,120 @@ ipcMain.handle('compete-browse', async () => {
 setTimeout(() => { try { competeSvc().recover().catch(() => {}) } catch {} }, 5000)
 setTimeout(() => { competeFromArgv(process.argv).catch(() => {}) }, 9000)   // started from a desktop shortcut; after recover() so a leftover session is undone first   // a session that was running when the app or PC went down is put back
 
+// ─── Games (lib/games): library of every installed game, per-game changes (priority, power throttling, windowed-game optimisations) read back and undoable ───
+// docs/GAMES_EVIDENCE.md. State lives in jt_games.json; registry changes go through journalSvc().runRecorded ('games:<id>:<row>'); priority is owned by the CPU & Memory service.
+const Games = require('./lib/games')
+let _games = null
+function gamesBases() {
+  const out = []
+  for (const d of ['C', 'D', 'E', 'F', 'G']) {
+    const root = d + ':\\'
+    if (!fs.existsSync(root)) continue
+    for (const sub of ['Program Files', 'Program Files (x86)', 'Games', 'XboxGames', 'Riot Games', 'Epic Games', 'Rockstar Games', 'EA Games', 'Program Files\\Epic Games', 'Program Files (x86)\\Steam\\steamapps\\common', 'Program Files\\Rockstar Games', 'Program Files\\Riot Games', 'Program Files\\Battle.net', 'Battle.net']) out.push(root + sub)
+    out.push(root.slice(0, 2))
+  }
+  return out
+}
+function gamesWalk(dir) {
+  const out = []
+  const skipDir = require('./lib/games/exes').SKIP_DIR
+  const walk = (d, depth) => {
+    if (depth > 6 || out.length >= 600) return   // Riot / Epic keep the game exe five folders down
+    let ents; try { ents = fs.readdirSync(d, { withFileTypes: true }) } catch { return }
+    for (const e of ents) {
+      const p = path.join(d, e.name)
+      if (e.isDirectory()) { if (!skipDir.test(e.name)) walk(p, depth + 1) }
+      else if (/\.exe$/i.test(e.name)) { try { out.push({ path: p, size: fs.statSync(p).size }) } catch {} }
+    }
+  }
+  walk(dir, 0)
+  return out
+}
+function gamesFacts() {
+  const profile = capsProfileFresh()
+  const caps = profile ? Caps.deriveCaps(profile) : null
+  const form = (caps && caps.form) || (cachedSysInfo && typeof cachedSysInfo.isLaptop === 'boolean' ? (cachedSysInfo.isLaptop ? 'laptop' : 'desktop') : null)
+  const m = /^\d+\.\d+\.(\d+)/.exec(os.release())
+  return { hybrid: caps && caps.cpu ? caps.cpu.hybrid === true : null, laptop: form === 'laptop' ? true : form === 'desktop' ? false : null, build: m ? Number(m[1]) : null }
+}
+function gamesSvc() {
+  if (_games) return _games
+  _games = Games.create({
+    registry: refresh => getGamesRegistry(!!refresh),
+    bases: gamesBases, exists: p => { try { return fs.existsSync(p) } catch { return false } }, walk: gamesWalk,
+    runPS: (s, ms) => runPS(s, ms), runCmd: (c, ms) => runCmd(c, ms),
+    runRecorded: (...a) => journalSvc().runRecorded(...a),
+    cpumem: { priority: o => cpumemSvc().priority(o), priorityClear: o => cpumemSvc().priorityClear(o) },
+    isPremium: () => !!auth && auth.isPremium(),
+    settings: () => loadSettings(),
+    facts: gamesFacts,
+    listLines: async () => String((await runPS(CompeteAct.listScript(), 15000)).out || '').split(/\r?\n/),
+    sessions: () => SessionRec.list(SESSIONS_DIR(), fs, path),
+    launch: async spec => {
+      if (spec.kind === 'url') { await shell.openExternal(spec.url); return }
+      if (spec.kind === 'shell') { spawn('explorer.exe', [spec.target], { detached: true, stdio: 'ignore' }).unref(); return }
+      spawn(spec.exe, [], { cwd: spec.cwd, detached: true, stdio: 'ignore' }).unref()
+    },
+    legacyRestore: async (knownId, installPath) => {
+      const r = await applyGameTweakImpl({ gameId: knownId, action: 'restore', installPath })
+      const st = loadSettings(); st['tweak_game-' + knownId] = 'restored'; saveSettings(st)
+      return r
+    },
+    state: { read: () => cuRead('jt_games.json', null), write: v => cuWrite('jt_games.json', v) },
+    emit: cuSend,
+  })
+  return _games
+}
+/** `gameProfile_<id>` for a Pulse preset id the watcher detected: the id itself, its curated id, or any library id that means the same game. */
+function gameProfileFor(settings, presetId) {
+  const cand = new Set([presetId, GamesKnown.knownIdOf(presetId)])
+  try { const s = gamesSvc().state().snapshot; if (s) for (const g of s.games) if (g.aliases.includes(presetId)) cand.add(g.id) } catch {}
+  for (const c of cand) if (c && settings['gameProfile_' + c]) return settings['gameProfile_' + c]
+  return undefined
+}
+const gmFail = e => ({ ok: false, error: String((e && e.message) || e).slice(0, 200) })
+const gmStr = (v, n) => (typeof v === 'string' && v.length <= n ? v : '')
+ipcMain.handle('games2-scan', async (_, req) => { try { return await gamesSvc().scan({ refresh: !!(req && req.refresh) }) } catch (e) { return gmFail(e) } })
+ipcMain.handle('games2-state', () => { try { return gamesSvc().state() } catch (e) { return gmFail(e) } })
+ipcMain.handle('games2-run', async (_, req) => {
+  const items = Array.isArray(req && req.items) ? req.items.slice(0, 200).map(i => ({ gameId: gmStr(i && i.gameId, 120), row: gmStr(i && i.row, 24), action: i && i.action === 'restore' ? 'restore' : 'apply' })) : []
+  try { return await gamesSvc().run({ items }) } catch (e) { return gmFail(e) }
+})
+ipcMain.handle('games2-tune-all', async () => { try { return await gamesSvc().tuneAll() } catch (e) { return gmFail(e) } })
+ipcMain.handle('games2-undo-run', async (_, req) => { try { return await gamesSvc().undoRun({ runId: gmStr(req && req.runId, 40) }) } catch (e) { return gmFail(e) } })
+ipcMain.handle('games2-history', () => { try { return gamesSvc().history() } catch (e) { return gmFail(e) } })
+ipcMain.handle('games2-launch', async (_, req) => { try { return await gamesSvc().launch({ gameId: gmStr(req && req.gameId, 120) }) } catch (e) { return gmFail(e) } })
+ipcMain.handle('games2-favorite', (_, req) => { try { return gamesSvc().favorite({ id: gmStr(req && req.id, 120), on: !(req && req.on === false) }) } catch (e) { return gmFail(e) } })
+ipcMain.handle('games2-hide', async (_, req) => { try { return await gamesSvc().hide({ id: gmStr(req && req.id, 120), on: !(req && req.on === false) }) } catch (e) { return gmFail(e) } })
+ipcMain.handle('games2-migrate', async () => { try { return await gamesSvc().migrate() } catch (e) { return gmFail(e) } })
+ipcMain.handle('games2-add-custom', async () => {
+  const r = await dialog.showOpenDialog(mainWindow, { title: 'Select the game executable', properties: ['openFile'], filters: [{ name: 'Programs', extensions: ['exe'] }] })
+  if (r.canceled || !r.filePaths[0]) return { ok: false, canceled: true }
+  try { return await gamesSvc().addCustom({ path: r.filePaths[0] }) } catch (e) { return gmFail(e) }
+})
+ipcMain.handle('games2-remove-custom', async (_, req) => { try { return await gamesSvc().removeCustom({ id: gmStr(req && req.id, 300) }) } catch (e) { return gmFail(e) } })
+ipcMain.handle('games2-pick-exe', async (_, req) => {
+  const g = gamesSvc().find(gmStr(req && req.gameId, 120))
+  if (!g) return { ok: false, error: 'unknown-game' }
+  const r = await dialog.showOpenDialog(mainWindow, { title: 'Select the game executable', defaultPath: g.install || undefined, properties: ['openFile'], filters: [{ name: 'Programs', extensions: ['exe'] }] })
+  if (r.canceled || !r.filePaths[0]) return { ok: false, canceled: true }
+  try { return await gamesSvc().pickExe({ gameId: g.id, path: r.filePaths[0] }) } catch (e) { return gmFail(e) }
+})
+ipcMain.handle('games2-use-exe', async (_, req) => { try { return await gamesSvc().useExe({ gameId: gmStr(req && req.gameId, 120), path: gmStr(req && req.path, 300) }) } catch (e) { return gmFail(e) } })
+ipcMain.handle('games2-open-folder', (_, req) => {
+  const g = gamesSvc().find(gmStr(req && req.gameId, 120))
+  if (!g || !g.install) return { ok: false }
+  shell.openPath(g.install)
+  return { ok: true }
+})
+/** The watcher or Competitive Mode saw a game start: remember which executable of its folder is the real one. Best effort, never blocks. */
+function gamesLearnRunning() {
+  Promise.resolve().then(async () => {
+    const lines = String((await runPS(CompeteAct.listScript(), 15000)).out || '').split(/\r?\n/)
+    await gamesSvc().learn(lines)
+  }).catch(() => {})
+}
+
 // ─── Per-Game Auto Profile (process watcher) ──────────────────────────────────
 let gameWatcherInterval = null
 let activeGameProfile = null
@@ -11488,6 +11567,7 @@ ipcMain.handle('start-game-watcher', async () => {
       activeGameProfile = detectedGame
       const presetName = PULSE_PRESETS[detectedGame].name
       mainWindow?.webContents.send('game-watcher-event', { event: 'game-started', gameId: detectedGame })
+      gamesLearnRunning()
       gameShieldActivate().catch(() => {})
       if (loadSettings().updateGuardEnabled && auth && auth.isPremium()) {
         // Count pending updates first (the search needs the Windows Update service), warn, then hold updates — unless the game already closed
@@ -11527,7 +11607,7 @@ ipcMain.handle('start-game-watcher', async () => {
 
       // Per-game tweak profile: apply if one is assigned to this game
       const curSettings = loadSettings()
-      const assignedProfile = curSettings[`gameProfile_${detectedGame}`]
+      const assignedProfile = gameProfileFor(curSettings, detectedGame)
       if (assignedProfile) {
         const profiles = loadProfiles()
         const profile = profiles[assignedProfile]

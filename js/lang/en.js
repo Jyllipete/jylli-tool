@@ -375,34 +375,34 @@ LANG.en = {
       rpLoading:'Loading restore points…', rpRestoreLabel:'Restore to point:',
       rpRestoreBtn:'Restore to Selected Point',
       rpRestoreWarn:'Save all work before restoring. System WILL restart.',
-      gpReadyTitle:'Ready to configure', gpReadyActiveTitle:'Profile Active',
-      gpReadySub:'Fine-tune this profile before applying.',
-      gpReadyActiveSub:'HIGH CPU/IO priority, MMCSS, Defender exclusion applied.',
-      gpCoreSettings:'Core settings', gpApplyProfile:'Apply Profile', gpRestoreDefaults:'Restore Defaults',
-      gpAutoProfile:'AUTO-PROFILE ON LAUNCH', gpNoProfile:'— No profile assigned —',
-      gpWhatApplies:'What this applies',
-      gpWhatIfeo:'IFEO HIGH CPU + I/O priority for game executables',
-      gpWhatMmcss:'MMCSS: GPU Priority=8, Scheduling=High, Clock=10000',
-      gpWhatFso:'Fullscreen Optimizations disabled for game EXEs',
-      gpWhatDefender:'Defender exclusion added for game install path',
-      gpWhatDvr:'Game DVR / Xbox recording disabled',
-      gpLastSeen:'Last seen: {date}',
-      gpOpenFolder:'Open Folder',
-      gpTipTitle:'Select a game to view its profile and apply per-game optimizations. Run Scan to detect installed games automatically.',
-      gpBundlesTitle:'Game Bundles',
-      gpBundleCreate:'Create Bundle',
-      gpBundleActivate:'Activate',
-      gpBundleDelete:'Delete',
-      gpBundleEmpty:'No bundles yet. Create one to bundle a Pulse preset + tweak profile + CitizenFX.ini settings.',
-      gpBundleNamePrompt:'Bundle name:',
-      gpBundleSaved:'Bundle saved.',
-      gpBundleDeleted:'Bundle deleted.',
-      gpBundleActivated:'Bundle activated.',
-      gpBundlePulse:'Pulse preset',
-      gpBundleTweakProfile:'Tweak profile',
-      gpBundleIniSettings:'ini keys',
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
       gpWatcherOn:'Disable Auto-Profiles', gpWatcherOff:'Enable Auto-Profiles',
-      gpWatcherActiveDesc:'Watching — tweaks apply when a game launches, restore on exit.',
+
       aoOptimized:'optimized',
       watcherWatchingLabel:'Watching for: Fortnite, GTA V, Valorant, CS2, Apex, Warzone, Rust, THE FINALS, Arma Reforger',
       watcherEnableLabel:'Enable to start monitoring.',
@@ -821,7 +821,7 @@ LANG.en = {
       colorScheme:'Theme', colorSchemeDesc:'Dark is the default. System follows your Windows setting.', schemeSystem:'System', schemeDark:'Dark', schemeLight:'Light',
       cmdPg_dashboard:'Home', cmdPgSub_dashboard:'Dashboard overview', cmdPg_preflight:'Diagnostics', cmdPgSub_preflight:'Pre-flight scan', cmdPg_performance:'Performance', cmdPgSub_performance:'Tweaks, CPU, GPU and power settings', cmdPg_gaming:'Gaming', cmdPgSub_gaming:'Game profiles and app optimizer', cmdPg_network:'Network', cmdPgSub_network:'Network tweaks', cmdPg_privacy_cleanup:'Cleanup and privacy', cmdPgSub_privacy_cleanup:'Debloat, cleanup and privacy controls', cmdPg_startup_manager:'Startup apps', cmdPgSub_startup_manager:'Startup manager', cmdPg_process_manager:'Processes', cmdPgSub_process_manager:'Process manager', cmdPg_latency_monitor:'Latency', cmdPgSub_latency_monitor:'DPC/ISR latency monitor', cmdPg_bios_tuner:'BIOS Tuner', cmdPgSub_bios_tuner:'BIOS and firmware tools', cmdPg_pulse:'Pulse', cmdPgSub_pulse:'Game performance mode', cmdPg_scheduler:'Scheduler', cmdPgSub_scheduler:'Automated tweaks', cmdPg_changelog:'Tweak history', cmdPgSub_changelog:'Changes you have made', cmdPg_settings:'Settings', cmdPgSub_settings:'App preferences', cmdPg_restore_points:'Restore points', cmdPgSub_restore_points:'Create and manage restore points', cmdPg_fixes:'Fixes', cmdPgSub_fixes:'Quick system fixes', cmdAct_rp:'Create restore point', cmdActSub_rp:'Quick safety snapshot', cmdAct_theme:'Switch theme', cmdActSub_theme:'Toggle dark and light', cmdAct_log:'Clear log', cmdActSub_log:'Clear the activity log', cmdAct_bug:'Report a bug', cmdActSub_bug:'Send a bug report', cmdAct_new:'What\'s new', cmdActSub_new:'Latest release notes', cmdGroupPages:'Pages', cmdGroupActions:'Actions', cmdNoResults:'No results for',
       startupTitle:'Startup and services', startupLegendImpact:'Impact', startupImpHigh:'High', startupImpMed:'Medium', startupImpLow:'Low', startupLegendHigh:'disable', startupLegendMed:'optional', startupLegendLow:'keep', startupClearSearch:'Clear search',
-      gpAutoPulseBadge:'Auto-Pulse', gpAutoPulseActive:'Auto-Pulse active',
+
       netTweaksActive:'tweaks active', netEthernetAdapter:'Ethernet adapter', netWirelessAdapter:'wireless adapter',
       pmFreezeErrorTitle:'Freeze error', biosScewinScanRequired:'Run the SCEWIN scan first.', pfFailed:'Scan failed.', pfComplete:'Scan complete.', aoStillActiveTitle:'Tweaks still active after restore', aoStillActiveBody:'These settings are still applied on your system even though you toggled them off. Run Restore to fully undo them.', bsScanPrompt:'Run a scan to see your bloat score.', bloatDesc_clean:'Your system is clean. No action needed.', bloatDesc_moderate:'Moderate bloat detected. Gaming preset recommended.', bloatDesc_bloated:'High bloat. Full scan and cleanup advised.', bloatDesc_critical:'Critical bloat. Immediate action recommended.', saveError:'Could not save the file.',
       aoBbLive:'LIVE', aoBbCpuVsCap:'CPU used vs. cap',
@@ -1416,29 +1416,29 @@ aoHeroEyebrow:'App scanner', aoHeroDetected:'{n} apps detected', aoHeroScanning:
       whatsNewSubtitle:'Release Notes',
       whatsNewClose:'Close',
       // Game Profiles
-      gpSearchPlaceholder:'Search games…',
-      gpScanBtn:'Scan',
-      gpStatusRun:'RUN',
-      gpStatusInst:'INST',
-      gpStatusNotInst:'NOT INST',
-      gpStatusRunning:'RUNNING',
-      gpStatusInstalled:'INSTALLED',
-      gpStatusNotInstalled:'NOT INSTALLED',
-      gpScanningTitle:'Scanning for games…',
-      gpScanningSubtitle:'Checking install paths and registry',
-      gpScanComplete:'Game scan complete',
-      gpScanFound:'games found',
-      gpScanStatus:'Found {inst} / {total} games installed',
-      gpBadgeRunning:'Running',
-      gpBadgeInstalled:'Installed',
-      gpBadgeNotFound:'Not found',
-      gpNotInstalled:'Not installed',
-      gpLastSeen:'Last seen: {date}',
-      gpOptimize:'Optimize',
-      gpApplyingProfile:'Applying…',
-      gpRestoringProfile:'Restoring…',
-      gpProfileApplied:'Profile applied',
-      gpProfileRestored:'Profile restored',
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
       // Fixes — button states, reboot modal, Logitech warning
       fixRunning:'Running…',
       fixDone:'Done',
@@ -1473,7 +1473,7 @@ aoHeroEyebrow:'App scanner', aoHeroDetected:'{n} apps detected', aoHeroScanning:
       ugPendingOne:'{n} pending Windows update — Update Guard will hold it', ugPendingMany:'{n} pending Windows updates — Update Guard will hold them', ugPendingMsg:'Windows Update frozen for this session',
       gsFreedT:'Game Shield freed {mb}MB RAM', gsFreedB:'Stopped {n} background process(es) this session',
       dlOverwriteT:'Overwrite Profile?', dlOverwriteB:'A profile named <strong>"{name}"</strong> already exists. Overwrite it?', dlOverwrite:'Overwrite', dlApplyProfT:'Apply Profile: {name}', dlApplyProfB:'This will apply {n} tweaks from the "{name}" profile.', dlApplyAll:'Apply All', dlCloneT:'Clone Profile', dlCloneB:'New name for the copy of <strong>"{name}"</strong>:', dlClone:'Clone', dlCopySuffix:'(copy)', dlRenameT:'Rename Profile', dlRenameB:'New name for <strong>"{name}"</strong>:', dlRename:'Rename', dlPingT:'Custom Ping Host', dlPingB:'Enter IP or hostname to ping:', dlDnsPriT:'Custom DNS — Primary Server', dlDnsPriB:'Enter primary IPv4 DNS address (e.g. 8.8.8.8):', dlDnsSecT:'Custom DNS — Secondary Server', dlDnsSecB:'Enter secondary IPv4 DNS address (optional — leave blank to skip):', dlReEnableT:'Re-enable {name}', dlReEnableSvcB:'Service "{name}" will be restored to "{start}" start and started.', dlReEnableTaskB:'Task "{name}" will be re-enabled in Task Scheduler.', dlReEnable:'Re-enable', tkFailedName:'Failed: {name}',
-      gpBundleTweaksFailed:'{n} tweak(s) did not apply: {ids}', launchRuleFailed:'Could not change this setting', tkUgOn:'Update Guard enabled', tkUgOff:'Update Guard disabled', tkGsOn:'Game Shield enabled', tkGsOff:'Game Shield disabled', tkUgOnLong:'Update Guard enabled — Windows Update blocked during gaming',
+launchRuleFailed:'Could not change this setting', tkUgOn:'Update Guard enabled', tkUgOff:'Update Guard disabled', tkGsOn:'Game Shield enabled', tkGsOff:'Game Shield disabled', tkUgOnLong:'Update Guard enabled — Windows Update blocked during gaming',
       abClose:'Close', abAdvanced:'Advanced mode', abWhatsNew:'What\'s new', abBugReport:'Report a bug', abToggleLog:'Toggle output log', abDelete:'Delete', abRebootNow:'Reboot now',
       tkScanReq:'Scan Required', tkScanReqRevert:'Run SCEWIN Scan first to revert a setting.', tkScanReqToken:'Run SCEWIN Scan first to identify the token.', tkScanReqPlain:'Run SCEWIN Scan first.', tkScanReqProfile:'Run SCEWIN Scan first before saving a profile.', tkSettingNotFound:'Setting Not Found', tkTokenNotInDump:'Token {token} not in current BIOS dump.', tkSettingNotInDump:'This setting is not in the current BIOS dump.', tkOptionNotFound:'Option Not Found', tkOptionNotFoundMsg:'Could not find option "{label}" in current dump.', tkValueUnavail:'Value Not Available', tkValueUnavailMsg:'The original value is no longer an option in your BIOS.', tkReverted:'Reverted', tkRevertFailed:'Revert Failed', tkBiosWriteFail:'Could not write to BIOS.', tkSafetyReq:'Safety Toggle Required', tkSafetyBios:'Flip the safety toggle before applying.', tkSafetyTweak:'Flip the safety toggle on this tweak before applying it.', tkFailed:'Failed', tkOpFailed:'Operation failed.', tkHyperVOff:'Hyper-V Disabled', tkHyperVOn:'Hyper-V Re-enabled', tkRebootReq:'Reboot required for this change to take effect.', tkSelectProfile:'Select Profile', tkSelectProfileMsg:'Choose a profile from the dropdown first.', tkProfLoadFail:'Profile Load Failed', tkProfLoadFailMsg:'Could not apply profile.', tkExportFail:'Export Failed', tkExportFailMsg:'Could not export profile.', tkBoardMismatch:'Board Mismatch', tkImportFail:'Import Failed', tkImportFailMsg:'Could not import profile.', tkAutoTuneReady:'Recommendation ready — review and apply', tkFailedShort:'Failed', tkNameReq:'Name Required', tkNameReqMsg:'Enter a preset name before saving.', tkEnterProfName:'Enter a profile name', tkNoTweaksYet:'No tweaks applied yet', tkNoTweaksYetMsg:'Apply some tweaks first', tkProfSaved:'Profile saved', tkProfNotFound:'Profile not found', tkProfApplied:'Profile applied', tkProfAppliedMsg:'{applied} tweaks applied{failedPart}', tkFailedPart:', {failed} failed', tkProfDeletedT:'Profile Deleted', tkProfDeletedWarn:'Tweaks from this profile were NOT reverted automatically. Use the Changelog tab to undo them individually.', tkProfDeleted:'Profile deleted', tkCloneFail:'Clone failed', tkProfCloned:'Profile cloned', tkProfClonedMsg:'"{name}" created', tkRenameFail:'Rename failed', tkProfRenamed:'Profile renamed', tkProfExported:'Profile exported', tkProfExportedMsg:'Saved to Desktop as {file}', tkExportFailLow:'Export failed', tkImportFailLow:'Import failed', tkInvalidProfFile:'Invalid profile file', tkProfImported:'Profile imported', tkProfImportedMsg:'"{name}" added to your profiles', tkCopied:'Copied', tkReportCopied:'Session report copied to clipboard', tkAdminReq:'Administrator Required', tkAdminReqMsg:'Auto-Optimize needs Admin privileges. Relaunch as Administrator.', tkAlreadyRunning:'Already Running', tkAlreadyRunningMsg:'Auto-Optimization is already in progress.', tkUndoFailed:'Undo Failed', tkRpNotFound:'Restore point "{name}" not found', tkNothingSel:'Nothing selected', tkNothingSelTweak:'Check at least one tweak to run.', tkDraftResumed:'Draft Resumed', tkDraftResumedMsg:'Your previous selections have been restored.', tkInvalidIp:'Invalid IP', tkInvalidIpMsg:'Enter a valid IPv4 address.', tkInvalidIp2Msg:'Secondary DNS must be a valid IPv4 address or empty.', tkDnsSet:'Custom DNS configured', tkProfAssigned:'Profile assigned', tkProfAssignedMsg:'"{name}" will auto-apply when {game} launches', tkProfRemoved:'Profile removed', tkProfRemovedMsg:'No auto-profile for {game}', tkProfileFailed:'Profile Failed', tkProfMissing:'Profile Missing', tkProfMissingMsg:'"{name}" no longer exists — bundle activated without it', tkNothingSelCap:'Nothing Selected', tkSelApp:'Select at least one app to remove.', tkSelService:'Select at least one service to disable.', tkSelTask:'Select at least one task to disable.', tkSelTaskRe:'Check the tasks you want to re-enable.', tkSelDevice:'Select at least one device.', tkSelExt:'Select at least one extension to remove.', tkSelFeature:'Select features to disable.', tkGamingRec:'Gaming Recommended', tkGamingRecSvc:'Services selected for gaming{lap}{wifi}.', tkLapSafe:' (laptop-safe)', tkWifiKept:', Wi-Fi preserved', tkGamingRecTask:'Tasks selected{lap}.', tkReEnabled:'Re-enabled', tkReEnabledSvc:'{name} is now active.', tkReEnabledTask:'{name} is active again.', tkError:'Error', tkReEnableSvcFail:'Could not re-enable {name}.', tkFixApplied:'Fix applied', tkFixFailed:'Fix failed', tkUnknownError:'Unknown error', tkUpdGuard:'Update Guard', tkUpdQuiet:'Windows Update quiet hours set to {hours}', tkReapplied:'Re-applied {n} tweak(s)', tkRemoved:'Removed: {name}', genSafeDefaults:'Safe Defaults',
       genSafeDefaultsConfirm:'Apply safe tweaks with no danger flags or reboot required?',
@@ -1745,8 +1745,8 @@ aoHeroEyebrow:'App scanner', aoHeroDetected:'{n} apps detected', aoHeroScanning:
       fivemModConflictTitle:'Mod Conflict Detector',
       // Game Profiles
       recentSessionsTitle:'Recent Sessions',
-      gpAutoProfilesTitle:'Per-Game Auto Profiles',
-      gpAutoProfilesDesc:'Automatically applies tweaks when a game is detected, restores defaults on close. Checks every 5 seconds.',
+
+
       // BIOS CPU Power Tuner block
       ryzenTitle:'AMD CPU POWER TUNER — ADVANCED USERS ONLY',
       ryzenWarn1:'Changes PPT, TDC, and EDC power limits via RyzenAdj.',
@@ -3522,14 +3522,7 @@ aoHeroEyebrow:'App scanner', aoHeroDetected:'{n} apps detected', aoHeroScanning:
       dial:'changes recorded', statToday:'Last 24 hours', statApplied:'Applied', statRestored:'Restored', loading:'Reading the journal', none:'Nothing recorded yet', last:'Latest change {t}', failed:'Could not read the history',
       undoBatchTitle:'Undo this batch?', undoBatchBody:'Every change in this batch is put back to what it was before. You can apply them again later.',
       undoSessionTitle:'Undo this whole session?', undoSessionBody:'Every change made in this session is put back to what it was before. Changes that were already undone are skipped.',
-    },
-    gpHero: {
-      title:'Game profiles', lead:'A tuned profile per game. Every profile can be restored from its own page.', dial:'optimized', statFound:'Installed', statOpt:'Optimized', statRun:'Running now',
-      scanning:'Looking for installed games', found:'{n} installed games', none:'No supported games found', cta:'Optimize remaining', ctaDone:'All installed games optimized',
-      confirmBody:'Apply the profile to {n} installed games? Each one is journaled and can be restored.',
-      errAdmin:'Administrator rights required', errPath:'Game path not found. Try scanning again.', errUnknown:'Unknown error', errPerm:'Permission denied. Try running as administrator.', errScan:'Scan failed',
-      bundleHint:'Choose Create bundle to snapshot your current preset.', bundleEmpty:'Empty bundle',
-    },
+    },
     procx: {
       hogTitle:'CPU hog rail', hogSub:'Freeze any process. It is restored automatically when your game exits.', kill:'End process', saved:'saved {n}s of CPU', freezeErr:'Could not freeze the process', ipcFailed:'The request failed',
     },

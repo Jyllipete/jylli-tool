@@ -23,6 +23,7 @@
 <link rel="stylesheet" href="css/cpumem.css">
 <link rel="stylesheet" href="css/gpu.css">
 <link rel="stylesheet" href="css/power.css">
+<link rel="stylesheet" href="css/games.css">
 <link rel="stylesheet" href="css/cleanup.css">
 <link rel="stylesheet" href="css/diagnostics.css">
 <link rel="stylesheet" href="css/fivem.css">
@@ -519,6 +520,8 @@
 <script src="js/lang/gamecfg-fi.js"></script>
 <script src="js/lang/compete-en.js"></script>
 <script src="js/lang/compete-fi.js"></script>
+<script src="js/lang/games-en.js"></script>
+<script src="js/lang/games-fi.js"></script>
 <script src="js/lang/pulse-en.js"></script>
 <script src="js/lang/pulse-fi.js"></script>
 <script src="js/lang/home-en.js"></script>
@@ -653,6 +656,9 @@
 <script src="js/gameconfig/sheet.js"></script>
 <script src="js/compete/pure.js"></script>
 <script src="js/compete/page.js"></script>
+<script src="js/games/pure.js"></script>
+<script src="js/games/views.js"></script>
+<script src="js/games/page.js"></script>
 <script src="js/fivem/views.js"></script>
 <script src="lib/pulse/attribution.js"></script>
 <script src="lib/pulse/frames.js"></script>
@@ -2863,12 +2869,6 @@ async function toggleGameWatcher() {
     if (btn) { btn.innerHTML = `<i class="fa fa-stop"></i> ${tUI('gpWatcherOn')}`; btn.className = 'btn btn-danger'; btn.disabled = false }
     const lbl = document.getElementById('watcher-active-game')
     if (lbl) lbl.textContent = tUI('watcherWatchingLabel')
-    const gpBtn = document.getElementById('gp-watcher-toggle-btn')
-    const gpDot = document.getElementById('gp-watcher-dot')
-    if (gpBtn) { gpBtn.innerHTML = `<i class="fa fa-stop"></i> ${tUI('gpWatcherOn')}`; gpBtn.className = 'btn btn-sm btn-danger' }
-    if (gpDot) gpDot.className = 'gp-watcher-dot running'
-    const gpCard = document.getElementById('gp-watcher-card')
-    if (gpCard) gpCard.className = 'gp-watcher-card state-running'
     toast(tUI('autoProfilesOn'), tUI('autoProfilesOnBody'), 'ok')
   } else {
     await api.stopGameWatcher()
@@ -2881,12 +2881,6 @@ async function toggleGameWatcher() {
     if (btn) { btn.innerHTML = `<i class="fa fa-play"></i> ${tUI('gpWatcherOff')}`; btn.className = 'btn btn-info' }
     const lbl = document.getElementById('watcher-active-game')
     if (lbl) lbl.textContent = tUI('watcherEnableLabel')
-    const gpBtn = document.getElementById('gp-watcher-toggle-btn')
-    const gpDot = document.getElementById('gp-watcher-dot')
-    if (gpBtn) { gpBtn.innerHTML = `<i class="fa fa-play"></i> ${tUI('gpWatcherOff')}`; gpBtn.className = 'btn btn-sm btn-info' }
-    if (gpDot) gpDot.className = 'gp-watcher-dot stopped'
-    const gpCard2 = document.getElementById('gp-watcher-card')
-    if (gpCard2) gpCard2.className = 'gp-watcher-card state-stopped'
     toast(tUI('autoProfilesOff'), '', 'info')
   }
 }
@@ -6149,473 +6143,22 @@ async function applyTweakCard(id, checked, isDanger = false) {
   } finally { _tweakInflight.delete(id) }
 }
 
-// ─── Page: Game Profiles (Paragon two-panel layout) ───────────────────────────
-const _gico = (f) => `<img src="assets/games/${f}" style="width:100%;height:100%;object-fit:contain" draggable="false">`
-const GAME_LIST = [
-  { id:'fortnite',      name:'Fortnite',           dev:'Epic Games',            emoji:_gico('Fortnite.ico'), installed:false, running:false, installPath:null, lastPlayed:null },
-  { id:'gtav',          name:'GTA V',               dev:'Rockstar Games',        emoji:_gico('GTA5.ico'), installed:false, running:false, installPath:null, lastPlayed:null },
-  { id:'valorant',      name:'Valorant',            dev:'Riot Games',            emoji:_gico('Valorant.ico'), installed:false, running:false, installPath:null, lastPlayed:null },
-  { id:'arma-reforger', name:'Arma Reforger',       dev:'Bohemia Interactive',   emoji:_gico('Arma Reforger.ico'), installed:false, running:false, installPath:null, lastPlayed:null },
-  { id:'minecraft',     name:'Minecraft',           dev:'Mojang',                emoji:_gico('Minecraft.ico'), installed:false, running:false, installPath:null, lastPlayed:null },
-  { id:'cs2',           name:'Counter-Strike 2',    dev:'Valve',                 emoji:_gico('Counter Strike 2.ico'), installed:false, running:false, installPath:null, lastPlayed:null },
-  { id:'apex',          name:'Apex Legends',        dev:'Respawn Entertainment', emoji:_gico('Apex Legends.ico'), installed:false, running:false, installPath:null, lastPlayed:null },
-  { id:'warzone',       name:'Warzone',             dev:'Activision',            emoji:_gico('Warzone.ico'), installed:false, running:false, installPath:null, lastPlayed:null },
-  { id:'rust',          name:'Rust',                dev:'Facepunch Studios',     emoji:_gico('Rust.ico'), installed:false, running:false, installPath:null, lastPlayed:null },
-  { id:'the-finals',    name:'THE FINALS',          dev:'Embark Studios',        emoji:_gico('The Finals.ico'), installed:false, running:false, installPath:null, lastPlayed:null },
-  { id:'r6siege',       name:'Rainbow Six Siege',   dev:'Ubisoft',               emoji:_gico('R6.ico'), installed:false, running:false, installPath:null, lastPlayed:null },
-  { id:'overwatch2',    name:'Overwatch 2',         dev:'Blizzard',              emoji:_gico('Overwatch.ico'), installed:false, running:false, installPath:null, lastPlayed:null },
-  { id:'tarkov',        name:'Escape from Tarkov',  dev:'Battlestate Games',     emoji:_gico('Tarkov.ico'), installed:false, running:false, installPath:null, lastPlayed:null },
-  { id:'squad',         name:'Squad',               dev:'Offworld Industries',   emoji:_gico('Squad.ico'), installed:false, running:false, installPath:null, lastPlayed:null },
-  { id:'dayz',          name:'DayZ',                dev:'Bohemia Interactive',   emoji:_gico('DayZ.ico'), installed:false, running:false, installPath:null, lastPlayed:null },
-  { id:'cyberpunk',     name:'Cyberpunk 2077',      dev:'CD Projekt Red',        emoji:_gico('Cyberpunk.ico'), installed:false, running:false, installPath:null, lastPlayed:null },
-  { id:'rdr2',          name:'Red Dead Redemption 2', dev:'Rockstar Games',      emoji:_gico('Red Dead Redemption 2.ico'), installed:false, running:false, installPath:null, lastPlayed:null },
-  { id:'pubg',          name:'PUBG',                dev:'Krafton',               emoji:_gico('Pubg.ico'), installed:false, running:false, installPath:null, lastPlayed:null },
-]
-const GAME_TIPS = {
-  fortnite:      'NVIDIA Control Panel: set Low Latency Mode = Ultra for FortniteClient-Win64-Shipping.exe.',
-  gtav:          'Add -dx11 as Rockstar Launcher launch argument for better CPU performance on older CPUs.',
-  valorant:      'Disable Multithreaded Rendering if you experience stutters on older CPUs.',
-  'arma-reforger': 'Use Exclusive Fullscreen + disable VSync in Arma Reforger settings for best FPS.',
-  minecraft:     'Install Sodium + Lithium (Fabric) for 2–5× more FPS on Java Edition.',
-  cs2:           'Launch options: -novid -nojoy -fullscreen +fps_max 0 +mat_queue_mode 2',
-  apex:          '+fps_max unlimited in Origin/EA App launch options for uncapped frames.',
-  warzone:       'Use Fullscreen Exclusive + disable in-game V-Sync for lowest input latency.',
-  rust:          'Steam: -window-mode exclusive -high -maxMem=8192 -malloc=system -force-d3d11',
-  'the-finals':  'Fullscreen Exclusive and V-Sync off for lowest input latency.',
-  r6siege:       'Disable Ubisoft overlay for lower input lag. Set texture quality to medium for highest FPS on competitive maps.',
-  overwatch2:    'Set Render Scale to 100%. Dynamic Render Scale causes frame time spikes — disable it.',
-  tarkov:        'Disable HD textures. Set object LOD to 2. Disable SSR. Use fullscreen (not borderless) for lowest latency.',
-  squad:         'Lower shadows to medium. Disable ambient occlusion. Use DirectX 11 mode for best stability.',
-  dayz:          'Lower view distance to 1200m. Shadows on low. Disable volumetric clouds for best FPS.',
-  cyberpunk:     'Enable DLSS or FSR. Set crowd density to low. Disable ray tracing for competitive performance.',
-  rdr2:          'Lower grass quality and shadows first — they are the biggest GPU cost. TAA sharpening to 100%.',
-  pubg:          'Use Smooth + Unlocked framerate preset. Disable V-Sync. Lower foliage to very low.',
-}
-// ─── Page: Gaming (tab wrapper) ───────────────────────────────────────────────
-let selectedGameId = 'fortnite'
-let gpScanned = false
-let _gpScanRunning = false
-
+// ─── Page: Games ──────────────────────────────────────────────────────────────
+// Competitive Mode (js/compete/page.js) is open to everyone and stays on top. Below it is the Library (js/games/*, engine lib/games): the real list of
+// every installed game, Play, per-game tuning that is read back, play history. Library and Play are free; per-game changes lock inline (Premium).
 async function buildGameOpti(c) {
-  // Competitive Mode (js/compete/page.js) is open to everyone; its Premium rows lock inline. The rest of the tab is Premium.
   const cpHost = document.createElement('div')
   cpHost.id = 'cp-host'
   c.appendChild(cpHost)
   const cpPanel = JylliCompetePage.mount(cpHost)
-  registerPageCleanup('game-opti', () => { try { cpPanel.destroy() } catch {} })
-  if (!settings.isPremium) { const rest = document.createElement('div'); c.appendChild(rest); await JylliPremium.build(rest, 'games'); return }
-  // Hero (js/ui/tab-kit.js): how many installed games have their profile applied, and one action for the rest
-  const gpHost = document.createElement('div')
-  gpHost.className = 'tk-hero'
-  c.appendChild(gpHost)
-  const gpT = (k, v) => tG('gpHero', k, v)
-  const gpHero = JylliHero.mount(gpHost, {
-    id: 'gp-hero', eyebrow: gpT('scanning'), title: gpT('title'), lead: gpT('lead'), dial: { label: gpT('dial') },
-    stats: [{ k: 'found', label: gpT('statFound') }, { k: 'opt', label: gpT('statOpt') }, { k: 'run', label: gpT('statRun') }],
-    cta: { id: 'gp-optimize-all', icon: 'bolt', label: gpT('cta'), onClick: () => gpOptimizeAll() },
-  })
-  gpHero.scanning(!gpScanned)
-  window._gpHeroRefresh = () => {
-    const inst = GAME_LIST.filter(g => g.installed)
-    const opt = inst.filter(g => settings['tweak_game-' + g.id] === 'applied')
-    const left = inst.length - opt.length
-    gpHero.scanning(_gpScanRunning)
-    gpHero.update({
-      pct: inst.length ? Math.round(opt.length / inst.length * 100) : null, tone: 'accent',
-      eyebrow: !gpScanned ? gpT('scanning') : inst.length ? gpT('found', { n: inst.length }) : gpT('none'),
-      stats: { found: gpScanned ? inst.length : '–', opt: gpScanned ? opt.length : '–', run: GAME_LIST.filter(g => g.running).length },
-      cta: { hidden: !inst.length, done: inst.length > 0 && left === 0, badge: left, label: left === 0 ? gpT('ctaDone') : gpT('cta') },
-    })
-  }
-  registerPageCleanup('game-opti', () => { window._gpHeroRefresh = null; gpHero.destroy() })
-  window._gpHeroRefresh()
-  // Auto-profile watcher strip
-  const watchStrip = document.createElement('div')
-  watchStrip.id = 'gp-watcher-card'
-  watchStrip.className = `gp-watcher-card ${gameWatcherRunning ? 'state-running' : 'state-stopped'}`
-  watchStrip.innerHTML = `
-    <div class="gp-watcher-icon"><i class="fa fa-robot"></i></div>
-    <div class="gp-watcher-body">
-      <div class="gp-watcher-title">
-        ${tUI('gpAutoProfilesTitle')}
-        ${autoPulseEnabled ? `<span class="j-badge j-badge-ok">${tUI('gpAutoPulseBadge')}</span>` : ''}
-      </div>
-      <div class="gp-watcher-sub">
-        ${gameWatcherRunning ? tUI('gpWatcherActiveDesc') : tUI('gpAutoProfilesDesc')}
-      </div>
-      ${autoPulseActive ? `<div class="j-live-strip"><span class="j-live-dot"></span><span>${tUI('gpAutoPulseActive')}</span></div>` : ''}
-    </div>
-    <div id="gp-watcher-dot" class="gp-watcher-dot ${gameWatcherRunning ? 'running' : 'stopped'}" style="display:none"></div>
-    <button class="btn btn-sm ${gameWatcherRunning ? 'btn-danger' : 'btn-info'}" id="gp-watcher-toggle-btn" onclick="toggleGameWatcher()">
-      ${gameWatcherRunning ? `<i class="fa fa-stop"></i> ${tUI('gpWatcherOn')}` : `<i class="fa fa-play"></i> ${tUI('gpWatcherOff')}`}
-    </button>`
-  c.appendChild(watchStrip)
-
-  // Game Bundles panel
-  const bundlesWrap = document.createElement('div')
-  bundlesWrap.id = 'gp-bundles-wrap'
-  bundlesWrap.style.cssText = 'margin-bottom:10px'
-  bundlesWrap.innerHTML = `
-    <div class="gp-bundles-header">
-      <span class="gp-bundles-label"><i class="fa fa-layer-group"></i>${tUI('gpBundlesTitle')}</span>
-      <button class="j-btn j-btn-sm j-btn-ghost" onclick="gpCreateBundle()">
-        <i class="fa fa-plus"></i> ${tUI('gpBundleCreate')}
-      </button>
-    </div>
-    <div id="gp-bundle-list" class="jx-619"></div>`
-  c.appendChild(bundlesWrap)
-  gpRenderBundles()
-
-  // Two-panel layout
-  const layout = document.createElement('div')
-  layout.className = 'gp-layout'
-
-  // Left panel — game list
-  const leftPanel = document.createElement('div')
-  leftPanel.className = 'gp-list'
-  leftPanel.innerHTML = `
-    <div class="gp-list-header">
-      <input class="gp-search" placeholder="${tUI('gpSearchPlaceholder')}" oninput="filterGPList(this.value)">
-      <button class="j-btn j-btn-sm j-btn-ghost" onclick="doGPScan(this)"><i class="fa fa-magnifying-glass"></i> ${tUI('gpScanBtn')}</button>
-    </div>
-    <div class="gp-items" id="gp-items"></div>`
-
-  // Right panel — game detail
-  const rightPanel = document.createElement('div')
-  rightPanel.className = 'gp-detail'
-  rightPanel.id = 'gp-detail'
-
-  layout.appendChild(leftPanel)
-  layout.appendChild(rightPanel)
-  c.appendChild(layout)
-
-  renderGPList(GAME_LIST)
-  renderGPDetail(GAME_LIST.find(g => g.id === selectedGameId) || GAME_LIST[0])
-
-  if (!gpScanned) doGPScan(null, true)
-}
-
-function renderGPList(games, filter = '') {
-  const el = document.getElementById('gp-items')
-  if (!el) return
-  const filtered = filter ? games.filter(g => g.name.toLowerCase().includes(filter.toLowerCase())) : games
-  const sorted = [...filtered].sort((a, b) => {
-    const aScore = a.running ? 2 : a.installed ? 1 : 0
-    const bScore = b.running ? 2 : b.installed ? 1 : 0
-    if (bScore !== aScore) return bScore - aScore
-    return a.name.localeCompare(b.name)
-  })
-  if (sorted.length === 0) {
-    el.innerHTML = `
-      <div class="gp-empty">
-        <div class="gp-empty-icon"><i class="fa fa-magnifying-glass"></i></div>
-        <div class="gp-empty-title">${filter ? 'No games found' : 'No games detected'}</div>
-        <div class="gp-empty-sub">${filter ? `No results for "${filter.replace(/"/g,'&quot;')}"` : 'Click Scan to detect installed games'}</div>
-      </div>`
-    return
-  }
-  el.innerHTML = sorted.map(g => `
-    <div class="gp-item ${g.id === selectedGameId ? 'active' : ''} ${!g.installed && !g.running ? 'gp-not-installed' : ''}"
-         onclick="selectGPGame('${g.id}')"
-         tabindex="0"
-         role="button"
-         aria-pressed="${g.id === selectedGameId}"
-         onkeydown="if(event.key==='Enter'||event.key===' '){selectGPGame('${g.id}')}">
-      <div class="gp-emoji">${g.emoji}</div>
-      <div class="gp-item-info">
-        <div class="gp-item-name">${g.name}</div>
-        <div class="gp-item-dev">${g.dev}</div>
-        ${g.installed && g.installPath ? `<div class="jx-620">${g.installPath.split('\\').slice(-2).join('\\')}</div>` : ''}
-      </div>
-      <span class="gp-status ${g.running ? 'running' : g.installed ? 'installed' : 'not-installed'}">
-        ${g.running ? tUI('gpStatusRun') : g.installed ? tUI('gpStatusInst') : tUI('gpStatusNotInst')}
-      </span>
-    </div>`).join('')
-}
-
-function filterGPList(v) { renderGPList(GAME_LIST, v) }
-
-function selectGPGame(id) {
-  selectedGameId = id
-  renderGPList(GAME_LIST)
-  const g = GAME_LIST.find(g => g.id === id)
-  if (g) renderGPDetail(g)
-}
-
-function renderGPDetail(g) {
-  const dp = document.getElementById('gp-detail')
-  if (!dp) return
-  dp.classList.remove('gp-detail-entering')
-  void dp.offsetWidth
-  dp.classList.add('gp-detail-entering')
-  dp.addEventListener('animationend', () => dp.classList.remove('gp-detail-entering'), { once: true })
-  const applied = tweakState(`game-${g.id}`) === 'applied'
-  const tip = GAME_TIPS[g.id] || ''
-
-  dp.innerHTML = `
-    <div class="gp-hero-banner">
-      <div class="gp-hero-bg jx-621"></div>
-      <div class="gp-hero-top">
-        <div class="gp-hero-medallion ${g.running ? 'status-running' : !g.installed && !g.running ? 'status-not-installed' : ''}">${g.emoji}</div>
-        <span class="gp-hero-status-chip ${g.running ? 'running' : g.installed ? 'installed' : 'not-installed'}">
-          ${g.running ? tUI('gpStatusRunning') : g.installed ? tUI('gpStatusInstalled') : tUI('gpStatusNotInstalled')}
-        </span>
-      </div>
-      <div class="gp-hero-bottom">
-        <div class="gp-hero-name">${g.name}</div>
-        <div class="gp-hero-dev">${g.dev}</div>
-        ${g.installPath ? `<div class="gp-hero-path"><i class="fa fa-folder-open jx-24"></i>${g.installPath}</div>` : ''}
-        ${g.lastPlayed && g.installed ? `<div class="jx-622">${tUI('gpLastSeen').replace('{date}', g.lastPlayed)}</div>` : ''}
-      </div>
-    </div>
-    <div class="gp-detail-body">
-      <div class="gp-ready-card ${applied ? 'gp-ready-active' : ''}">
-        <div class="gp-ready-dot ${applied ? 'gp-dot-active' : 'gp-dot-inactive'}"></div>
-        <div class="jx-2">
-          <div class="jx-59">${applied ? tUI('gpReadyActiveTitle') : tUI('gpReadyTitle')}</div>
-          <div class="jx-1">${applied ? tUI('gpReadyActiveSub') : tUI('gpReadySub')}</div>
-        </div>
-      </div>
-      <div class="gp-section-lbl">${tUI('gpCoreSettings')}</div>
-      <div class="gp-cta-row">
-        <button class="btn-gp-apply" onclick="doGPApply('${g.id}','apply')"><i class="fa fa-bolt"></i> ${tUI('gpApplyProfile')}</button>
-        <button class="btn-gp-restore" onclick="doGPApply('${g.id}','restore')"><i class="fa fa-rotate-left"></i> ${tUI('gpRestoreDefaults')}</button>
-        ${g.id === 'arma-reforger' ? `<button class="btn btn-info btn-sm" onclick="api.openArmaSettings()"><i class="fa fa-sliders"></i> Graphics Settings</button>` : ''}
-      </div>
-      ${['cs2', 'apex', 'fortnite', 'minecraft'].includes(g.id) && g.installed ? `<div id="gc-host-${g.id}"></div>` : ''}
-      ${tip ? `<div class="gp-tip-v2"><i class="fa fa-lightbulb jx-623"></i>${tip}</div>` : ''}
-      ${g.installPath ? `<div class="jx-95"><button class="btn btn-ghost btn-sm" onclick="api.openPath(${jsArg(g.installPath)})" ><i class="fa fa-folder-open"></i> ${tUI('gpOpenFolder')}</button></div>` : ''}
-      <div class="gp-section-lbl">${tUI('gpAutoProfile')}</div>
-      <div id="gp-profile-assign-row" class="jx-624">
-        <select class="gp-profile-select" id="gp-profile-sel-${g.id}" onchange="assignGameProfile('${g.id}',this.value)">
-          <option value="">${tUI('gpNoProfile')}</option>
-        </select>
-      </div>
-      <div class="gp-section-lbl">${tUI('gpWhatApplies')}</div>
-      <div class="gp-feature-grid">
-        <div class="gp-feature-card cat-perf"><span class="gp-feature-icon"><i class="fa fa-bolt"></i></span><span class="gp-feature-text">${tUI('gpWhatIfeo')}</span></div>
-        <div class="gp-feature-card cat-audio"><span class="gp-feature-icon"><i class="fa fa-gamepad"></i></span><span class="gp-feature-text">${tUI('gpWhatMmcss')}</span></div>
-        <div class="gp-feature-card cat-gfx"><span class="gp-feature-icon"><i class="fa fa-display"></i></span><span class="gp-feature-text">${tUI('gpWhatFso')}</span></div>
-        <div class="gp-feature-card cat-sec"><span class="gp-feature-icon"><i class="fa fa-shield-halved"></i></span><span class="gp-feature-text">${tUI('gpWhatDefender')}</span></div>
-        <div class="gp-feature-card cat-sys"><span class="gp-feature-icon"><i class="fa fa-bullseye"></i></span><span class="gp-feature-text">${tUI('gpWhatDvr')}</span></div>
-      </div>
-    </div>`
-  // Populate per-game profile assignment select (async — must be awaited internally)
-  ;(async () => { await populateGameProfileSelect(g.id) })()
-  { const gcHost = document.getElementById('gc-host-' + g.id); if (gcHost && window.JylliGameCfg) window.JylliGameCfg.mount(gcHost, g.id) }
-}
-
-async function populateGameProfileSelect(gameId) {
-  const sel = document.getElementById(`gp-profile-sel-${gameId}`)
-  if (!sel) return
-  sel.innerHTML = `<option disabled selected>Loading…</option>`
-  sel.disabled = true
-  let profiles
-  try {
-    profiles = await api.listProfiles()
-  } catch {
-    const selNow = document.getElementById(`gp-profile-sel-${gameId}`)
-    if (selNow) { selNow.innerHTML = `<option disabled selected>Failed to load profiles</option>`; selNow.disabled = false }
-    return
-  }
-  const selNow = document.getElementById(`gp-profile-sel-${gameId}`)
-  if (!selNow) return
-  const assigned = settings[`gameProfile_${gameId}`] || ''
-  const names = Object.keys(profiles).sort()
-  selNow.innerHTML = `<option value="">${tUI('gpNoProfile')}</option>` +
-    names.map(n => `<option value="${n}" ${n === assigned ? 'selected' : ''}>${n}</option>`).join('')
-  selNow.disabled = false
-}
-
-async function assignGameProfile(gameId, profileName) {
-  settings[`gameProfile_${gameId}`] = profileName || ''
-  await api.saveSettings(settings)
-  if (profileName) toast(tUI('tkProfAssigned'), tUIf('tkProfAssignedMsg', { name: profileName, game: gameId }), 'ok')
-  else toast(tUI('tkProfRemoved'), tUIf('tkProfRemovedMsg', { game: gameId }), 'info')
-}
-
-async function doGPApply(gameId, action) {
-  const g = GAME_LIST.find(g => g.id === gameId)
-  if (!g) return
-  toast(action === 'apply' ? tUI('gpApplyingProfile') : tUI('gpRestoringProfile'), g.name, 'info', 1500)
-  const r = await api.applyGameTweak(gameId, action, g.installPath).catch(e => ({ ok: false, error: e.message }))
-  if (!r?.ok) {
-    const errMsg = r?.error?.includes('admin') || r?.error?.includes('Access')
-      ? tG('gpHero', 'errAdmin')
-      : r?.error?.includes('path') || r?.error?.includes('not found')
-      ? tG('gpHero', 'errPath')
-      : r?.error || tG('gpHero', 'errUnknown')
-    toast(tUI('tkProfileFailed'), errMsg, 'err')
-    return
-  }
-  settings[`tweak_game-${gameId}`] = action === 'apply' ? 'applied' : 'restored'
-  await api.saveSettings(settings)
-  await api.addChangelogEntry({ id: `game-${gameId}`, action }).catch(() => {})
-  toast(action === 'apply' ? tUI('gpProfileApplied') : tUI('gpProfileRestored'), g.name, action === 'apply' ? 'ok' : 'info')
-  renderGPDetail(g)
-  if (window._gpHeroRefresh) window._gpHeroRefresh()
-}
-
-// One action for every installed game that has no profile yet (asks first; each game is journaled like a single apply)
-async function gpOptimizeAll() {
-  const todo = GAME_LIST.filter(g => g.installed && settings['tweak_game-' + g.id] !== 'applied')
-  if (!todo.length) return
-  try { await showConfirm({ title: tG('gpHero', 'cta'), body: tG('gpHero', 'confirmBody', { n: todo.length }), okText: tUI('apply'), okStyle: 'primary', icon: 'fa-bolt' }) } catch { return }
-  let ok = 0, failed = 0
-  for (const g of todo) {
-    const r = await api.applyGameTweak(g.id, 'apply', g.installPath).catch(() => null)
-    if (r && r.ok) { settings['tweak_game-' + g.id] = 'applied'; ok++; await api.addChangelogEntry({ id: 'game-' + g.id, action: 'apply' }).catch(() => {}) } else failed++
-  }
-  await api.saveSettings(settings).catch(() => {})
-  toast(tG('gpHero', 'cta'), tUI('batchDone').replace('{applied}', ok) + (failed ? ' · ' + tUI('batchFailed').replace('{failed}', failed) : ''), ok > 0 ? 'ok' : 'warn')
-  renderGPList(GAME_LIST)
-  const sel = GAME_LIST.find(g => g.id === selectedGameId); if (sel) renderGPDetail(sel)
-  if (window._gpHeroRefresh) window._gpHeroRefresh()
-}
-
-// ── Game Bundles ─────────────────────────────────────────────────────────────
-async function gpRenderBundles() {
-  const el = document.getElementById('gp-bundle-list')
-  if (!el) return
-  const bundles = await api.listGameBundles().catch(() => ({}))
-  const entries = Object.values(bundles || {}).filter(b => b && typeof b === 'object' && b.name)
-  if (entries.length === 0) {
-    el.innerHTML = `<div class="jx-625">
-      <span style="font-size:16px;opacity:0.4"><i class="fa fa-layer-group"></i></span>
-      <div>
-        <div class="jx-626">${tUI('gpBundleEmpty')}</div>
-        <div class="jx-33">${tG('gpHero', 'bundleHint')}</div>
-      </div>
-    </div>`
-    return
-  }
-  el.innerHTML = entries.map(b => {
-    const gameName = (b.gameId && typeof PULSE_PRESETS !== 'undefined' && PULSE_PRESETS?.[b.gameId]?.name) ? PULSE_PRESETS[b.gameId].name : (b.gameId || '—')
-    const tags = [
-      b.pulsePreset ? `<span class="jx-627">⚡ Pulse</span>` : '',
-      b.tweakProfileName ? `<span class="jx-628"><i class="fa fa-wrench"></i> ${b.tweakProfileName.length > 12 ? b.tweakProfileName.slice(0,12)+'…' : b.tweakProfileName}</span>` : '',
-      b.citizenfxIniSnapshot && Object.keys(b.citizenfxIniSnapshot).length > 0 ? `<span class="jx-629">${Object.keys(b.citizenfxIniSnapshot).length} ${tUI('gpBundleIniSettings')}</span>` : '',
-    ].filter(Boolean).join(' ')
-    return `<div class="gp-bundle-card gp-bundle-card-v2">
-      <div class="gp-bundle-name">${b.name}</div>
-      <div class="gp-bundle-game">${gameName}</div>
-      <div class="jx-630">${tags || `<span class="jx-7">${tG('gpHero', 'bundleEmpty')}</span>`}</div>
-      <div class="jx-631">
-        <button class="btn btn-ghost btn-sm" style="font-size:11px;flex:1" onclick="gpActivateBundleBtn(this,${jsArg(b.name)})"><i class="fa fa-play"></i> ${tUI('gpBundleActivate')}</button>
-        <button class="btn btn-ghost btn-sm" style="font-size:11px;color:var(--danger);border-color:rgba(var(--c-danger-rgb),0.3)" onclick="gpDeleteBundle(${jsArg(b.name)})"><i class="fa fa-trash"></i></button>
-      </div>
-    </div>`
-  }).join('')
-}
-
-async function gpActivateBundleBtn(btn, name) {
-  const card = btn.closest('.gp-bundle-card')
-  if (card) card.classList.add('gp-bundle-activating')
-  const origHTML = btn.innerHTML
-  btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i>'
-  btn.disabled = true
-  await gpActivateBundle(name)
-  if (card) card.classList.remove('gp-bundle-activating')
-  btn.innerHTML = origHTML
-  btn.disabled = false
-}
-
-async function gpCreateBundle() {
-  const name = await showPrompt({ title: tUI('gpBundlesTitle'), body: tUI('gpBundleNamePrompt'), placeholder: 'My FiveM Bundle', okText: tUI('gpBundleCreate'), icon: 'fa-layer-group' })
-  if (!name || !name.trim()) return
-  const trimmed = name.trim()
-
-  // Snapshot current state
-  const curSettings = settings
-  const pulsePreset = pulseIsActive ? pulseSelectedPreset : null
-
-  // Get assigned tweak profile for selected game
-  const tweakProfileName = curSettings[`gameProfile_${selectedGameId}`] || null
-
-  const bundle = {
-    name: trimmed,
-    gameId: selectedGameId || null,
-    pulsePreset: pulsePreset || null,
-    tweakProfileName: tweakProfileName || null,
-    createdAt: Date.now(),
-  }
-  const r = await api.saveGameBundle(bundle)
-  if (r.ok) {
-    toast(tUI('gpBundleSaved'), trimmed, 'ok')
-    gpRenderBundles()
-  }
-}
-
-async function gpActivateBundle(name) {
-  const r = await api.loadGameBundle(name).catch(e => ({ ok: false, error: e.message }))
-  if (!r.ok) { toast(name, r.error || 'Failed', 'err'); return }
-  if (r.bundle?.tweakProfileName) {
-    const profiles = await api.listProfiles().catch(() => ({}))
-    if (!profiles[r.bundle.tweakProfileName]) {
-      toast(tUI('tkProfMissing'), tUIf('tkProfMissingMsg', { name: r.bundle.tweakProfileName }), 'warn')
-    }
-  }
-  const tpFailed = r.results?.tweakProfile?.failed || []
-  if (tpFailed.length) toast(tUI('gpBundleActivated'), tUIf('gpBundleTweaksFailed', { n: tpFailed.length, ids: tpFailed.map(f => f.id).join(', ') }).slice(0, 300), 'warn', 8000)
-  else toast(tUI('gpBundleActivated'), name, 'ok')
-  if (r.bundle?.pulsePreset && !pulseIsActive) {
-    const pr = await api.pulseStart({ presetId: r.bundle.pulsePreset }).catch(e => ({ ok: false, error: String((e && e.message) || e) }))   // main reads presetId, not preset
-    if (pr && pr.ok === false) toast(tUI('launchRuleFailed'), String(pr.error || pr.reason || '').slice(0, 200), 'warn')
-  }
-  gpRenderBundles()
-  if (selectedGameId && r.bundle?.gameId === selectedGameId) {
-    const sel = GAME_LIST.find(g => g.id === selectedGameId)
-    if (sel) renderGPDetail(sel)
-  }
-}
-
-async function gpDeleteBundle(name) {
-  try {
-    await showConfirm({ title: tUI('gpBundleDelete'), body: `Delete bundle <strong>"${name}"</strong>?`, okText: tUI('gpBundleDelete'), okStyle: 'danger', icon: 'fa-trash' })
-  } catch { return }
-  const r = await api.deleteGameBundle(name)
-  if (r.ok) { toast(tUI('gpBundleDeleted'), name, 'info'); gpRenderBundles() }
-}
-
-async function doGPScan(btn, auto = false) {
-  if (_gpScanRunning) return
-  _gpScanRunning = true
-  if (btn) { btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i>'; btn.disabled = true }
-  const itemsEl = document.getElementById('gp-items')
-  if (itemsEl) {
-    itemsEl.innerHTML = `
-      <div class="jx-632">
-        <i class="fa fa-spinner fa-spin jx-633"></i>
-        <div class="jx-634">${tUI('gpScanningTitle')}</div>
-        <div class="jx-635">${tUI('gpScanningSubtitle')}</div>
-      </div>`
-  }
-  try {
-    const found = await api.detectGames()
-    gpScanned = true
-    ;(Array.isArray(found) ? found : []).forEach(f => {
-      const g = GAME_LIST.find(g => g.id === f.id)
-      if (g) { g.installed = f.installed; g.running = f.isRunning; g.installPath = f.installPath; g.lastPlayed = f.lastPlayed }
-    })
-    const count = found.filter(g => g.installed).length
-    if (!auto) toast(tUI('gpScanComplete'), `${count} ${tUI('gpScanFound')}`, 'ok')
-  } catch (e) {
-    api.startupTrace?.(`[gameScan] failed: ${e}`)
-    const msg = e?.code === 'EACCES' ? tG('gpHero', 'errPerm')
-      : e?.message || tG('gpHero', 'errScan')
-    toast(tUI('gpScanBtn'), msg, 'err')
-    _gpScanRunning = false
-    if (btn) { btn.innerHTML = `<i class="fa fa-magnifying-glass"></i> ${tUI('gpScanBtn')}`; btn.disabled = false }
-    renderGPList(GAME_LIST)
-    if (window._gpHeroRefresh) window._gpHeroRefresh()
-    return
-  }
-  if (btn) { btn.innerHTML = `<i class="fa fa-magnifying-glass"></i> ${tUI('gpScanBtn')}`; btn.disabled = false }
-  _gpScanRunning = false
-  renderGPList(GAME_LIST)
-  if (window._gpHeroRefresh) window._gpHeroRefresh()
-  const sel = GAME_LIST.find(g => g.id === selectedGameId)
-  if (sel) renderGPDetail(sel)
+  window.__gaCompete = cpPanel
+  registerPageCleanup('game-opti', () => { window.__gaCompete = null; try { cpPanel.destroy() } catch {} })
+  const gaHost = document.createElement('div')
+  gaHost.id = 'ga-host'
+  c.appendChild(gaHost)
+  const lib = JylliGamesPage.mount(gaHost)
+  registerPageCleanup('game-opti', () => { try { lib.destroy() } catch {} })
+  if (!settings.isPremium) { const rest = document.createElement('div'); c.appendChild(rest); await JylliPremium.build(rest, 'games') }
 }
 
 // ─── Page: App Optimizer ───────────────────────────────────────────────────────
@@ -7574,50 +7117,6 @@ async function rpExportList() {
 }
 
 function openRstrui() { api.openExternal('rstrui.exe') }
-
-// ─── Game tweak handler ───────────────────────────────────────────────────────
-const GAME_IDS = ['arma-reforger','fortnite','gtav','valorant','minecraft','cs2','apex','warzone','rust','the-finals']
-
-const _origApplyTweak = applyTweak
-window.applyTweak = async function(id, action = 'apply') {
-  if (!id.startsWith('game-')) return _origApplyTweak(id, action)
-
-  const gameId = id.replace('game-', '')
-  if (!GAME_IDS.includes(gameId)) return _origApplyTweak(id, action)
-
-  const badge   = document.getElementById(`badge-${id}`)
-  const prog    = document.getElementById(`prog-${id}`)
-  const progBar = document.getElementById(`prog-bar-${id}`)
-
-  if (prog)    prog.classList.add('visible')
-  if (progBar) progBar.classList.add('indeterminate')
-  if (badge)   badge.textContent = action === 'apply' ? tUI('statusRunning') : tUI('statusRestoring')
-
-  let result
-  try { result = await api.applyGameTweak(gameId, action) } catch (e) { result = { ok: false, error: String(e?.message || e) } }
-
-  if (progBar) { progBar.classList.remove('indeterminate'); progBar.style.width = '100%' }
-  if (prog) {
-    prog.classList.add('completing')
-    prog.addEventListener('animationend', () => {
-      prog.classList.remove('visible', 'completing')
-      if (progBar) progBar.style.width = '0%'
-    }, { once: true })
-  }
-
-  if (!result?.ok) {
-    if (badge) { badge.innerHTML = '<i class="fa fa-xmark"></i> ERROR'; badge.className = 'tweak-badge' }
-    return result || { ok: false }
-  }
-  if (badge) {
-    badge.innerHTML = action === 'apply' ? `<i class="fa fa-check"></i> ${tUI('statusApplied')}` : `<i class="fa fa-rotate-left"></i> ${tUI('statusRestored')}`
-    badge.className   = `tweak-badge ${action === 'apply' ? 'applied' : 'restored'}`
-  }
-  settings[`tweak_${id}`] = action === 'apply' ? 'applied' : 'restored'
-  await api.saveSettings(settings)
-  await api.addChangelogEntry({ id, action }).catch(() => {})
-  return result
-}
 
 // ─── Auth/Boot — see js/boot-logic.js ──────────────────────────────────────────
 

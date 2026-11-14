@@ -353,34 +353,34 @@ LANG.fi = {
       rpLoading:'Ladataan palautuspisteitä…', rpRestoreLabel:'Palauta kohtaan:',
       rpRestoreBtn:'Palauta valittuun pisteeseen',
       rpRestoreWarn:'Tallenna kaikki työ ennen palauttamista. Järjestelmä KÄYNNISTYY UUDELLEEN.',
-      gpReadyTitle:'Valmis konfiguroitavaksi', gpReadyActiveTitle:'Profiili aktiivinen',
-      gpReadySub:'Hienosäädä tämä profiili ennen käyttöä.',
-      gpReadyActiveSub:'KORKEA CPU/IO-prioriteetti, MMCSS, Defender-poikkeus käytössä.',
-      gpCoreSettings:'Perusasetukset', gpApplyProfile:'Käytä profiili', gpRestoreDefaults:'Palauta oletukset',
-      gpAutoProfile:'AUTOMAATTINEN PROFIILI KÄYNNISTYKSESSÄ', gpNoProfile:'— Ei profiilia asetettu —',
-      gpWhatApplies:'Mitä tämä käyttää',
-      gpWhatIfeo:'IFEO HIGH CPU + I/O -prioriteetti peliohjelmille',
-      gpWhatMmcss:'MMCSS: GPU-prioriteetti=8, Ajastus=Korkea, Kellotaajuus=10000',
-      gpWhatFso:'Kokoruutuoptimoinnit poistettu käytöstä peli-ohjelmille',
-      gpWhatDefender:'Defender-poikkeus lisätty pelin asennuspolkuun',
-      gpWhatDvr:'Game DVR / Xbox-tallennus poistettu käytöstä',
-      gpLastSeen:'Viimeksi nähty: {date}',
-      gpOpenFolder:'Avaa kansio',
-      gpTipTitle:'Valitse peli nähdäksesi sen profiilin ja käyttääksesi pelikohtaiset optimoinnit. Suorita skannaus havaitaksesi asennetut pelit automaattisesti.',
-      gpBundlesTitle:'Pelipaketteja',
-      gpBundleCreate:'Luo paketti',
-      gpBundleActivate:'Aktivoi',
-      gpBundleDelete:'Poista',
-      gpBundleEmpty:'Ei paketteja vielä. Luo paketti yhdistämään Pulse-asetus + säätöprofiili + CitizenFX.ini-asetukset.',
-      gpBundleNamePrompt:'Paketin nimi:',
-      gpBundleSaved:'Paketti tallennettu.',
-      gpBundleDeleted:'Paketti poistettu.',
-      gpBundleActivated:'Paketti aktivoitu.',
-      gpBundlePulse:'Pulse-asetus',
-      gpBundleTweakProfile:'Säätöprofiili',
-      gpBundleIniSettings:'ini-avaimet',
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
       gpWatcherOn:'Poista automaattiset profiilit käytöstä', gpWatcherOff:'Ota automaattiset profiilit käyttöön',
-      gpWatcherActiveDesc:'Seurataan — säädöt käyttöön pelin käynnistyessä, palautetaan lopetuksessa.',
+
       aoOptimized:'optimoitu',
       watcherWatchingLabel:'Seurataan: Fortnite, GTA V, Valorant, CS2, Apex, Warzone, Rust, THE FINALS, Arma Reforger',
       watcherEnableLabel:'Ota käyttöön aloittaaksesi seuranta.',
@@ -799,7 +799,7 @@ LANG.fi = {
       colorScheme:'Teema', colorSchemeDesc:'Tumma on oletus. Järjestelmä seuraa Windowsin asetusta.', schemeSystem:'Järjestelmä', schemeDark:'Tumma', schemeLight:'Vaalea',
       cmdPg_dashboard:'Etusivu', cmdPgSub_dashboard:'Järjestelmän yleiskatsaus', cmdPg_preflight:'Diagnostiikka', cmdPgSub_preflight:'Esitarkistus', cmdPg_performance:'Suorituskyky', cmdPgSub_performance:'Säädöt, CPU-, GPU- ja virta-asetukset', cmdPg_gaming:'Pelaaminen', cmdPgSub_gaming:'Peliprofiilit ja sovellusoptimointi', cmdPg_network:'Verkko', cmdPgSub_network:'Verkkosäädöt', cmdPg_privacy_cleanup:'Siivous ja yksityisyys', cmdPgSub_privacy_cleanup:'Bloatware, siivous ja yksityisyys', cmdPg_startup_manager:'Käynnistyssovellukset', cmdPgSub_startup_manager:'Käynnistyksen hallinta', cmdPg_process_manager:'Prosessit', cmdPgSub_process_manager:'Prosessinhallinta', cmdPg_latency_monitor:'Viive', cmdPgSub_latency_monitor:'DPC/ISR-viiveseuranta', cmdPg_bios_tuner:'BIOS Tuner', cmdPgSub_bios_tuner:'BIOS- ja laiteohjelmistotyökalut', cmdPg_pulse:'Pulse', cmdPgSub_pulse:'Pelitehotila', cmdPg_scheduler:'Ajastin', cmdPgSub_scheduler:'Automaattiset säädöt', cmdPg_changelog:'Säätöhistoria', cmdPgSub_changelog:'Tekemäsi muutokset', cmdPg_settings:'Asetukset', cmdPgSub_settings:'Sovelluksen asetukset', cmdPg_restore_points:'Palautuspisteet', cmdPgSub_restore_points:'Luo ja hallitse palautuspisteitä', cmdPg_fixes:'Korjaukset', cmdPgSub_fixes:'Nopeat järjestelmäkorjaukset', cmdAct_rp:'Luo palautuspiste', cmdActSub_rp:'Nopea turvakuva', cmdAct_theme:'Vaihda teemaa', cmdActSub_theme:'Vaihda tumman ja vaalean välillä', cmdAct_log:'Tyhjennä loki', cmdActSub_log:'Tyhjennä tapahtumaloki', cmdAct_bug:'Ilmoita virheestä', cmdActSub_bug:'Lähetä virheraportti', cmdAct_new:'Uutta', cmdActSub_new:'Viimeisimmät julkaisutiedot', cmdGroupPages:'Sivut', cmdGroupActions:'Toiminnot', cmdNoResults:'Ei tuloksia haulle',
       startupTitle:'Käynnistys ja palvelut', startupLegendImpact:'Vaikutus', startupImpHigh:'Suuri', startupImpMed:'Kohtalainen', startupImpLow:'Pieni', startupLegendHigh:'poista käytöstä', startupLegendMed:'valinnainen', startupLegendLow:'pidä', startupClearSearch:'Tyhjennä haku',
-      gpAutoPulseBadge:'Auto-Pulse', gpAutoPulseActive:'Auto-Pulse käynnissä',
+
       netTweaksActive:'säätöä käytössä', netEthernetAdapter:'Ethernet-sovitin', netWirelessAdapter:'langaton sovitin',
       pmFreezeErrorTitle:'Jäädytysvirhe', biosScewinScanRequired:'Suorita SCEWIN-skannaus ensin.', pfFailed:'Skannaus epäonnistui.', pfComplete:'Skannaus valmis.', aoStillActiveTitle:'Säädöt ovat yhä käytössä palautuksen jälkeen', aoStillActiveBody:'Nämä asetukset ovat yhä käytössä järjestelmässäsi, vaikka kytkit ne pois. Suorita palautus kumotaksesi ne kokonaan.', bsScanPrompt:'Suorita skannaus nähdäksesi bloatware-pisteesi.', bloatDesc_clean:'Järjestelmäsi on siisti. Toimia ei tarvita.', bloatDesc_moderate:'Kohtalaisesti bloatwarea. Pelaamisen esiasetus suositellaan.', bloatDesc_bloated:'Paljon bloatwarea. Täysi skannaus ja siivous suositellaan.', bloatDesc_critical:'Kriittisesti bloatwarea. Toimia suositellaan heti.', saveError:'Tiedostoa ei voitu tallentaa.',
       aoBbLive:'LIVE', aoBbCpuVsCap:'CPU-käyttö ja raja',
@@ -1437,29 +1437,29 @@ aoHeroEyebrow:'Sovellusskanneri', aoHeroDetected:'{n} sovellusta tunnistettu', a
       whatsNewSubtitle:'Julkaisutiedot',
       whatsNewClose:'Sulje',
       // Game Profiles
-      gpSearchPlaceholder:'Hae pelejä…',
-      gpScanBtn:'Skannaa',
-      gpStatusRun:'KÄYNNISSÄ',
-      gpStatusInst:'ASENNETTU',
-      gpStatusNotInst:'EI ASENNETTU',
-      gpStatusRunning:'KÄYNNISSÄ',
-      gpStatusInstalled:'ASENNETTU',
-      gpStatusNotInstalled:'EI ASENNETTU',
-      gpScanningTitle:'Skannataan pelejä…',
-      gpScanningSubtitle:'Tarkistetaan asennuspolkuja ja rekisteriä',
-      gpScanComplete:'Peliskannaus valmis',
-      gpScanFound:'peliä löydetty',
-      gpScanStatus:'Löytyi {inst} / {total} asennettua peliä',
-      gpBadgeRunning:'Käynnissä',
-      gpBadgeInstalled:'Asennettu',
-      gpBadgeNotFound:'Ei löydy',
-      gpNotInstalled:'Ei asennettu',
-      gpLastSeen:'Viimeksi nähty: {date}',
-      gpOptimize:'Optimoi',
-      gpApplyingProfile:'Käytetään…',
-      gpRestoringProfile:'Palautetaan…',
-      gpProfileApplied:'Profiili käytetty',
-      gpProfileRestored:'Profiili palautettu',
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
       // Fixes
       fixRunning:'Suoritetaan…',
       fixDone:'Valmis',
@@ -1494,7 +1494,7 @@ aoHeroEyebrow:'Sovellusskanneri', aoHeroDetected:'{n} sovellusta tunnistettu', a
       ugPendingOne:'{n} odottava Windows-päivitys — Update Guard pidättää sen', ugPendingMany:'{n} odottavaa Windows-päivitystä — Update Guard pidättää ne', ugPendingMsg:'Windows Update jäädytetty tämän istunnon ajaksi',
       gsFreedT:'Game Shield vapautti {mb} Mt RAMia', gsFreedB:'Pysäytettiin {n} taustaprosessia tämän session aikana',
       dlOverwriteT:'Korvataanko profiili?', dlOverwriteB:'Profiili <strong>"{name}"</strong> on jo olemassa. Korvataanko se?', dlOverwrite:'Korvaa', dlApplyProfT:'Ota profiili käyttöön: {name}', dlApplyProfB:'Tämä ottaa käyttöön {n} säätöä profiilista "{name}".', dlApplyAll:'Ota kaikki käyttöön', dlCloneT:'Kopioi profiili', dlCloneB:'Uusi nimi kopiolle: <strong>"{name}"</strong>:', dlClone:'Kopioi', dlCopySuffix:'(kopio)', dlRenameT:'Nimeä profiili uudelleen', dlRenameB:'Uusi nimi: <strong>"{name}"</strong>:', dlRename:'Nimeä', dlPingT:'Oma ping-osoite', dlPingB:'Anna IP-osoite tai isäntänimi:', dlDnsPriT:'Oma DNS — ensisijainen palvelin', dlDnsPriB:'Anna ensisijainen IPv4 DNS-osoite (esim. 8.8.8.8):', dlDnsSecT:'Oma DNS — toissijainen palvelin', dlDnsSecB:'Anna toissijainen IPv4 DNS-osoite (valinnainen — jätä tyhjäksi ohittaaksesi):', dlReEnableT:'Ota takaisin käyttöön: {name}', dlReEnableSvcB:'Palvelu "{name}" palautetaan tilaan "{start}" ja käynnistetään.', dlReEnableTaskB:'Tehtävä "{name}" otetaan takaisin käyttöön Tehtävienajastimessa.', dlReEnable:'Ota käyttöön', tkFailedName:'Epäonnistui: {name}',
-      gpBundleTweaksFailed:'{n} säätöä ei otettu käyttöön: {ids}', launchRuleFailed:'Asetusta ei voitu muuttaa', tkUgOn:'Update Guard päällä', tkUgOff:'Update Guard pois päältä', tkGsOn:'Game Shield päällä', tkGsOff:'Game Shield pois päältä', tkUgOnLong:'Update Guard päällä — Windows Update estetty pelatessa',
+launchRuleFailed:'Asetusta ei voitu muuttaa', tkUgOn:'Update Guard päällä', tkUgOff:'Update Guard pois päältä', tkGsOn:'Game Shield päällä', tkGsOff:'Game Shield pois päältä', tkUgOnLong:'Update Guard päällä — Windows Update estetty pelatessa',
       abClose:'Sulje', abAdvanced:'Laajennettu tila', abWhatsNew:'Uutta', abBugReport:'Ilmoita virheestä', abToggleLog:'Näytä/piilota loki', abDelete:'Poista', abRebootNow:'Käynnistä uudelleen nyt',
       tkScanReq:'Skannaus vaaditaan', tkScanReqRevert:'Aja ensin SCEWIN-skannaus asetuksen palauttamiseksi.', tkScanReqToken:'Aja ensin SCEWIN-skannaus tunnisteen löytämiseksi.', tkScanReqPlain:'Aja ensin SCEWIN-skannaus.', tkScanReqProfile:'Aja SCEWIN-skannaus ennen profiilin tallennusta.', tkSettingNotFound:'Asetusta ei löytynyt', tkTokenNotInDump:'Tunnistetta {token} ei löydy nykyisestä BIOS-vedoksesta.', tkSettingNotInDump:'Tätä asetusta ei ole nykyisessä BIOS-vedoksessa.', tkOptionNotFound:'Vaihtoehtoa ei löytynyt', tkOptionNotFoundMsg:'Vaihtoehtoa "{label}" ei löytynyt nykyisestä vedoksesta.', tkValueUnavail:'Arvo ei ole saatavilla', tkValueUnavailMsg:'Alkuperäinen arvo ei ole enää BIOSissasi valittavissa.', tkReverted:'Palautettu', tkRevertFailed:'Palautus epäonnistui', tkBiosWriteFail:'BIOSiin kirjoitus epäonnistui.', tkSafetyReq:'Turvakytkin vaaditaan', tkSafetyBios:'Käännä turvakytkin ennen käyttöönottoa.', tkSafetyTweak:'Käännä tämän säädön turvakytkin ennen käyttöönottoa.', tkFailed:'Epäonnistui', tkOpFailed:'Toiminto epäonnistui.', tkHyperVOff:'Hyper-V poistettu käytöstä', tkHyperVOn:'Hyper-V otettu takaisin käyttöön', tkRebootReq:'Muutos vaatii uudelleenkäynnistyksen.', tkSelectProfile:'Valitse profiili', tkSelectProfileMsg:'Valitse ensin profiili pudotusvalikosta.', tkProfLoadFail:'Profiilin lataus epäonnistui', tkProfLoadFailMsg:'Profiilia ei voitu ottaa käyttöön.', tkExportFail:'Vienti epäonnistui', tkExportFailMsg:'Profiilin vienti epäonnistui.', tkBoardMismatch:'Emolevy ei täsmää', tkImportFail:'Tuonti epäonnistui', tkImportFailMsg:'Profiilin tuonti epäonnistui.', tkAutoTuneReady:'Suositus valmis — tarkista ja ota käyttöön', tkFailedShort:'Epäonnistui', tkNameReq:'Nimi vaaditaan', tkNameReqMsg:'Anna esiasetukselle nimi ennen tallennusta.', tkEnterProfName:'Anna profiilin nimi', tkNoTweaksYet:'Säätöjä ei ole vielä otettu käyttöön', tkNoTweaksYetMsg:'Ota ensin käyttöön joitakin säätöjä', tkProfSaved:'Profiili tallennettu', tkProfNotFound:'Profiilia ei löytynyt', tkProfApplied:'Profiili otettu käyttöön', tkProfAppliedMsg:'{applied} säätöä otettu käyttöön{failedPart}', tkFailedPart:', {failed} epäonnistui', tkProfDeletedT:'Profiili poistettu', tkProfDeletedWarn:'Profiilin säätöjä EI palautettu automaattisesti. Käytä Muutosloki-välilehteä peruaksesi ne yksitellen.', tkProfDeleted:'Profiili poistettu', tkCloneFail:'Kopiointi epäonnistui', tkProfCloned:'Profiili kopioitu', tkProfClonedMsg:'"{name}" luotu', tkRenameFail:'Nimeäminen epäonnistui', tkProfRenamed:'Profiili nimetty uudelleen', tkProfExported:'Profiili viety', tkProfExportedMsg:'Tallennettu työpöydälle: {file}', tkExportFailLow:'Vienti epäonnistui', tkImportFailLow:'Tuonti epäonnistui', tkInvalidProfFile:'Virheellinen profiilitiedosto', tkProfImported:'Profiili tuotu', tkProfImportedMsg:'"{name}" lisätty profiileihisi', tkCopied:'Kopioitu', tkReportCopied:'Istuntoraportti kopioitu leikepöydälle', tkAdminReq:'Vaatii järjestelmänvalvojan oikeudet', tkAdminReqMsg:'Auto-Optimize vaatii järjestelmänvalvojan oikeudet. Käynnistä uudelleen järjestelmänvalvojana.', tkAlreadyRunning:'Jo käynnissä', tkAlreadyRunningMsg:'Automaattinen optimointi on jo käynnissä.', tkUndoFailed:'Kumoaminen epäonnistui', tkRpNotFound:'Palautuspistettä "{name}" ei löytynyt', tkNothingSel:'Ei valintoja', tkNothingSelTweak:'Valitse vähintään yksi säätö suoritettavaksi.', tkDraftResumed:'Luonnos palautettu', tkDraftResumedMsg:'Aiemmat valintasi on palautettu.', tkInvalidIp:'Virheellinen IP', tkInvalidIpMsg:'Anna kelvollinen IPv4-osoite.', tkInvalidIp2Msg:'Toissijaisen DNS:n on oltava kelvollinen IPv4-osoite tai tyhjä.', tkDnsSet:'Oma DNS asetettu', tkProfAssigned:'Profiili liitetty', tkProfAssignedMsg:'"{name}" otetaan käyttöön automaattisesti kun {game} käynnistyy', tkProfRemoved:'Profiili poistettu', tkProfRemovedMsg:'Ei automaattiprofiilia: {game}', tkProfileFailed:'Profiili epäonnistui', tkProfMissing:'Profiili puuttuu', tkProfMissingMsg:'"{name}" ei ole enää olemassa — paketti aktivoitu ilman sitä', tkNothingSelCap:'Ei valintoja', tkSelApp:'Valitse vähintään yksi poistettava sovellus.', tkSelService:'Valitse vähintään yksi poistettava palvelu.', tkSelTask:'Valitse vähintään yksi poistettava tehtävä.', tkSelTaskRe:'Valitse tehtävät, jotka haluat ottaa takaisin käyttöön.', tkSelDevice:'Valitse vähintään yksi laite.', tkSelExt:'Valitse vähintään yksi poistettava laajennus.', tkSelFeature:'Valitse poistettavat ominaisuudet.', tkGamingRec:'Pelisuositus', tkGamingRecSvc:'Palvelut valittu pelaamista varten{lap}{wifi}.', tkLapSafe:' (kannettavalle turvallinen)', tkWifiKept:', Wi-Fi säilytetty', tkGamingRecTask:'Tehtävät valittu{lap}.', tkReEnabled:'Otettu takaisin käyttöön', tkReEnabledSvc:'{name} on nyt aktiivinen.', tkReEnabledTask:'{name} on taas aktiivinen.', tkError:'Virhe', tkReEnableSvcFail:'Kohdetta {name} ei voitu ottaa takaisin käyttöön.', tkFixApplied:'Korjaus suoritettu', tkFixFailed:'Korjaus epäonnistui', tkUnknownError:'Tuntematon virhe', tkUpdGuard:'Update Guard', tkUpdQuiet:'Windows Updaten hiljaiset tunnit asetettu: {hours}', tkReapplied:'Otettu uudelleen käyttöön {n} säätöä', tkRemoved:'Poistettu: {name}', genSafeDefaults:'Turvalliset oletukset',
       genSafeDefaultsConfirm:'Käytetäänkö turvalliset säädöt ilman vaaralippuja tai uudelleenkäynnistystä?',
@@ -1785,8 +1785,8 @@ aoHeroEyebrow:'Sovellusskanneri', aoHeroDetected:'{n} sovellusta tunnistettu', a
       fivemModConflictTitle:'Mod-konfliktien tunnistus',
       // Game Profiles
       recentSessionsTitle:'Viimeisimmät sessiot',
-      gpAutoProfilesTitle:'Peli­kohtaiset automaatti­profiilit',
-      gpAutoProfilesDesc:'Käyttää säätöjä automaattisesti kun peli havaitaan, palauttaa oletukset lopetuksessa. Tarkistaa 5 sekunnin välein.',
+
+
       // BIOS CPU Power Tuner block
       ryzenTitle:'AMD CPU -TEHOSÄÄDIN — VAIN KOKENEILLE KÄYTTÄJILLE',
       ryzenWarn1:'Muuttaa PPT-, TDC- ja EDC-tehorajoituksia RyzenAdj:n kautta.',
@@ -3705,14 +3705,7 @@ aoHeroEyebrow:'Sovellusskanneri', aoHeroDetected:'{n} sovellusta tunnistettu', a
       dial:'kirjattua muutosta', statToday:'Viimeiset 24 tuntia', statApplied:'Otettu käyttöön', statRestored:'Palautettu', loading:'Luetaan lokia', none:'Ei vielä kirjauksia', last:'Viimeisin muutos {t}', failed:'Historiaa ei voitu lukea',
       undoBatchTitle:'Perutaanko tämä erä?', undoBatchBody:'Jokainen tämän erän muutos palautetaan siihen, mitä se oli ennen. Voit ottaa ne käyttöön myöhemmin uudelleen.',
       undoSessionTitle:'Perutaanko koko istunto?', undoSessionBody:'Jokainen tässä istunnossa tehty muutos palautetaan siihen, mitä se oli ennen. Jo perutut muutokset ohitetaan.',
-    },
-    gpHero: {
-      title:'Pelien profiilit', lead:'Viritetty profiili jokaiselle pelille. Jokaisen profiilin voi palauttaa sen omalta sivulta.', dial:'optimoitu', statFound:'Asennettu', statOpt:'Optimoitu', statRun:'Käynnissä nyt',
-      scanning:'Etsitään asennettuja pelejä', found:'{n} asennettua peliä', none:'Tuettuja pelejä ei löytynyt', cta:'Optimoi loput', ctaDone:'Kaikki asennetut pelit optimoitu',
-      confirmBody:'Otetaanko profiili käyttöön {n} asennetulle pelille? Jokainen kirjataan ja voidaan palauttaa.',
-      errAdmin:'Vaatii järjestelmänvalvojan oikeudet', errPath:'Pelin polkua ei löytynyt. Kokeile skannata uudelleen.', errUnknown:'Tuntematon virhe', errPerm:'Käyttö estetty. Kokeile ajaa järjestelmänvalvojana.', errScan:'Skannaus epäonnistui',
-      bundleHint:'Valitse Luo paketti tallentaaksesi nykyisen esiasetuksen.', bundleEmpty:'Tyhjä paketti',
-    },
+    },
     procx: {
       hogTitle:'CPU-syöpöt', hogSub:'Jäädytä mikä tahansa prosessi. Se palautuu automaattisesti, kun pelisi sulkeutuu.', kill:'Lopeta prosessi', saved:'säästetty {n} s CPU:ta', freezeErr:'Prosessia ei voitu jäädyttää', ipcFailed:'Pyyntö epäonnistui',
     },

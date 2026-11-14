@@ -164,7 +164,15 @@
     offs.push(api.onCompeteState(s => { st.session = s && s.state ? s : { state: 'idle' }; if (st.session.state !== 'idle') st.ended = null; render() }))
     offs.push(api.onCompeteEnded(r => { st.ended = r; render() }))
     render(); load(false)
-    return { destroy() { offs.forEach(f => { try { typeof f === 'function' && f() } catch {} }) } }
+    /** The Games tab hands a game over: select it here and bring the panel into view. */
+    function select(id) {
+      if (busy() || !id) return
+      if (!gameById(id) && String(id).startsWith('custom:')) st.games.unshift({ id, name: String(id).slice(7).split(/[\\/]/).pop().replace(/\.exe$/i, ''), source: 'custom' })
+      if (!gameById(id)) return
+      choose(id)
+      try { sec.scrollIntoView({ block: 'start', behavior: 'smooth' }) } catch {}
+    }
+    return { destroy() { offs.forEach(f => { try { typeof f === 'function' && f() } catch {} }) }, select }
   }
 
   const api2 = { mount }

@@ -49,10 +49,6 @@
       T('pulse-river', ['Every frame, measured', 'This river is the last minute of frame times. A hitch is marked with its likely cause. Hover to read a moment.'], ['Jokainen ruutu mitattuna', 'Tämä virta on viimeisen minuutin ruutuajat. Pätkiminen merkitään todennäköisellä syyllään. Vie hiiri päälle, niin näet hetken tiedot.']),
       T('pulse-limiter', ['What is holding you back', 'The Limiter says in one sentence what limits your FPS right now, with the numbers behind it.'], ['Mikä sinua hidastaa', 'Rajoittaja kertoo yhdellä lauseella, mikä rajoittaa FPS:ääsi juuri nyt, ja näyttää luvut sen takana.']),
     ] },
-    games: { v: 1, tag: { 'games-carousel': '#game-row', 'games-profile': '.tweak-card' }, stops: [
-      T('games-carousel', ['Your games', 'Games we found on this PC. Choose one to open its profile.'], ['Pelisi', 'Koneelta löytyneet pelit. Valitse peli avataksesi sen profiilin.']),
-      T('games-profile', ['A profile per game', 'Each profile holds the tweaks for that game and can be undone on its own.'], ['Profiili jokaiselle pelille', 'Jokainen profiili sisältää kyseisen pelin säädöt, ja sen voi perua erikseen.']),
-    ] },
     apps: { v: 1, tag: { 'apps-hero': '.ao-hero', 'apps-list': '.ao-card' }, stops: [
       T('apps-hero', ['Tuning for your apps', 'Optimize all applies the recommended changes for the apps we detected.'], ['Sovellusten viritys', 'Optimoi kaikki ottaa käyttöön suositellut muutokset tunnistetuille sovelluksille.']),
       T('apps-list', ['Apps and priority', 'Each app shows what will change, including process priority, before you apply it.'], ['Sovellukset ja prioriteetti', 'Jokainen sovellus näyttää, mitä muuttuu, myös prosessin prioriteetti, ennen käyttöönottoa.']),
@@ -115,6 +111,12 @@
       T('settings-general', ['Sounds and startup', 'Quiet chimes, advanced mode and when the app starts are all here.'], ['Äänet ja käynnistys', 'Hiljaiset äänet, edistynyt tila ja sovelluksen käynnistys löytyvät täältä.']),
       T('settings-appearance', ['Make it yours', 'Accent colour, light or dark, motion and how much 3D you would like.'], ['Tee siitä omasi', 'Korostusväri, vaalea tai tumma, liike ja 3D:n määrä.']),
       T('settings-tours', ['Tours and welcome', 'Turn guided tours off, show them again, or run the welcome from the beginning.'], ['Kierrokset ja tervetulo', 'Poista opastetut kierrokset käytöstä, näytä ne uudelleen tai aja tervetulo alusta.']),
+    ] },
+    games: { v: 2, stops: [
+      T('ga-stage', ['Your games at a glance', 'How many of your installed games are tuned, what you played last, and one button for the next step. Watching for games to start is switched on here.'], ['Pelisi yhdellä silmäyksellä', 'Kuinka monta asennettua peliäsi on viritetty, mitä pelasit viimeksi ja yksi painike seuraavaan vaiheeseen. Pelien käynnistymisen seuranta kytketään päälle tästä.']),
+      T('ga-grid', ['Everything installed, found for you', 'Steam, Epic, Xbox and games you add yourself. Search, filter and sort. Covers come from files already on this PC, nothing is downloaded.'], ['Kaikki asennetut, löydettynä puolestasi', 'Steam, Epic, Xbox ja itse lisäämäsi pelit. Hae, suodata ja järjestä. Kannet tulevat tämän koneen omista tiedostoista, mitään ei ladata.']),
+      T('ga-detail', ['One game at a time', 'Play it, tune it, see how it ran. Every change is read back from Windows and can be undone. A guessed program file is never changed until you confirm it.'], ['Yksi peli kerrallaan', 'Pelaa, viritä, katso miten se pyöri. Jokainen muutos luetaan takaisin Windowsista ja sen voi perua. Arvattua ohjelmatiedostoa ei muuteta ennen kuin vahvistat sen.']),
+      T('ga-views', ['Library, Play history, Automation, History', 'Play history shows only sessions Jylli really recorded. Automation applies a profile when a game starts. History lists every change with its own undo.'], ['Kirjasto, Pelihistoria, Automaatio, Historia', 'Pelihistoria näyttää vain sessiot, jotka Jylli oikeasti tallensi. Automaatio ottaa profiilin käyttöön pelin käynnistyessä. Historia listaa jokaisen muutoksen omalla peruutuksellaan.']),
     ] },
     prolock: { v: 2, stops: [
       T('prolock-card', ['This page is part of Premium', 'The rest of the app is fully yours. Premium adds this page and the advanced controls behind it, and one purchase covers all of them.'], ['Tämä sivu kuuluu Premiumiin', 'Muu sovellus on täysin käytössäsi. Premium lisää tämän sivun ja sen taakse jäävät edistyneet säätimet, ja yksi ostos kattaa ne kaikki.']),

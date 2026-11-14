@@ -19,7 +19,7 @@ async function buildGameCarousel(parent) {
     const hue = [...g.id].reduce((a, ch) => (a * 31 + ch.charCodeAt(0)) % 360, 7)
     return `<li><button type="button" class="j-game-card" data-game="${escAttr(g.id)}" title="${escAttr(g.name)}" style="--gh:${hue}"><span class="j-game-fallback" aria-hidden="true">${escHtml((g.name.match(/[A-Za-z0-9]/) || ['?'])[0])}</span><span class="j-game-name">${escHtml(g.name)}</span></button></li>`
   }).join('')
-  row.querySelectorAll('[data-game]').forEach(b => { b.onclick = () => showPage('game-opti') })
+  row.querySelectorAll('[data-game]').forEach(b => { b.onclick = () => { showPage('game-opti'); try { JylliGamesPage.reveal(b.dataset.game) } catch {} } })   // the Games tab opens on that game
   for (const g of games) {   // covers arrive one by one, so the row never waits on image decoding
     api.getGameCover(g.id).then(url => {
       if (!url) return
