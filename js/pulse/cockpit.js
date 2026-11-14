@@ -28,7 +28,6 @@
   root.innerHTML = `<section class="pu-ck-hero" id="ck-hero">
       <div class="pu-ck-big"><div class="pu-ck-fps"><b id="ck-fps">–</b><small>FPS</small></div><div class="pu-ck-lows"><span id="ck-low1"></span><span id="ck-score"></span></div></div>
       <div class="pu-ck-ctl"><label class="pu-ck-sel"><span>${esc(T('ck_game'))}</span><select id="ck-game" class="pu-in"></select></label>
-        <label class="pu-check"><input type="checkbox" id="ck-killbg" checked><span>${esc(T('killBg'))}</span></label>
         <button type="button" class="pu-cta" id="ck-boost"><i class="fa fa-bolt" aria-hidden="true"></i><span></span></button></div></section>
     <div class="pu-ck-grid"><div class="pu-ck-main">
       <section class="pu-stage"><div class="pu-stage-h"><div class="pu-eyebrow"><span class="pu-dot" id="ck-sdot" data-tone="idle"></span><span id="ck-sstate"></span></div>
@@ -94,7 +93,7 @@
     if (S.busy) return
     S.busy = true; paintCta()
     const wasActive = S.boost.active
-    const r = wasActive ? await A.pulse2Unboost().catch(() => null) : await A.pulse2Boost({ presetId: S.selected, name: presetName(S.selected), killBg: $('ck-killbg').checked }).catch(() => null)
+    const r = wasActive ? await A.pulse2Unboost().catch(() => null) : await A.pulse2Boost({ presetId: S.selected, name: presetName(S.selected), killBg: false }).catch(() => null)
     S.busy = false
     if (r && r.ok !== false && r.boost) S.boost = r.boost
     else $('ck-state-t').textContent = T(wasActive ? 'endFail' : 'boostFail')

@@ -97,16 +97,36 @@
   }
 
   // ── boost receipt ─────────────────────────────────────────────────────────────
+  // Three honest groups: what Pulse changed (each proven by a read-back), what it left alone and why, and what it only recommends.
+  const STEP_ICON = { ok: 'circle-check', fail: 'circle-xmark', run: 'circle-notch', skip: 'minus', idle: 'circle' }
+  function stepRow(s, T) {
+    const v = vars(s.vars || {})
+    const why = s.state === 'skip' ? T('stepSkip_' + (v.reason || 'unknown'), v) : s.state === 'fail' ? T('stepFail_' + (v.reason || 'not-changed'), v) : T('stepWhy_' + s.id, v)
+    const fine = s.state === 'ok' ? `<p class="pu-muted pu-fine">${esc(T('stepEffect_' + s.id))} ${esc(T('stepTrade_' + s.id))}</p>` : ''
+    const label = s.state === 'ok' && s.verified ? T('stepState_ok') : T('stepState_' + s.state)
+    return `<li data-state="${esc(s.state)}" title="${esc(s.detail || '')}"><i class="fa fa-${STEP_ICON[s.state] || 'circle'}" aria-hidden="true"></i><div class="pu-step-b"><span>${esc(T('step_' + s.id))}</span><p class="pu-muted">${esc(why)}</p>${fine}</div><em>${esc(label)}</em></li>`
+  }
+  function measureHtml(m, T) {
+    if (!m) return ''
+    const head = `<h4 class="pu-h">${esc(T('msTitle'))}</h4>`
+    if (m.state === 'pending' || m.state === 'collecting') return `<section class="pu-measure">${head}<p class="pu-muted">${esc(T('msCollecting', { pct: n0((m.progress || 0) * 100) || '0' }))}</p></section>`
+    if (m.state === 'unavailable') return `<section class="pu-measure">${head}<p class="pu-muted">${esc(T('msUnavailable_' + (m.reason || 'no-after')))}</p></section>`
+    const rows = [['avgFps', ''], ['low1Fps', ''], ['p99Ms', ' ms'], ['smooth', '']].map(([k, u]) => {
+      const b = m.before && m.before[k], a = m.after && m.after[k], d = m.delta && m.delta[k]
+      const good = k === 'p99Ms'
+      return `<tr><th scope="row">${esc(T({ avgFps: 'fps_avg', low1Fps: 'fps_low1', p99Ms: 'fps_p99', smooth: 'fps_smooth' }[k]))}</th><td>${has(b) ? esc(String(b)) + u : DASH}</td><td>${has(a) ? esc(String(a)) + u : DASH}</td><td>${deltaHtml(d, u, !good)}</td></tr>`
+    }).join('')
+    const warn = m.capped ? T('msCapped') : !m.comparable ? T('msWeak', { before: m.limiters && m.limiters.before ? T('lim_' + m.limiters.before) : DASH, after: m.limiters && m.limiters.after ? T('lim_' + m.limiters.after) : DASH }) : ''
+    return `<section class="pu-measure">${head}<table class="pu-table"><thead><tr><th></th><th scope="col">${esc(T('msBefore'))}</th><th scope="col">${esc(T('msAfter'))}</th><th scope="col">${esc(T('msChange'))}</th></tr></thead><tbody>${rows}</tbody></table>${warn ? `<p class="pu-muted pu-warn">${esc(warn)}</p>` : ''}<p class="pu-muted">${esc(T('msNote'))}</p></section>`
+  }
   function receiptHtml(boost, T) {
+    const b = boost || {}
     const by = {}
-    for (const s of (boost && boost.steps) || []) by[s.id] = s
-    const rows = Steps.IDS.map(id => {
-      const s = by[id]
-      const st = s ? s.state : (boost && boost.active ? 'skip' : 'idle')
-      const icon = st === 'ok' ? 'circle-check' : st === 'fail' ? 'circle-xmark' : st === 'run' ? 'circle-notch' : st === 'skip' ? 'minus' : 'circle'
-      return `<li data-state="${st}" title="${esc(s && s.detail || '')}"><i class="fa fa-${icon}" aria-hidden="true"></i><span>${esc(T('step_' + id))}</span><em>${esc(T('stepState_' + st))}</em></li>`
-    })
-    return `<ul class="pu-steps">${rows.join('')}</ul>`
+    for (const s of b.steps || []) by[s.id] = s
+    const rows = Steps.IDS.filter(id => by[id]).map(id => stepRow(by[id], T))
+    const none = b.none && (b.active || (b.steps || []).length) ? `<p class="pu-muted pu-none">${esc(T('receiptNone'))}</p>` : ''
+    const recs = (b.recs || []).length ? `<h4 class="pu-h">${esc(T('receiptRecs'))}</h4><ul class="pu-recs">${b.recs.map(r => `<li><i class="fa fa-lightbulb" aria-hidden="true"></i><span>${esc(T('rec_' + r.id, vars(r.vars || {})))}</span></li>`).join('')}</ul>` : ''
+    return `${none}<ul class="pu-steps">${rows.join('')}</ul>${recs}${measureHtml(b.measure, T)}`
   }
 
   // ── pre-flight ────────────────────────────────────────────────────────────────
@@ -114,8 +134,9 @@
     if (!res) return ''
     const items = res.items.map(i => {
       const fix = i.fix ? `<button type="button" class="pu-sec" data-act="fix" data-kind="${esc(i.fix.kind)}" data-target="${esc(i.fix.target || '')}">${esc(T('pfFix_' + (i.fix.target || i.fix.kind)))}</button>` : ''
-      const icon = i.state === 'ok' ? 'circle-check' : i.state === 'unknown' ? 'circle-question' : i.state === 'bad' ? 'circle-exclamation' : 'triangle-exclamation'
-      return `<li class="pu-pf" data-state="${i.state}"><i class="fa fa-${icon}" aria-hidden="true"></i><div><h4>${esc(T('pf_' + i.id))}</h4><p class="pu-muted">${esc(T('pfw_' + i.id + '_' + i.state, vars(i.evidence)))}</p></div>${fix}</li>`
+      const vis = i.state === 'keep' ? 'ok' : i.state
+      const icon = vis === 'ok' ? 'circle-check' : i.state === 'unknown' ? 'circle-question' : i.state === 'bad' ? 'circle-exclamation' : 'triangle-exclamation'
+      return `<li class="pu-pf" data-state="${vis}"><i class="fa fa-${icon}" aria-hidden="true"></i><div><h4>${esc(T('pf_' + i.id))}</h4><p class="pu-muted">${esc(T('pfw_' + i.id + '_' + i.state, vars(i.evidence)))}</p></div>${fix}</li>`
     })
     return `<ul class="pu-pf-list">${items.join('')}</ul>`
   }
@@ -191,7 +212,7 @@
       <div class="pu-cols2">${ba}${vs}</div>${marks}</div>`
   }
 
-  const api = { DASH, esc, n0, n1, show, vars, clock, srcName, fpsCells, fpsStrip, TILES, tileValue, vitalsHtml, paintVitals, limiterHtml, hitLog, hitLogHtml, receiptHtml, preflightHtml, causeName, verdictName, when, ribbonPath, sessionsHtml, deltaHtml, debriefHtml }
+  const api = { DASH, esc, n0, n1, show, vars, clock, srcName, fpsCells, fpsStrip, TILES, tileValue, vitalsHtml, paintVitals, limiterHtml, hitLog, hitLogHtml, receiptHtml, preflightHtml, measureHtml, causeName, verdictName, when, ribbonPath, sessionsHtml, deltaHtml, debriefHtml }
   root.JylliPulseUI = api
   if (isNode) module.exports = api
 })(typeof window !== 'undefined' ? window : globalThis)

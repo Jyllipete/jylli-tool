@@ -1,7 +1,7 @@
 'use strict'
 // Preview fixtures for Pulse: the REAL lib/pulse service (frames, river columns, limiter, score, attribution, debrief, pre-flight) driven by a
 // synthetic game, so the tab, the Cockpit and the HUD show real engine output. No PresentMon, no PowerShell, no registry.
-// --pu-state live (default) | idle (no game, no frames) | hitchy (heat and stalls) | debrief (history already recorded) | fail (calls fail)
+// --pu-state live (default) | none (boost finds nothing safe to change) | idle (no game, no frames) | hitchy (heat and stalls) | debrief (history already recorded) | fail (calls fail)
 const Pulse = require('../../lib/pulse')
 const Sess = require('../../lib/pulse/session')
 const Steps = require('../../lib/pulse/steps')
@@ -51,7 +51,20 @@ function inst(sender, ctx) {
     state: { read: () => null, write: () => {} },
     sessions: { list: () => (st === 'debrief' || st === 'hitchy' ? SESSIONS.map(s => ({ id: s.id, game: s.game, startedAt: s.startedAt, durationSec: s.durationSec, summary: s.summary, hasTelemetry: true })) : []), get: id => SESSIONS.find(s => s.id === id) || null },
     debriefs: { save: (id, d) => { debriefs[id] = d }, load: id => debriefs[id] || null, list: () => Object.values(debriefs) },
-    activate: async ({ presetId, report }) => { for (const id of Steps.IDS) { await sleep(110); report(id, id === 'affinity' ? 'skip' : 'ok', id) } return { ok: true } },
+    activate: async ({ presetId, report, setPlan }) => {
+      if (st === 'none') {
+        setPlan({ changes: [], skipped: [], recommend: [{ id: 'gameMode', vars: {} }], none: true })
+        report('power', 'skip', 'laptop', { vars: { reason: 'x3d' } }); await sleep(110)
+        report('priority', 'skip', 'already', { vars: { reason: 'already-set', cls: 'High' } }); await sleep(110)
+        report('deprio', 'skip', 'none', { vars: { reason: 'none-competing' } })
+        return { ok: true }
+      }
+      setPlan({ changes: [{ id: 'power' }, { id: 'priority' }, { id: 'deprio' }], skipped: [], none: false, recommend: [{ id: 'heavy', vars: { name: 'chrome', cpu: 27 } }, { id: 'gameMode', vars: {} }] })
+      await sleep(110); report('power', 'ok', 'High performance', { verified: true, vars: { from: 'Balanced' } })
+      await sleep(110); report('priority', 'ok', 'Valorant', { verified: true, vars: { name: 'VALORANT-Win64-Shipping', from: 'Normal' } })
+      await sleep(110); report('deprio', 'ok', 'OneDrive', { verified: true, vars: { n: 2, names: 'OneDrive, Dropbox', failed: 0 } })
+      return { ok: true }
+    },
     deactivate: async () => ({ ok: true }),
     baseline: () => ({ cpu: 12, gpu: 4, ram: 66, cpuTemp: 51 }),
     bgCpu: () => (st === 'hitchy' ? 41 : 3),

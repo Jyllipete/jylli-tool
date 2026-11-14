@@ -57,16 +57,41 @@ One verdict from the last few seconds, checked in this order. The first that app
 
 | Part | Weight | Formula (ours) |
 |---|---|---|
-| Smoothness | 0.35 | pacing score / 100 |
-| Stability | 0.25 | (1% low / average - 0.4) / 0.45, clamped to 0..1 |
+| Smoothness | 0.45 | pacing score / 100 |
+| Stability | 0.30 | (1% low / average - 0.4) / 0.45, clamped to 0..1 |
 | Thermal headroom | 0.25 | (95 - hottest of CPU and GPU) / 25, clamped to 0..1 |
-| Boost steps | 0.15 | steps done / steps in the boost; only while a boost ran |
 
 A part that was not measured is left out and the rest renormalised (`js/score.js`), so it can neither raise nor lower the score. Smoothness or stability must be measured: a cool PC with a boost but no frames behind it has no score. The debrief shows each part with the number behind it. Colour: 800 and up good, 600 and up fair, below that poor.
 
-## Boost steps (`steps.js`)
+## The boost: plan, apply, prove, undo (`plan.js`, `measure.js`, `activatePulse`)
 
-The receipt maps the lines `activatePulse` logs onto eight named steps: timer resolution 0.5 ms, CPU core parking, power plan, game scheduling (MMCSS), GPU and network interrupt routing, background apps, game priority, background priority. A step is done, skipped (the log says why: laptop, RAM size, core count) or failed. Every step is journaled by `activatePulse` and undone by `pulseRestoreAll`.
+A boost is not a fixed list. `plan.js` (pure) takes facts about this PC, this game and what is running and returns **changes** (applied, read back, undone), **skipped** changes with the reason, and **recommendations** (never done by Pulse). If no change applies it says so ("nothing safe to change, Pulse is only measuring"). Thresholds are ours.
+
+| Change | Applied when | Expected effect (not measured per PC) | Cost |
+|---|---|---|---|
+| Power plan Balanced to High performance | Desktop, not a dual-CCD X3D, the active plan is exactly Balanced, a High performance plan exists | Clocks stay up when load jumps; helps responsiveness | More idle power and heat. Verified with `powercfg /getactivescheme`. Undone through the journal, unless you changed the plan since (then it is left alone and the log says so) |
+| Game process to AboveNormal | Game running and currently Normal or BelowNormal (a deferred apply happens when the watcher sees the game) | Only matters while the CPU is contended | None when idle. Verified by reading the class back; Windows refusing (protected process) is shown as failed, not done |
+| Lower busy background apps to BelowNormal | Process using at least 2 % of the CPU, currently Normal, not on the protected list (system, shell, launchers, anti-cheat, voice/streaming/audio, peripheral software, Jylli) | Frees CPU time only if they compete with the game | They run slower while you play. Processes are identified by pid, name and start time, so a reused pid is never touched |
+
+Recommendations (shown, never done): laptop on battery or not (use the Windows power mode), dual-CCD X3D on a non-Balanced plan, no High performance plan, an app using at least 20 % of the CPU, RAM at 85 % or more (names the biggest app), Game Mode off, Windows Update busy, CPU at 85 C or more before the game.
+
+### Retired, and why
+
+- **Timer resolution 0.5 ms**: the request was made inside a short-lived PowerShell process and died with it; since Windows 10 2004 it is per process anyway. It did nothing and was reported as done.
+- **"Core parking off" and boost mode**: wrote a minimum of 0 % cores (which allows parking everything; High performance defaults to 100 %) and weakened the boost mode. It did the opposite of its name.
+- **MMCSS SystemResponsiveness / Games task**: only affects threads that register with MMCSS; the original was only kept in memory and the game watcher wrote its own value first, so the restore left a change behind.
+- **GPU and NIC interrupt affinity**: takes effect only after the device restarts or the PC reboots, so it did nothing during the session and became permanent if the PC rebooted mid-session.
+- **Closing browsers, launchers and OneDrive**: force-killed apps (lost work, not reversible, Steam for CS2). Now only a recommendation.
+- **Lowering every Normal process**, including voice chat, streaming and launchers (a game started from a lowered launcher inherits the low priority).
+- **Boost steps as 15 % of the Pulse score**: a command running is not a result. The score now uses smoothness, stability and thermal headroom only.
+
+### Before and after (`measure.js`)
+
+"Before" is up to 15 s of rendered frames drawn just before the boost (at least 5 s, otherwise "no before reading"). "After" is 15 s of rendered frames starting 5 s after the boost settled. They are different moments of play, so the card says so, and marks the comparison weak when the limiter verdict differs between the windows and as capped when either window sat at a frame cap (then Pulse can only affect steadiness). No frames, no numbers.
+
+### Restore and recovery
+
+Every change is a journal entry with control `pulse:power`, `pulse:priority` or `pulse:deprio` (priorities use the change kind `pulse-priority`, with an undo handler in `main.js`). Restore runs when the boost ends, the game closes, activation fails, the app quits (inside the quit cleanup race) and, after a crash or forced shutdown, at the next start (`pulseRecover`, which also replays snapshots left by older Pulse versions and a stale watcher MMCSS value). A process that is gone, or whose priority you changed since, counts as restored. A failed restore keeps the journal entry and is retried at the next start.
 
 ## Pre-flight (`preflight.js`)
 
@@ -76,7 +101,8 @@ The receipt maps the lines `activatePulse` logs onto eight named steps: timer re
 | Memory | under 70% | 70% or more | 85% or more | Game Shield |
 | Background load | under 20% | 20% or more | 35% or more | Game Shield |
 | Windows Update | not running | running | n/a | Update Guard |
-| Power plan | High / Ultimate | anything else | n/a | the boost |
+| Power plan | High / Ultimate, or Balanced on a laptop / dual-CCD X3D | Balanced on a plain desktop | n/a | the boost |
+| Game Mode | on | off | n/a | none (a Windows setting) |
 | Pending restart | none | waiting | n/a | none |
 
 A fix is offered only where Pulse already has an action for it. Unreadable inputs are `unknown`, never ok.

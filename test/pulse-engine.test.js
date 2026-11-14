@@ -98,12 +98,12 @@ test('limiter: a missing sensor never produces a verdict from nothing', () => {
 
 // ── score ────────────────────────────────────────────────────────────────────────
 test('score: parts that were not measured are left out and the rest renormalised', () => {
-  const full = S.compute({ smoothness: 80, avgFps: 100, low1Fps: 85, cpuTemp: 70, boost: { ok: 8, total: 8 } })
+  const full = S.compute({ smoothness: 80, avgFps: 100, low1Fps: 85, cpuTemp: 70 })
   assert.ok(full.score > 800 && full.score <= 1000)
   const none = S.compute({})
   assert.equal(none.score, null)
-  assert.equal(none.missing.length, 4)
-  assert.equal(S.compute({ cpuTemp: 40, boost: { ok: 8, total: 8 } }).score, null)   // cool and boosted, but no frames: no score
+  assert.equal(none.missing.length, 3)
+  assert.equal(S.compute({ cpuTemp: 40 }).score, null)   // a cool PC with no frames behind it: no score
   const onlySmooth = S.compute({ smoothness: 50 })
   assert.equal(onlySmooth.score, 500)
 })
@@ -161,7 +161,6 @@ test('debrief: hitches, causes, verdict, score and marks are built from the sess
 test('debrief: no boost, no baseline and no previous session are null, not zero', () => {
   const d = Sess.build({ session: recorded(), boost: null, marks: [], previous: null })
   assert.equal(d.boost, null); assert.equal(d.beforeAfter, null); assert.equal(d.vsLast, null)
-  assert.ok(d.scoreMissing.includes('boost'))
 })
 test('debrief: compares with the previous session of the game', () => {
   const prev = Sess.build({ session: recorded({ id: '111111111111', summary: { frames: 7000, avgFps: 100, low1Fps: 50, low01Fps: 30 } }), boost: null, marks: [], previous: null })
@@ -179,7 +178,7 @@ test('debrief: a clean session says clean, and one without telemetry still build
 test('preflight: unknown stays unknown, and fixes exist only where Pulse has an action', () => {
   const r = Pre.evaluate(null)
   assert.equal(r.state, 'unknown'); assert.ok(r.items.every(i => i.state === 'unknown' && i.fix === null))
-  const p = Pre.evaluate({ cpuTemp: 92, ramPct: 78, topProc: { name: 'chrome', cpu: 40 }, updateActive: true, powerPlan: { name: 'Balanced', high: false }, pendingReboot: true })
+  const p = Pre.evaluate({ cpuTemp: 92, ramPct: 78, topProc: { name: 'chrome', cpu: 40 }, updateActive: true, powerPlan: { name: 'Balanced', high: false, balanced: true }, pendingReboot: true })
   const by = id => p.items.find(i => i.id === id)
   assert.equal(p.state, 'bad')
   assert.equal(by('thermal').state, 'bad'); assert.equal(by('thermal').fix, null)
@@ -194,18 +193,8 @@ test('preflight: a healthy machine is ok', () => {
 })
 
 // ── boost steps ──────────────────────────────────────────────────────────────────
-test('steps: every line activatePulse logs maps to a named step, and anything else is ignored', () => {
-  assert.deepEqual(Steps.stepOf('  Timer resolution → 0.5ms', 'ok'), { id: 'timer', state: 'ok', detail: 'Timer resolution → 0.5ms' })
-  assert.equal(Steps.stepOf('  Core unparking skipped (laptop — battery/heat safety)', 'info').state, 'skip')
-  assert.equal(Steps.stepOf('  CPU core parking disabled', 'ok').id, 'parking')
-  assert.equal(Steps.stepOf('  Power plan → High Performance', 'ok').id, 'power')
-  assert.equal(Steps.stepOf('  MMCSS Games scheduling → High (SystemResponsiveness=10, 8 cores)', 'ok').id, 'mmcss')
-  assert.equal(Steps.stepOf('  Interrupt affinity routed for 2 device(s) → CPU 3', 'ok').id, 'affinity')
-  assert.equal(Steps.stepOf('  Stopped: discord', 'ok').id, 'kill')
-  assert.equal(Steps.stepOf('  Game process not found yet — priority will apply when game launches', 'info').id, 'priority')
-  assert.equal(Steps.stepOf('  3 background process(es) deprioritised', 'ok').id, 'deprio')
-  assert.equal(Steps.stepOf('◆ Pulse active — Valorant', 'head'), null)
-  assert.equal(Steps.IDS.length, 8)
+test('steps: the receipt lists exactly the changes the planner can make', () => {
+  assert.deepEqual(Steps.IDS, ['power', 'priority', 'deprio'])
 })
 
 test('attribution: one instant of telemetry gets the same causes and order as a recorded second', () => {

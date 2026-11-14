@@ -89,6 +89,10 @@
 .pu-steps li { display: grid; grid-template-columns: 16px minmax(0, 1fr) auto; align-items: center; gap: 10px; min-height: 30px; font-size: var(--font-size-base, 13px); color: var(--c-text-secondary); }
 .pu-steps li i { font-size: 13px; color: var(--c-text-tertiary); }
 .pu-steps li em { font-style: normal; font-size: var(--font-size-sm, 12px); color: var(--c-text-tertiary); }
+.pu-steps li { align-items: start; } .pu-steps li > i { margin-top: 3px; } .pu-step-b p { margin: 2px 0 0; } .pu-fine { font-size: var(--font-size-sm, 12px); }
+.pu-recs { list-style: none; margin: 6px 0 0; padding: 0; display: flex; flex-direction: column; gap: 6px; } .pu-recs li { display: grid; grid-template-columns: 16px minmax(0, 1fr); gap: 10px; font-size: var(--font-size-base, 13px); color: var(--c-text-secondary); } .pu-recs i { color: var(--c-warning); margin-top: 3px; }
+.pu-measure { margin-top: 12px; } .pu-warn { color: var(--c-warning); } .pu-none { margin: 0 0 8px; }
+.pu-steps li[data-state="skip"] > i { opacity: .6; }
 .pu-steps li[data-state="ok"] { color: var(--c-text-primary); } .pu-steps li[data-state="ok"] i { color: var(--c-success); }
 .pu-steps li[data-state="fail"] i { color: var(--c-danger); }
 .pu-steps li[data-state="run"] i { color: var(--c-accent); }
@@ -214,3 +218,5 @@ body.game-live .pu-flash { animation: none; }
 .pu input.gs-slider { height: 24px; min-height: 24px; background: transparent; border: 0; }
 .pu .j-pu-excl { display: flex; flex-direction: column; gap: 8px; }
 .pu .j-pu-shield { display: flex; flex-direction: column; gap: 14px; padding-top: 4px; }
+
+.pu-steps + .pu-h, .pu-recs-h { margin-top: 14px; }

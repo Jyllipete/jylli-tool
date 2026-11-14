@@ -29,7 +29,7 @@
   }
 
   api.mount = function mount(c) {
-    const S = { view: 'live', live: null, boost: { active: false, steps: [] }, presets: [], selected: store.get('pulse_preset', ''), killBg: store.get('pulse_kill_bg', '1') !== '0',
+    const S = { view: 'live', live: null, boost: { active: false, steps: [] }, presets: [], selected: store.get('pulse_preset', ''), killBg: false,
       busy: false, sessions: null, deb: null, pf: null, prefs: null, disposed: false, unsub: [], limKey: '', recvKey: '', river: null, debRiver: null }
     const el = document.createElement('div')
     el.className = 'jk pu'
@@ -70,8 +70,7 @@
         <div class="pu-river" id="pu-river" role="img" aria-label="${esc(T('riverAria'))}" data-hint="${esc(T('riverHint'))}"></div><dl class="pu-fps" id="pu-fps"></dl></section>
       <aside class="pu-limiter" id="pu-limiter" data-tone="idle" aria-live="polite"></aside></div>
       <div class="pu-vitals" id="pu-vitals">${UI.vitalsHtml(T)}</div>
-      <div class="pu-pick"><section class="pu-card"><div class="pu-stage-h"><h3 class="pu-h">${esc(T('pickTitle'))}</h3>
-        <label class="pu-check"><input type="checkbox" id="pulse-kill-bg"${S.killBg ? ' checked' : ''}><span>${esc(T('killBg'))}</span></label></div><div class="pu-games" id="pu-games"></div></section>
+      <div class="pu-pick"><section class="pu-card"><div class="pu-stage-h"><h3 class="pu-h">${esc(T('pickTitle'))}</h3></div><div class="pu-games" id="pu-games"></div></section>
         <section class="pu-card"><h3 class="pu-h">${esc(T('receiptTitle'))}</h3><div id="pu-receipt"></div><button type="button" class="pu-ghost" data-act="fix-mouse"><i class="fa fa-computer-mouse" aria-hidden="true"></i><span>${esc(T('fixMouse'))}</span></button></section></div>`
     S.river = JylliPulseRiverView.mount(q('#pu-river'), { mode: 'live', label: (col, i, n) => {
       const sec = ((n - 1 - i) * 0.25)
@@ -200,8 +199,7 @@
     })
     el.addEventListener('change', e => {
       const t = e.target
-      if (t.id === 'pulse-kill-bg') { S.killBg = t.checked; store.set('pulse_kill_bg', t.checked ? '1' : '0') }
-      else if (t.dataset && t.dataset.act === 'pin') A().pulse2SetPrefs({ pin: t.checked }).then(r => { if (r && r.ok) S.prefs = r.prefs })
+      if (t.dataset && t.dataset.act === 'pin') A().pulse2SetPrefs({ pin: t.checked }).then(r => { if (r && r.ok) S.prefs = r.prefs })
       else if (t.dataset && t.dataset.act === 'key') A().pulse2SetPrefs({ keys: { [t.dataset.name]: t.value.trim() } }).then(r => { if (r && r.ok) { S.prefs = r.prefs; paintPrefs() } })
       else if (t.dataset && t.dataset.act === 'opacity') A().pulse2SetPrefs({ hud: { opacity: Number(t.value) / 100 } }).then(r => { if (r && r.ok) S.prefs = r.prefs })
     })

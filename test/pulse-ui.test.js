@@ -100,13 +100,15 @@ test('ui: every string that reaches the page is escaped', () => {
   assert.ok(!rows.includes('<img'))
   const pf = UI.preflightHtml({ items: [{ id: 'background', state: 'warn', evidence: { name: evil, cpu: 30 }, fix: null }] }, TE)
   assert.ok(!pf.includes('<img'))
-  assert.ok(!UI.receiptHtml({ active: true, steps: [{ id: 'timer', state: 'ok', detail: evil }] }, TE).includes('<img'))
+  assert.ok(!UI.receiptHtml({ active: true, steps: [{ id: 'power', state: 'ok', detail: evil, vars: { from: evil } }], recs: [{ id: 'heavy', vars: { name: evil, cpu: 30 } }] }, TE).includes('<img'))
 })
-test('ui: the boost receipt always lists all eight steps in order', () => {
-  const html = UI.receiptHtml({ active: true, steps: [{ id: 'power', state: 'ok' }] }, TE)
-  assert.equal((html.match(/<li /g) || []).length, 8)
-  assert.ok(html.indexOf('Timer resolution') < html.indexOf('Power plan'))
-  assert.ok(UI.receiptHtml(null, TE).includes('data-state="idle"'))
+test('ui: the receipt shows only what was reported, plus recommendations and the nothing-to-change message', () => {
+  const html = UI.receiptHtml({ active: true, steps: [{ id: 'power', state: 'ok', verified: true }, { id: 'deprio', state: 'skip', vars: { reason: 'none-competing' } }], recs: [{ id: 'gameMode', vars: {} }] }, TE)
+  assert.equal((html.match(/<li data-state/g) || []).length, 2)
+  assert.ok(html.indexOf('Power plan') < html.indexOf('Background priority'))
+  assert.ok(html.includes('pu-recs'))
+  assert.ok(UI.receiptHtml({ active: true, steps: [], none: true }, TE).includes('pu-none'))
+  assert.ok(!UI.receiptHtml(null, TE).includes('<li'))
 })
 test('ui: a debrief renders from a real build, with and without the optional parts', () => {
   const Sess = require('../lib/pulse/session')
