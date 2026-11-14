@@ -46,6 +46,7 @@ function respond(name, args, ctx) {
   if (/^diag2/.test(name)) return require('./diag-fixture').respond(name, args, ctx)
   if (/^compete[A-Z]/.test(name)) return require('./compete-fixture').respond(name, args, ctx)
   if (/^games2|^getGameCover$/.test(name)) return require('./games-fixture').respond(name, args, ctx)
+  if (/^apps2/.test(name)) return require('./apps-fixture').respond(name, args, ctx)
   switch (name) {
     // BIOS workstation: runs the REAL model/doctor code on synthetic data (HP-style rows plus a few hundred generated ones to exercise the virtual grid)
     case 'bios2Status': {
@@ -104,9 +105,6 @@ function respond(name, args, ctx) {
     case 'getCachedTier': return premium
     case 'getTweakStates': return tweakStates
     case 'getProcesses': return processes
-    case 'scanInstalledApps': return ['edge-optimize','chrome-optimize','firefox-optimize','discord-optimize','discord-cpu-priority','spotify-optimize','steam-optimize','epic-optimize','riot-optimize','obs-optimize','nvidia-app-optimize','vscode-optimize','explorer-optimize']
-    case 'healthCheckAppOptimizer': return { 'chrome-optimize': 'drifted', 'steam-optimize': 'ok' }
-    case 'aoGetCpuCaps': return {}
     case 'freezeGetPids': return { ok: true, frozenPids: [] }
     case 'getStartupItems': return startupItems
     case 'getBootImpact': return { ok: true, items: [] }

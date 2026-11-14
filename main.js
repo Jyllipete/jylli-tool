@@ -1103,6 +1103,7 @@ app.whenReady().then(async () => {
   auth = createAuth({ BOT_URL, userDataDir: userData, safeStorage, userAgent: 'jylli-tool/' + APP_VERSION })
   await auth.ready   // stored session is decrypted (async safeStorage) before any window asks about premium
   snapshots = createSnapshotStore(path.join(userData, 'snapshots'))
+  setTimeout(() => { appsSvc().recover().catch(() => {}) }, 6000)   // Game time left by a crash is put back
   setTimeout(() => { pulseRecover().catch(() => {}) }, 4000)   // a boost that was running when the PC lost power or the app crashed is put back first
   if (snapshots.load('update-guard')) setUpdateGuard(false).catch(() => {})   // Windows Update must never stay disabled after Jylli Tool is gone
   startupTrace('createWindow starting')
@@ -9603,58 +9604,9 @@ ipcMain.handle('detect-av', async () => {
 })
 
 // ─── App Optimizer IPC ────────────────────────────────────────────────────────
+// Apps tab: what an older version changed and the new tab no longer does. Restore only (`appsLegacyRestore`); nothing here applies anything any more.
 const APP_OPTIMIZER_TWEAKS = {
-  // ── Browsers ─────────────────────────────────────────────────────────────
-  'edge-optimize': {
-    safetyTier: 2,
-    apply: async (s, ps, cmd) => {
-      await ps(`New-Item -Path 'HKLM:\\SOFTWARE\\Policies\\Microsoft\\Edge' -Force -EA SilentlyContinue | Out-Null
-Set-ItemProperty -Path 'HKLM:\\SOFTWARE\\Policies\\Microsoft\\Edge' -Name 'StartupBoostEnabled' -Value 0 -Force
-Set-ItemProperty -Path 'HKLM:\\SOFTWARE\\Policies\\Microsoft\\Edge' -Name 'BackgroundModeEnabled' -Value 0 -Force`)
-      // GPU acceleration is deliberately left on: turning it off makes the browser slower, not lighter.
-      s('Edge: startup boost off, background mode off.', 'ok')
-    },
-    restore: async (s, ps) => {
-      await ps(`Remove-ItemProperty -Path 'HKLM:\\SOFTWARE\\Policies\\Microsoft\\Edge' -Name 'StartupBoostEnabled','BackgroundModeEnabled','HardwareAccelerationModeEnabled' -EA SilentlyContinue`)
-      s('Edge settings fully restored.', 'ok')
-    }
-  },
-  'chrome-optimize': {
-    safetyTier: 2,
-    apply: async (s, ps) => {
-      await ps(`New-Item -Path 'HKLM:\\SOFTWARE\\Policies\\Google\\Chrome' -Force -EA SilentlyContinue | Out-Null
-Set-ItemProperty -Path 'HKLM:\\SOFTWARE\\Policies\\Google\\Chrome' -Name 'BackgroundModeEnabled' -Value 0 -Force`)
-      s('Chrome: background mode off (GPU acceleration left on).', 'ok')
-    },
-    restore: async (s, ps) => {
-      await ps(`Remove-ItemProperty -Path 'HKLM:\\SOFTWARE\\Policies\\Google\\Chrome' -Name 'HardwareAccelerationModeEnabled','BackgroundModeEnabled' -EA SilentlyContinue`)
-      s('Chrome settings restored.', 'ok')
-    }
-  },
   'firefox-optimize': {
-    safetyTier: 2,
-    apply: async (s, ps) => {
-      const ffProfiles = path.join(os.homedir(), 'AppData', 'Roaming', 'Mozilla', 'Firefox', 'Profiles')
-      if (fs.existsSync(ffProfiles)) {
-        const userJs = `// PTU Firefox Performance
-user_pref("layers.acceleration.disabled", false);
-user_pref("gfx.webrender.all", true);
-user_pref("media.hardware-video-decoding.enabled", true);
-user_pref("browser.cache.memory.capacity", 524288);
-user_pref("network.prefetch-next", false);
-user_pref("network.dns.disablePrefetch", true);
-user_pref("browser.sessionstore.interval", 60000);
-user_pref("browser.sessionhistory.max_total_viewers", 4);`
-        const profiles = fs.readdirSync(ffProfiles)
-        for (const p of profiles) {
-          const profilePath = path.join(ffProfiles, p)
-          if (fs.statSync(profilePath).isDirectory()) {
-            fs.writeFileSync(path.join(profilePath, 'user.js'), userJs)
-            s(`  Firefox profile ${p}: user.js written`, 'ok')
-          }
-        }
-      } else { s('Firefox not found.', 'info') }
-    },
     restore: async (s) => {
       const ffProfiles = path.join(os.homedir(), 'AppData', 'Roaming', 'Mozilla', 'Firefox', 'Profiles')
       if (fs.existsSync(ffProfiles)) {
@@ -9668,42 +9620,8 @@ user_pref("browser.sessionhistory.max_total_viewers", 4);`
       } else { s('Firefox profile folder not found.', 'info') }
     }
   },
-  'brave-optimize': {
-    safetyTier: 2,
-    apply: async (s, ps) => {
-      await ps(`New-Item -Path 'HKLM:\\SOFTWARE\\Policies\\BraveSoftware\\Brave' -Force -EA SilentlyContinue | Out-Null
-Set-ItemProperty -Path 'HKLM:\\SOFTWARE\\Policies\\BraveSoftware\\Brave' -Name 'BackgroundModeEnabled' -Value 0 -Force`)
-      s('Brave: background mode disabled (GPU acceleration left on).', 'ok')
-    },
-    restore: async (s, ps) => {
-      await ps(`Remove-ItemProperty -Path 'HKLM:\\SOFTWARE\\Policies\\BraveSoftware\\Brave' -Name 'HardwareAccelerationModeEnabled','BackgroundModeEnabled' -EA SilentlyContinue`)
-      s('Brave restored.', 'ok')
-    }
-  },
-  'opera-gx-optimize': {
-    safetyTier: 2,
-    apply: async () => { throw new Error('Retired: this only switched GPU acceleration off, which makes the browser slower. Nothing was changed.') },
-    restore: async (s, ps) => {
-      await ps(`Remove-ItemProperty -Path 'HKLM:\\SOFTWARE\\Policies\\OperaSoftware\\OperaGX' -Name 'HardwareAccelerationModeEnabled' -EA SilentlyContinue`)
-      s('Opera GX: hardware acceleration policy removed.', 'ok')
-    }
-  },
   // ── Discord ───────────────────────────────────────────────────────────────
   'discord-optimize': {
-    safetyTier: 1,
-    apply: async (s, ps) => {
-      const appData = process.env.APPDATA || ''
-      const discordCfg = path.join(appData, 'discord', 'settings.json')
-      if (fs.existsSync(discordCfg)) {
-        const cfg = JSON.parse(fs.readFileSync(discordCfg, 'utf8'))
-        cfg.SKIP_HOST_UPDATE = true
-        cfg.enableHardwareAcceleration = false
-        cfg.audioSubsystem = 'legacy'
-        fs.writeFileSync(discordCfg, JSON.stringify(cfg, null, 2))
-        s('Discord: HW accel off, skip host update, legacy audio subsystem.', 'ok')
-      } else { s('Discord settings.json not found — launch Discord first.', 'warn') }
-      await ps(`Get-Process -Name 'Discord','DiscordPTB','DiscordCanary' -EA SilentlyContinue | ForEach-Object { $_.PriorityClass = 'BelowNormal' }`)
-    },
     restore: async (s, ps) => {
       const appData = process.env.APPDATA || ''
       const discordCfg = path.join(appData, 'discord', 'settings.json')
@@ -9721,14 +9639,6 @@ Set-ItemProperty -Path 'HKLM:\\SOFTWARE\\Policies\\BraveSoftware\\Brave' -Name '
     }
   },
   'discord-cpu-priority': {
-    safetyTier: 2,
-    apply: async (s, ps) => {
-      const base = 'HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options'
-      await ps(`New-Item -Path "${base}\\Discord.exe\\PerfOptions" -Force -EA SilentlyContinue | Out-Null
-Set-ItemProperty -Path "${base}\\Discord.exe\\PerfOptions" -Name CpuPriorityClass -Value 1 -Force
-Set-ItemProperty -Path "${base}\\Discord.exe\\PerfOptions" -Name IoPriority -Value 0 -Force`)
-      s('Discord.exe: IDLE CPU + I/O priority (lowest).', 'ok')
-    },
     restore: async (s, ps) => {
       const perfPath = 'HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\Discord.exe\\PerfOptions'
       await ps(`Remove-ItemProperty -Path '${perfPath}' -Name CpuPriorityClass,IoPriority -EA SilentlyContinue
@@ -9738,12 +9648,6 @@ if (-not (Get-ItemProperty -Path '${perfPath}' -EA SilentlyContinue | Select-Obj
   },
   // ── Spotify ───────────────────────────────────────────────────────────────
   'spotify-optimize': {
-    safetyTier: 2,
-    apply: async (s, ps) => {
-      await ps(`New-Item -Path 'HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\Spotify.exe\\PerfOptions' -Force -EA SilentlyContinue | Out-Null
-Set-ItemProperty -Path 'HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\Spotify.exe\\PerfOptions' -Name CpuPriorityClass -Value 1 -Force`)
-      s('Spotify: IDLE CPU priority — won\'t compete with games.', 'ok')
-    },
     restore: async (s, ps) => {
       const spotifyPerf = 'HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\Spotify.exe\\PerfOptions'
       await ps(`Remove-ItemProperty -Path '${spotifyPerf}' -Name CpuPriorityClass -EA SilentlyContinue
@@ -9751,36 +9655,8 @@ if (-not (Get-ItemProperty -Path '${spotifyPerf}' -EA SilentlyContinue | Select-
       s('Spotify priority fully restored.', 'ok')
     }
   },
-  // ── Steam ─────────────────────────────────────────────────────────────────
-  'steam-optimize': {
-    safetyTier: 2,
-    apply: async (s, ps) => {
-      // No steam.cfg (it blocks Steam updates) and no Idle priority (games started from Steam would inherit it).
-      await ps(`Set-ItemProperty -Path 'HKCU:\\Software\\Valve\\Steam' -Name 'StartupMode' -Value 0 -Force -EA SilentlyContinue`)
-      s('Steam: start-up mode set to minimized.', 'ok')
-    },
-    restore: async (s, ps) => {
-      const steamPathResult = await ps('(Get-ItemProperty "HKLM:\\SOFTWARE\\WOW6432Node\\Valve\\Steam" -EA SilentlyContinue).InstallPath')
-      if (steamPathResult.out.trim()) {
-        const cfgPath = path.join(steamPathResult.out.trim(), 'steam.cfg')
-        if (fs.existsSync(cfgPath)) { try { if (fs.readFileSync(cfgPath, 'utf8').replace(/\r/g, '') === 'BootStrapperInhibitAll=enable\nCleintAutoRestart=disable\n') { fs.unlinkSync(cfgPath); s('Steam: steam.cfg written by an earlier version removed.', 'ok') } else { s('Steam: steam.cfg is not ours, left alone.', 'info') } } catch { s('Steam: could not remove steam.cfg.', 'warn') } }
-        else { s('Steam: steam.cfg not found.', 'info') }
-      }
-      await ps(`Remove-ItemProperty -Path 'HKCU:\\Software\\Valve\\Steam' -Name 'StartupMode' -EA SilentlyContinue`)
-      const steamPerf = 'HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\steam.exe\\PerfOptions'
-      await ps(`Remove-ItemProperty -Path '${steamPerf}' -Name CpuPriorityClass -EA SilentlyContinue
-if (-not (Get-ItemProperty -Path '${steamPerf}' -EA SilentlyContinue | Select-Object -ExcludeProperty PS* | Get-Member -MemberType NoteProperty -EA SilentlyContinue)) { Remove-Item -Path '${steamPerf}' -Force -EA SilentlyContinue }`)
-      s('Steam tweaks fully restored.', 'ok')
-    }
-  },
   // ── OBS ───────────────────────────────────────────────────────────────────
   'obs-optimize': {
-    safetyTier: 2,
-    apply: async (s, ps) => {
-      await ps(`New-Item -Path 'HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\obs64.exe\\PerfOptions' -Force -EA SilentlyContinue | Out-Null
-Set-ItemProperty -Path 'HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\obs64.exe\\PerfOptions' -Name CpuPriorityClass -Value 3 -Force`)
-      s('OBS: HIGH CPU priority — encoding gets more CPU time.', 'ok')
-    },
     restore: async (s, ps) => {
       const obsPerf = 'HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\obs64.exe\\PerfOptions'
       await ps(`Remove-ItemProperty -Path '${obsPerf}' -Name CpuPriorityClass -EA SilentlyContinue
@@ -9788,57 +9664,8 @@ if (-not (Get-ItemProperty -Path '${obsPerf}' -EA SilentlyContinue | Select-Obje
       s('OBS priority fully restored.', 'ok')
     }
   },
-  // ── Windows Explorer ──────────────────────────────────────────────────────
-  'explorer-optimize': {
-    safetyTier: 1,
-    apply: async (s, ps) => {
-      await ps(`Set-ItemProperty -Path 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced' -Name 'LaunchTo' -Value 1 -Force
-Set-ItemProperty -Path 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced' -Name 'HideFileExt' -Value 0 -Force
-Set-ItemProperty -Path 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Serialize' -Name 'StartupDelayInMSec' -Value 0 -Force -EA SilentlyContinue`)
-      s('Explorer: no startup delay, launches to This PC, show extensions.', 'ok')
-    },
-    restore: async (s, ps) => {
-      await ps(`Remove-ItemProperty -Path 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced' -Name 'LaunchTo','HideFileExt' -EA SilentlyContinue
-Remove-ItemProperty -Path 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Serialize' -Name 'StartupDelayInMSec' -EA SilentlyContinue`)
-      s('Explorer tweaks fully restored.', 'ok')
-    }
-  },
-  // ── Epic Games ────────────────────────────────────────────────────────────
-  'epic-optimize': {
-    safetyTier: 2,
-    apply: async (s) => {
-      // The launcher keeps its normal CPU priority: a launcher at Idle priority passes that on to the games it starts.
-      const cfgFile = path.join(process.env['LOCALAPPDATA'] || '', 'EpicGamesLauncher\\Saved\\Config\\Windows\\GameUserSettings.ini')
-      if (fs.existsSync(cfgFile)) {
-        let ini = fs.readFileSync(cfgFile, 'utf8')
-        ini = ini.replace(/bRunAtStartup\s*=\s*.*/g, 'bRunAtStartup=False')
-        if (!ini.includes('bRunAtStartup')) ini += '\nbRunAtStartup=False\n'
-        fs.writeFileSync(cfgFile, ini)
-        s('Epic Games: start with Windows turned off.', 'ok')
-      } else {
-        s('Epic Games: settings file not found, nothing changed.', 'info')
-      }
-    },
-    restore: async (s, ps) => {
-      const epicPerf = 'HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\EpicGamesLauncher.exe\\PerfOptions'
-      await ps(`Remove-ItemProperty -Path '${epicPerf}' -Name CpuPriorityClass,IoPriority -EA SilentlyContinue
-if (-not (Get-ItemProperty -Path '${epicPerf}' -EA SilentlyContinue | Select-Object -ExcludeProperty PS* | Get-Member -MemberType NoteProperty -EA SilentlyContinue)) { Remove-Item -Path '${epicPerf}' -Force -EA SilentlyContinue }`)
-      const cfgFile = path.join(process.env['LOCALAPPDATA'] || '', 'EpicGamesLauncher\\Saved\\Config\\Windows\\GameUserSettings.ini')
-      if (fs.existsSync(cfgFile)) {
-        try {
-          let ini = fs.readFileSync(cfgFile, 'utf8')
-          ini = ini.replace(/bRunAtStartup\s*=\s*False/gi, 'bRunAtStartup=True')
-          fs.writeFileSync(cfgFile, ini)
-          s('Epic Games: startup setting restored.', 'ok')
-        } catch { s('Epic Games: could not restore GameUserSettings.ini.', 'warn') }
-      }
-      s('Epic Games priority and settings fully restored.', 'ok')
-    }
-  },
   // ── EA App ────────────────────────────────────────────────────────────────
   'ea-app-optimize': {
-    safetyTier: 2,
-    apply: async () => { throw new Error('Retired: Launchers are no longer set to Idle priority: games they start inherit it (Microsoft CreateProcess docs), which can lower FPS. Nothing was changed.') },
     restore: async (s, ps) => {
       const eaPerf = 'HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\EADesktop.exe\\PerfOptions'
       const eaBgPerf = 'HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\EABackgroundService.exe\\PerfOptions'
@@ -9851,8 +9678,6 @@ if (-not (Get-ItemProperty -Path '${eaBgPerf}' -EA SilentlyContinue | Select-Obj
   },
   // ── Riot Client ───────────────────────────────────────────────────────────
   'riot-optimize': {
-    safetyTier: 2,
-    apply: async () => { throw new Error('Retired: Launchers are no longer set to Idle priority: games they start inherit it (Microsoft CreateProcess docs), which can lower FPS. Nothing was changed.') },
     restore: async (s, ps) => {
       const riotPerf = 'HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\RiotClientServices.exe\\PerfOptions'
       await ps(`Remove-ItemProperty -Path '${riotPerf}' -Name CpuPriorityClass,IoPriority -EA SilentlyContinue
@@ -9860,29 +9685,8 @@ if (-not (Get-ItemProperty -Path '${riotPerf}' -EA SilentlyContinue | Select-Obj
       s('Riot Client priority fully restored.', 'ok')
     }
   },
-  // ── NVIDIA App / GeForce Experience ──────────────────────────────────────
-  'nvidia-app-optimize': {
-    safetyTier: 2,
-    apply: async (s, ps) => {
-      await ps(`Stop-Service -Name 'NvTelemetryContainer' -Force -EA SilentlyContinue
-Set-Service -Name 'NvTelemetryContainer' -StartupType Disabled -EA SilentlyContinue`)
-      s('NVIDIA telemetry service disabled.', 'ok')
-    },
-    restore: async (s, ps) => {
-      await ps(`Set-Service -Name 'NvTelemetryContainer' -StartupType Automatic -EA SilentlyContinue
-Start-Service -Name 'NvTelemetryContainer' -EA SilentlyContinue`)
-      s('NVIDIA telemetry service restored.', 'ok')
-      const base = 'HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options'
-      const nvidiaPerf = `${base}\\NVIDIA GeForce Experience.exe\\PerfOptions`
-      await ps(`Remove-ItemProperty -Path '${nvidiaPerf}' -Name CpuPriorityClass -EA SilentlyContinue
-if (-not (Get-ItemProperty -Path '${nvidiaPerf}' -EA SilentlyContinue | Select-Object -ExcludeProperty PS* | Get-Member -MemberType NoteProperty -EA SilentlyContinue)) { Remove-Item -Path '${nvidiaPerf}' -Force -EA SilentlyContinue }`)
-      s('GeForce Experience priority restored.', 'ok')
-    }
-  },
   // ── Playnite ──────────────────────────────────────────────────────────────
   'playnite-optimize': {
-    safetyTier: 2,
-    apply: async () => { throw new Error('Retired: Launchers are no longer set to Idle priority: games they start inherit it (Microsoft CreateProcess docs), which can lower FPS. Nothing was changed.') },
     restore: async (s, ps) => {
       const playnitePerf = 'HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\Playnite.DesktopApp.exe\\PerfOptions'
       await ps(`Remove-ItemProperty -Path '${playnitePerf}' -Name CpuPriorityClass,IoPriority -EA SilentlyContinue
@@ -9892,13 +9696,6 @@ if (-not (Get-ItemProperty -Path '${playnitePerf}' -EA SilentlyContinue | Select
   },
   // ── VS Code ───────────────────────────────────────────────────────────────
   'vscode-optimize': {
-    safetyTier: 2,
-    apply: async (s, ps) => {
-      const base = 'HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options'
-      await ps(`New-Item -Path "${base}\\Code.exe\\PerfOptions" -Force -EA SilentlyContinue | Out-Null
-Set-ItemProperty -Path "${base}\\Code.exe\\PerfOptions" -Name CpuPriorityClass -Value 1 -Force`)
-      s('VS Code: set to IDLE CPU priority when in background.', 'ok')
-    },
     restore: async (s, ps) => {
       const codePerf = 'HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\Code.exe\\PerfOptions'
       await ps(`Remove-ItemProperty -Path '${codePerf}' -Name CpuPriorityClass -EA SilentlyContinue
@@ -9908,99 +9705,84 @@ if (-not (Get-ItemProperty -Path '${codePerf}' -EA SilentlyContinue | Select-Obj
   },
 }
 
-ipcMain.handle('run-app-optimizer', async (_, { id, action }) => {
+/** Puts one old change back (journal undo first, then the old restore code). Firefox: only user.js files this app wrote (header check), never the user's own. */
+async function appsLegacyRestore(id) {
   const send = (msg, level) => mainWindow?.webContents.send('log', { msg, level, ts: new Date().toLocaleTimeString() })
-  send(`App Optimizer: ${id} [${action}]`, 'head')
+  const t = APP_OPTIMIZER_TWEAKS[id]
+  if (!t || typeof t.restore !== 'function') return false
+  send('Apps: putting back ' + id, 'head')
+  const control = 'app-optimizer:' + id
   try {
-    const t = APP_OPTIMIZER_TWEAKS[id]
-    if (!t || (action !== 'apply' && action !== 'restore') || typeof t[action] !== 'function') return { ok: false, error: 'unknown_app_optimizer_action' }
-    const control = `app-optimizer:${id}`
-    if (action === 'restore') {
-      const j = await journalSvc().restoreRecorded(control, send)
-      if (j.done) return { ok: true }
+    const j = await journalSvc().restoreRecorded(control, send)
+    if (!j.done) {
+      let failed = null
+      if (id === 'firefox-optimize') {
+        const root = path.join(os.homedir(), 'AppData', 'Roaming', 'Mozilla', 'Firefox', 'Profiles')
+        if (fs.existsSync(root)) for (const p of fs.readdirSync(root)) {
+          const f = path.join(root, p, 'user.js')
+          try { if (fs.existsSync(f) && fs.readFileSync(f, 'utf8').startsWith('// PTU Firefox Performance')) fs.unlinkSync(f) } catch { failed = [{ err: 'user.js' }] }
+        }
+      } else {
+        await journalSvc().runRecorded(control, 'restore', { via: 'manual', onFailures: f => { failed = f } }, (ps, cmd) => t.restore(send, ps, cmd))
+      }
+      if (failed) { send('Apps: ' + id + ' could not be put back completely', 'err'); return false }
     }
-    let failed = null
-    await journalSvc().runRecorded(control, action, { via: 'manual', onFailures: f => { failed = f } }, (ps, cmd) => t[action](send, ps, cmd))
-    if (failed) { send('App Optimizer: ' + failed.map(f => f.err).join('; ').slice(0, 200), 'err'); return { ok: false, partial: true, error: failed.map(f => f.err).join('; ').slice(0, 300) } }
-    return { ok: true }
-  } catch (e) {
-    send(`Error: ${e.message}`, 'err')
-    return { ok: false, error: e.message }
-  }
+    const st = loadSettings(); st['tweak_' + id] = 'restored'; saveSettings(st)
+    return true
+  } catch (e) { send('Apps: ' + e.message, 'err'); return false }
+}
+
+// ─── Apps (lib/apps): what the programs cost, documented changes read back and undoable, Game time (programs step back while a game runs) ───
+const Apps = require('./lib/apps')
+let _apps = null
+function appsSvc() {
+  if (_apps) return _apps
+  _apps = Apps.create({
+    runPS: (s, ms) => runPS(s, ms),
+    runRecorded: (...a) => journalSvc().runRecorded(...a),
+    undoControl: c => journalSvc().undoControl(c),
+    cpumem: { priority: o => cpumemSvc().priority(o), priorityClear: o => cpumemSvc().priorityClear(o) },
+    files: {
+      read: p => { try { return fs.readFileSync(p, 'utf8') } catch { return null } },
+      write: (p, t) => fs.writeFileSync(p, t),
+      exists: p => { try { return fs.existsSync(p) } catch { return false } },
+      list: d => { try { return fs.readdirSync(d) } catch { return [] } },
+    },
+    env: { appdata: process.env.APPDATA || '', localappdata: process.env.LOCALAPPDATA || '' },
+    isPremium: () => !!auth && auth.isPremium(),
+    settings: () => loadSettings(),
+    activeGame: () => (activeGameProfile ? { id: activeGameProfile, name: (PULSE_PRESETS[activeGameProfile] || {}).name || activeGameProfile } : null),
+    legacyRestore: appsLegacyRestore,
+    state: { read: () => cuRead('jt_apps.json', null), write: v => cuWrite('jt_apps.json', v) },
+    emit: cuSend,
+  })
+  return _apps
+}
+/** The watcher's game as Game time needs it: id, name and the program name (never a wildcard pattern). */
+function appsGameOf(presetId) {
+  const p = PULSE_PRESETS[presetId] || {}
+  const exe = String(p.exe || '').toLowerCase()
+  return { id: presetId, name: p.name || presetId, stems: exe && !/[*]/.test(exe) && !exe.includes('_gtaprocess') ? [exe.replace(/\.exe$/, '')] : [] }
+}
+ipcMain.handle('apps2-scan', async () => { try { return await appsSvc().scan() } catch (e) { return gmFail(e) } })
+ipcMain.handle('apps2-cost', async () => { try { return await appsSvc().cost() } catch (e) { return gmFail(e) } })
+ipcMain.handle('apps2-state', () => { try { return appsSvc().state() } catch (e) { return gmFail(e) } })
+ipcMain.handle('apps2-run', async (_, req) => {
+  const items = Array.isArray(req && req.items) ? req.items.slice(0, 60).map(i => ({ row: gmStr(i && i.row, 40), action: i && i.action === 'restore' ? 'restore' : 'apply' })) : []
+  try { return await appsSvc().run({ items }) } catch (e) { return gmFail(e) }
 })
-
-ipcMain.handle('scan-installed-apps', async () => {
-  const lad = process.env['LOCALAPPDATA'] || ''
-  const appd = process.env['APPDATA'] || ''
-  const pf = process.env['ProgramFiles'] || 'C:\\Program Files'
-  const pf86 = process.env['ProgramFiles(x86)'] || 'C:\\Program Files (x86)'
-  const pd = process.env['ProgramData'] || 'C:\\ProgramData'
-  const checks = {
-    'edge-optimize':       () => fs.existsSync(path.join(pf86, 'Microsoft\\Edge\\Application\\msedge.exe')) || fs.existsSync(path.join(pf, 'Microsoft\\Edge\\Application\\msedge.exe')),
-    'chrome-optimize':     () => fs.existsSync(path.join(pf, 'Google\\Chrome\\Application\\chrome.exe')) || fs.existsSync(path.join(pf86, 'Google\\Chrome\\Application\\chrome.exe')),
-    'brave-optimize':      () => fs.existsSync(path.join(pf, 'BraveSoftware\\Brave-Browser\\Application\\brave.exe')) || fs.existsSync(path.join(pf86, 'BraveSoftware\\Brave-Browser\\Application\\brave.exe')),
-    'opera-gx-optimize':   () => fs.existsSync(path.join(appd, 'Opera Software\\Opera GX Stable\\launcher.exe')),
-    'firefox-optimize':    () => fs.existsSync(path.join(pf, 'Mozilla Firefox\\firefox.exe')) || fs.existsSync(path.join(pf86, 'Mozilla Firefox\\firefox.exe')),
-    'discord-optimize':    () => { try { const d = path.join(lad, 'Discord'); return fs.existsSync(d) && fs.readdirSync(d).some(f => f.startsWith('app-')) } catch { return false } },
-    'discord-cpu-priority':() => { try { const d = path.join(lad, 'Discord'); return fs.existsSync(d) && fs.readdirSync(d).some(f => f.startsWith('app-')) } catch { return false } },
-    'spotify-optimize':    () => fs.existsSync(path.join(appd, 'Spotify\\Spotify.exe')),
-    'steam-optimize':      () => fs.existsSync(path.join(pf86, 'Steam\\steam.exe')) || fs.existsSync(path.join(pf, 'Steam\\steam.exe')),
-    'obs-optimize':        () => fs.existsSync(path.join(pf, 'obs-studio\\bin\\64bit\\obs64.exe')) || fs.existsSync(path.join(pf86, 'obs-studio\\bin\\64bit\\obs64.exe')),
-    'epic-optimize':       () => fs.existsSync(path.join(pd, 'Epic\\EpicGamesLauncher\\Portal\\Binaries\\Win64\\EpicGamesLauncher.exe')) || fs.existsSync(path.join(pf, 'Epic Games\\Launcher\\Portal\\Binaries\\Win64\\EpicGamesLauncher.exe')),
-    'ea-app-optimize':     () => false, // retired: launcher idle priority is inherited by the games it starts
-    'riot-optimize':       () => false,
-    'nvidia-app-optimize': () => fs.existsSync(path.join(pf, 'NVIDIA Corporation\\NVIDIA app\\CEF\\NVIDIA app.exe')) || fs.existsSync(path.join(pf, 'NVIDIA Corporation\\GeForce Experience\\NVIDIA GeForce Experience.exe')),
-    'playnite-optimize':   () => false,
-    'vscode-optimize':     () => fs.existsSync(path.join(lad, 'Programs\\Microsoft VS Code\\Code.exe')),
-    'explorer-optimize':   () => true,
-  }
-  const installed = []
-  for (const [id, check] of Object.entries(checks)) {
-    try { if (check()) installed.push(id) } catch {}
-  }
-  return installed
+ipcMain.handle('apps2-tune', async () => { try { return await appsSvc().tuneRecommended() } catch (e) { return gmFail(e) } })
+ipcMain.handle('apps2-undo-run', async (_, req) => { try { return await appsSvc().undoRun({ runId: gmStr(req && req.runId, 40) }) } catch (e) { return gmFail(e) } })
+ipcMain.handle('apps2-history', () => { try { return appsSvc().history() } catch (e) { return gmFail(e) } })
+ipcMain.handle('apps2-game-end', async () => { try { return await appsSvc().gameEnd() } catch (e) { return gmFail(e) } })
+ipcMain.handle('apps2-migrate', async () => { try { return await appsSvc().migrate() } catch (e) { return gmFail(e) } })
+ipcMain.handle('apps2-rules-get', () => { try { return appsSvc().rulesGet() } catch (e) { return gmFail(e) } })
+ipcMain.handle('apps2-rules-set', (_, req) => {
+  const picks = {}
+  if (req && req.picks && typeof req.picks === 'object') for (const [k, v] of Object.entries(req.picks).slice(0, 80)) picks[gmStr(k, 24)] = v === null ? null : gmStr(v, 12)
+  try { return appsSvc().rulesSet({ enabled: typeof (req && req.enabled) === 'boolean' ? req.enabled : undefined, picks }) } catch (e) { return gmFail(e) }
 })
-
-ipcMain.handle('health-check-app-optimizer', async () => {
-  const appd = process.env['APPDATA'] || ''
-  const pf = process.env['ProgramFiles'] || 'C:\\Program Files'
-  const pf86 = process.env['ProgramFiles(x86)'] || 'C:\\Program Files (x86)'
-  const ifeoBase = 'HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options'
-
-  const readReg = (keyPath, name) => {
-    try {
-      const out = require('child_process').execSync(`reg query "${keyPath}" /v "${name}" 2>nul`, { encoding: 'utf8' })
-      const m = out.match(/REG_DWORD\s+(0x[0-9a-fA-F]+|\d+)/)
-      return m ? parseInt(m[1], 16) : null
-    } catch { return null }
-  }
-
-  const checks = {
-    'edge-optimize':       () => readReg('HKLM\\SOFTWARE\\Policies\\Microsoft\\Edge', 'BackgroundModeEnabled') === 0,
-    'chrome-optimize':     () => readReg('HKLM\\SOFTWARE\\Policies\\Google\\Chrome', 'BackgroundModeEnabled') === 0,
-    'brave-optimize':      () => readReg('HKLM\\SOFTWARE\\Policies\\BraveSoftware\\Brave', 'BackgroundModeEnabled') === 0,
-    'opera-gx-optimize':   () => readReg('HKLM\\SOFTWARE\\Policies\\OperaSoftware\\OperaGX', 'HardwareAccelerationModeEnabled') === 0,
-    'firefox-optimize':    () => { try { const ffp = path.join(appd.replace('Roaming',''), 'Roaming\\Mozilla\\Firefox\\Profiles'); return fs.existsSync(ffp) && fs.readdirSync(ffp).some(p => fs.existsSync(path.join(ffp, p, 'user.js'))) } catch { return false } },
-    'discord-optimize':    () => { try { const cfg = path.join(appd, 'discord\\settings.json'); if (!fs.existsSync(cfg)) return false; const d = JSON.parse(fs.readFileSync(cfg,'utf8')); return d.enableHardwareAcceleration === false && d.audioSubsystem === 'legacy' } catch { return false } },
-    'discord-cpu-priority':() => readReg(`${ifeoBase}\\Discord.exe\\PerfOptions`, 'CpuPriorityClass') === 1,
-    'spotify-optimize':    () => readReg(`${ifeoBase}\\Spotify.exe\\PerfOptions`, 'CpuPriorityClass') === 1,
-    'steam-optimize':      () => readReg('HKCU\\Software\\Valve\\Steam', 'StartupMode') === 0,
-    'obs-optimize':        () => readReg(`${ifeoBase}\\obs64.exe\\PerfOptions`, 'CpuPriorityClass') === 3,
-    'epic-optimize':       () => { try { const f = path.join(process.env['LOCALAPPDATA'] || '', 'EpicGamesLauncher\\Saved\\Config\\Windows\\GameUserSettings.ini'); return fs.existsSync(f) && /bRunAtStartup\s*=\s*False/i.test(fs.readFileSync(f, 'utf8')) } catch { return false } },
-    'ea-app-optimize': () => false,
-    'riot-optimize': () => false,
-    'nvidia-app-optimize': () => { try { const r = require('child_process').execSync('sc query NvTelemetryContainer 2>nul',{encoding:'utf8'}); return r.includes('STOPPED') || r.includes('DISABLED') } catch { return false } },
-    'playnite-optimize': () => false,
-    'vscode-optimize':     () => readReg(`${ifeoBase}\\Code.exe\\PerfOptions`, 'CpuPriorityClass') === 1,
-    'explorer-optimize':   () => readReg('HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Serialize', 'StartupDelayInMSec') === 0 && readReg('HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced', 'HideFileExt') === 0 && readReg('HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced', 'LaunchTo') === 1,
-  }
-
-  const results = {}
-  for (const [id, check] of Object.entries(checks)) {
-    try { results[id] = check() ? 'ok' : 'drifted' } catch { results[id] = 'unknown' }
-  }
-  return results
-})
+app.on('will-quit', () => { try { _apps && _apps.shutdown().catch(() => {}) } catch {} })
 const GAME_EXE_MAP = {
   'arma-reforger': ['ArmaReforger.exe', 'ArmaReforgerSteam.exe', 'ArmaReforger_BE.exe'],
   'fortnite':      ['FortniteClient-Win64-Shipping.exe', 'FortniteLauncher.exe', 'EpicGamesLauncher.exe', 'FortniteClient-Win64-Shipping_BE.exe'],
@@ -11591,6 +11373,7 @@ ipcMain.handle('start-game-watcher', async () => {
       const presetName = PULSE_PRESETS[detectedGame].name
       mainWindow?.webContents.send('game-watcher-event', { event: 'game-started', gameId: detectedGame })
       gamesLearnRunning()
+      appsSvc().gameStart(appsGameOf(detectedGame)).catch(() => {})   // Game time: programs step back while the game runs
       gameShieldActivate().catch(() => {})
       if (loadSettings().updateGuardEnabled && auth && auth.isPremium()) {
         // Count pending updates first (the search needs the Windows Update service), warn, then hold updates — unless the game already closed
@@ -11708,6 +11491,7 @@ ipcMain.handle('start-game-watcher', async () => {
       activeGameProfile = null
       activeGameProfileTweaksApplied = false
       mainWindow?.webContents.send('game-watcher-event', { event: 'game-closed', gameId: prev })
+      appsSvc().gameEnd().catch(() => {})
       gameShieldDeactivate().catch(() => {})
       updateGuardSession(false).catch(() => {})
       mainWindow?.webContents.send('log', { msg: `Game closed: ${prev} — restoring defaults…`, level: 'info', ts: new Date().toLocaleTimeString() })
@@ -11788,6 +11572,7 @@ ipcMain.handle('stop-game-watcher', async () => {
   if (gameWatcherInterval) { clearInterval(gameWatcherInterval); gameWatcherInterval = null }
   activeGameProfile = null
   presenceRefresh()
+  appsSvc().gameEnd().catch(() => {})
   // If auto-pulse was active, deactivate it
   if (autoPulseTriggeredPreset) {
     autoPulseTriggeredPreset = null
@@ -14441,49 +14226,6 @@ Write-Output "CPU_TEMP=$cpuTemp"
   return { ok: true, lastTick: cpuTemp > 0 ? { cpuTemp: Math.round(cpuTemp) } : null }
 })
 
-// ─── App Optimizer Extended ───────────────────────────────────────────────────
-ipcMain.handle('ao-get-cpu-caps', async () => {
-  if (!requiresPremium('ao-get-cpu-caps')) return {}
-  // Caller accesses: cpuCaps[app.id] — expects a flat { [appId]: number } object
-  const capsPath = path.join(app.getPath('userData'), 'ao-cpu-caps.json')
-  try { return JSON.parse(fs.readFileSync(capsPath, 'utf8')) }
-  catch { return {} }
-})
-
-ipcMain.handle('ao-set-cpu-cap', async (_, { appId, capPercent } = {}) => {
-  if (!requiresPremium('ao-set-cpu-cap')) return { ok: false, reason: 'premium_required' }
-  if (!appId) return { ok: false, error: 'no_app_id' }
-  const capsPath = path.join(app.getPath('userData'), 'ao-cpu-caps.json')
-  let caps = {}
-  try { caps = JSON.parse(fs.readFileSync(capsPath, 'utf8')) } catch {}
-  if (capPercent != null) { caps[appId] = capPercent } else { delete caps[appId] }
-  fs.writeFileSync(capsPath, JSON.stringify(caps, null, 2))
-  return { ok: true }
-})
-
-ipcMain.handle('ao-fingerprint-drift-cause', async (_, { id, driftedAt } = {}) => {
-  if (!requiresPremium('ao-fingerprint-drift-cause')) return { updates: [] }
-  // Caller accesses: { updates } where updates is string[] (short descriptions)
-  const since = new Date(driftedAt || Date.now() - 7 * 86400000).toISOString().split('T')[0]
-  const r = await runPS(`
-Get-WinEvent -LogName System -MaxEvents 200 -EA SilentlyContinue |
-  Where-Object { $_.TimeCreated -ge '${since}' -and $_.Id -in @(19,20,43,44) } |
-  Select-Object TimeCreated,Message |
-  ConvertTo-Json -Compress
-  `, 15000)
-  try {
-    const events = JSON.parse(r.out || '[]')
-    const list = (Array.isArray(events) ? events : [events]).slice(0, 5)
-    // Return array of short human-readable strings
-    const updates = list.map(e => {
-      const msg = (e.Message || '').split('\n')[0].trim()
-      const time = e.TimeCreated ? new Date(e.TimeCreated).toLocaleDateString() : ''
-      return time ? `${time}: ${msg}` : msg
-    }).filter(Boolean)
-    return { updates }
-  } catch { return { updates: [] } }
-})
-
 // ─── Cleanup Extended ────────────────────────────────────────────────────────
 ipcMain.handle('scan-phantom-apps', async () => {
   if (!requiresPremium('scan-phantom-apps')) return { ok: false, reason: 'premium_required' }
@@ -14689,22 +14431,6 @@ ipcMain.handle('set-self-priority', async (_, on) => {
     if ($p) { $p.PriorityClass = 'AboveNormal' }
   `, 5000)
   return { ok: r.ok, active: !!on }
-})
-
-ipcMain.handle('set-update-intercept', async (_, val) => {
-  if (!requiresPremium('set-update-intercept')) return { ok: false, reason: 'premium_required' }
-  // Same path as Update Guard: the original start type is snapshotted and read back, never forced to 'Manual'.
-  const ok = await setUpdateGuard(!!val)
-  return ok ? { ok: true, active: !!val } : { ok: false, active: !val, error: 'wuauserv_not_changed' }
-})
-
-ipcMain.handle('set-idle-suppression', async (_, val) => {
-  if (!requiresPremium('set-idle-suppression')) return { ok: false, reason: 'premium_required' }
-  const r = await runPS(val
-    ? `powercfg /requestsoverride PROCESS "${process.execPath}" SYSTEM DISPLAY AWAYMODE`
-    : `powercfg /requestsoverride PROCESS "${process.execPath}"`
-  )
-  return { ok: r.ok, active: !!val }
 })
 
 // ─── Runtime Installer ────────────────────────────────────────────────────────

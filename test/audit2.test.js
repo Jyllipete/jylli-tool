@@ -97,13 +97,14 @@ test('Restore button puts back the recorded original, not a hardcoded default', 
   assert.strictEqual(ownRestoreRan, 1)
 })
 
-test('App Optimizer: launchers are no longer set to Idle priority and steam.cfg is not written', () => {
-  for (const id of ['steam-optimize', 'epic-optimize', 'ea-app-optimize', 'riot-optimize', 'playnite-optimize', 'nvidia-app-optimize']) {
-    const a = applyPart(entry(id))
-    assert.ok(!/CpuPriorityClass|IoPriority/.test(a), id + ' must not change launcher priority')
-    assert.ok(!a.includes('BootStrapperInhibitAll'), id + ' must not block Steam updates')
-  }
-  for (const id of ['ea-app-optimize', 'riot-optimize', 'playnite-optimize']) assert.ok(applyPart(entry(id)).includes('Retired'), id)
+test('Apps tab: launchers are never set to Idle, nothing applies from the old table, steam.cfg is not written', () => {
+  const block = main.slice(main.indexOf('const APP_OPTIMIZER_TWEAKS = {'), main.indexOf('async function appsLegacyRestore'))
+  assert.ok(!block.includes('apply:'), 'the old table only restores')
+  assert.ok(!block.includes('BootStrapperInhibitAll=enable'), 'steam.cfg is never written')
+  for (const id of ['ea-app-optimize', 'riot-optimize', 'playnite-optimize']) assert.ok(entry(id).includes('restore:'), id + ' stays restorable')
+  const known = require('../lib/apps/known'), appsCat = require('../lib/apps/catalog'), rules = require('../lib/apps/rules')
+  for (const r of appsCat.ROWS) { const app = known.BY_ID[r.app]; if (app.role === 'launcher') assert.ok(false, 'no persistent change on a launcher: ' + r.id) }
+  for (const app of known.APPS.filter(x => x.role === 'launcher')) assert.ok(!rules.allowed(app).includes('quiet'), app.id)
 })
 
 test('Diagnostics: leftover launcher priorities are found and one repair removes them', () => {

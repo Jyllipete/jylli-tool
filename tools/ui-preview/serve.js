@@ -32,7 +32,7 @@ http.createServer((req, res) => {
     req.on('end', async () => {
       try {
         const { respond } = require('./fixtures')
-        const ctx = { lang: url.searchParams.get('lang') || 'en', premium: (url.searchParams.get('tier') || 'premium') === 'premium', ga: url.searchParams.get('ga') || 'full' }
+        const ctx = { lang: url.searchParams.get('lang') || 'en', premium: (url.searchParams.get('tier') || 'premium') === 'premium', ga: url.searchParams.get('ga') || 'full', ap: url.searchParams.get('ap') || 'full' }
         const slow = Number(url.searchParams.get('slow')) || 0   // ?slow=2500 delays every answer, so the boot screen lasts like a real scan
         if (slow && !/^(loadSettings|getSettings)$/.test(url.pathname.slice(7))) await new Promise(r => setTimeout(r, slow))
         const v = await respond(url.pathname.slice(7), JSON.parse(body || '[]'), ctx)

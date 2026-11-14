@@ -69,14 +69,6 @@ Object.assign(LANG.fi.tweakDescs, {
   "dns-adguard": "Asettaa jokaisen yhdistetyn verkkosovittimen DNS-palvelimiksi AdGuardin, joka estää monia mainos- ja seurantaverkkotunnuksia. Muuttaa nimien selvitystä, ei pelin pingiä tai FPS:ää. Peruutus palauttaa automaattisen DNS:n.",
   "dns-custom": "Asettaa jokaisen yhdistetyn verkkosovittimen DNS-palvelimiksi kaksi antamaasi osoitetta. Muuttaa nimien selvitystä, ei pelin pingiä tai FPS:ää. Peruutus palauttaa automaattisen DNS:n.",
 })
-Object.assign(LANG.fi.aoDescs, {
-  "steam-optimize": "Asettaa Steamin käynnistymään pienennettynä ilmaisinalueelle. Se ei enää muuta Steamin prioriteettia eikä estä Steam-päivityksiä: Steamista käynnistetyt pelit perivät launcherin prioriteetin, joten Idle-launcher voi hidastaa peliä.",
-  "epic-optimize": "Estää Epic Games Launcherin käynnistymisen Windowsin mukana. Sen suoritinprioriteettiin ei kosketa: launcherista käynnistetyt pelit perivät sen.",
-  "nvidia-app-optimize": "Poistaa NVIDIA-telemetriapalvelun käytöstä. GeForce Experience säilyttää normaalin suoritinprioriteettinsa.",
-  "ea-app-optimize": "Poistettu käytöstä: Idle-prioriteetilla oleva launcher välittää prioriteetin käynnistämilleen peleille. Mitään ei muuteta.",
-  "riot-optimize": "Poistettu käytöstä: Idle-prioriteetilla oleva launcher välittää prioriteetin käynnistämilleen peleille. Mitään ei muuteta.",
-  "playnite-optimize": "Poistettu käytöstä: Idle-prioriteetilla oleva launcher välittää prioriteetin käynnistämilleen peleille. Mitään ei muuteta."
-})
 Object.assign(LANG.fi.tweakDescs, {
   "steam-optimize": "Asettaa Steamin käynnistymään pienennettynä ilmaisinalueelle. Se ei enää muuta Steamin prioriteettia eikä estä Steam-päivityksiä: Steamista käynnistetyt pelit perivät launcherin prioriteetin, joten Idle-launcher voi hidastaa peliä.",
   "epic-optimize": "Estää Epic Games Launcherin käynnistymisen Windowsin mukana. Sen suoritinprioriteettiin ei kosketa: launcherista käynnistetyt pelit perivät sen.",

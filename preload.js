@@ -159,9 +159,6 @@ contextBridge.exposeInMainWorld('api', {
   downloadUpdate:     ()           => ipcRenderer.invoke('download-update'),
   installUpdate:      ()           => ipcRenderer.invoke('install-update'),
   getWhatsNew:        (lang)       => ipcRenderer.invoke('get-whats-new', lang),
-  runAppOptimizer:    (id, action) => ipcRenderer.invoke('run-app-optimizer', { id, action }),
-  scanInstalledApps:      ()           => ipcRenderer.invoke('scan-installed-apps'),
-  healthCheckAppOptimizer: ()          => ipcRenderer.invoke('health-check-app-optimizer'),
   onWindowsHealthProgress: (cb) => on('windows-health-progress', cb),
   onPreflightProgress:     (cb) => on('preflight-progress', cb),
   onSpecProgress:     (cb) => on('spec-progress', cb),
@@ -342,9 +339,6 @@ contextBridge.exposeInMainWorld('api', {
   thermalGetStatus:     ()           => ipcRenderer.invoke('thermal-get-status'),
 
   // App Optimizer Extended
-  aoGetCpuCaps:         ()           => ipcRenderer.invoke('ao-get-cpu-caps'),
-  aoSetCpuCap:          (appId, capPercent) => ipcRenderer.invoke('ao-set-cpu-cap', { appId, capPercent }),
-  aoFingerprintDriftCause: (id, driftedAt) => ipcRenderer.invoke('ao-fingerprint-drift-cause', { id, driftedAt }),
 
   // Cleanup
   cleanup2Scan:         (opts)       => ipcRenderer.invoke('cleanup2-scan', opts),
@@ -412,6 +406,18 @@ contextBridge.exposeInMainWorld('api', {
   onGpu2Live:           (cb)         => on('gpu2-live', cb),
   onGpu2Display:        (cb)         => on('gpu2-display', cb),
   onGpu2Test:           (cb)         => on('gpu2-test', cb),
+  apps2Scan:            ()           => ipcRenderer.invoke('apps2-scan'),
+  apps2Cost:            ()           => ipcRenderer.invoke('apps2-cost'),
+  apps2State:           ()           => ipcRenderer.invoke('apps2-state'),
+  apps2Run:             (req)        => ipcRenderer.invoke('apps2-run', req),
+  apps2Tune:            ()           => ipcRenderer.invoke('apps2-tune'),
+  apps2UndoRun:         (req)        => ipcRenderer.invoke('apps2-undo-run', req),
+  apps2History:         ()           => ipcRenderer.invoke('apps2-history'),
+  apps2GameEnd:         ()           => ipcRenderer.invoke('apps2-game-end'),
+  apps2Migrate:         ()           => ipcRenderer.invoke('apps2-migrate'),
+  apps2RulesGet:        ()           => ipcRenderer.invoke('apps2-rules-get'),
+  apps2RulesSet:        (req)        => ipcRenderer.invoke('apps2-rules-set', req),
+  onApps2Changed:       (cb)         => { const h = (_, d) => cb(d); ipcRenderer.on('apps2-changed', h); return () => ipcRenderer.removeListener('apps2-changed', h) },
   games2Scan:           (req)        => ipcRenderer.invoke('games2-scan', req),
   games2State:          ()           => ipcRenderer.invoke('games2-state'),
   games2Run:            (req)        => ipcRenderer.invoke('games2-run', req),
@@ -526,8 +532,6 @@ contextBridge.exposeInMainWorld('api', {
   setFocusAssist:       (on)         => ipcRenderer.invoke('set-focus-assist', on),
   setSelfPriority:      (on)         => ipcRenderer.invoke('set-self-priority', on),
   setLowResourceMode:   (on)         => ipcRenderer.invoke('set-low-resource-mode', on),
-  setUpdateIntercept:   (val)        => ipcRenderer.invoke('set-update-intercept', val),
-  setIdleSuppression:   (val)        => ipcRenderer.invoke('set-idle-suppression', val),
 
   // Runtime Installer
   detectMissingRuntimes:    ()       => ipcRenderer.invoke('detect-missing-runtimes'),

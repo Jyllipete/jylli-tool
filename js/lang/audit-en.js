@@ -69,14 +69,6 @@ Object.assign(LANG.en.tweakDescs, {
   "dns-adguard": "Sets the DNS servers of every connected network adapter to AdGuard, which blocks many ad and tracker domains. Changes name resolution, not in-game ping or FPS. Undo returns to automatic DNS.",
   "dns-custom": "Sets the DNS servers of every connected network adapter to the two addresses you enter. Changes name resolution, not in-game ping or FPS. Undo returns to automatic DNS.",
 })
-Object.assign(LANG.en.aoDescs, {
-  "steam-optimize": "Sets Steam to start minimized to the tray. It no longer changes Steam priority or blocks Steam updates: games started from Steam inherit the launcher priority, so an Idle launcher can slow the game.",
-  "epic-optimize": "Stops the Epic Games Launcher from starting with Windows. Its CPU priority is left alone: games started from the launcher inherit it.",
-  "nvidia-app-optimize": "Disables the NVIDIA telemetry container service. GeForce Experience keeps its normal CPU priority.",
-  "ea-app-optimize": "Retired: an Idle-priority launcher passes that priority on to the games it starts. Nothing is changed.",
-  "riot-optimize": "Retired: an Idle-priority launcher passes that priority on to the games it starts. Nothing is changed.",
-  "playnite-optimize": "Retired: an Idle-priority launcher passes that priority on to the games it starts. Nothing is changed."
-})
 Object.assign(LANG.en.tweakDescs, {
   "steam-optimize": "Sets Steam to start minimized to the tray. It no longer changes Steam priority or blocks Steam updates: games started from Steam inherit the launcher priority, so an Idle launcher can slow the game.",
   "epic-optimize": "Stops the Epic Games Launcher from starting with Windows. Its CPU priority is left alone: games started from the launcher inherit it.",

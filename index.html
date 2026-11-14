@@ -16,7 +16,6 @@
 <link rel="stylesheet" href="css/arrival.css">
 <link rel="stylesheet" href="css/auto-opti.css">
 <link rel="stylesheet" href="css/tab-kit.css">
-<link rel="stylesheet" href="css/app-hero.css">
 <link rel="stylesheet" href="css/debloat.css">
 <link rel="stylesheet" href="css/windows.css">
 <link rel="stylesheet" href="css/network.css">
@@ -24,6 +23,7 @@
 <link rel="stylesheet" href="css/gpu.css">
 <link rel="stylesheet" href="css/power.css">
 <link rel="stylesheet" href="css/games.css">
+<link rel="stylesheet" href="css/apps.css">
 <link rel="stylesheet" href="css/cleanup.css">
 <link rel="stylesheet" href="css/diagnostics.css">
 <link rel="stylesheet" href="css/fivem.css">
@@ -522,6 +522,8 @@
 <script src="js/lang/compete-fi.js"></script>
 <script src="js/lang/games-en.js"></script>
 <script src="js/lang/games-fi.js"></script>
+<script src="js/lang/apps-en.js"></script>
+<script src="js/lang/apps-fi.js"></script>
 <script src="js/lang/pulse-en.js"></script>
 <script src="js/lang/pulse-fi.js"></script>
 <script src="js/lang/home-en.js"></script>
@@ -595,7 +597,6 @@
 <script src="js/auto-opti/reactor.js"></script>
 <script src="js/ui/filter.js"></script>
 <script src="js/ui/tab-kit.js"></script>
-<script src="js/pages/app-hero.js"></script>
 <script src="lib/debloat/classify.js"></script>
 <script src="lib/debloat/footprint.js"></script>
 <script src="js/debloat/core.js"></script>
@@ -657,6 +658,9 @@
 <script src="js/compete/pure.js"></script>
 <script src="js/compete/page.js"></script>
 <script src="js/games/pure.js"></script>
+<script src="js/apps/pure.js"></script>
+<script src="js/apps/views.js"></script>
+<script src="js/apps/page.js"></script>
 <script src="js/games/views.js"></script>
 <script src="js/games/page.js"></script>
 <script src="js/fivem/views.js"></script>
@@ -701,8 +705,6 @@ function tG(group, key, vars) {
   const s = String((LANG[currentLang]?.[group]?.[key] ?? LANG.en[group]?.[key]) ?? key)
   return vars ? s.replace(/\{(\w+)\}/g, (m, k) => (k in vars) ? vars[k] : m) : s
 }
-function tAOName(id) { return (LANG[currentLang]?.aoNames?.[id]  ?? LANG.en.aoNames?.[id])  ?? id }
-function tAODesc(id)  { return (LANG[currentLang]?.aoDescs?.[id]  ?? LANG.en.aoDescs?.[id])  ?? '' }
 function applyI18n() {
   document.querySelectorAll('[data-i18n]').forEach(el => { el.textContent = tUI(el.dataset.i18n) })
   document.querySelectorAll('[data-i18n-title]').forEach(el => { el.textContent = tTitle(el.dataset.i18nTitle) })
@@ -2182,18 +2184,10 @@ const SEARCH_INDEX = [
   { id:'cs2',                   label:'CS2 Optimiser',                              page:'game-tweaks',  desc:'Game-specific tweaks' },
   { id:'rust',                  label:'Rust Optimiser',                             page:'game-tweaks',  desc:'Game-specific tweaks' },
   { id:'the-finals',            label:'The Finals Optimiser',                       page:'game-tweaks',  desc:'Game-specific tweaks' },
-  // App Optimizer
-  { id:'edge-optimize',         label:'Microsoft Edge Optimise',                    page:'app-optimizer',desc:'Disable Edge background services' },
-  { id:'chrome-optimize',       label:'Chrome Optimise',                            page:'app-optimizer',desc:'Chrome memory/GPU flags' },
-  { id:'brave-optimize',        label:'Brave Optimise',                             page:'app-optimizer',desc:'Brave browser flags' },
-  { id:'opera-gx-optimize',     label:'Opera GX Optimise',                         page:'app-optimizer',desc:'Opera GX flags' },
-  { id:'firefox-optimize',      label:'Firefox Optimise',                           page:'app-optimizer',desc:'Firefox about:config tweaks' },
-  { id:'discord-optimize',      label:'Discord Optimise',                           page:'app-optimizer',desc:'Discord GPU and hardware acc settings' },
-  { id:'discord-cpu-priority',  label:'Discord CPU Priority',                       page:'app-optimizer',desc:'Set Discord to below normal priority' },
-  { id:'spotify-optimize',      label:'Spotify Optimise',                           page:'app-optimizer',desc:'Spotify hardware acceleration off' },
-  { id:'steam-optimize',        label:'Steam Optimise',                             page:'app-optimizer',desc:'Steam startup and overlay settings' },
-  { id:'obs-optimize',          label:'OBS Optimise',                               page:'app-optimizer',desc:'OBS encoder and priority settings' },
-  { id:'explorer-optimize',     label:'Explorer Optimise',                          page:'app-optimizer',desc:'Explorer startup delay and preview off' },
+  // Apps
+  { id:'apps-cost',               label:'Background app cost',                        page:'app-optimizer',desc:'What every background program uses right now' },
+  { id:'apps-gametime',          label:'Game time',                                  page:'app-optimizer',desc:'Programs step back while a game runs' },
+  { id:'apps-browsers',          label:'Browser background mode',                    page:'app-optimizer',desc:'Edge, Chrome and Brave stay closed when closed' },
   // Cleanup
   { id:'clean-temp',            label:'Clear Temp Files',                           page:'cleanup',      desc:'%TEMP%, Windows\\Temp' },
   { id:'clean-nvidia',          label:'Clear NVIDIA Shader Cache',                  page:'cleanup',      desc:'DXCache, GLCache' },
@@ -6161,612 +6155,14 @@ async function buildGameOpti(c) {
   if (!settings.isPremium) { const rest = document.createElement('div'); c.appendChild(rest); await JylliPremium.build(rest, 'games') }
 }
 
-// ─── Page: App Optimizer ───────────────────────────────────────────────────────
-let _aoInstalled = new Set()
-let _aoRunningUnoptimized = []
-let _aoHero = null, _aoRunningIds = new Set(), _aoDriftedIds = new Set()
-const AO_CONFLICTS = [
-  {
-    id: 'gpu-queue-double',
-    check: (states, inst) =>
-      inst.has('chrome-optimize') && inst.has('discord-optimize') &&
-      states['chrome-optimize'] !== 'applied' && states['discord-optimize'] !== 'applied',
-    title: 'GPU queue conflict: Chrome + Discord',
-    body: 'Chrome and Discord are both using GPU hardware acceleration. They compete for the same GPU command queue, causing microstutter in games. Disable hardware acceleration in Discord.',
-    fix: 'discord-optimize',
-    icon: 'fa-microchip'
-  },
-  {
-    id: 'obs-cpu-starvation',
-    check: (states, inst) =>
-      inst.has('obs-optimize') && states['obs-optimize'] !== 'applied' &&
-      (inst.has('discord-optimize') || inst.has('spotify-optimize')),
-    title: 'OBS may be CPU-starved during streaming',
-    body: 'OBS is not set to HIGH priority. Background apps like Discord or Spotify can preempt encoding threads, causing dropped frames.',
-    fix: 'obs-optimize',
-    icon: 'fa-video'
-  },
-  {
-    id: 'browser-gpu-pressure',
-    check: (states, inst) => {
-      const gpuApps = ['chrome-optimize','brave-optimize','edge-optimize','opera-gx-optimize','firefox-optimize']
-      return gpuApps.filter(id => inst.has(id) && states[id] !== 'applied').length >= 2
-    },
-    title: 'Multiple browsers using GPU acceleration',
-    body: 'Two or more browsers have GPU hardware acceleration active. Even when idle, they hold VRAM and GPU command queue slots that your game needs.',
-    fix: null,
-    icon: 'fa-globe'
-  },
-  {
-    id: 'launcher-trio-unapplied',
-    check: (states, inst) => {
-      const launchers = ['steam-optimize','epic-optimize','ea-app-optimize','riot-optimize']
-      return launchers.filter(id => inst.has(id) && states[id] !== 'applied').length >= 3
-    },
-    title: 'Multiple game launchers running unoptimized',
-    body: 'Steam, Epic, EA App, and/or Riot Client are all running without priority limits. Launcher background tasks (update checks, friend presence) compete for CPU and network bandwidth.',
-    fix: null,
-    icon: 'fa-gamepad'
-  },
-]
-
-const _aoico = (f) => `<img src="assets/apps/${f}" style="width:26px;height:26px;object-fit:contain" draggable="false">`
-const APP_OPTI_DEFS = [
-  { id:'edge-optimize',        cat:'Browsers',      sub:'Microsoft',    icon:_aoico('microsoft.ico'),
-    bullets:['Disables startup boost (Edge launching at boot)','Disables background mode (Edge running when closed)']  },
-  { id:'chrome-optimize',      cat:'Browsers',      sub:'Google',       icon:_aoico('chrome.ico'),
-    bullets:['Disables background mode (Chrome closing fully when window closed)'] },
-  { id:'brave-optimize',       cat:'Browsers',      sub:'Brave',        icon:_aoico('brave.ico'),
-    bullets:['Disables background mode'] },
-  { id:'opera-gx-optimize',    cat:'Browsers',      sub:'Opera',        icon:_aoico('opera.ico'),
-    bullets:['Retired: it only turned GPU acceleration off, which slows the browser down'] },
-  { id:'firefox-optimize',     cat:'Browsers',      sub:'Mozilla',      icon:_aoico('firefox.ico'),
-    bullets:['Enables WebRender GPU compositor','Tunes cache size to 512 MB','Reduces session autosave interval to 60s','Disables DNS prefetch'] },
-  { id:'discord-optimize',     cat:'Communication', sub:'Discord',      icon:_aoico('discord.ico'),
-    bullets:['Disables hardware acceleration','Disables game overlay','Switches to legacy audio subsystem (lower CPU)','Disables host auto-update on launch'] },
-  { id:'discord-cpu-priority', cat:'Communication', sub:'Discord',      icon:_aoico('discord.ico'),
-    bullets:['Sets Discord.exe to IDLE CPU priority via IFEO','Sets Discord.exe to IDLE I/O priority'] },
-  { id:'spotify-optimize',     cat:'Media',         sub:'Spotify',      icon:_aoico('spotify.ico'),
-    bullets:['Disables hardware acceleration','Sets Spotify.exe to IDLE CPU priority via IFEO'] },
-  { id:'steam-optimize',       cat:'Launchers',     sub:'Valve',        icon:_aoico('Steam.ico'),
-    bullets:['Starts Steam minimized to the tray','No priority change and no update blocking: games inherit a launcher priority'] },
-  { id:'epic-optimize',        cat:'Launchers',     sub:'Epic Games',   icon:_aoico('Epic Games.ico'),
-    bullets:['Disables auto-start in launcher config (bRunAtStartup=False)','CPU priority is left alone: games inherit a launcher priority'] },
-  { id:'ea-app-optimize',      cat:'Launchers',     sub:'Electronic Arts', icon:'<i class="fa fa-store jx-156"></i>',
-    bullets:['Sets EA Desktop to IDLE CPU + I/O priority','Sets EA background service to IDLE CPU priority'] },
-  { id:'riot-optimize',        cat:'Launchers',     sub:'Riot Games',   icon:'<i class="fa fa-shield-halved jx-156"></i>',
-    bullets:['Sets RiotClientServices.exe to IDLE CPU + I/O priority','Vanguard anti-cheat is not affected'] },
-  { id:'obs-optimize',         cat:'Streaming',     sub:'OBS Project',  icon:_aoico('obs.ico'),
-    bullets:['Sets obs64.exe to HIGH CPU priority via IFEO','Encoding threads compete less with game threads'] },
-  { id:'nvidia-app-optimize',  cat:'System',        sub:'NVIDIA',       icon:_aoico('Nvidia App.ico'),
-    bullets:['Disables NvTelemetryContainer service (stops at boot)','GeForce Experience keeps its normal CPU priority'] },
-  { id:'playnite-optimize',    cat:'System',        sub:'Playnite',     icon:'<i class="fa fa-list-ul jx-636"></i>',
-    bullets:['Sets Playnite.DesktopApp.exe to IDLE CPU priority','Sets Playnite to IDLE I/O priority'] },
-  { id:'vscode-optimize',      cat:'System',        sub:'Microsoft',    icon:_aoico('VS Code.ico'),
-    bullets:['Sets Code.exe to IDLE CPU priority when in the background','Editor stays quiet while gaming'] },
-  { id:'explorer-optimize',    cat:'System',        sub:'Microsoft',    icon:_aoico('Windows Explorer.ico'),
-    bullets:['Removes 10-second Explorer startup delay','Sets default folder view to This PC','Shows file extensions in all folders'] },
-]
-
-async function buildAppOptimizer(c) {
-  // ── Hero: coverage scanner (js/pages/app-hero.js) — mounted first, scanning until the real probes resolve ──
-  const _catKeyMap2 = { Browsers:'aoCatBrowsers', Communication:'aoCatCommunication', Media:'aoCatMedia', Launchers:'aoCatLaunchers', Streaming:'aoCatStreaming', System:'aoCatSystem' }
-  if (_aoHero) { try { _aoHero.destroy() } catch {} }
-  _aoRunningIds = new Set(); _aoDriftedIds = new Set()
-  _aoHero = JylliAppHero.mount(c, {
-    t: (key, vars) => { let v = tUI(key); if (vars) for (const k in vars) v = v.replace('{' + k + '}', vars[k]); return v },
-    catLabel: cat => tUI(_catKeyMap2[cat]) || cat,
-    appName: id => tAOName(id) || id,
-  })
-  let _aoInitInstalled = new Set()
-  try { _aoInitInstalled = new Set(await api.scanInstalledApps()) } catch {}
-  _aoInstalled = _aoInitInstalled
-  _aoHero.update(JylliAppHero.summary(APP_OPTI_DEFS, _aoInstalled, _aoStateMap(), _aoRunningIds, _aoDriftedIds))
-
-  // Use the already-scanned installed set from hero build
-  const installed = _aoInstalled
-
-  // Detect which apps are currently running — map process names to app IDs
-  const AO_PROCESS_MAP = {
-    'edge':              ['edge-optimize'],
-    'msedge':            ['edge-optimize'],
-    'chrome':            ['chrome-optimize'],
-    'brave':             ['brave-optimize'],
-    'opera':             ['opera-gx-optimize'],
-    'firefox':           ['firefox-optimize'],
-    'discord':           ['discord-optimize','discord-cpu-priority'],
-    'spotify':           ['spotify-optimize'],
-    'steam':             ['steam-optimize'],
-    'epicgameslauncher': ['epic-optimize'],
-    'eadesktop':         ['ea-app-optimize'],
-    'riotclientservices':['riot-optimize'],
-    'obs64':             ['obs-optimize'],
-    'obs32':             ['obs-optimize'],
-    'nvcontainer':       ['nvidia-app-optimize'],
-    'playnite.desktopapp':['playnite-optimize'],
-    'code':              ['vscode-optimize'],
-    'explorer':          ['explorer-optimize'],
-  }
-  let runningAppIds = new Set()
-  try {
-    const procs = await api.getProcesses()
-    if (Array.isArray(procs)) {
-      for (const p of procs) {
-        const exe = (p.Name || '').toLowerCase().replace('.exe','')
-        for (const [key, ids] of Object.entries(AO_PROCESS_MAP)) {
-          if (exe === key) ids.forEach(id => runningAppIds.add(id))
-        }
-      }
-    }
-  } catch {}
-
-  _aoRunningIds = runningAppIds
-  _aoRefreshHero()
-  const catKeyMap = { Browsers:'aoCatBrowsers', Communication:'aoCatCommunication', Media:'aoCatMedia', Launchers:'aoCatLaunchers', Streaming:'aoCatStreaming', System:'aoCatSystem' }
-  const cats = [...new Set(APP_OPTI_DEFS.map(a => a.cat))]
-
-  // Build state map for conflict detector + fingerprinting
-  const stateMap = {}
-  APP_OPTI_DEFS.forEach(a => { if (installed.has(a.id)) stateMap[a.id] = tweakState(a.id) })
-
-  // ── Smart Gaming Mode panel ───────────────────────────────────────────────
-  const sgmPanel = document.createElement('div')
-  sgmPanel.className = 'ao-sgm-panel'
-  const sgEnabled = settings.updateInterceptEnabled || settings.idleSuppressionEnabled
-  sgmPanel.innerHTML = `
-    <div class="ao-sgm-header">
-      <div class="ao-sgm-icon"><i class="fa fa-gamepad"></i></div>
-      <span class="ao-sgm-title">${tUI('aoSmartGamingMode')}</span>
-      <span id="sgm-active-badge" class="ao-sgm-badge"${sgEnabled ? '' : ' style="display:none"'}>${tUI('aoEnabled') || 'ACTIVE'}</span>
-    </div>
-    <div class="ao-sgm-body">
-      <div class="ao-sgm-desc">${tUI('aoSmartGamingDesc')}</div>
-      <div class="ao-sgm-row">
-        <div class="jx-2">
-          <div class="ao-sgm-row-hd">${tUI('aoUpdateIntercept')}</div>
-          <div class="ao-sgm-row-ds">${tUI('aoUpdateInterceptDesc')}</div>
-        </div>
-        <label class="tc-toggle jx-157">
-          <input type="checkbox" id="sgm-update-intercept" ${settings.updateInterceptEnabled ? 'checked' : ''} onchange="sgmToggle('updateInterceptEnabled',this.checked)">
-          <span class="tc-slider"></span>
-        </label>
-      </div>
-      <div class="ao-sgm-row">
-        <div class="jx-2">
-          <div class="ao-sgm-row-hd">${tUI('aoIdleSuppression')}</div>
-          <div class="ao-sgm-row-ds">${tUI('aoIdleSuppressionDesc')}</div>
-        </div>
-        <label class="tc-toggle jx-157">
-          <input type="checkbox" id="sgm-idle-suppression" ${settings.idleSuppressionEnabled ? 'checked' : ''} onchange="sgmToggle('idleSuppressionEnabled',this.checked)">
-          <span class="tc-slider"></span>
-        </label>
-      </div>
-    </div>`
-  c.appendChild(sgmPanel)
-
-  // ── Conflict Detector banner ──────────────────────────────────────────────
-  const conflictImpactMap = {
-    'gpu-queue-double':      'MICROSTUTTER',
-    'obs-cpu-starvation':    'DROPPED FRAMES',
-    'browser-gpu-pressure':  'VRAM PRESSURE',
-    'launcher-trio-unapplied':'CPU OVERHEAD',
-  }
-  const activeConflicts = AO_CONFLICTS.filter(conf => conf.check(stateMap, installed))
-  if (activeConflicts.length > 0) {
-    const cBanner = document.createElement('div')
-    cBanner.id = 'ao-conflict-banner'
-    cBanner.className = 'ao-conflict-banner'
-    const countLabel = activeConflicts.length === 1 ? `1 ${tUI('aoConflictDetected')}` : `${activeConflicts.length} ${tUI('aoConflictsDetected')}`
-    cBanner.innerHTML = `<div class="ao-conflict-hd"><i class="fa fa-triangle-exclamation"></i> ${countLabel}</div>`
-    activeConflicts.forEach(conf => {
-      const row = document.createElement('div')
-      row.dataset.cid = conf.id
-      row.className = 'ao-conflict-row'
-      const impact = conflictImpactMap[conf.id]
-      let fixBtn = ''
-      if (conf.fix) {
-        fixBtn = `<button class="j-btn j-btn-sm j-btn-primary" onclick="aoConflictFix('${conf.id}','${conf.fix}')"><i class="fa fa-bolt"></i> ${tUI('aoConflictFix')}</button>`
-      } else if (conf.id === 'browser-gpu-pressure') {
-        fixBtn = `<button class="btn btn-sm jx-61" onclick="aoConflictFixAll(['chrome-optimize','brave-optimize','edge-optimize','opera-gx-optimize','firefox-optimize'])"><i class="fa fa-bolt"></i> ${tUI('aoFixAllBrowsers')}</button>`
-      } else if (conf.id === 'launcher-trio-unapplied') {
-        fixBtn = `<button class="btn btn-sm jx-61" onclick="aoConflictFixAll(['steam-optimize','epic-optimize','ea-app-optimize','riot-optimize'])"><i class="fa fa-bolt"></i> ${tUI('aoFixAllLaunchers')}</button>`
-      }
-      row.innerHTML = `
-        <i class="fa ${conf.icon} j-note-ico" aria-hidden="true"></i>
-        <div class="jx-2">
-          <div class="ao-conflict-title">${conf.title}${impact ? `<span class="ao-conflict-impact">${impact}</span>` : ''}</div>
-          <div class="ao-conflict-body">${conf.body}</div>
-        </div>
-        ${fixBtn}`
-      cBanner.appendChild(row)
-    })
-    c.appendChild(cBanner)
-  }
-
-  // "Apply All Running" bar — only shown if there are running unoptimized apps
-  const runningUnoptimized = APP_OPTI_DEFS.filter(a => installed.has(a.id) && runningAppIds.has(a.id) && tweakState(a.id) !== 'applied')
-  _aoRunningUnoptimized = runningUnoptimized
-  if (runningUnoptimized.length > 0) {
-    const applyAllBar = document.createElement('div')
-    applyAllBar.id = 'ao-running-bar'
-    applyAllBar.className = 'ao-running-bar'
-    const runNames = runningUnoptimized.map(a => tAOName(a.id) || a.id)
-    const runNamesDisplay = runNames.slice(0,3).join(', ') + (runNames.length > 3 ? ` +${runNames.length - 3} more` : '')
-    applyAllBar.innerHTML = `
-      <i class="fa fa-circle-play ao-running-bar-icon"></i>
-      <div class="ao-running-bar-body">
-        <div class="ao-running-bar-ttl">${tUI('aoRunningAppsTitle')}</div>
-        <div class="ao-running-bar-sub">${runNamesDisplay}</div>
-      </div>
-      <button class="j-btn j-btn-sm j-btn-primary" onclick="applyAllRunningApps(${jsArg(runningUnoptimized.map(a => a.id))})">
-        <i class="fa fa-bolt"></i> ${tUI('aoApplyAllRunning')}
-      </button>`
-    c.appendChild(applyAllBar)
-  }
-
-  // Load saved CPU caps for Resource Budget dropdowns
-  let cpuCaps = {}
-  try { cpuCaps = await api.aoGetCpuCaps() } catch {}
-
-  const catSubKeyMap = { Browsers:'aoCatSubBrowsers', Communication:'aoCatSubCommunication', Media:'aoCatSubMedia', Launchers:'aoCatSubLaunchers', Streaming:'aoCatSubStreaming', System:'aoCatSubSystem' }
-
-  // Restore section collapse states
-  const _aoColStates = {}
-  try { cats.forEach(cat => { _aoColStates[cat] = localStorage.getItem(`sec_col_ao-${cat.toLowerCase()}`) === '1' }) } catch {}
-
-  cats.forEach(cat => {
-    const catApps = APP_OPTI_DEFS.filter(a => a.cat === cat && installed.has(a.id))
-    if (catApps.length === 0) return
-    const secId = `ao-${cat.toLowerCase()}`
-    const catApplied = catApps.filter(a => tweakState(a.id) === 'applied').length
-    const section = makeSection(tUI(catKeyMap[cat]) || cat, tUI(catSubKeyMap[cat]) || '', secId)
-    // Inject progress badge value
-    const spb = document.getElementById(`spb-${secId}`)
-    if (spb) {
-      spb.textContent = `${catApplied}/${catApps.length}`
-      spb.style.display = ''
-      spb.className = 'sec-progress-badge' + (catApplied === catApps.length ? ' spb-full' : catApplied > 0 ? ' spb-partial' : '')
-    }
-    const catIconMap = { Browsers:'fa-globe', Communication:'fa-comments', Media:'fa-music', Launchers:'fa-rocket', Streaming:'fa-video', System:'fa-gear' }
-    const grid = document.createElement('div')
-    grid.className = 'ao-grid'
-    grid.dataset.aoCat = cat
-    // Restore collapsed state
-    if (_aoColStates[cat]) { grid.classList.add('sec-collapsed') ; const btn = document.getElementById(`scb-${secId}`); if (btn) btn.classList.add('collapsed') }
-    // Category header row inside grid
-    const catHeader = document.createElement('div')
-    catHeader.className = 'ao-cat-header'
-    catHeader.style.cssText = '--ao-cat-rgb:var(--c-accent-rgb)'
-    catHeader.innerHTML = `
-      <div class="ao-cat-stripe"></div>
-      <div class="ao-cat-icon"><i class="fa ${catIconMap[cat] || 'fa-grid-2'}"></i></div>
-      <span class="ao-cat-title">${tUI(catKeyMap[cat]) || cat}</span>
-      <span class="ao-cat-progress" id="aocp-${secId}">${catApplied}/${catApps.length} ${tUI('aoOptimized')}</span>`
-    grid.appendChild(catHeader)
-    catApps.forEach(app => {
-      const applied = tweakState(app.id) === 'applied'
-      const isRunning = runningAppIds.has(app.id)
-      const chipsHtml = app.bullets?.length
-        ? `<div class="ao-chips">${app.bullets.map(b => `<span class="ao-chip">${b}</span>`).join('')}</div>`
-        : ''
-      const savedCap = cpuCaps[app.id] || 0
-      const capOptions = [0, 5, 10, 25].map(v =>
-        `<option value="${v}" ${savedCap === v ? 'selected' : ''}>${v === 0 ? tUI('aoResourceBudgetUnlimited') : v + '% CPU'}</option>`
-      ).join('')
-      const d = document.createElement('div')
-      d.className = 'ao-card' + (applied ? ' ao-applied' : '') + (isRunning && !applied ? ' ao-running-live' : '')
-      d.id = `aoc-${app.id}`
-      d.innerHTML = `
-        <div class="ao-top">
-          <div class="ao-icon">${app.icon}</div>
-          <div class="jx-2">
-            <div class="ao-name">${tAOName(app.id)}</div>
-            <div class="ao-sub">${app.sub}</div>
-          </div>
-          ${isRunning ? '<span class="ao-live-badge">LIVE</span>' : ''}
-        </div>
-        ${applied ? '<div class="ao-check-badge"><i class="fa fa-check"></i></div>' : ''}
-        <div class="ao-desc">${tAODesc(app.id)}</div>
-        ${chipsHtml}
-        <div class="ao-foot">
-          <span class="ao-badge ${applied ? 'ao-on' : ''}" id="aob-${app.id}">${applied ? `<i class="fa fa-check"></i> ${tUI('aoApplied')}` : tUI('aoDefault')}</span>
-          <div class="jx-637">
-            <button class="btn btn-ghost btn-sm" id="aorb-${app.id}" onclick="doAppOpti('${app.id}','restore')" title="${tUI('ttRestoreProfile')}" ${!applied ? 'disabled style="opacity:0.35;cursor:not-allowed;pointer-events:none"' : ''}><i class="fa fa-rotate-left"></i></button>
-            <label class="tc-toggle">
-              <input type="checkbox" id="aot-${app.id}" ${applied ? 'checked' : ''} onchange="doAppOptiToggle('${app.id}',this.checked)">
-              <span class="tc-slider"></span>
-            </label>
-          </div>
-        </div>
-        <div class="ao-budget-row">
-          <i class="fa fa-gauge-simple jx-5"></i>
-          <span class="ao-budget-lbl">${tUI('aoResourceBudget')}</span>
-          <select class="ao-budget-sel" onchange="aoSetCpuCap('${app.id}',+this.value)">${capOptions}</select>
-        </div>
-        <div class="ao-prog-strip"><div class="ao-prog-bar" id="aopb-${app.id}"></div></div>`
-      grid.appendChild(d)
-    })
-    section.appendChild(grid)
-    c.appendChild(section)
-  })
-  c.appendChild(makeTip(tUI('appOptiTip'), 'info'))
-
-  // Health check — update badges for any applied tweaks that have drifted
-  const appliedIds = APP_OPTI_DEFS.filter(a => installed.has(a.id) && tweakState(a.id) === 'applied').map(a => a.id)
-  if (appliedIds.length > 0) {
-    try {
-      const health = await api.healthCheckAppOptimizer()
-      _aoDriftedIds = new Set(appliedIds.filter(id => health[id] === 'drifted'))
-      _aoRefreshHero()
-      for (const id of appliedIds) {
-        const status = health[id]
-        if (status === 'drifted') {
-          const badge = document.getElementById(`aob-${id}`)
-          const card = document.getElementById(`aoc-${id}`)
-          if (badge) { badge.innerHTML = `<i class="fa fa-triangle-exclamation"></i> ${tUI('aoDrifted')}`; badge.className = 'ao-badge ao-drift' }
-          if (card) card.classList.add('ao-drifted')
-        }
-      }
-
-      // ── Behavior Fingerprinting ───────────────────────────────────────────
-      // Record timestamped drift events; correlate with Windows Update history
-      const now = Date.now()
-      const snapKey = 'ao_fingerprint_history'
-      let fpHistory = {}
-      try { fpHistory = JSON.parse(settings[snapKey] || '{}') } catch {}
-
-      for (const id of appliedIds) {
-        const status = health[id]
-        if (status === 'drifted' && !fpHistory[id]?.driftedAt) {
-          fpHistory[id] = { driftedAt: now, notified: false }
-        } else if (status === 'ok' && fpHistory[id]) {
-          delete fpHistory[id]
-        }
-      }
-      settings[snapKey] = JSON.stringify(fpHistory)
-      await api.saveSettings(settings).catch(() => {})
-
-      const unreported = Object.entries(fpHistory).filter(([, v]) => !v.notified)
-      if (unreported.length > 0) {
-        const fpBanner = document.createElement('div')
-        fpBanner.id = 'ao-fp-banner'
-        fpBanner.className = 'j-note j-note-info'
-        fpBanner.innerHTML = `<div class="j-note-title"><i class="fa fa-clock-rotate-left" aria-hidden="true"></i> ${tUI('aoFingerprintTitle')}</div>`
-
-        for (const [id, { driftedAt }] of unreported) {
-          const driftDate = new Date(driftedAt).toLocaleDateString()
-          const row = document.createElement('div')
-          row.dataset.fpid = id
-          row.className = 'j-note-row'
-          row.innerHTML = `
-            <i class="fa fa-triangle-exclamation j-note-ico" aria-hidden="true"></i>
-            <div class="fp-cause-text jx-109"><strong class="jx-20">${tAOName(id)}</strong> — ${driftDate} <i class="fa fa-spinner fa-spin j-note-spin" aria-hidden="true"></i>${tUI('aoFingerprintChecking')}</div>
-            <button class="j-btn j-btn-sm" onclick="aoFpRestore('${id}')"><i class="fa fa-rotate-right"></i> ${tUI('restore')}</button>`
-          fpBanner.appendChild(row)
-
-          api.aoFingerprintDriftCause(id, driftedAt).then(({ updates }) => {
-            const causeEl = row.querySelector('.fp-cause-text')
-            if (!causeEl) return
-            if (updates?.length > 0) {
-              causeEl.innerHTML = `<strong class="jx-20">${tAOName(id)}</strong> — ${driftDate} ${tUI('aoFingerprintCause')} <span class="jx-8">${updates[0]}</span>`
-            } else {
-              causeEl.innerHTML = `<strong class="jx-20">${tAOName(id)}</strong> — drifted on ${driftDate}`
-            }
-          }).catch(() => {})
-
-          fpHistory[id].notified = true
-        }
-        settings[snapKey] = JSON.stringify(fpHistory)
-        await api.saveSettings(settings).catch(() => {})
-
-        // Insert before conflict banner, or before first section card, or append
-        const refNode = document.getElementById('ao-conflict-banner') || c.querySelector('.section-card') || null
-        if (refNode) c.insertBefore(fpBanner, refNode)
-        else c.appendChild(fpBanner)
-      }
-    } catch {}
-  }
-
-  // Catch "still active after restore" — covers users who toggled off before fix was applied
-  const restoredIds = APP_OPTI_DEFS.filter(a => installed.has(a.id) && tweakState(a.id) === 'restored').map(a => a.id)
-  if (restoredIds.length > 0) {
-    try {
-      const health = await api.healthCheckAppOptimizer()
-      const stillActive = restoredIds.filter(id => health[id] === 'ok')
-      if (stillActive.length > 0) {
-        const stuckBanner = document.createElement('div')
-        stuckBanner.id = 'ao-stuck-banner'
-        stuckBanner.className = 'j-note j-note-danger'
-        stuckBanner.innerHTML = `<div class="j-note-title"><i class="fa fa-circle-exclamation" aria-hidden="true"></i> ${tUI('aoStillActiveTitle')}</div>
-<div class="j-note-body">${tUI('aoStillActiveBody')}</div>
-<div class="jx-67">${stillActive.map(id => `<button class="j-btn j-btn-sm j-btn-danger" onclick="doAppOpti('${id}','restore').then(()=>{ const b=document.getElementById('ao-stuck-banner'); if(b) b.remove() })"><i class="fa fa-rotate-left"></i> ${tAOName(id) || id}</button>`).join('')}</div>`
-        const refNode = document.getElementById('ao-conflict-banner') || document.getElementById('ao-fp-banner') || c.querySelector('.section-card') || null
-        if (refNode) c.insertBefore(stuckBanner, refNode)
-        else c.appendChild(stuckBanner)
-      }
-    } catch {}
-  }
-  if (_aoHero) _aoHero.scanning(false)
-}
-
-async function aoFpRestore(id) {
-  await doAppOpti(id, 'apply')
-  const row = document.querySelector(`#ao-fp-banner [data-fpid="${id}"]`)
-  if (row) row.remove()
-  const banner = document.getElementById('ao-fp-banner')
-  if (banner && !banner.querySelector('[data-fpid]')) banner.remove()
-  const snapKey = 'ao_fingerprint_history'
-  let h = {}; try { h = JSON.parse(settings[snapKey] || '{}') } catch {}
-  delete h[id]; settings[snapKey] = JSON.stringify(h)
-  await api.saveSettings(settings).catch(() => {})
-}
-
-async function aoSetCpuCap(appId, capPercent) {
-  await api.aoSetCpuCap(appId, capPercent).catch(() => {})
-  const label = capPercent > 0 ? `${capPercent}% CPU cap` : 'CPU cap removed'
-  toast(tAOName(appId) || appId, label, capPercent > 0 ? 'ok' : 'info')
-}
-
-async function doAppOptiToggle(id, apply) { await doAppOpti(id, apply ? 'apply' : 'restore') }
-
-async function sgmToggle(key, val) {
-  // Change the system first; the saved setting and the switch follow the real result.
-  let r = null
-  if (key === 'updateInterceptEnabled') r = await api.setUpdateIntercept(val).catch(() => null)
-  else if (key === 'idleSuppressionEnabled') r = await api.setIdleSuppression(val).catch(() => null)
-  const featureName = key === 'updateInterceptEnabled' ? tUI('aoUpdateIntercept') : tUI('aoIdleSuppression')
-  if (!r || r.ok === false) {
-    const box = document.getElementById(key === 'updateInterceptEnabled' ? 'sgm-update-intercept' : 'sgm-idle-suppression')
-    if (box) box.checked = !val
-    toast(featureName, tUI('tkOpFailed'), 'err')
-    return
-  }
-  settings[key] = val
-  await api.saveSettings(settings).catch(() => {})
-  const activeBadge = document.getElementById('sgm-active-badge')
-  if (activeBadge) {
-    const anyActive = settings.updateInterceptEnabled || settings.idleSuppressionEnabled
-    activeBadge.style.display = anyActive ? '' : 'none'
-  }
-  toast(featureName, tUI(val ? 'aoEnabled' : 'aoDisabled'), val ? 'ok' : 'info')
-}
-
-function _aoRebuildConflictBanner() {
-  const banner = document.getElementById('ao-conflict-banner')
-  if (!banner) return
-  const stateMap = {}
-  APP_OPTI_DEFS.forEach(a => { if (_aoInstalled.has(a.id)) stateMap[a.id] = tweakState(a.id) })
-  const active = AO_CONFLICTS.filter(conf => conf.check(stateMap, _aoInstalled))
-  if (active.length === 0) { banner.remove(); return }
-  const countLabel = active.length === 1 ? `1 ${tUI('aoConflictDetected')}` : `${active.length} ${tUI('aoConflictsDetected')}`
-  banner.innerHTML = `<div class="jx-644"><i class="fa fa-triangle-exclamation"></i> ${countLabel}</div>`
-  active.forEach(conf => {
-    const row = document.createElement('div')
-    row.dataset.cid = conf.id
-    row.style.cssText = 'background:rgba(0,0,0,0.2);border-radius:8px;padding:10px 12px;margin-bottom:6px;display:flex;align-items:flex-start;gap:10px'
-    let fixBtn = ''
-    if (conf.fix) {
-      fixBtn = `<button class="j-btn j-btn-sm j-btn-primary" onclick="aoConflictFix('${conf.id}','${conf.fix}')"><i class="fa fa-bolt"></i> ${tUI('aoConflictFix')}</button>`
-    } else if (conf.id === 'browser-gpu-pressure') {
-      fixBtn = `<button class="btn btn-sm jx-61" onclick="aoConflictFixAll(['chrome-optimize','brave-optimize','edge-optimize','opera-gx-optimize','firefox-optimize'])"><i class="fa fa-bolt"></i> ${tUI('aoFixAllBrowsers')}</button>`
-    } else if (conf.id === 'launcher-trio-unapplied') {
-      fixBtn = `<button class="btn btn-sm jx-61" onclick="aoConflictFixAll(['steam-optimize','epic-optimize','ea-app-optimize','riot-optimize'])"><i class="fa fa-bolt"></i> ${tUI('aoFixAllLaunchers')}</button>`
-    }
-    row.innerHTML = `
-      <i class="fa ${conf.icon} j-note-ico" aria-hidden="true"></i>
-      <div class="jx-2">
-        <div class="jx-645">${conf.title}</div>
-        <div class="jx-73">${conf.body}</div>
-      </div>
-      ${fixBtn}`
-    banner.appendChild(row)
-  })
-}
-
-async function aoConflictFix(conflictId, appId) {
-  await doAppOpti(appId, 'apply')
-  _aoRebuildConflictBanner()
-  if (conflictId === 'gpu-queue-double') {
-    const other = appId === 'discord-optimize' ? 'chrome-optimize' : 'discord-optimize'
-    if (_aoInstalled.has(other) && tweakState(other) !== 'applied') {
-      setTimeout(() => toast(tAOName(other), tUI('aoAlsoConsider'), 'info'), 1200)
-    }
-  }
-}
-
-async function aoConflictFixAll(ids) {
-  const toFix = ids.filter(id => _aoInstalled.has(id) && tweakState(id) !== 'applied')
-  for (const id of toFix) await doAppOpti(id, 'apply').catch(() => {})
-  _aoRebuildConflictBanner()
-}
-
-async function applyAllRunningApps(ids) {
-  if (!Array.isArray(ids) || ids.length === 0) return
-  const names = ids.map(id => tAOName(id) || id).join(', ')
-  try { await showConfirm({ title: tUI('aoApplyAllRunning'), body: `Apply optimizations for: <strong class="jx-9">${names}</strong>?`, okText: tUI('apply'), okStyle: 'info', icon: 'fa-bolt' }) } catch { return }
-  for (const id of ids) await doAppOpti(id, 'apply').catch(() => {})
-  toast(tUI('aoApplyAllRunning'), `${ids.length} apps optimized`, 'ok')
-}
-function _aoStateMap() {
-  const m = {}
-  APP_OPTI_DEFS.forEach(a => { m[a.id] = tweakState(a.id) })
-  return m
-}
-function _aoRefreshHero() {
-  const inst = _aoInstalled
-  if (!inst?.size) { if (_aoHero) { _aoHero.update(JylliAppHero.summary(APP_OPTI_DEFS, [], {}, [], [])); _aoHero.scanning(false) } return }
-  if (_aoHero) _aoHero.update(JylliAppHero.summary(APP_OPTI_DEFS, inst, _aoStateMap(), _aoRunningIds, _aoDriftedIds))
-  const _cm2 = { Browsers:'aoCatBrowsers', Communication:'aoCatCommunication', Media:'aoCatMedia', Launchers:'aoCatLaunchers', Streaming:'aoCatStreaming', System:'aoCatSystem' }
-  // Update section progress badges
-  for (const cat of [...new Set(APP_OPTI_DEFS.map(a => a.cat))]) {
-    const secId = `ao-${cat.toLowerCase()}`
-    const spb = document.getElementById(`spb-${secId}`)
-    if (!spb) continue
-    const catApps    = APP_OPTI_DEFS.filter(a => a.cat === cat && inst.has(a.id))
-    const catApplied = catApps.filter(a => tweakState(a.id) === 'applied').length
-    spb.textContent  = `${catApplied}/${catApps.length}`
-    spb.className    = 'sec-progress-badge' + (catApplied === catApps.length ? ' spb-full' : catApplied > 0 ? ' spb-partial' : '')
-  }
-}
-async function doAppOpti(id, action = 'apply') {
-  const bar = document.getElementById(`aopb-${id}`)
-  const badge = document.getElementById(`aob-${id}`)
-  const tog = document.getElementById(`aot-${id}`)
-  const card = document.getElementById(`aoc-${id}`)
-  const restoreBtn = document.getElementById(`aorb-${id}`)
-  if (bar) { bar.classList.add('ind'); bar.style.opacity = '1'; bar.style.transition = '' }
-  if (badge) badge.innerHTML = '<i class="fa fa-spinner fa-spin" style="font-size:11px;opacity:0.6"></i>'
-
-  const r = await api.runAppOptimizer(id, action)
-
-  if (!r?.ok) {
-    if (bar) { bar.classList.remove('ind'); bar.style.width = '0%' }
-    const s = tweakState(id)
-    const wasApplied = s === 'applied'
-    if (badge) { badge.innerHTML = wasApplied ? `<i class="fa fa-check"></i> ${tUI('aoApplied')}` : tUI('aoDefault'); badge.className = 'ao-badge' + (wasApplied ? ' ao-on' : '') }
-    if (tog) tog.checked = wasApplied
-    toast(tAOName(id) || id, r?.error || 'Failed', 'err')
-    return
-  }
-
-  if (bar) {
-    bar.classList.remove('ind')
-    bar.style.transition = 'width 0.4s ease'
-    bar.style.width = '100%'
-    setTimeout(() => {
-      bar.style.transition = 'width 0.6s ease, opacity 0.4s ease'
-      bar.style.opacity = '0'
-      setTimeout(() => { bar.style.width = '0%'; bar.style.opacity = '1'; bar.style.transition = '' }, 600)
-    }, 800)
-  }
-  const applied = action === 'apply'
-  if (badge) { badge.innerHTML = applied ? `<i class="fa fa-check"></i> ${tUI('aoApplied')}` : `<i class="fa fa-rotate-left"></i> ${tUI('aoDefault')}`; badge.className = 'ao-badge' + (applied ? ' ao-on' : '') }
-  if (tog) tog.checked = applied
-  if (card) { card.classList.toggle('ao-applied', applied); card.classList.remove('ao-drifted') }
-  if (restoreBtn) {
-    restoreBtn.disabled = !applied
-    restoreBtn.style.opacity = applied ? '' : '0.35'
-    restoreBtn.style.cursor = applied ? '' : 'not-allowed'
-    restoreBtn.style.pointerEvents = applied ? '' : 'none'
-  }
-
-  // Show restart-needed hint for apps that require a restart to take effect
-  const needsRestartIds = ['discord-optimize', 'firefox-optimize', 'steam-optimize', 'chrome-optimize', 'edge-optimize', 'brave-optimize', 'opera-gx-optimize', 'spotify-optimize']
-  if (!applied && needsRestartIds.includes(id) && card) {
-    const hint = document.createElement('div')
-    hint.style.cssText = 'font-size:11px;color:var(--c-warning);margin-top:5px;display:flex;align-items:center;gap:4px;opacity:1;transition:opacity 1s'
-    hint.innerHTML = '<i class="fa fa-arrow-rotate-right jx-4"></i> Restart the app for changes to take effect'
-    card.appendChild(hint)
-    setTimeout(() => { hint.style.opacity = '0'; setTimeout(() => hint.remove(), 1000) }, 6000)
-  }
-
-  settings[`tweak_${id}`] = applied ? 'applied' : 'restored'
-  await api.saveSettings(settings)
-  await api.addChangelogEntry({ id, action }).catch(() => {})
-  _aoRefreshHero()
-
-  const label = tAOName(id) || id
-  toast(applied ? `${tUI('appOptiApplied')}: ${label}` : `${tUI('appOptiRestored')}: ${label}`, '', applied ? 'ok' : 'info')
+// ─── Page: Apps ───────────────────────────────────────────────────────────────
+// Apps "Backstage": js/apps/{pure,views,page}.js on the engine in lib/apps (what background programs cost, documented changes read back, Game time).
+function buildAppOptimizer(c) {
+  const host = document.createElement('div')
+  host.id = 'ap-host'
+  c.appendChild(host)
+  const page = JylliAppsPage.mount(host)
+  registerPageCleanup('app-optimizer', () => { try { page.destroy() } catch {} })
 }
 
 // ─── Page: Cleanup ────────────────────────────────────────────────────────────
