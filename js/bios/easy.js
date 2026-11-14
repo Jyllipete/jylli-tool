@@ -67,6 +67,55 @@
     return html`<div class="bw-facts">${row('CPU', f.cpu)}${row('GPU', f.gpu)}${row('RAM', ram)}${row('BIOS', f.biosDate)}${row(T('easy_cap_label'), can)}</div>`
   }
 
+  // Firmware status: facts Windows reports, so it works without reading the BIOS
+  function firmwareBlock(a) {
+    const f = a.firmware || {}
+    const yn = v => (v == null ? '' : v ? T('fw_yes') : T('fw_no'))
+    const rows = [
+      [T('fw_boot'), f.uefi == null ? '' : f.uefi ? 'UEFI' : T('fw_legacy')],
+      [T('fw_secureBoot'), f.secureBoot == null ? '' : f.secureBoot ? T('fw_on') : T('fw_off')],
+      ['TPM', f.tpm ? T('fw_tpm_' + f.tpm) : ''],
+      [T('fw_virt'), f.virt == null ? '' : f.virt ? T('fw_on') : T('fw_off')],
+      [T('fw_rebar'), f.rebar == null ? '' : f.rebar ? T('fw_active') : T('fw_off')],
+      [T('fw_hypervisor'), yn(f.hypervisor)],
+    ].filter(r => r[1])
+    if (!rows.length) return ''
+    return html`<section class="bw-easy-sec"><h3>${T('fw_title')}</h3><div class="bw-facts">${rows.map(r => html`<div class="bw-fact"><span>${r[0]}</span><span class="bw-mono">${r[1]}</span></div>`)}</div><p class="bw-muted">${T('fw_note')}</p></section>`
+  }
+
+  // "Settings that matter": one card per plain-language setting found on this board
+  const CAT_ORDER = ['cpu', 'power', 'memory', 'pcie', 'security', 'boot']
+  function stateText(c) {
+    if (c.state === 'value') return c.label
+    if (c.state === 'mixed') return T('card_mixed')
+    return T('card_state_' + c.state)
+  }
+  function cardRow(c) {
+    const v = { n: c.count, off: c.offCount, names: c.names.join(', '), more: Math.max(0, c.count - c.names.length) }
+    const rec = c.rec ? T('card_rec_' + c.rec) : ''
+    const ctl = c.writable
+      ? html`<div class="bw-seg" role="group">${c.options.map(o => html`<button type="button" class="bw-seg-b ${o.current ? 'is-on' : ''}" ${o.current ? 'disabled' : ''} data-card="${c.id}" data-val="${o.value}">${o.label}</button>`)}</div>`
+      : html`<span class="bw-pill bw-pill-${c.state === 'mixed' ? 'warn' : 'neutral'}">${stateText(c)}</span>`
+    return html`<div class="bw-card ${c.differs ? 'bw-card-differs' : ''}">
+      <div class="bw-card-head"><h4>${T('card_' + c.id + '_title')}</h4>${ctl}</div>
+      <p>${T('card_' + c.id + '_d')}</p>
+      <p class="bw-muted">${c.group ? T('card_group', v) : T('card_where', v)}${c.readonly ? ' · ' + T('card_readonly') : ''}</p>
+      ${rec ? html`<p class="bw-card-rec">${rec}${tx('card_rec_why_' + c.id) ? ' ' + tx('card_rec_why_' + c.id) : ''}</p>` : (c.differs === false && has('card_norec_' + c.id) ? html`<p class="bw-muted">${T('card_norec_' + c.id)}</p>` : '')}
+      ${tx('card_' + c.id + '_gain') ? html`<p class="bw-muted"><strong>${T('card_gain_label')}</strong> ${T('card_' + c.id + '_gain')}</p>` : ''}
+      ${tx('card_' + c.id + '_trade') ? html`<p class="bw-muted"><strong>${T('card_trade_label')}</strong> ${T('card_' + c.id + '_trade')}</p>` : ''}
+      <p class="bw-muted">${T('card_level_' + (c.level || 'system'))}${c.reboot ? ' · ' + T('card_reboot') : ''}${c.manual && !c.readonly ? ' · ' + T('card_manual') : ''}</p>
+    </div>`
+  }
+  function cardsBlock(a) {
+    const cards = a.cards || []
+    if (!cards.length) return ''
+    const differ = cards.filter(c => c.differs).length
+    return html`<section class="bw-easy-sec"><h3>${T('card_title')}</h3>
+      <p class="bw-muted">${T('card_count', { n: cards.length })}${differ ? ' · ' + T('card_differ', { n: differ }) : ''}</p>
+      ${CAT_ORDER.map(cat => { const list = cards.filter(c => c.cat === cat); return list.length ? html`<details class="bw-more" ${list.some(c => c.differs) ? 'open' : ''}><summary>${T('cat_' + cat)} (${list.length})</summary>${list.map(cardRow)}</details>` : '' })}
+    </section>`
+  }
+
   function draw() {
     const box = ST.box; if (!box) return
     const a = ST.advice
@@ -76,11 +125,13 @@
       ${ST.applied ? html`<section class="bw-done"><i class="fa fa-circle-check" aria-hidden="true"></i><div><strong>${T('easy_appliedTitle')}</strong><span>${T('easy_appliedBody')}</span></div>
         <button type="button" class="j-btn j-btn-primary j-btn-sm" data-restart>${T('easy_restartNow')}</button><button type="button" class="j-btn j-btn-ghost j-btn-sm" data-undo>${T('easy_undo')}</button></section>` : ''}
       <section class="bw-easy-sec"><h3>${T('easy_pcTitle')}</h3>${factsBlock(a)}</section>
+      ${firmwareBlock(a)}
       <section class="bw-easy-sec"><h3>${T('easy_presetsTitle')}</h3><div class="bw-presets">${a.presets.map(p => presetCard(a, p))}</div></section>
       <section class="bw-easy-sec"><h3>${T('easy_sugTitle')}</h3>
         ${show.length ? show.map(s => suggestionCard(a, s)) : html`<p class="bw-muted">${T('easy_none')}</p>`}
         ${good.length ? html`<details class="bw-more"><summary>${T('easy_goodTitle', { n: good.length })}</summary>${good.map(s => suggestionCard(a, s))}</details>` : ''}
       </section>
+      ${cardsBlock(a)}
       <section class="bw-easy-sec"><details class="bw-more"><summary>${T('easy_mythsTitle')}</summary><ul class="bw-myths">${a.myths.map(m => html`<li>${T('easy_myth_' + m)}</li>`)}</ul></details></section>`)
     wire(a)
   }
@@ -99,6 +150,10 @@
     }))
     box.querySelectorAll('[data-preset]').forEach(b => b.addEventListener('click', () => {
       const p = a.presets.find(x => x.id === b.dataset.preset); if (p) review(T('easy_presetReview', { name: T('easy_preset_' + p.id), n: p.count }), p.changes)
+    }))
+    box.querySelectorAll('[data-card]').forEach(b => b.addEventListener('click', () => {
+      const c = (a.cards || []).find(x => x.id === b.dataset.card); const o = c && c.options.find(x => String(x.value) === b.dataset.val)
+      if (o && o.change) review(T('commitTitle', { n: 1 }), [o.change])
     }))
     box.querySelectorAll('[data-bios]').forEach(b => b.addEventListener('click', () => restart(true)))
     const r = box.querySelector('[data-restart]'); if (r) r.addEventListener('click', () => restart(false))

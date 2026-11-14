@@ -59,6 +59,21 @@
     el.querySelector('#bw-grid').addEventListener('keydown', onGridKey)
   }
 
+  /** Identity confidence, VM / boot mode / Secure Boot chips and the restart-pending note. Wording says what the evidence is, never more. */
+  function idChips() {
+    const id = S.identity, i = S.info || {}
+    if (!id) return ''
+    const c = []
+    c.push(html`<span class="bw-chip" title="${T('id_model_note')}">${T('id_model_' + (id.model && id.model.status || 'unknown'))}</span>`)
+    if (id.isVM) c.push(html`<span class="bw-chip bw-chip-off">${T('id_vm')}</span>`)
+    if (i.uefi === false) c.push(html`<span class="bw-chip bw-chip-off">${T('id_legacy')}</span>`)
+    if (i.secureBoot != null) c.push(html`<span class="bw-chip">${T(i.secureBoot ? 'id_sb_on' : 'id_sb_off')}</span>`)
+    const n = (id.conflicts || []).length + (id.placeholders || []).length
+    if (n) c.push(html`<span class="bw-chip bw-chip-off" title="${(id.conflicts || []).map(x => x.field).concat((id.placeholders || []).map(x => x.field + ': ' + x.raw)).join('; ')}">${T('id_unconfirmed', { n })}</span>`)
+    if (S.pending) c.push(html`<span class="bw-chip bw-chip-off">${T('pending_restart')}</span>`)
+    return html`${c}`
+  }
+
   function drawStrip() {
     const i = S.info || {}
     const eng = S.engines.find(e => e.id === S.engine)
@@ -69,7 +84,8 @@
         <i class="fa fa-microchip" aria-hidden="true"></i>
         <div class="bw-id-text"><strong>${i.board || T('boardUnknown')}</strong><span class="bw-mono">${[i.vendor, i.biosVersion, i.biosDate].filter(Boolean).join(' · ')}</span></div>
       </div>
-      ${eng ? html`<span class="bw-chip">${T('engine_' + eng.id)}${eng.verified ? '' : html` <em>${T('unverified')}</em>`}</span>` : html`<span class="bw-chip bw-chip-off">${T('noEngine')}</span>`}
+      ${eng ? html`<span class="bw-chip" title="${T('cap_title')}">${T('engine_' + eng.id)} · ${T('cap_read_' + (eng.read || 'unavailable'))} · ${T('cap_write_' + (eng.write || 'locked'))}</span>` : html`<span class="bw-chip bw-chip-off">${T('noEngine')}</span>`}
+      ${idChips()}
       <label class="bw-search"><i class="fa fa-magnifying-glass" aria-hidden="true"></i><input id="bw-q" type="search" value="${S.q}" placeholder="${T('searchPlaceholder', { n: S.settings.length })}" aria-label="${T('search')}" ${S.settings.length ? '' : 'disabled'}></label>
       <label class="bw-toggle"><input id="bw-changed" type="checkbox" ${S.changed ? 'checked' : ''}> ${T('changedOnly')}</label>
       <span class="bw-staged bw-mono">${T('staged', { n: staged })}</span>
@@ -171,17 +187,19 @@
   }
 
   function drawDeck() {
-    const tabs = ['changes', 'timeline', 'doctor', 'console']
+    const tabs = ['changes', 'timeline', 'instruments', 'doctor', 'console']
     const body = S.deck === 'changes'
       ? (S.staged.size ? html`<ul class="bw-changes">${[...S.staged].map(([k, v]) => { const s = S.settings.find(x => x.key === k); return html`<li><span>${s.name}</span><span class="bw-mono">${labelOf(s, s.current)} → ${labelOf(s, v)}</span><button type="button" class="j-btn j-btn-ghost j-btn-sm" data-unstage="${k}">${T('undo')}</button></li>` })}</ul><p class="bw-muted bw-pad">${T('commitLockedBody')}</p>` : html`<p class="bw-muted bw-pad">${T('noChanges')}</p>`)
       : S.deck === 'timeline'
-        ? (S.snaps.length ? html`<ul class="bw-changes">${S.snaps.map(n => html`<li><span>${new Date(n.ts).toLocaleString()} · ${n.reason === 'restore' ? T('reasonRestore') : T('reasonCommit')}</span><span class="bw-mono">${T('snapshotChanges', { n: (n.changes || []).length })}</span><button type="button" class="j-btn j-btn-ghost j-btn-sm" data-restore="${n.id}" ${writable() ? '' : 'disabled'}>${T('restore')}</button></li>`)}</ul>` : html`<p class="bw-muted bw-pad">${T('noSnapshots')}</p>`)
+        ? (S.snaps.length ? html`<ul class="bw-changes">${S.snaps.map(n => html`<li><span>${new Date(n.ts).toLocaleString()} · ${n.reason === 'restore' ? T('reasonRestore') : T('reasonCommit')}</span><span class="bw-mono">${T('snapshotChanges', { n: (n.changes || []).length })}</span><button type="button" class="j-btn j-btn-ghost j-btn-sm" data-restore="${n.id}" ${writable() ? '' : 'disabled'}>${T('restore')}</button></li>`)}</ul>` : html`<p class="bw-muted bw-pad">${T('noSnapshots')}</p>`) + auditList()
       : S.deck === 'doctor'
         ? html`<ul class="bw-doctor">${S.findings.map(f => html`<li class="bw-f bw-f-${f.level}"><i class="fa ${f.level === 'ok' ? 'fa-circle-check' : f.level === 'block' ? 'fa-circle-xmark' : 'fa-circle-info'}" aria-hidden="true"></i><div><strong>${T('doctor_' + f.id + '_title')}</strong><span>${T('doctor_' + f.id + '_fix')}</span></div></li>`)}</ul>${S.engines.some(e => e.id === 'scewin') || (S.findings.some(f => /^scewin_/.test(f.id))) ? html`<div class="bw-pad"><button class="j-btn j-btn-secondary j-btn-sm" id="bw-import" type="button"><i class="fa fa-folder-open" aria-hidden="true"></i> ${T('importScewin')}</button></div>` : ''}`
+        : S.deck === 'instruments' ? html`<div id="bw-instr"></div>`
         : html`<pre class="bw-console bw-mono">${S.log.join('\n') || T('consoleEmpty')}</pre>`
     el.querySelector('#bw-deck').innerHTML = String(html`
       <div class="bw-tabs" role="tablist">${tabs.map(t => html`<button type="button" role="tab" aria-selected="${String(S.deck === t)}" data-deck="${t}">${T('deck_' + t)}${t === 'changes' && S.staged.size ? html` <span class="bw-mono">${S.staged.size}</span>` : ''}</button>`)}</div>
       <div class="bw-deck-body">${body}</div>`)
+    if (root.JylliBiosInstrumentsUI) { if (S.deck === 'instruments') root.JylliBiosInstrumentsUI.render(el.querySelector('#bw-instr')); else root.JylliBiosInstrumentsUI.stop() }
     el.querySelectorAll('#bw-deck [data-restore]').forEach(b => b.addEventListener('click', () => openRestore(b.dataset.restore)))
     el.querySelectorAll('#bw-deck [data-deck]').forEach(b => b.addEventListener('click', () => { S.deck = b.dataset.deck; if (S.deck === 'timeline') loadSnaps(); else drawDeck() }))
     el.querySelectorAll('#bw-deck [data-unstage]').forEach(b => b.addEventListener('click', () => { S.staged.delete(b.dataset.unstage); drawRows(); drawStrip(); drawDeck() }))
@@ -281,14 +299,24 @@
       if (root.JylliBiosEasy) root.JylliBiosEasy.onCommitted(r)
     } else {
       log(`commit failed: ${r.error}${r.reverted ? ', reverted ' + r.reverted : ''}`)
-      root.toast(T('failedTitle'), errText(r.error) + (r.reverted ? ' ' + T('revertedNote') : ''), 'error')
+      const manual = r.partial && r.manual ? ' ' + T('revertIncompleteNote', { list: r.manual.map(m => m.name + ' = ' + m.value).join('; ') }) : ''
+      root.toast(T('failedTitle'), errText(r.error) + (r.reverted ? ' ' + T('revertedNote') : '') + manual, 'error')
+      if (r.partial) log('PARTIAL: set by hand in BIOS setup: ' + (r.manual || []).map(m => m.name + ' = ' + m.value).join('; '))
       S.deck = 'console'; drawDeck()
     }
+  }
+
+  /** What was tried and how it ended (commit, restore, disarm), newest first. Failed and partial attempts are shown, not hidden. */
+  function auditList() {
+    const rows = S.audit || []
+    if (!rows.length) return ''
+    return html`<h4 class="bw-pad">${T('audit_title')}</h4><ul class="bw-changes">${rows.slice(0, 30).map(e => html`<li><span>${new Date(e.ts).toLocaleString()} · ${T('audit_' + e.action)}</span><span class="bw-mono ${e.result === 'ok' ? '' : 'bw-bad'}">${T('audit_res_' + (e.result || 'failed'))}${e.error ? ' · ' + errText(e.error) : ''}</span><span class="bw-mono">${(e.changes || []).map(c => c.name + ': ' + c.from + ' → ' + c.to).join('; ')}</span></li>`)}</ul>`
   }
 
   async function loadSnaps() {
     const r = await api.bios2Snapshots()
     S.snaps = r.ok ? r.snapshots : []
+    try { const a = api.bios2Audit ? await api.bios2Audit() : null; S.audit = a && a.ok ? a.entries : [] } catch { S.audit = [] }
     drawDeck()
   }
 
@@ -325,7 +353,7 @@
   async function open() {
     const st = await api.bios2Status()
     if (!st.ok) { el.innerHTML = String(html`<div class="bw-empty"><i class="fa fa-lock" aria-hidden="true"></i><h4>${T('proOnly')}</h4></div>`); return }
-    S.info = st.info; S.engines = st.engines; S.findings = st.findings
+    S.info = st.info; S.engines = st.engines; S.findings = st.findings; S.identity = st.identity || null; S.pending = !!st.pending; S.blockers = st.blockers || []
     try { const tr = await api.bios2Trial(); S.trial = tr && tr.ok ? tr.trial : null } catch { S.trial = null }
     const ready = st.engines.find(e => e.state === 'ready')
     drawStrip(); drawTree(); S._list = []; drawInspector(); drawDeck()

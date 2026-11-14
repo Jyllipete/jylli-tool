@@ -49,20 +49,22 @@ function respond(name, args, ctx) {
     case 'bios2Status': {
       const doctor = require('../../lib/bios/doctor')
       const info = { vendor: 'HP', biosVersion: 'T70 Ver. 01.25.01', biosDate: '2026-06-17', board: 'HP 87E0', system: 'HP ProBook 440 G8', uefi: true, hvci: true, elevated: true }
-      return { ok: true, info, engines: [{ id: 'hp-wmi', state: 'ready', verified: false, writable: true }], findings: doctor.diagnose({ vendor: 'HP', elevated: true, uefi: true, hvci: true, hpWmi: 'ok' }) }
+      const identity = require('../../lib/bios/identity').identify({ cim: { biosVendor: 'HP', biosVersion: 'T70 Ver. 01.25.01', biosDate: '2026-06-17', boardVendor: 'HP', board: '87E0', systemVendor: 'HP', systemModel: 'HP ProBook 440 G8', productVendor: 'HP', productName: 'HP ProBook 440 G8' }, reg: { BIOSVendor: 'HP', SystemManufacturer: 'HP', SystemProductName: 'HP ProBook 440 G8', BaseBoardProduct: '87E0' }, uefi: true, secureBoot: true, chassis: [10], elevated: true })
+      return { ok: true, info: { ...info, secureBoot: true }, identity, blockers: [], pending: false, engines: [{ id: 'hp-wmi', state: 'ready', read: 'verified', write: 'verified', verified: true, writable: true }], findings: doctor.diagnose({ vendor: 'HP', elevated: true, uefi: true, hvci: true, hpWmi: 'ok' }) }
     }
     // Easy mode: the REAL advisor on a synthetic gaming laptop (RAM below rated speed, ReBAR off, fan always on)
     case 'bios2Advise': {
       const adv = require('../../lib/bios/advisor'), model = require('../../lib/bios/model')
       const e = (n, cur, opts) => ({ cls: 'HP_BIOSEnumeration', Name: n, CurrentValue: cur, PossibleValues: opts, Path: 'Advanced/System Options', IsReadOnly: false })
-      const settings = model.fromHp([e('XMP Profile', 'Disable', ['Disable', 'Profile 1']), e('CSM Support', 'Enable', ['Enable', 'Disable']), e('Above 4G Decoding', 'Disable', ['Disable', 'Enable']), e('Resizable BAR', 'Disable', ['Disable', 'Enable']), e('Fan Always On', 'Enable', ['Enable', 'Disable']), e('Graphics Mode', 'Hybrid', ['Hybrid', 'Discrete']), e('Core Performance Boost', 'Auto', ['Disable', 'Auto'])])
-      const caps = { form: 'laptop', hybridGraphics: true, anyDiscrete: true, rebar: false, bios: { date: '2025-03-12' }, cpu: { name: 'AMD Ryzen 7 7840HS', vendor: 'amd', family: 'zen4', mobile: true }, gpu: { name: 'NVIDIA GeForce RTX 4060 Laptop GPU', vendor: 'nvidia', arch: 'rtx40', discrete: true }, sec: { secureBoot: true }, host: { antiCheat: [] } }
-      const out = adv.advise({ caps, ram: { xmp: 'off', type: 'DDR5', xmpConfiguredMT: 4800, xmpRatedMT: 5600 }, info: { board: 'HP 8A44', vendor: 'HP', uefi: true }, settings, writable: true })
+      const settings = model.fromHp([e('XMP Profile', 'Disable', ['Disable', 'Profile 1']), e('CSM Support', 'Enable', ['Enable', 'Disable']), e('Above 4G Decoding', 'Disable', ['Disable', 'Enable']), e('Resizable BAR', 'Disable', ['Disable', 'Enable']), e('Fan Always On', 'Enable', ['Enable', 'Disable']), e('Graphics Mode', 'Hybrid', ['Hybrid', 'Discrete']), e('Core Performance Boost', 'Auto', ['Disable', 'Auto']), e('Native ASPM', 'Enable', ['Disable', 'Enable']), e('DMI ASPM', 'Disable', ['Disable', 'Enable']), e('PEG0 ASPM', 'Enable', ['Disable', 'Enable']), e('L1 Substates', 'Disable', ['Disable', 'Enable']), e('Intel VT-D Tech', 'Enable', ['Disable', 'Enable']), e('Secure Boot', 'Enable', ['Disable', 'Enable']), e('Global C-state Control', 'Auto', ['Disable', 'Auto', 'Enable']), e('Restore after AC Power Loss', 'Power Off', ['Power Off', 'Power On', 'Last State'])])
+      const caps = { form: 'laptop', hybridGraphics: true, anyDiscrete: true, rebar: false, bios: { date: '2025-03-12' }, cpu: { name: 'AMD Ryzen 7 7840HS', vendor: 'amd', family: 'zen4', mobile: true }, gpu: { name: 'NVIDIA GeForce RTX 4060 Laptop GPU', vendor: 'nvidia', arch: 'rtx40', discrete: true }, sec: { secureBoot: true, wsl: true, hypervisorPresent: true }, host: { antiCheat: [] } }
+      const out = adv.advise({ caps, ram: { xmp: 'off', type: 'DDR5', xmpConfiguredMT: 4800, xmpRatedMT: 5600 }, info: { board: 'HP 8A44', vendor: 'HP', uefi: true, virtFw: false, tpm: { present: true, ready: true } }, settings, writable: true })
       return { ok: true, engine: 'hp-wmi', writable: true, haveSettings: true, capsKnown: true, ...out }
     }
     case 'bios2Restart': return { ok: true }
     case 'bios2Trial': return { ok: true, trial: null }
     case 'bios2Commit': return { ok: true, snapshotId: 1, applied: (args[0] && args[0].changes || []).length, restartNeeded: true }
+    case 'bios2Audit': return { ok: true, entries: [{ ts: now - 3600000, action: 'commit', engine: 'hp-wmi', result: 'ok', changes: [{ id: 'Fast Boot', name: 'Fast Boot', from: 'Disable', to: 'Enable' }] }, { ts: now - 7200000, action: 'commit', engine: 'hp-wmi', result: 'partial', error: 'revert_incomplete', changes: [{ id: 'SMT', name: 'SMT', from: 'Enable', to: 'Disable' }] }] }
     case 'bios2Snapshots': return { ok: true, snapshots: [{ id: 1, ts: now - 3600000, engine: 'hp-wmi', reason: 'commit', changes: [{ id: 'Fast Boot', name: 'Fast Boot', from: 'Disable', to: 'Enable' }], count: 713 }] }
     case 'bios2Restore': return { ok: true, applied: 1 }
     case 'bios2Read': {

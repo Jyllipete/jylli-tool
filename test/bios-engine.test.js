@@ -47,7 +47,7 @@ test('Doctor names the right conditions', () => {
   assert.ok(ids(doctor.diagnose({ vendor: 'American Megatrends Inc.', elevated: true, uefi: true, scewin: { state: 'missing' } })).includes('scewin_missing'))
   assert.ok(ids(doctor.diagnose({ vendor: 'American Megatrends Inc.', elevated: true, uefi: true, hvci: true, scewin: { state: 'ok' } })).includes('driver_may_be_blocked'))
   assert.ok(ids(doctor.diagnose({ vendor: 'HP', elevated: false, uefi: true, hpWmi: 'denied' })).includes('not_elevated'))
-  assert.ok(ids(doctor.diagnose({ vendor: 'Dell Inc.', elevated: true, uefi: true })).includes('vendor_unsupported'))
+  assert.ok(ids(doctor.diagnose({ vendor: 'Acer Inc.', elevated: true, uefi: true })).includes('vendor_unsupported'))
   assert.ok(ids(doctor.diagnose({ vendor: 'x', elevated: true, uefi: false })).includes('legacy_bios'))
   assert.equal(doctor.matchScewinError('LoadDeviceDriver returned false'), 'driver_load')
   assert.equal(doctor.matchScewinError('Error in writing variable to NVRAM'), 'write_protected')

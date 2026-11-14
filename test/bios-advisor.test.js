@@ -117,3 +117,60 @@ test('old BIOS and unprotected anti-cheat are things only the user can fix', () 
   assert.ok(ids(r).includes('biosage:check')); assert.ok(ids(r).includes('secureboot:check'))
   assert.ok(r.suggestions.filter(s => s.status === 'check').every(s => s.changes.length === 0))
 })
+
+// ── Settings that matter (cards) and the firmware checks ──
+const cardOf = (r, id) => r.cards.find(c => c.id === id)
+
+test('cards: a grouped family reads Mixed, is read-only, and never recommends Off', () => {
+  const r = advise(base({ settings: [opt('Native ASPM', 'Enabled', ['Disabled', 'Enabled']), opt('DMI ASPM', 'Disabled', ['Disabled', 'Enabled']), opt('PEG0 ASPM', 'Enabled', ['Disabled', 'Enabled'])] }))
+  const c = cardOf(r, 'aspm')
+  assert.equal(c.state, 'mixed'); assert.equal(c.count, 3); assert.equal(c.offCount, 1)
+  assert.equal(c.group, true); assert.deepEqual(c.options, []); assert.equal(c.rec, null); assert.equal(c.differs, false)
+})
+
+test('cards: no idle-power or spread-spectrum card ever carries a recommendation', () => {
+  const r = advise(base({ settings: [opt('Intel C-State', 'Enabled', ['Disabled', 'Enabled']), opt('C1E Support', 'Enabled', ['Disabled', 'Enabled']), opt('EIST', 'Enabled', ['Disabled', 'Enabled']), opt('FIVR Spread Spectrum', 'Enabled', ['Disabled', 'Enabled']), opt('LTR Mechanism Enable', 'Enabled', ['Disabled', 'Enabled'])] }))
+  for (const id of ['cstates', 'c1e', 'eist', 'spread', 'ltr']) { const c = cardOf(r, id); assert.ok(c, id); assert.equal(c.rec, null, id); assert.equal(c.differs, false, id) }
+})
+
+test('cards: Secure Boot and TPM are shown but never get controls', () => {
+  const r = advise(base({ settings: [opt('Secure Boot', 'Enabled', ['Disabled', 'Enabled']), opt('Security Device Support', 'Enabled', ['Disabled', 'Enabled']), opt('TPM State', 'Enabled', ['Disabled', 'Enabled'])] }))
+  assert.equal(cardOf(r, 'secureboot').readonly, true); assert.deepEqual(cardOf(r, 'secureboot').options, [])
+  assert.equal(cardOf(r, 'tpm').readonly, true); assert.deepEqual(cardOf(r, 'tpm').options, [])
+  assert.equal(r.cards.filter(c => c.id === 'tpm').length, 1)   // "TPM State" is not a second card
+})
+
+test('cards: a single toggle gets a ready change, and differs only where evidence backs a recommendation', () => {
+  const r = advise(base({ settings: [opt('Resizable BAR', 'Disabled', ['Disabled', 'Enabled']), opt('Hyper-Threading', 'Disabled', ['Disabled', 'Enabled'])] }))
+  const rb = cardOf(r, 'rebar')
+  assert.equal(rb.state, 'off'); assert.equal(rb.rec, 'on'); assert.equal(rb.differs, true); assert.equal(rb.writable, true)
+  assert.equal(rb.options.find(o => o.label === 'Enabled').change.toLabel, 'Enabled')
+  assert.equal(cardOf(r, 'smt').differs, false)      // no recommendation, so never "differs"
+})
+
+test('cards: nothing without readable settings, and read-only/critical settings get no controls', () => {
+  assert.deepEqual(advise(base()).cards, [])
+  const r = advise(base({ settings: [opt('DRAM Voltage', 'Auto', ['Auto', '1.35'])] }))
+  assert.equal(r.cards.length, 0)
+})
+
+test('virtualization off while WSL/Hyper-V is installed: a check, never in a preset', () => {
+  const r = advise(base({ caps: { sec: { wsl: true } }, info: { virtFw: false } }))
+  const s = r.suggestions.find(x => x.id === 'virt-needed')
+  assert.equal(s.status, 'check'); assert.equal(s.vars.names, 'WSL'); assert.deepEqual(s.presets, []); assert.equal(s.manual.steps, 'virt-needed')
+  assert.equal(advise(base({ caps: { sec: { wsl: false } }, info: { virtFw: false } })).suggestions.some(x => x.id === 'virt-needed'), false)
+  assert.equal(advise(base({ caps: { sec: { wsl: true } }, info: { virtFw: true } })).suggestions.some(x => x.id === 'virt-needed'), false)
+})
+
+test('TPM missing with anti-cheat on Windows 11: a check; unknown TPM says nothing', () => {
+  const caps = { os: { win11: true }, host: { antiCheat: ['Vanguard'] } }
+  assert.equal(advise(base({ caps, info: { tpm: { present: false, ready: false } } })).suggestions.find(x => x.id === 'tpm-anticheat').status, 'check')
+  assert.equal(advise(base({ caps, info: { tpm: null } })).suggestions.some(x => x.id === 'tpm-anticheat'), false)
+  assert.equal(advise(base({ caps, info: { tpm: { present: true, ready: true } } })).suggestions.some(x => x.id === 'tpm-anticheat'), false)
+})
+
+test('firmware block only reports what Windows told us', () => {
+  assert.deepEqual(Object.values(advise({ caps: {}, ram: {}, info: {}, settings: null, writable: false }).firmware).filter(v => v != null), [])
+  const f = advise(base({ caps: { sec: { secureBoot: true, hypervisorPresent: false } }, info: { virtFw: true, tpm: { present: true, ready: true } } })).firmware
+  assert.equal(f.uefi, true); assert.equal(f.secureBoot, true); assert.equal(f.tpm, 'ready'); assert.equal(f.virt, true); assert.equal(f.rebar, true); assert.equal(f.hypervisor, false)
+})

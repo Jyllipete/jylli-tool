@@ -203,6 +203,7 @@ contextBridge.exposeInMainWorld('api', {
   bios2Trial:         ()            => ipcRenderer.invoke('bios2-trial'),
   bios2TrialDisarm:   ()            => ipcRenderer.invoke('bios2-trial-disarm'),
   bios2Snapshots:     ()            => ipcRenderer.invoke('bios2-snapshots'),
+  bios2Audit:         ()            => ipcRenderer.invoke('bios2-audit'),
   bios2Restore:       (req)         => ipcRenderer.invoke('bios2-restore', { id: req && req.id, typed: req && req.typed }),
   bios2Read:          (req)         => ipcRenderer.invoke('bios2-read', { engine: req && req.engine, confirmUnverified: !!(req && req.confirmUnverified) }),
   biosHyperV:         (action)      => ipcRenderer.invoke('bios-hyper-v', { action }),

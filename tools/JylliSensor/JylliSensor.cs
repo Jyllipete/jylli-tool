@@ -140,9 +140,10 @@ class SensorVisitor : IVisitor
             case HardwareType.Cpu:
                 if (sensor.SensorType == SensorType.Temperature)
                 {
-                    if (sensor.Name.Contains("Package") || sensor.Name.Contains("CPU Package"))
+                    // Intel reports "CPU Package"; AMD Ryzen reports "Core (Tctl/Tdie)" (and per-die "CCD1 (Tdie)")
+                    if (sensor.Name.Contains("Package") || sensor.Name.Contains("CPU Package") || sensor.Name.Contains("Tctl"))
                         _vals[0] = v;  // cpu_package_temp
-                    if (sensor.Name.StartsWith("Core #") || sensor.Name.Contains("Core Max"))
+                    if (sensor.Name.StartsWith("Core #") || sensor.Name.Contains("Core Max") || sensor.Name.StartsWith("CCD"))
                         _vals[1] = Math.Max(_vals[1], v);  // cpu_core_max (running max)
                 }
                 else if (sensor.SensorType == SensorType.Power && sensor.Name.Contains("Package"))
