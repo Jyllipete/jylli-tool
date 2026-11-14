@@ -250,7 +250,7 @@ test('before/after rows are measured values only', async () => {
 test('FiveM settings: only differing recommended values are written, the backup is journaled, Undo can restore it', async () => {
   const { fivemSettings } = require('../lib/auto-opti/controls')
   const rec = require('../lib/auto-opti/fivem-rec').recommend
-  assert.strictEqual(rec(12288).TextureQuality, '3'); assert.strictEqual(rec(4096).TextureQuality, '2'); assert.strictEqual(rec(0).ReflectionQuality, '0')
+  assert.strictEqual(rec(12288).TextureQuality, '2'); assert.strictEqual(rec(4096).TextureQuality, '1'); assert.strictEqual(rec(2048).TextureQuality, '0'); assert.strictEqual(rec(0).ReflectionQuality, '0')
   const want = rec(8192), vals = { ...want, GrassQuality: '3', MSAA: '4', DoF: null }
   let written = null; const noted = []
   const fivem = { read: async () => ({ ok: true, vals, path: 'C:/x/gta5_settings.xml', size: 100 }), write: async c => { written = c; return { ok: true, size: 90 } }, vramMB: async () => 8192 }

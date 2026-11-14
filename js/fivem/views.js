@@ -54,6 +54,12 @@
       }).join('')
     }
     listBox.addEventListener('click', e => { const b = e.target.closest('[data-id]'); if (b) select(b.dataset.id) })
+    // Console coach: the player pastes the command into the F8 console; the app never types it for them.
+    detail.addEventListener('click', async e => {
+      const b = e.target.closest('[data-copy]'); if (!b) return
+      let ok = false; try { await navigator.clipboard.writeText(b.dataset.copy); ok = true } catch { ok = false }
+      ctx.toast(ok ? T('copied') : T('copyFail'), ok ? b.dataset.copy : '', ok ? 'ok' : 'err')
+    })
 
     async function load() {
       const r = await A().fivem2Sessions().catch(() => null)
@@ -108,13 +114,18 @@
       const hit = a.hitches.slice(0, 40).map(h => `<li data-tone="${CAUSE_TONE[h.primary] || 'idle'}"><span class="fv-mono">${esc(secs(h.startSec))}</span><span class="fv-hw">${esc(h.worstMs)} ms</span><span class="fv-pill" data-tone="${CAUSE_TONE[h.primary] || 'idle'}">${esc(T('cause_' + h.primary))}</span><span class="fv-muted">${esc(h.causes.length > 1 ? h.causes.slice(1).map(c => T('cause_' + c)).join(', ') : '')}</span></li>`).join('')
       const ne = a.net.slice(0, 20).map(e => `<li data-tone="${e.type === 'spike' ? 'warn' : 'danger'}"><span class="fv-mono">${esc(secs(e.startSec + (net ? net.offsetSec : 0)))}</span><span class="fv-hw">${e.worst ? esc(e.worst) + ' ms' : esc(secs(e.endSec - e.startSec + 1))}</span><span class="fv-pill" data-tone="${e.type === 'spike' ? 'warn' : 'danger'}">${esc(T('net_' + e.type))}</span></li>`).join('')
       const causeChips = Object.entries(counts).sort((x, y) => y[1] - x[1]).map(([c, n]) => `<span class="fv-pill" data-tone="${CAUSE_TONE[c] || 'idle'}">${esc(T('cause_' + c))} · ${n}</span>`).join('')
-      detail.innerHTML = `<dl class="fv-stats">${cell('dur', secs(s.durationSec))}${cell('avg', sum.avgFps ? Math.round(sum.avgFps) + ' fps' : null)}${cell('low1', sum.low1Fps ? Math.round(sum.low1Fps) + ' fps' : null)}${cell('hitches', String(a.hitches.length))}</dl>` +
+      const pc = d.pacing || {}
+      const modeRows = (d.modes || []).map(m => `<span class="fv-pill" data-tone="${m.kind === 'composed' ? 'warn' : m.kind === 'direct' ? 'ok' : 'idle'}">${esc(m.mode)} · ${esc(m.pct)}%</span>`).join('')
+      const composed = (d.modes || []).filter(m => m.kind === 'composed').reduce((n, m) => n + m.pct, 0)
+      const modesHtml = modeRows ? `<section class="fv-sec2"><h3 class="fv-h">${esc(T('modesT'))}</h3><div class="fv-pills">${modeRows}</div>${composed >= 10 ? `<p class="fv-banner" data-tone="warn" role="status">${esc(T('modesComposed', { pct: Math.round(composed) }))}</p>` : ''}<p class="fv-muted">${esc(T('modesNote'))}</p></section>` : ''
+      const coachHtml = (d.coach || []).length ? `<section class="fv-sec2"><h3 class="fv-h">${esc(T('coachT'))}</h3><p class="fv-muted">${esc(T('coachNote'))}</p>${d.coach.map(c => `<article class="fv-find" data-sev="info"><div class="fv-find-t"><h4>${esc(T('co_' + c.id))}</h4><p>${esc(T('cw_' + c.id))}</p>${c.cmds.map(k => `<p class="fv-cmd"><code class="fv-mono">${esc(k.cmd)}</code>${k.dev ? `<span class="fv-pill" data-tone="idle">${esc(T('devTag'))}</span>` : ''}<button type="button" class="fv-sec" data-copy="${esc(k.cmd)}">${esc(T('copy'))}</button></p>`).join('')}</div></article>`).join('')}</section>` : ''
+      detail.innerHTML = `<dl class="fv-stats">${cell('dur', secs(s.durationSec))}${cell('avg', sum.avgFps ? Math.round(sum.avgFps) + ' fps' : null)}${cell('low1', sum.low1Fps ? Math.round(sum.low1Fps) + ' fps' : null)}${cell('hitches', String(a.hitches.length))}${cell('spikes', pc.smallSpikes == null ? null : String(pc.smallSpikes))}${cell('steady', pc.consistencyPct == null ? null : pc.consistencyPct + '%')}</dl>` +
         chart(d) +
         `<div class="fv-cols"><section><h3 class="fv-h">${esc(T('hitches'))}</h3>${causeChips ? `<div class="fv-pills">${causeChips}</div>` : ''}` +
         (hit ? `<ul class="fv-ev">${hit}</ul>` : `<p class="fv-muted">${esc(T('noHitches'))}</p>`) +
         (!a.hasTelemetry ? `<p class="fv-muted">${esc(T('noTelemetry'))}</p>` : '') + `</section>` +
         `<section><h3 class="fv-h">${esc(T('netEvents'))}</h3>` + (net ? (ne ? `<ul class="fv-ev">${ne}</ul>` : `<p class="fv-muted">${esc(T('noNetEvents'))}</p>`) : `<p class="fv-muted">${esc(T('noNet'))}</p>`) +
-        `<p class="fv-muted">${esc(T('netNote'))}</p></section></div>`
+        `<p class="fv-muted">${esc(T('netNote'))}</p></section></div>` + modesHtml + coachHtml
     }
 
     load()
@@ -292,7 +303,7 @@
   // ───────────────────────── Crash lab ─────────────────────────
   V.crash = function (host, ctx) {
     const { T, esc, el, A, S } = ctx
-    const st = { log: null, mods: null, filter: 'all', q: '', loading: false }
+    const st = { log: null, mods: null, filter: 'all', q: '', loading: false, file: null }
     const box = el('div', 'fv-crash')
     host.appendChild(box)
 
@@ -305,7 +316,7 @@
         diag = L.found.length ? L.found.map(f => `<article class="fv-find" data-sev="warn"><div class="fv-find-t"><h4>${esc(T('sig_' + f.id))}${f.count > 1 ? ` <span class="fv-muted">×${f.count}</span>` : ''}</h4><p>${esc(T('sigf_' + f.id))}</p><p class="fv-mono fv-sample">${esc(f.sample)}</p></div></article>`).join('') : `<p class="fv-muted">${esc(T('noSigs'))}</p>`
         const q = st.q.toLowerCase()
         const lines = L.lines.filter(l => (st.filter === 'all' || l.sev === st.filter || (st.filter === 'warn' && l.sev === 'error')) && (!q || l.text.toLowerCase().includes(q)))
-        logHtml = `<div class="fv-logbar"><div class="fv-fchips" role="group" aria-label="${esc(T('logFilter'))}">${['all', 'error', 'warn'].map(f => `<button type="button" class="fv-chipb" data-f="${f}" aria-pressed="${st.filter === f}">${esc(T('lf_' + f))}</button>`).join('')}</div><input type="search" class="fv-in" id="fv-lq" value="${esc(st.q)}" placeholder="${esc(T('logSearch'))}" aria-label="${esc(T('logSearch'))}"><span class="fv-muted">${esc(L.file)} · ${esc(ctx.ago(Date.now() - L.at))}</span></div>` +
+        logHtml = `<div class="fv-logbar"><div class="fv-fchips" role="group" aria-label="${esc(T('logFilter'))}">${['all', 'error', 'warn'].map(f => `<button type="button" class="fv-chipb" data-f="${f}" aria-pressed="${st.filter === f}">${esc(T('lf_' + f))}</button>`).join('')}</div><input type="search" class="fv-in" id="fv-lq" value="${esc(st.q)}" placeholder="${esc(T('logSearch'))}" aria-label="${esc(T('logSearch'))}">${(L.files || []).length > 1 ? `<select class="fv-in" id="fv-lf" aria-label="${esc(T('logPick'))}">${L.files.map(x => `<option value="${esc(x.f)}"${x.f === L.file ? ' selected' : ''}>${esc(x.f)} · ${esc(ctx.ago(Date.now() - x.t))}</option>`).join('')}</select>` : `<span class="fv-muted">${esc(L.file)} · ${esc(ctx.ago(Date.now() - L.at))}</span>`}</div>` +
           `<div class="fv-log" tabindex="0" aria-label="${esc(T('logAria'))}">${lines.map(l => `<div class="fv-ll" data-sev="${l.sev}"><span class="fv-lx"></span><span class="fv-mono">${esc(l.text)}</span></div>`).join('') || `<p class="fv-muted">${esc(T('noLines'))}</p>`}</div>`
       } else if (L && !L.ok) logHtml = `<p class="fv-muted">${esc(T(L.error === 'no-log' ? 'noLog' : 'logFail'))}</p>`
       else logHtml = `<p class="fv-muted">${esc(T('loading'))}</p>`
@@ -318,10 +329,11 @@
       const f = e.target.closest('[data-f]'); if (f) { st.filter = f.dataset.f; paint(); return }
       if (e.target.closest('[data-act="reload"]')) load()
     })
+    box.addEventListener('change', e => { if (e.target.id === 'fv-lf') { st.file = e.target.value; load() } })
     box.addEventListener('input', e => { if (e.target.id === 'fv-lq') { st.q = e.target.value; const pos = e.target.selectionStart; paint(); const n = box.querySelector('#fv-lq'); if (n) { n.focus(); try { n.setSelectionRange(pos, pos) } catch { noop() } } } })
     async function load() {
       st.log = null; st.mods = null; paint()
-      const [l, m] = await Promise.all([A().fivem2Logs().catch(() => ({ ok: false, error: 'x' })), A().fivem2Mods().catch(() => ({ ok: false }))])
+      const [l, m] = await Promise.all([A().fivem2Logs({ file: st.file }).catch(() => ({ ok: false, error: 'x' })), A().fivem2Mods().catch(() => ({ ok: false }))])
       st.log = l; st.mods = m; paint()
       const lg = box.querySelector('.fv-log'); if (lg) lg.scrollTop = lg.scrollHeight
     }

@@ -7,10 +7,14 @@ const Cat = require('../../lib/fivem/catalog')
 const Ready = require('../../lib/fivem/readiness')
 const Sig = require('../../lib/fivem/signatures')
 const Attr = require('../../lib/fivem/attribution')
+const Pace = require('../../lib/fivem/pacing')
+const Coach = require('../../lib/fivem/coach')
+const Hist = require('../../lib/fivem/history')
+const Fit = require('../../lib/fivem/fit')
 
 const INI = '[Game]\r\nIVPath=C:\\Games\\Grand Theft Auto V\r\nUpdateChannel=canary\r\nDisableNVSP=0\r\nEnableFullMemoryDump=0\r\nSavedBuildNumber=3258\r\nTelemetry=1\r\n'
-const XML = ['TextureQuality 3', 'ShaderQuality 2', 'AnisotropicFiltering 16', 'ShadowQuality 3', 'Shadow_Distance 1.000000', 'Shadow_SoftShadows 2', 'UltraShadows_Enabled true', 'ReflectionQuality 3', 'SSAO 2',
-  'LodScale 1.500000', 'PedLodBias 0.500000', 'VehicleLodBias 0.500000', 'GrassQuality 3', 'CityDensity 1.000000', 'ParticleQuality 2', 'WaterQuality 2', 'PostFX 3', 'DoF true', 'MotionBlurStrength 0.500000', 'Tessellation 2', 'MSAA 4', 'FXAA_Enabled false']
+const XML = ['TextureQuality 2', 'ShaderQuality 2', 'AnisotropicFiltering 16', 'ShadowQuality 3', 'Shadow_Distance 1.000000', 'Shadow_SoftShadows 2', 'UltraShadows_Enabled true', 'ReflectionQuality 3', 'SSAO 2',
+  'LodScale 1.500000', 'PedLodBias 0.500000', 'VehicleLodBias 0.500000', 'GrassQuality 3', 'CityDensity 1.000000', 'ParticleQuality 2', 'WaterQuality 1', 'PostFX 3', 'DoF true', 'MotionBlurStrength 0.500000', 'Tessellation 2', 'MSAA 4', 'FXAA_Enabled false']
   .map(l => { const [k, v] = l.split(' '); return `    <${k} value="${v}" />` }).join('\n')
 const GFX = `<?xml version="1.0"?>\n<Settings>\n  <graphics>\n${XML}\n  </graphics>\n</Settings>\n`
 
@@ -110,7 +114,21 @@ async function handle(name, args, sender, ctx) {
       const s = session(req && req.id, req && req.id === 's1')
       const rtt = Array.from({ length: 460 }, (_, i) => (i === 130 || i === 131 ? null : i === 300 ? 310 : 26 + (i % 5)))
       const net = req && req.id === 's1' ? { server: SERVERS[0], rtt, offsetSec: 10 } : null
-      return { ok: true, session: s, net, analysis: Attr.analyze({ ...s, net: net && { rtt } }) }
+      const analysis = Attr.analyze({ ...s, net: net && { rtt } })
+      const modes = Pace.modes({ 'Hardware: Independent Flip': 840, 'Composed: Flip': 160 })
+      return { ok: true, session: s, net, analysis, pacing: Pace.analyze(s.bins), modes, coach: Coach.advise(analysis) }
+    }
+    case 'fivem2Fit': {
+      const sv = SERVERS.find(x => x.id === (req && req.id)) || SERVERS[0]
+      const tcp = Fit.tcpStats([24, 26, 25, 27, 24, 26])
+      const r = Fit.evaluate({ installed: true, builds: [3258], server: { reachable: true, build: 3407, pure: 1, resources: 412 }, mods: [{ id: 'reshade', sev: 'low' }], tcp })
+      return { ok: true, at: Date.now(), server: { name: sv.name, host: sv.host, port: sv.port, players: 148, max: 256, build: 3407, pure: 1, resources: 412 }, tcp, items: r.items, fit: r.ok }
+    }
+    case 'fivem2Passport': return { ok: true, passport: { here: { n: 5, minutes: 212, avg: 118, low1: 74 }, elsewhere: { n: 9, minutes: 540, avg: 141, low1: 92 }, enough: true, deltaPct: -16 } }
+    case 'fivem2RouteHistory': {
+      const mk = (day, hour, verdict) => ({ at: Date.now() - day * 86400000, hour, bucket: Hist.bucketOf(hour), verdict, seg: verdict === 'clean' ? 'server' : 'isp', avg: 25, jitter: 2, loss: verdict === 'clean' ? 0 : 6, rounds: 90 })
+      const entries = [mk(7, 21, 'loss-isp'), mk(6, 10, 'clean'), mk(5, 20, 'loss-isp'), mk(3, 22, 'loss-isp'), mk(2, 9, 'clean'), mk(1, 19, 'clean')]
+      return { ok: true, entries, pattern: Hist.pattern(entries) }
     }
     default: return undefined
   }

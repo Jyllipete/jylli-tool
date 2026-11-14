@@ -60,7 +60,7 @@ test('graphics: presets only touch keys that exist and unknown VRAM never means 
   assert.deepEqual(Object.keys(Gfx.preset('performance', cur, 0)).sort(), ['LodScale', 'MSAA', 'TextureQuality'])
   assert.equal(Gfx.textureLimit(0), null)
   assert.equal(Gfx.vramTier(0), 1)
-  assert.equal(Gfx.vramTier(8192), 3)
+  assert.equal(Gfx.vramTier(8192), 2)
 })
 
 // ── route verdict ──────────────────────────────────────────────────────────────────
@@ -153,4 +153,19 @@ test('attribution: network spikes and loss runs are separate events and never bl
   const a = Attr.analyze(session(steady(40), {}, { net: { rtt } }))
   assert.deepEqual(a.net.map(e => e.type), ['spike', 'loss'])
   assert.equal(a.hitches.length, 0)
+})
+
+test('graphics: offered steps stay inside the game ranges (texture, shader, particle 0-2; reflection, postFX, shadow 0-3)', () => {
+  const max = k => Gfx.BY_KEY[k].opts.length - 1
+  for (const k of ['TextureQuality', 'ShaderQuality', 'ParticleQuality']) assert.equal(max(k), 2, k)
+  for (const k of ['ReflectionQuality', 'PostFX', 'ShadowQuality']) assert.equal(max(k), 3, k)
+  assert.equal(Gfx.validValue('TextureQuality', '3'), false)
+  for (const d of Gfx.DEFS) for (const k of ['perf', 'bal']) assert.ok(Gfx.validValue(d.key, d[k]), d.key + ' ' + k)
+})
+test('graphics: the Quality preset never lowers a setting the player already has higher', () => {
+  const cur = { MSAA: '4', ShadowQuality: '3', TextureQuality: '0', GrassQuality: '0', LodScale: '2.000000' }
+  const q = Gfx.preset('quality', cur, 8192)
+  assert.equal(q.MSAA, undefined); assert.equal(q.ShadowQuality, undefined); assert.equal(q.LodScale, undefined)
+  assert.equal(q.TextureQuality, '2')              // raised to what 8 GB holds
+  assert.equal(q.GrassQuality, '1')                // below balanced: raised
 })

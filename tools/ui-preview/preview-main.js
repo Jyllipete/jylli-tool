@@ -335,9 +335,15 @@ async function fivemShots(win, dir, logs, report) {
   await shot(win, path.join(dir, 'fv-3-hops.png'))
   await js("document.querySelector('.fv-findings')?.scrollIntoView({ block: 'start' })"); await sleep(400)
   await shot(win, path.join(dir, 'fv-4-preflight.png'))
+  await js("document.querySelector('.fv [data-act=\"fit\"]')?.click()"); await sleep(900)
+  await js("document.querySelector('.fv-fit')?.scrollIntoView({ block: 'start' })"); await sleep(400)
+  await shot(win, path.join(dir, 'fv-4b-fit.png'))
+  await js("document.querySelector('.fv-hist')?.scrollIntoView({ block: 'center' })"); await sleep(400)
+  await shot(win, path.join(dir, 'fv-4c-history.png'))
   for (const [i, v] of ['sessions', 'graphics', 'client', 'crash'].entries()) {
     await js("window.scrollTo(0, 0); document.getElementById('page-content')?.scrollTo(0, 0); document.querySelector('.fv .j-seg-item[data-id=\"" + v + "\"]')?.click()"); await sleep(1300)
     await shot(win, path.join(dir, 'fv-' + (5 + i) + '-' + v + '.png'))
+    if (v === 'sessions') { await js("document.querySelector('.fv-sdetail .fv-sec2')?.scrollIntoView({ block: 'start' })"); await sleep(400); await shot(win, path.join(dir, 'fv-5b-sessions-extras.png')) }
   }
   await js("document.querySelector('.fv .j-seg-item[data-id=\"graphics\"]')?.click()"); await sleep(400)
   await js("document.querySelector('.fv [data-preset=\"performance\"]')?.click()"); await sleep(900)

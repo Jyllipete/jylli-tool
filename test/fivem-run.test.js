@@ -48,6 +48,7 @@ function harness(opts = {}) {
       if (/JJFV/.test(s)) return { ok: true, out: 'JJFV:' + JSON.stringify(opts.applied || { priority: false, io: false, fso: true, gamebar: false, defender: false }) }
       if (/JJLOC/.test(s)) return { ok: true, out: 'JJLOC:{}' }
       if (/JJMTU/.test(s)) return { ok: true, out: 'JJMTU:{"payload":1464}' }
+      if (/-LiteralPath .*PerfOptions/.test(s) && opts.ifeo !== undefined) return { ok: true, out: 'JJV:' + opts.ifeo }
       return { ok: true, out: '' }
     },
     runRecorded: async (control, action, meta, fn) => {
@@ -121,6 +122,13 @@ test('apply: priority sets the real exes only, through the journal under the fiv
   assert.equal(h.log.rec[0].control, 'fivem2:priority')
   assert.equal(h.log.cmds.length, 2)
   assert.ok(h.log.cmds.every(c => /^reg add "HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\FiveM(_b3258_GTAProcess)?\.exe\\PerfOptions" \/v CpuPriorityClass/.test(c)))
+})
+test('apply: a priority value another tab already set is never overwritten', async () => {
+  const h = harness({ ifeo: 6 })
+  const r = await h.svc.apply('priority')
+  assert.equal(r.ok, false); assert.equal(r.error, 'owned-elsewhere'); assert.equal(h.log.cmds.length, 0)
+  const same = harness({ ifeo: 3 })
+  assert.equal((await same.svc.apply('priority')).ok, true)
 })
 test('apply: a failing registry write is reported, not hidden', async () => {
   const h = harness({ cmdFails: true })
@@ -289,4 +297,75 @@ test('cache: refused while the game runs; legacy restore only knows the retired 
   assert.deepEqual(h.svc.legacy().legacy, ['fivem-network', 'fivem-fso'])
   assert.equal((await h.svc.legacyRestore('rm -rf')).error, 'unknown')
   assert.equal((await h.svc.legacyRestore('fivem-network')).ok, true)
+})
+
+// ── route memory, trace guard, fit check, session extras ────────────────────────────
+test('route: an automatic start is refused while the game runs, an explicit one is not, and the game starting stops a running trace', async () => {
+  const h = harness({ running: true })
+  const add = await h.svc.serverAdd('203.0.113.9:30120')
+  assert.equal((await h.svc.routeStart(add.server.id)).error, 'game-running'); assert.equal(h.log.spawned.length, 0)
+  assert.equal((await h.svc.routeStart(add.server.id, { force: true })).ok, true)
+  assert.equal(h.svc.routeSnapshot().running, true)
+  h.svc.gameStarted()
+  assert.equal(h.svc.routeSnapshot().running, false)
+  h.svc.gameEnded()                                  // the session timer must not outlive the test
+})
+test('route memory: a finished trace of enough rounds is remembered per server, short ones are not', async () => {
+  const h = harness()
+  const add = await h.svc.serverAdd('203.0.113.9:30120')
+  await h.svc.routeStart(add.server.id)
+  h.log.spawned[0].stdout.emit('data', Buffer.from('JJROUTE:{"d":2,"h":[[1,"192.168.1.1",1.2],[2,"203.0.113.9",20.5]]}\n'))
+  h.svc.routeStop()
+  assert.equal(h.svc.routeHistory(add.server.id).entries.length, 0)            // 1 round: not remembered
+  await h.svc.routeStart(add.server.id)
+  for (let i = 0; i < 35; i++) h.log.spawned[1].stdout.emit('data', Buffer.from('JJROUTE:{"d":2,"h":[[1,"192.168.1.1",1.2],[2,"203.0.113.9",20.5]]}\n'))
+  h.svc.routeStop()
+  const r = h.svc.routeHistory(add.server.id)
+  assert.equal(r.entries.length, 1); assert.equal(r.entries[0].verdict, 'clean'); assert.equal(r.pattern.runs, 1); assert.equal(r.pattern.enough, false)
+  assert.equal(h.svc.routeHistory('missing').entries.length, 0)
+})
+test('fitCheck: combines the server, the local builds and mods and six quick connections; read-only', async () => {
+  const h = harness()
+  h.deps.fitGapMs = 0
+  const add = await h.svc.serverAdd('203.0.113.9:30120')
+  const r = await h.svc.fitCheck(add.server.id)
+  assert.equal(r.ok, true); assert.equal(r.tcp.n, 6); assert.equal(r.tcp.got, 6)
+  assert.ok(r.items.some(i => i.id === 'mods-high'))                          // ScriptHookV.dll sits in the fixture's plugins folder
+  assert.equal(h.log.rec.length, 0); assert.equal(h.log.cmds.length, 0)       // nothing was written or journaled
+  assert.equal((await h.svc.fitCheck('missing')).error, 'unknown')
+  const bare = harness({ bare: true }); bare.deps.fitGapMs = 0
+  const a2 = await bare.svc.serverAdd('203.0.113.9:30120')
+  assert.ok((await bare.svc.fitCheck(a2.server.id)).items.some(i => i.id === 'not-installed'))
+})
+test('session: carries pacing, present modes and the console coach next to the hitch list', async () => {
+  const bins = Array.from({ length: 30 }, () => ({ fps: 100, maxMs: 12, frames: 100 })); bins[4] = { fps: 100, maxMs: 40, frames: 100 }
+  const rec = { id: 'abc', game: { id: 'fivem', name: 'FiveM' }, startedAt: 10000, durationSec: 30, bins, series: {}, seconds: 0, summary: { avgFps: 100 }, hist: [], edges: [], presentModes: { 'Hardware: Independent Flip': 80, 'Composed: Flip': 20 } }
+  const h = harness({ recorderRows: [{ id: 'abc', game: rec.game, startedAt: 10000, durationSec: 30, summary: rec.summary }], recorderSessions: { abc: rec } })
+  const s = h.svc.session('abc')
+  assert.equal(s.pacing.smallSpikes, 1)
+  assert.deepEqual(s.modes.map(m => [m.kind, m.pct]), [['direct', 80], ['composed', 20]])
+  assert.ok(Array.isArray(s.coach))
+})
+test('scan: an Enhanced client folder is reported, never edited', async () => {
+  const h = harness()
+  fs.mkdirSync(path.join(h.p.local, 'FiveM for GTAV Enhanced'), { recursive: true })
+  const r = (await h.svc.scan()).report
+  assert.equal(r.loc.enhanced, true); assert.ok(r.findings.some(f => f.id === 'enhanced'))
+})
+test('passport: groups the recorded sessions of one saved server against the rest', async () => {
+  const rows = ['p1', 'p2', 'p3'].map((id, i) => ({ id, game: { id: 'fivem', name: 'FiveM' }, startedAt: 1000000 + i * 3600000, durationSec: 900, summary: { avgFps: 100 + i * 10, low1Fps: 60 }, hasTelemetry: false }))
+  const h = harness({ recorderRows: rows })
+  const add = await h.svc.serverAdd('203.0.113.9:30120')
+  assert.equal(h.svc.passport('missing').error, 'unknown')
+  assert.equal(h.svc.passport(add.server.id).passport, null)                         // no session is tagged with this server
+})
+test('logs: an earlier log can be picked by name from the listing; any other name falls back to the newest', async () => {
+  const h = harness()
+  const dir = path.join(h.p.app, 'logs'); fs.mkdirSync(dir, { recursive: true })
+  fs.writeFileSync(path.join(dir, 'CitizenFX_log_old.log'), 'DXGI_ERROR_DEVICE_HUNG here\n'); fs.utimesSync(path.join(dir, 'CitizenFX_log_old.log'), new Date(1000), new Date(1000))
+  fs.writeFileSync(path.join(dir, 'CitizenFX_log_new.log'), 'all fine\n')
+  const newest = await h.svc.logs()
+  assert.equal(newest.file, 'CitizenFX_log_new.log'); assert.equal(newest.files.length, 2); assert.equal(newest.found.length, 0)
+  assert.equal((await h.svc.logs('CitizenFX_log_old.log')).found[0].id, 'gpu-removed')
+  assert.equal((await h.svc.logs('..\..\evil.log')).file, 'CitizenFX_log_new.log')
 })

@@ -38,7 +38,7 @@ const fmt = (v, d = 0) => (typeof v === 'number' && Number.isFinite(v) ? v.toLoc
     const Route = root.JylliFivemRoute
     const host = el('div', 'jk fv')
     c.appendChild(host)
-    const S = { view: 'uplink', report: null, servers: [], active: null, route: null, meta: null, tracing: false, live: {}, mtu: null, adding: false, addError: null, disposed: false, unsub: [], paintT: 0 }
+    const S = { view: 'uplink', report: null, servers: [], active: null, route: null, meta: null, tracing: false, live: {}, mtu: null, adding: false, addError: null, paused: false, fit: null, fitBusy: false, hist: null, pass: null, disposed: false, unsub: [], paintT: 0 }
     const ctx = { T, esc, el, ago, A, S, show: id => show(id), rescan: () => scan(), toast: (a, b, c2) => { try { root.toast(a, b || '', c2 || 'ok') } catch { /* not ready */ } }, confirm: o => root.showConfirm(o) }
 
     // ── frame ──
@@ -77,7 +77,10 @@ const fmt = (v, d = 0) => (typeof v === 'number' && Number.isFinite(v) ? v.toLoc
     const verdict = el('div', 'fv-verdict')
     const stats = el('dl', 'fv-stats')
     const hopsBox = el('details', 'fv-hops')
-    main.append(radarHost, verdict, stats, hopsBox)
+    const fitBox = el('section', 'fv-fit')
+    const histBox = el('section', 'fv-hist')
+    const passBox = el('section', 'fv-hist')
+    main.append(radarHost, verdict, stats, hopsBox, fitBox, passBox, histBox)
     stage.append(rail, main)
     const findings = el('div', 'fv-findings')
     uv.append(stage, findings)
@@ -95,7 +98,7 @@ const fmt = (v, d = 0) => (typeof v === 'number' && Number.isFinite(v) ? v.toLoc
         const lv = S.live[s.id] || {}
         const pl = players(lv.players, lv.max)
         return `<div class="fv-srv" data-active="${s.id === S.active}"><button type="button" class="fv-srv-main" data-act="use" data-id="${esc(s.id)}" aria-pressed="${s.id === S.active}">` +
-          `<span class="fv-srv-name">${esc(s.name || s.host)}</span><span class="fv-srv-sub">${esc(s.host)}:${s.port}${pl ? ' · ' + esc(pl) : ''}</span></button>` +
+          `<span class="fv-srv-name">${esc(s.name || s.host)}</span><span class="fv-srv-sub">${esc(s.host)}:${s.port}${pl ? ' · ' + esc(pl) : lv.hidden ? ' · ' + esc(T('infoHidden')) : ''}</span></button>` +
           `<button type="button" class="fv-x" data-act="remove" data-id="${esc(s.id)}" aria-label="${esc(T('removeServer', { name: s.name || s.host }))}"><i class="fa fa-xmark" aria-hidden="true"></i></button></div>`
       }).join('')
       rail.innerHTML = `<h3 class="fv-h">${esc(T('servers'))}</h3><div class="fv-srvs">${rows || `<p class="fv-muted">${esc(T('noServers'))}</p>`}</div>` +
@@ -108,7 +111,7 @@ const fmt = (v, d = 0) => (typeof v === 'number' && Number.isFinite(v) ? v.toLoc
       const a = analysis(), sv = activeServer()
       let tone = 'idle', eyebrow, title, lead
       if (!sv) { eyebrow = T('eyNone'); title = T('tNone'); lead = T('lNone') }
-      else if (!S.tracing || !a) { eyebrow = `${sv.host}:${sv.port}`; title = T('tReady'); lead = T('lReady') }
+      else if (!S.tracing || !a) { eyebrow = `${sv.host}:${sv.port}`; title = S.paused ? T('tPaused') : T('tReady'); lead = S.paused ? T('lPaused') : T('lReady') }
       else {
         const v = a.verdict
         tone = toneOf(v.id)
@@ -121,7 +124,8 @@ const fmt = (v, d = 0) => (typeof v === 'number' && Number.isFinite(v) ? v.toLoc
       const primary = sv ? `<button type="button" class="fv-cta" data-act="connect"><i class="fa fa-rocket" aria-hidden="true"></i><span>${esc(T('connect'))}</span></button>` : ''
       const trace = sv ? `<button type="button" class="fv-sec" data-act="trace" aria-pressed="${S.tracing}"><i class="fa fa-${S.tracing ? 'stop' : 'play'}" aria-hidden="true"></i><span>${esc(S.tracing ? T('stopTrace') : T('startTrace'))}</span></button>` : ''
       const mtu = sv ? `<button type="button" class="fv-sec" data-act="mtu"${S.mtu === 'busy' ? ' disabled' : ''}><i class="fa fa-ruler-horizontal" aria-hidden="true"></i><span>${esc(S.mtu === 'busy' ? T('mtuBusy') : T('mtuRun'))}</span></button>` : ''
-      verdict.innerHTML = `<div class="fv-eyebrow"><span class="fv-dot"></span><span>${esc(eyebrow)}</span></div><h2 class="fv-title">${esc(title)}</h2><p class="fv-lead">${esc(lead)}</p><div class="fv-actions">${primary}${trace}${mtu}</div>`
+      const fitBtn = sv ? `<button type="button" class="fv-sec" data-act="fit"${S.fitBusy ? ' disabled' : ''}><i class="fa fa-clipboard-check" aria-hidden="true"></i><span>${esc(S.fitBusy ? T('fitBusy') : T('fitRun'))}</span></button>` : ''
+      verdict.innerHTML = `<div class="fv-eyebrow"><span class="fv-dot"></span><span>${esc(eyebrow)}</span></div><h2 class="fv-title">${esc(title)}</h2><p class="fv-lead">${esc(lead)}</p><div class="fv-actions">${primary}${fitBtn}${trace}${mtu}</div>`
     }
 
     function paintStats() {
@@ -144,6 +148,64 @@ const fmt = (v, d = 0) => (typeof v === 'number' && Number.isFinite(v) ? v.toLoc
     }
     hopsBox.addEventListener('toggle', () => { if (hopsBox.open) { hopsBox.dataset.built = '0'; paintHops() } })
 
+    // ── Fit Check: one read-only look at this server and this PC ──
+    function paintFit() {
+      const f = S.fit
+      if (!f || !activeServer() || f.serverId !== S.active) { fitBox.hidden = true; fitBox.innerHTML = ''; return }
+      fitBox.hidden = false
+      const items = f.items.map(i => `<article class="fv-find" data-sev="${esc(i.sev)}"><div class="fv-find-t"><h4>${esc(T('ft_' + i.id, i.vars))}</h4><p>${esc(T('fw_' + i.id, i.vars))}</p></div></article>`).join('')
+      const sv = f.server || {}, t = f.tcp || {}
+      const facts = [sv.players != null ? players(sv.players, sv.max) + ' ' + T('fitPlayers') : null, sv.build != null ? T('fitBuild', { n: sv.build }) : null, sv.resources != null ? T('fitRes', { n: sv.resources }) : null, t.avg != null ? T('fitTcp', { avg: fmt(t.avg, 0), loss: fmt(t.lossPct, 0), n: t.n }) : null].filter(Boolean)
+      fitBox.innerHTML = `<h3 class="fv-h">${esc(T('fitT', { name: sv.name || '' }))}</h3>${items || `<p class="fv-muted">${esc(T('fitOk'))}</p>`}<p class="fv-muted">${esc(facts.join(' · ') || T('fitNoFacts'))}</p><p class="fv-muted">${esc(T('fitNote'))}</p>`
+    }
+    async function runFit() {
+      const sv = activeServer(); if (!sv || S.fitBusy) return
+      S.fitBusy = true; paintVerdict()
+      const r = await A().fivem2Fit({ id: sv.id }).catch(() => null)
+      S.fitBusy = false; if (S.disposed) return
+      S.fit = r && r.ok ? { ...r, serverId: sv.id } : null
+      paintVerdict(); paintFit()
+      if (!r || !r.ok) ctx.toast(T('fitFail'), '', 'err')
+    }
+
+    // ── Server Passport: what this PC measured on this server, against everywhere else ──
+    function paintPass() {
+      const p = S.pass
+      if (!p) { passBox.hidden = true; passBox.innerHTML = ''; return }
+      passBox.hidden = false
+      const h = p.here, e = p.elsewhere
+      const cell = (k, v, unit) => `<div><dt>${esc(T('pp_' + k))}</dt><dd>${v == null ? dash : esc(v) + (unit ? `<small>${esc(unit)}</small>` : '')}</dd></div>`
+      const cmp = p.enough && p.deltaPct != null ? T(p.deltaPct === 0 ? 'ppSame' : p.deltaPct > 0 ? 'ppBetter' : 'ppWorse', { pct: Math.abs(p.deltaPct), n: e.n }) : T('ppFew')
+      passBox.innerHTML = `<h3 class="fv-h">${esc(T('ppT'))}</h3><dl class="fv-stats">${cell('sessions', String(h.n), '')}${cell('minutes', String(h.minutes), 'min')}${cell('avg', h.avg == null ? null : fmt(h.avg, 0), 'fps')}${cell('low1', h.low1 == null ? null : fmt(h.low1, 0), 'fps')}${e ? cell('elseAvg', e.avg == null ? null : fmt(e.avg, 0), 'fps') : ''}</dl><p class="fv-muted">${esc(cmp)}</p><p class="fv-muted">${esc(T('ppNote'))}</p>`
+    }
+    async function loadPass() {
+      const id = S.active; if (!id) { S.pass = null; paintPass(); return }
+      const r = await A().fivem2Passport({ id }).catch(() => null)
+      if (S.disposed || id !== S.active) return
+      S.pass = r && r.ok ? r.passport : null; paintPass()
+    }
+
+    // ── Route memory: what earlier traces of this server showed ──
+    function paintHist() {
+      const h = S.hist
+      if (!h || !h.entries.length) { histBox.hidden = true; histBox.innerHTML = ''; return }
+      histBox.hidden = false
+      const p = h.pattern
+      const cells = Object.keys(p.buckets).map(b => { const x = p.buckets[b]; return `<div data-tone="${x.n === 0 ? 'idle' : x.bad / x.n >= 0.5 ? 'danger' : x.bad ? 'warn' : 'ok'}"><dt>${esc(T('hb_' + b))}</dt><dd>${x.n ? esc(x.bad + ' / ' + x.n) : dash}</dd></div>` }).join('')
+      const lines = []
+      lines.push(T('histRuns', { n: p.runs, bad: p.badRuns }))
+      if (p.worst) lines.push(T('histWorst', { when: T('hb_' + p.worst.bucket).toLowerCase(), bad: p.worst.bad, n: p.worst.n }))
+      if (p.repeat) lines.push(T('histRepeat', { what: T('v_' + p.repeat.verdict), n: p.repeat.count }))
+      if (!p.enough) lines.push(T('histFew'))
+      histBox.innerHTML = `<h3 class="fv-h">${esc(T('histT'))}</h3><dl class="fv-stats">${cells}</dl>${lines.map(l => `<p class="fv-muted">${esc(l)}</p>`).join('')}`
+    }
+    async function loadHist() {
+      const id = S.active; if (!id) { S.hist = null; paintHist(); return }
+      const r = await A().fivem2RouteHistory({ id }).catch(() => null)
+      if (S.disposed || id !== S.active) return
+      S.hist = r && r.ok ? r : null; paintHist()
+    }
+
     function paintFindings() {
       const r = S.report
       if (!r) { findings.innerHTML = ''; return }
@@ -155,7 +217,7 @@ const fmt = (v, d = 0) => (typeof v === 'number' && Number.isFinite(v) ? v.toLoc
 
     function paintLive() { radar.update({ analysis: analysis() }); paintVerdict(); paintStats(); paintHops() }
     function schedule() { if (S.paintT || S.disposed) return; S.paintT = setTimeout(() => { S.paintT = 0; if (!S.disposed) paintLive() }, 400) }
-    function paintAll() { paintChips(); paintRail(); paintLive(); paintFindings() }
+    function paintAll() { paintChips(); paintRail(); paintLive(); paintFindings(); paintFit(); paintHist(); paintPass() }
 
     // ── events ──
     uv.addEventListener('click', async e => {
@@ -164,8 +226,9 @@ const fmt = (v, d = 0) => (typeof v === 'number' && Number.isFinite(v) ? v.toLoc
       if (act === 'use') return useServer(id)
       if (act === 'remove') return removeServer(id)
       if (act === 'connect') return connect()
-      if (act === 'trace') return S.tracing ? stopTrace() : startTrace()
+      if (act === 'trace') return S.tracing ? stopTrace() : startTrace(true)
       if (act === 'mtu') return runMtu()
+      if (act === 'fit') return runFit()
       const go = { 'open-client': 'client', 'open-graphics': 'graphics', 'open-crash': 'crash', 'open-uplink': 'uplink' }[act]
       if (go) show(go)
     })
@@ -183,7 +246,7 @@ const fmt = (v, d = 0) => (typeof v === 'number' && Number.isFinite(v) ? v.toLoc
     async function useServer(id) {
       if (id === S.active) return
       const r = await A().fivem2ServerUse({ id }); if (S.disposed) return
-      S.servers = r.servers; S.active = r.active; S.mtu = null; paintRail()
+      S.servers = r.servers; S.active = r.active; S.mtu = null; S.fit = null; paintRail(); paintFit(); loadHist(); loadPass()
       if (S.tracing) switchTarget(); else paintLive()
       refreshLive(id)
     }
@@ -198,15 +261,18 @@ const fmt = (v, d = 0) => (typeof v === 'number' && Number.isFinite(v) ? v.toLoc
     async function refreshLive(id) {
       const r = await A().fivem2ServerLive({ id }).catch(() => null)
       if (S.disposed || !r || !r.ok) return
-      S.live[id] = { players: r.players, max: r.max, httpMs: r.httpMs }; paintRail()
+      S.live[id] = { players: r.players, max: r.max, httpMs: r.httpMs, hidden: r.hidden === true }; paintRail()
     }
-    async function startTrace() {
+    // force = the player pressed Start. Automatic starts are refused by the service while the game runs (nothing probes beside the game).
+    async function startTrace(force) {
       const sv = activeServer(); if (!sv) return
-      const r = await A().fivem2RouteStart({ id: sv.id }); if (S.disposed) return
+      const r = await A().fivem2RouteStart({ id: sv.id, force: force === true }); if (S.disposed) return
+      if (r && r.error === 'game-running' && !force) { S.tracing = false; S.paused = true; paintVerdict(); return }
+      S.paused = false
       if (!r || !r.ok) { S.tracing = false; paintVerdict(); ctx.toast(T('traceFail'), T('traceFail_' + ((r && r.error) || 'x')), 'err'); return }
       S.route = Route.create(); S.meta = { id: sv.id, ip: r.ip }; S.tracing = true; paintLive()
     }
-    async function stopTrace() { S.tracing = false; await A().fivem2RouteStop().catch(() => {}); S.meta = null; paintLive() }
+    async function stopTrace() { S.tracing = false; await A().fivem2RouteStop().catch(() => {}); S.meta = null; paintLive(); loadHist() }
     async function switchTarget() { await stopTrace(); startTrace() }
     async function runMtu() {
       const sv = activeServer(); if (!sv) return
@@ -243,6 +309,7 @@ const fmt = (v, d = 0) => (typeof v === 'number' && Number.isFinite(v) ? v.toLoc
       if (snap && snap.ok && snap.running && snap.state) { S.route = snap.state; S.meta = snap.meta; S.tracing = true }
       await scan()
       if (S.disposed) return
+      loadHist(); loadPass()
       if (!S.tracing && activeServer()) startTrace()
       if (activeServer()) refreshLive(S.active)
     })()

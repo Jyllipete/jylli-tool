@@ -1106,6 +1106,8 @@ LANG.en = {
       analyticsConsentAllow:'Share stats',
       settingsStartup:'Start at Windows Startup',
       settingsStartupDesc:'Launch Jylli Tool automatically when Windows starts',
+      settingsHideOnGame:'Hide to tray when a game starts',
+      settingsHideOnGameDesc:'When a game is detected, Jylli Tool hides to the system tray. It keeps running; open it again from the tray icon.',
       startupTaskFailed:'Failed to update startup task',
       fingerprintBannerTitle:'Hardware mismatch detected',
       fingerprintBannerDesc:'{n} applied tweak{s} may not suit your current hardware.',

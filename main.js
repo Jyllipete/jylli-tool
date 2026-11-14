@@ -201,6 +201,8 @@ async function _updateSystemContext() {
         if (entry.videoCall)    videoCall     = true
         if (entry.mediaRender)  mediaRendering = true
       }
+      // FiveM's game process carries the build number (FiveM_b3258_GTAProcess.exe); the list above only knows one build.
+      if (!foundGame) { for (const e of currentExes) { if (/^fivem_b\d+_gtaprocess\.exe$/.test(e)) { foundGame = GAME_DATABASE.find(g => g.exe === 'fivem.exe') || null; break } } }
       for (const launcher of ['steam.exe','epicgameslauncher.exe','battlenet.exe','origin.exe','eadesktop.exe','galaxyclient.exe','gog galaxy.exe']) {
         if (currentExes.has(launcher)) { launcherActive = true; break }
       }
@@ -222,6 +224,12 @@ async function _updateSystemContext() {
         try { gpuSvc().gameStarted() } catch {}
         try { powerSvc().gameStarted() } catch {}
         mainWindow?.webContents.send('game-detected', { name: _systemContext.gameName, genre: _systemContext.gameGenre })
+        // Settings > "Hide Jylli Tool to the tray when a game starts". Not in the first seconds after launch (the user just opened the app on purpose),
+        // and only the window is hidden: detection, Pulse and the tray keep running, so the game exit is still noticed.
+        if (settings.hideOnGame === true && mainWindow && !mainWindow.isDestroyed() && mainWindow.isVisible() && Date.now() - sessionStartTime > 15000) {
+          mainWindow.hide(); updateTrayMenu()
+          mainWindow.webContents.send('log', { msg: `Game detected (${_systemContext.gameName || 'game'}): Jylli Tool hidden to the tray. Open it from the tray icon.`, level: 'info', ts: new Date().toLocaleTimeString() })
+        }
         if (settings.gameAutoOptimize) _triggerGameAutoOptimize()
         // Auto-open FiveM HUD if the detected game is FiveM/GTA5 and setting is enabled
         const gName = (_systemContext.gameName || '').toLowerCase()
@@ -1092,6 +1100,7 @@ app.whenReady().then(async () => {
   auth = createAuth({ BOT_URL, userDataDir: userData, safeStorage, userAgent: 'jylli-tool/' + APP_VERSION })
   await auth.ready   // stored session is decrypted (async safeStorage) before any window asks about premium
   snapshots = createSnapshotStore(path.join(userData, 'snapshots'))
+  setTimeout(() => { pulseRecover().catch(() => {}) }, 4000)   // a boost that was running when the PC lost power or the app crashed is put back first
   if (snapshots.load('update-guard')) setUpdateGuard(false).catch(() => {})   // Windows Update must never stay disabled after Jylli Tool is gone
   startupTrace('createWindow starting')
   createWindow(); createTray()
@@ -1201,7 +1210,7 @@ app.on('will-quit', (e) => {
   const sessionEndPromise = duration > 10000
     ? webhookSessionEnd(duration, sessionPageVisits, sessionTweaksCount)
     : Promise.resolve()
-  const cleanup = Promise.all([(sessionEndPromise || Promise.resolve()).finally(() => presenceShutdown().catch(() => {})), resumeAllFrozen(), (_powerLimit ? _powerLimit.onQuit().catch(() => {}) : null), snapshots?.load('update-guard') ? setUpdateGuard(false) : null])
+  const cleanup = Promise.all([(sessionEndPromise || Promise.resolve()).finally(() => presenceShutdown().catch(() => {})), resumeAllFrozen(), (_powerLimit ? _powerLimit.onQuit().catch(() => {}) : null), (pulseActivePreset ? pulseRestoreAll(() => {}).catch(() => {}) : null), snapshots?.load('update-guard') ? setUpdateGuard(false) : null])
   const timeout = new Promise(resolve => setTimeout(resolve, 6500))
   Promise.race([cleanup, timeout]).finally(() => {
     if (_updateReady && autoUpdater) {
@@ -2488,7 +2497,12 @@ Write-Output "GPU_TEMP=0"
   }
 }
 
-ipcMain.handle('get-metrics', async () => {
+ipcMain.handle('get-metrics', async (e) => {
+  // The FiveM overlay only reads: it must not restart the polling that hiding the app to the tray stopped (a game is running then).
+  if (fivemHudWindow && !fivemHudWindow.isDestroyed() && e && e.sender === fivemHudWindow.webContents) {
+    try { if (telemetrySvc().osHealthy()) return _hub.legacyMetrics() } catch {}
+    return _lastMetrics ?? {}
+  }
   if (!_lastMetrics) await collectMetrics()
   if (!_metricsInterval) {
     _metricsInterval = setInterval(collectMetrics, 3000)
@@ -3032,7 +3046,7 @@ function journalSvc() {
       emit: (ch, payload) => mainWindow?.webContents.send(ch, payload),
       loadSettings, saveSettings, writeLog: debugLog,
       noteSettingsWrites: patch => { for (const [k, v] of Object.entries(patch)) _settingsWriteLog.note(k, v) },
-      handlers: { 'gpu-power-limit': powerLimitSvc().undoHandler, dns: dnsUndoHandler, ...autoOptiUndoHandlers, ...powerUndoHandlers, ...debloatSvc().handlers, ...fivemSvc().handlers(), ...gamecfgSvc().handlers() },
+      handlers: { 'pulse-priority': pulsePriorityUndo, 'gpu-power-limit': powerLimitSvc().undoHandler, dns: dnsUndoHandler, ...autoOptiUndoHandlers, ...powerUndoHandlers, ...debloatSvc().handlers, ...fivemSvc().handlers(), ...gamecfgSvc().handlers() },
       manifest: (() => { try { return require('./lib/tweak-manifest.json') } catch { return {} } })(),
     })
     try { _journalSvc.journal.rotate() } catch {}
@@ -3348,6 +3362,7 @@ const RETIRED_TWEAKS = {
   'tcp-ctcp':                  'Windows uses CUBIC by default, which performs as well or better for games and downloads.',
   'nic-flow-control':          'Changes how the adapter paces packets but has no measurable effect on latency.',
   'cursor-max-rate':           'The mouse data queue size is not a limit on current Windows; no measurable effect.',
+  'fix-fivem-fullscreen':      'Replaced by the FiveM tab (Client view), which edits only the flag it adds and can undo it. Its old restore stays so earlier changes can still be undone.',
   'raw-aim-curve':             'Covered by Disable Mouse Acceleration; the extra curve table changes nothing further.',
   // Retired in the performance audit: every value is a Windows default, undocumented, aimed at a different workload, or not a performance change.
   'tcp-stack':                 'Every value it writes is already the Windows default except initialrto=2000, which is slower than the default of 1000.',
@@ -5629,8 +5644,9 @@ const TWEAKS = {
       const lad = process.env.LOCALAPPDATA || ''
       const fivemBase = path.join(lad, 'FiveM', 'FiveM.app')
       const paths = [
-        path.join(fivemBase, 'data', 'cache'),
-        path.join(fivemBase, 'data', 'server-cache'),
+        // Never the whole cache / server-cache folders: their game subfolders hold multi-GB assets (docs/FIVEM_EVIDENCE.md). Cleanup's target list is the real owner.
+        path.join(fivemBase, 'data', 'cache', 'browser'),
+        path.join(fivemBase, 'data', 'cache', 'subprocess'),
         path.join(fivemBase, 'data', 'server-cache-priv'),
         path.join(lad, 'NVIDIA', 'DXCache'),
       ]
@@ -5661,9 +5677,10 @@ const TWEAKS = {
     restore: async (s, ps) => {
       const base = 'HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options'
       for (const exe of ['FiveM.exe','GTA5.exe','FiveM_b3095_GTAProcess.exe','CitizenFX.exe']) {
-        await ps(`Set-ItemProperty -Path "${base}\\${exe}\\PerfOptions" -Name CpuPriorityClass -Value 2 -Force -EA SilentlyContinue`)
+        // Only the value this tweak wrote (3 = High): the CPU & Memory tab may own a different one for the same program.
+        await ps(`$k="${base}\\${exe}\\PerfOptions"; if((Get-ItemProperty -Path $k -Name CpuPriorityClass -EA SilentlyContinue).CpuPriorityClass -eq 3){ Remove-ItemProperty -Path $k -Name CpuPriorityClass -EA SilentlyContinue }`)
       }
-      s('FiveM/GTA priorities restored to Normal.', 'ok')
+      s('FiveM/GTA priority value removed (only where this tweak had set it).', 'ok')
     }
   },
   'fivem-io-priority': {
@@ -5680,8 +5697,8 @@ const TWEAKS = {
     },
     restore: async (s, ps) => {
       const base = 'HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options'
-      for (const exe of ['FiveM.exe','GTA5.exe','FiveM_b3095_GTAProcess.exe']) await ps(`Set-ItemProperty -Path "${base}\\${exe}\\PerfOptions" -Name IoPriority -Value 2 -Force -EA SilentlyContinue`)
-      s('FiveM I/O priority restored.', 'ok')
+      for (const exe of ['FiveM.exe','GTA5.exe','FiveM_b3095_GTAProcess.exe']) await ps(`$k="${base}\\${exe}\\PerfOptions"; if((Get-ItemProperty -Path $k -Name IoPriority -EA SilentlyContinue).IoPriority -eq 3){ Remove-ItemProperty -Path $k -Name IoPriority -EA SilentlyContinue }`)
+      s('FiveM I/O priority value removed (only where this tweak had set it).', 'ok')
     }
   },
   'fivem-defender': {
@@ -6760,10 +6777,9 @@ if ($r.Count -eq 0) { Write-Output "NONE_FOUND" } else { foreach ($x in $r) { Wr
     },
     restore: async (s, ps) => {
       const compat = 'HKCU:\\Software\\Microsoft\\Windows NT\\CurrentVersion\\AppCompatFlags\\Layers'
-      for (const exe of ['FiveM.exe', 'GTA5.exe', 'FiveM_b3095_GTAProcess.exe']) {
-        await ps(`Remove-ItemProperty -Path "${compat}" -Name "${exe}" -EA SilentlyContinue`)
-      }
-      s('Fullscreen compat flags removed.', 'ok')
+      // Remove only the flag this fix added; other compatibility flags on the same program (RUNASADMIN, HIGHDPIAWARE...) stay.
+      await ps(`$k='${compat}'; foreach($n in @('FiveM.exe','GTA5.exe','FiveM_b3095_GTAProcess.exe')){ $v=(Get-ItemProperty -Path $k -Name $n -EA SilentlyContinue).$n; if($v -and $v -match 'DISABLEDXMAXIMIZEDWINDOWEDMODE'){ $rest=(($v -replace 'DISABLEDXMAXIMIZEDWINDOWEDMODE','') -replace '\\s+',' ').Trim(); if($rest -eq '' -or $rest -eq '~'){ Remove-ItemProperty -Path $k -Name $n -EA SilentlyContinue } else { Set-ItemProperty -Path $k -Name $n -Value $rest } } }`)
+      s('Fullscreen compat flag removed (other flags kept).', 'ok')
       const gtaPathR = await ps(`
         $paths = @(
           "$env:ProgramFiles\\Rockstar Games\\Grand Theft Auto V",
@@ -10268,356 +10284,303 @@ ipcMain.handle('arma-write-settings', async (_, changes, manualDir) => {
 })
 
 // ─── Pulse ────────────────────────────────────────────────────────────────────
+// docs/PULSE_EVIDENCE.md. A boost is a plan (lib/pulse/plan.js) made from this PC, this game and what is running. Each change goes through the
+// change journal (control `pulse:<step>`), is read back to prove it took effect, and is undone when the boost ends, the game closes, an error
+// happens, the app quits, or - after a crash or forced shutdown - at the next start (pulseRecover).
 const PULSE_PRESETS = {
-  fortnite:     { name: 'Fortnite',            exe: 'FortniteClient-Win64-Shipping', priority: 'High',        killList: ['EpicGamesLauncher','EpicWebHelper','chrome','msedge'] },
-  valorant:     { name: 'Valorant',            exe: 'VALORANT-Win64-Shipping',       priority: 'High',        killList: ['chrome','msedge','OneDrive'] },
-  csgo:         { name: 'CS2 / CS:GO',         exe: 'cs2',                           priority: 'High',        killList: ['chrome','msedge','steam','steamwebhelper'] },
-  fivem:        { name: 'FiveM',               exe: 'FiveM_GTAProcess',              priority: 'AboveNormal', cpuIntensive: true,  killList: ['chrome','msedge','OneDrive','Teams'] },
-  warzone:      { name: 'Warzone',             exe: 'cod',                           priority: 'High',        killList: ['chrome','msedge','OneDrive'] },
-  apex:         { name: 'Apex Legends',        exe: 'r5apex',                        priority: 'High',        killList: ['chrome','msedge','EpicGamesLauncher'] },
-  minecraft:    { name: 'Minecraft',           exe: 'javaw',                         priority: 'AboveNormal', cpuIntensive: true,  killList: ['chrome','msedge','OneDrive'] },
-  arma:         { name: 'Arma Reforger',       exe: 'ArmaReforger*',                 priority: 'High',        cpuIntensive: true,  killList: ['chrome','msedge','OneDrive','Teams'] },
-  tarkov:       { name: 'Escape from Tarkov',  exe: 'EscapeFromTarkov',              priority: 'High',        cpuIntensive: true,  killList: ['chrome','msedge','OneDrive'] },
-  rocketleague: { name: 'Rocket League',       exe: 'RocketLeague',                  priority: 'High',        killList: ['chrome','msedge','EpicGamesLauncher'] },
-  rust:         { name: 'Rust',                exe: 'RustClient',                    priority: 'High',        killList: ['chrome','msedge','OneDrive'] },
-  r6:           { name: 'Rainbow Six Siege',   exe: 'RainbowSix',                    priority: 'High',        killList: ['chrome','msedge','OneDrive','Teams'] },
-  overwatch:    { name: 'Overwatch 2',         exe: 'Overwatch',                     priority: 'High',        killList: ['chrome','msedge','OneDrive'] },
+  fortnite:     { name: 'Fortnite',            exe: 'FortniteClient-Win64-Shipping' },
+  valorant:     { name: 'Valorant',            exe: 'VALORANT-Win64-Shipping' },
+  csgo:         { name: 'CS2 / CS:GO',         exe: 'cs2' },
+  fivem:        { name: 'FiveM',               exe: 'FiveM_GTAProcess' },
+  warzone:      { name: 'Warzone',             exe: 'cod' },
+  apex:         { name: 'Apex Legends',        exe: 'r5apex' },
+  minecraft:    { name: 'Minecraft',           exe: 'javaw' },
+  arma:         { name: 'Arma Reforger',       exe: 'ArmaReforger*' },
+  tarkov:       { name: 'Escape from Tarkov',  exe: 'EscapeFromTarkov' },
+  rocketleague: { name: 'Rocket League',       exe: 'RocketLeague' },
+  rust:         { name: 'Rust',                exe: 'RustClient' },
+  r6:           { name: 'Rainbow Six Siege',   exe: 'RainbowSix' },
+  overwatch:    { name: 'Overwatch 2',         exe: 'Overwatch' },
 }
 
-// Saved originals restored on pulse-stop
 let pulseActivePreset = null
-let pulseOrigMmcssResponsiveness = null
-let pulseOrigPowerPlan = null
 let autoPulseTriggeredPreset = null  // set when game watcher auto-activated pulse
 let lastUsedPulsePreset = null       // remembered for tray "Start Pulse" shortcut
 let pulseStartTimestamp = null       // set when Pulse activates, cleared on restore
+let pulseBatchId = null
+let pulseVia = 'manual'
+let pulseDeferredGame = false        // the boost started before the game did: its priority is applied when the game appears
+const Pu2Plan = require('./lib/pulse/plan')
+const pulseNewId = () => require('crypto').randomBytes(6).toString('hex')
+const pulseExePattern = preset => preset.exe.replace('_GTAProcess', '*GTAProcess')
 
-
-const PCI_PATH_RX = /^(?:Microsoft\.PowerShell\.Core\\Registry::)?HKEY_LOCAL_MACHINE\\SYSTEM\\CurrentControlSet\\Enum\\PCI\\[\w&.#{}\-\\]+$/
-const PULSE_PARK_GUID = '0cc5b647-c1df-4637-891a-dec35c318583'
-const PULSE_BOOST_GUID = 'be337238-0d82-4146-a960-4f3749d470c7'
-const PULSE_SUB_PROCESSOR = '54533251-82be-4824-96c1-47b60b740d00'
-let _pulseDeprioritised = []   // [{ id, name, orig }] — only processes Pulse itself lowered, so Stop can put exactly those back
-
-const PRIORITY_SKIP_RX = '^(System|Idle|Registry|smss|csrss|wininit|winlogon|lsass|lsm|services|svchost|MsMpEng|NisSrv|audiodg|dwm|explorer|ctfmon|conhost|sihost|taskhostw|fontdrvhost|RuntimeBroker|SearchHost|StartMenuExperienceHost|ShellExperienceHost|TextInputHost|WmiPrvSE|Memory Compression|electron|Jylli.*|PresentMon.*|JylliSensor)$'
-/** Lowers user processes that are at Normal priority and reports exactly which ones, so they can be put back. */
-async function lowerBackgroundPriorities(excludeNamePattern) {
-  const r = await runPS(`
-    $gamePid = $null
-    ${excludeNamePattern ? `$gamePid = (Get-Process -EA SilentlyContinue | Where-Object { $_.Name -like ${V.psQuote(excludeNamePattern)} } | Select-Object -First 1).Id` : ''}
-    Get-Process -EA SilentlyContinue | Where-Object { $_.Id -ne $gamePid -and $_.ProcessName -notmatch ${V.psQuote(PRIORITY_SKIP_RX)} } | ForEach-Object {
-      try {
-        $orig = $_.PriorityClass
-        if ($orig -eq 'Normal') { $_.PriorityClass = 'BelowNormal'; Write-Output ("PRIO|" + $_.Id + "|" + $_.ProcessName + "|" + $orig) }
-      } catch {}
-    }
-  `, 20000)
-  const out = []
-  for (const line of String(r.out || '').split(/\r?\n/)) {
-    const m = /^PRIO\|(\d+)\|([^|]+)\|(\w+)$/.exec(line.trim())
-    if (m) out.push({ id: Number(m[1]), name: m[2], orig: m[3] })
+/**
+ * One PowerShell run over a list of processes. Every process is re-identified by pid + name + start time first, so a recycled pid is never touched.
+ * mode 'set':     only[] = classes the process may currently have; sets `to`; prints SET|pid|before|after (read back), SKIP|pid|class, DENIED|pid, GONE|pid
+ * mode 'restore': only[0] = the class Pulse set; puts `to` back only if the process still has it; LEFT|pid|class when the user changed it since
+ * mode 'read':    CUR|pid|class
+ */
+function pulsePrioScript(mode, items) {
+  const payload = JSON.stringify(items.slice(0, 60).map(x => ({ id: Number(x.id) || 0, name: String(x.name || ''), st: String(x.st || ''), only: (x.only || []).map(String), to: String(x.to || '') })))
+  return `$items = ConvertFrom-Json ${V.psQuote(payload)}
+$mode = '${mode}'
+foreach ($i in @($items)) {
+  $p = Get-Process -Id $i.id -EA SilentlyContinue
+  if (-not $p -or $p.ProcessName -ne $i.name) { Write-Output ('GONE|' + $i.id); continue }
+  $st = ''; try { $st = $p.StartTime.ToFileTimeUtc().ToString() } catch {}
+  if ($i.st -and $st -and $st -ne $i.st) { Write-Output ('GONE|' + $i.id); continue }
+  $cur = ''; try { $cur = $p.PriorityClass.ToString() } catch { Write-Output ('DENIED|' + $i.id); continue }
+  if ($mode -eq 'read') { Write-Output ('CUR|' + $i.id + '|' + $cur); continue }
+  if ($mode -eq 'restore' -and @($i.only).Count -gt 0 -and $cur -ne @($i.only)[0]) { Write-Output ('LEFT|' + $i.id + '|' + $cur); continue }
+  if ($mode -eq 'set' -and @($i.only).Count -gt 0 -and (@($i.only) -notcontains $cur)) { Write-Output ('SKIP|' + $i.id + '|' + $cur); continue }
+  try { $p.PriorityClass = $i.to } catch { Write-Output ('DENIED|' + $i.id); continue }
+  $p.Refresh(); $after = ''; try { $after = $p.PriorityClass.ToString() } catch {}
+  Write-Output ('SET|' + $i.id + '|' + $cur + '|' + $after)
+}`
+}
+function pulsePrioParse(out) {
+  const res = new Map()
+  for (const line of String(out || '').split(/\r?\n/)) {
+    const m = /^(SET|SKIP|DENIED|GONE|LEFT|CUR)\|(\d+)(?:\|(\w*))?(?:\|(\w*))?$/.exec(line.trim())
+    if (m) res.set(Number(m[2]), { st: m[1], a: m[3] || '', b: m[4] || '' })
   }
-  return out
+  return res
 }
-/** Puts back only processes that still exist, are still the same program and still carry the lowered class. */
-async function restoreLoweredPriorities(items) {
-  if (!items?.length) return
-  const payload = JSON.stringify(items.slice(0, 400).map(x => ({ Id: Number(x.id) || 0, Name: String(x.name || ''), Class: String(x.orig || 'Normal') })))
-  await runPS(`
-    $items = ConvertFrom-Json ${V.psQuote(payload)}
-    foreach ($i in $items) {
-      $p = Get-Process -Id $i.Id -EA SilentlyContinue
-      if ($p -and $p.ProcessName -eq $i.Name -and $p.PriorityClass -eq 'BelowNormal') { try { $p.PriorityClass = $i.Class } catch {} }
-    }
-  `, 15000).catch(() => {})
+/** Journal undo for a priority Pulse set. A process that is gone, or whose class the user changed since, counts as restored. */
+const pulsePriorityUndo = {
+  read: async c => {
+    const r = await runPS(pulsePrioScript('read', [{ id: c.id, name: c.name, st: c.st }]), 10000)
+    const x = pulsePrioParse(r.out).get(Number(c.id))
+    return x && x.st === 'CUR' ? { exists: true, value: x.a } : { exists: true, value: c.after && c.after.value }
+  },
+  restore: async c => {
+    const r = await runPS(pulsePrioScript('restore', [{ id: c.id, name: c.name, st: c.st, only: [c.after && c.after.value], to: c.before && c.before.value }]), 10000)
+    return !!r.ok
+  },
 }
 
-async function pulseRestoreAll(send) {
-  // Restore interrupt affinity exactly as it was before Pulse changed it
-  {
-    const snap = snapshots.load('pulse-affinity') || {}
-    let affinityOk = true
-    for (const [devPath, v] of Object.entries(snap)) {
-      if (!PCI_PATH_RX.test(devPath)) continue
+/** Applies a priority to a list of processes under the journal and returns what the read-back proved: Map pid -> { st, a, b }. */
+async function pulseSetPriorities(control, items, to) {
+  let res = new Map()
+  await journalSvc().runRecorded(control, 'apply', { via: pulseVia, batchId: pulseBatchId }, async (ps, cmd, note) => {
+    const r = await runPS(pulsePrioScript('set', items.map(x => ({ ...x, to }))), 30000)
+    res = pulsePrioParse(r.out)
+    for (const x of items) {
+      const o = res.get(Number(x.id))
+      if (o && o.st === 'SET' && o.b === to) note({ kind: 'pulse-priority', id: Number(x.id), name: x.name, st: String(x.st || ''), before: { exists: true, value: o.a }, after: { exists: true, value: o.b } })
+    }
+  })
+  return res
+}
+
+/** What the planner needs, from one PowerShell run (about 1 s: two CPU-time samples) plus what the app already knows. */
+async function pulseGatherFacts(preset) {
+  const pat = pulseExePattern(preset)
+  const r = await runPS(`$ErrorActionPreference = 'SilentlyContinue'
+$n = [Environment]::ProcessorCount
+$a = @{}; Get-Process | ForEach-Object { try { $a[$_.Id] = $_.TotalProcessorTime.TotalMilliseconds } catch {} }
+Start-Sleep -Milliseconds 1000
+$rows = @()
+Get-Process | ForEach-Object { $p = $_; try {
+  $c = 0; if ($a.ContainsKey($p.Id)) { $c = [math]::Round((($p.TotalProcessorTime.TotalMilliseconds - $a[$p.Id]) / 1000 / $n) * 100, 1) }
+  $cls = ''; try { $cls = $p.PriorityClass.ToString() } catch {}
+  $st = ''; try { $st = $p.StartTime.ToFileTimeUtc().ToString() } catch {}
+  $rows += [pscustomobject]@{ id = $p.Id; name = $p.ProcessName; cpu = $c; ws = [math]::Round($p.WorkingSet64 / 1MB); cls = $cls; st = $st } } catch {} }
+$keep = @($rows | Where-Object { $_.cpu -ge 0.5 -or $_.ws -ge 600 -or $_.name -like ${V.psQuote(pat)} } | Sort-Object cpu -Descending | Select-Object -First 50)
+$o = @{ plan = ((powercfg /getactivescheme) -join ' '); list = ((powercfg /list) -join [char]10); procs = $keep
+  gm = (Get-ItemProperty 'HKCU:\\Software\\Microsoft\\GameBar' -Name AutoGameModeEnabled -EA SilentlyContinue).AutoGameModeEnabled
+  upd = [bool](Get-Process -Name TiWorker, MoUsoCoreWorker -EA SilentlyContinue) }
+$o | ConvertTo-Json -Compress -Depth 4`, 25000)
+  let j = null
+  try { j = JSON.parse(String(r.out || '').trim()) } catch { j = null }
+  const m = j && /([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\s*(?:\((.*?)\))?/i.exec(String(j.plan || ''))
+  const procs = j ? (Array.isArray(j.procs) ? j.procs : j.procs ? [j.procs] : []).map(p => ({ pid: p.id, name: p.name, cpu: p.cpu, ws: p.ws, cls: p.cls, st: p.st })) : []
+  const gameProcs = procs.filter(p => Pu2Plan.gameMatch(p.name, pat)).sort((a, b) => b.ws - a.ws)
+  const g = gameProcs[0]
+  const profile = capsProfileFresh()
+  const caps = profile ? Caps.deriveCaps(profile) : null
+  let onBattery = null; try { onBattery = require('electron').powerMonitor.isOnBatteryPower() } catch {}
+  const form = (caps && caps.form) || (cachedSysInfo && typeof cachedSysInfo.isLaptop === 'boolean' ? (cachedSysInfo.isLaptop ? 'laptop' : 'desktop') : null)
+  return {
+    form, onBattery, dualCcdX3d: caps && caps.cpu ? caps.cpu.dualCcdX3d === true : null,
+    activePlan: m ? { guid: m[1], name: m[2] || m[1] } : null,
+    highPerfAvailable: j ? new RegExp(Pu2Plan.HIGH_PERF, 'i').test(String(j.list || '')) : null,
+    gameMode: j && typeof j.gm === 'number' ? j.gm !== 0 : null,
+    game: g ? { pid: g.pid, name: g.name, cls: g.cls, st: g.st } : null, gamePattern: pat, needs: preset.needs || [],
+    procs, ramPct: _hub.value('ram.load'), cpuTemp: _hub.value('cpu.temp.package'), updateActive: j && typeof j.upd === 'boolean' ? j.upd : null,
+    frames: presentMonAvailable(),
+  }
+}
+
+/** Puts back everything the journal recorded for Pulse. Priorities always (self-guarded); the power plan only if the user has not changed it since. */
+async function pulseRestoreJournal(send) {
+  const svc = journalSvc()
+  const entries = svc.journal.list({ limit: 2000 }).filter(e => e.control && e.control.startsWith('pulse:') && e.action === 'apply' && !e.undoneBy)
+  let allOk = true
+  for (const e of entries) {
+    const isPower = e.control === 'pulse:power'
+    let r
+    try { r = await svc.undo({ entryId: e.id }, { force: !isPower }) } catch (err) { r = { ok: false, error: String(err && err.message || err) } }
+    if (r.ok) continue
+    if (isPower && r.conflict) { svc.journal.markUndone(e.id, 'pulse-left'); send('  Power plan was changed after Pulse switched it, so it was left as you set it.', 'info'); continue }
+    allOk = false
+  }
+  return allOk
+}
+
+/** Snapshots written by earlier versions of Pulse (interrupt affinity, core parking, MMCSS Games). Only replayed when one exists. */
+async function pulseLegacyRestore(send) {
+  let ok = true
+  const affinity = snapshots.load('pulse-affinity')
+  if (affinity) {
+    let affOk = true
+    for (const [devPath, v] of Object.entries(affinity)) {
+      if (!/^(?:Microsoft\.PowerShell\.Core\\Registry::)?HKEY_LOCAL_MACHINE\\SYSTEM\\CurrentControlSet\\Enum\\PCI\\[\w&.#{}\-\\]+$/.test(devPath)) continue
       const p = V.psQuote(devPath + '\\Device Parameters\\Interrupt Management\\Affinity Policy')
       const one = (name, val) => (val === null || val === undefined)
         ? `if (Test-Path -LiteralPath ${p}) { try { Remove-ItemProperty -Path ${p} -Name ${name} -EA Stop } catch { if (Get-ItemProperty -Path ${p} -Name ${name} -EA SilentlyContinue) { $bad = 1 } } }`
         : `try { if (!(Test-Path -LiteralPath ${p})) { New-Item -Path ${p} -Force -EA Stop | Out-Null }; Set-ItemProperty -Path ${p} -Name ${name} -Value ${Number(val)} -Type DWord -Force -EA Stop } catch { $bad = 1 }`
       const r = await runPS('$bad = 0; ' + one('DevicePolicy', v.p) + '; ' + one('AssignmentSetOverride', v.m) + '; exit $bad', 8000).catch(() => ({ ok: false }))
-      if (!r.ok) affinityOk = false
+      if (!r.ok) affOk = false
     }
-    // Keep the snapshot when a restore failed: deleting it would lose the only record of the original values.
-    if (affinityOk) { snapshots.remove('pulse-affinity'); send('  Interrupt affinity restored to Windows defaults.', 'ok') }
-    else send('  Interrupt affinity could NOT be fully restored. The original values are kept and the restore will be retried.', 'err')
+    if (affOk) { snapshots.remove('pulse-affinity'); send('  Interrupt routing from an earlier Pulse version was put back.', 'ok') } else ok = false
   }
-
-  // Put the power-plan values Pulse changed back to what that plan had before (absent value = the plan's own default)
-  {
-    const snap = snapshots.load('pulse-power')
-    let powerOk = true
-    if (snap?.guid && /^[0-9a-f-]{36}$/i.test(snap.guid)) {
-      for (const [key, val] of Object.entries(snap.values || {})) {
+  const power = snapshots.load('pulse-power')
+  if (power) {
+    let powerOk = !!(power.guid && /^[0-9a-f-]{36}$/i.test(power.guid))
+    if (powerOk) {
+      for (const [key, val] of Object.entries(power.values || {})) {
         const m = /^([0-9a-f-]{36})\|(ACSettingIndex|DCSettingIndex)$/i.exec(key)
         if (!m) continue
-        const p = V.psQuote(`HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Power\\User\\PowerSchemes\\${snap.guid}\\${PULSE_SUB_PROCESSOR}\\${m[1]}`)
-        // Absent original = remove our value; a key/value that is already gone counts as restored (a bare Remove-ItemProperty on a missing key exits 1)
-        await runPS(val === null
+        const p = V.psQuote(`HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Power\\User\\PowerSchemes\\${power.guid}\\54533251-82be-4824-96c1-47b60b740d00\\${m[1]}`)
+        const r = await runPS(val === null
           ? `if (Test-Path -LiteralPath ${p}) { try { Remove-ItemProperty -Path ${p} -Name ${m[2]} -EA Stop } catch { if (Get-ItemProperty -Path ${p} -Name ${m[2]} -EA SilentlyContinue) { exit 1 } } }; exit 0`
-          : `try { if (!(Test-Path -LiteralPath ${p})) { New-Item -Path ${p} -Force -EA Stop | Out-Null }; Set-ItemProperty -Path ${p} -Name ${m[2]} -Value ${Number(val)} -Type DWord -Force -EA Stop; exit 0 } catch { exit 1 }`, 8000).then(r => { if (!r.ok) powerOk = false }).catch(() => { powerOk = false })
+          : `try { if (!(Test-Path -LiteralPath ${p})) { New-Item -Path ${p} -Force -EA Stop | Out-Null }; Set-ItemProperty -Path ${p} -Name ${m[2]} -Value ${Number(val)} -Type DWord -Force -EA Stop; exit 0 } catch { exit 1 }`, 8000).catch(() => ({ ok: false }))
+        if (!r.ok) {
+          // Windows protects a plan's user keys (a registry delete is denied even elevated); powercfg is allowed, so put the plan's own default value back with it.
+          const def = { '0cc5b647-c1df-4637-891a-dec35c318583': 100, 'be337238-0d82-4146-a960-4f3749d470c7': 2 }[m[1].toLowerCase()]
+          const w = def == null || val !== null ? { ok: false } : await runCmd(`powercfg /set${m[2] === 'ACSettingIndex' ? 'ac' : 'dc'}valueindex ${power.guid} 54533251-82be-4824-96c1-47b60b740d00 ${m[1]} ${def}`, 8000)
+          if (!w.ok) powerOk = false
+        }
       }
       await runPS('powercfg /update-settings 2>$null', 8000).catch(() => {})
     }
-    if (powerOk) { snapshots.remove('pulse-power'); send('  CPU core parking restored.', 'ok') }
-    else send('  CPU core parking could NOT be fully restored. The original values are kept and the restore will be retried.', 'err')
+    if (powerOk) { snapshots.remove('pulse-power'); send('  Core parking values from an earlier Pulse version were put back.', 'ok') } else ok = false
   }
-
-  // Restore timer resolution — just release our request; Windows reverts automatically
-  await runPS(`
-    try {
-      Add-Type -TypeDefinition @'
-using System; using System.Runtime.InteropServices;
-public class TimerRes { [DllImport("ntdll.dll")] public static extern int NtSetTimerResolution(uint r, bool set, out uint cur); }
-'@
-      $cur = [uint32]0
-      [TimerRes]::NtSetTimerResolution(156250, $false, [ref]$cur) | Out-Null
-    } catch {}
-  `, 8000)
-
-  // Restore MMCSS SystemResponsiveness
-  if (pulseOrigMmcssResponsiveness !== null) {
-    await runPS(`Set-ItemProperty -Path 'HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Multimedia\\SystemProfile' -Name SystemResponsiveness -Value ${pulseOrigMmcssResponsiveness} -Force -EA SilentlyContinue`)
-    pulseOrigMmcssResponsiveness = null
-  }
-
-  // Restore MMCSS Tasks\\Games to the values it had before Pulse
-  {
-    const snap = snapshots.load('pulse-mmcss-games')
-    const games = 'HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Multimedia\\SystemProfile\\Tasks\\Games'
-    const orig = { 'GPU Priority': 8, 'Priority': 2, 'Scheduling Category': 'Medium', ...(snap || {}) }   // Windows defaults when nothing was recorded
-    for (const [name, v] of Object.entries(orig)) {
+  const games = snapshots.load('pulse-mmcss-games')
+  if (games) {
+    const base = 'HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Multimedia\\SystemProfile\\Tasks\\Games'
+    let gOk = true
+    for (const [name, v] of Object.entries(games)) {
       if (!['GPU Priority', 'Priority', 'Scheduling Category'].includes(name)) continue
-      await runPS(`Set-ItemProperty -Path '${games}' -Name ${V.psQuote(name)} -Value ${typeof v === 'number' ? v : V.psQuote(v)} -Force -EA SilentlyContinue`, 8000).catch(() => {})
+      const r = await runPS(`Set-ItemProperty -Path '${base}' -Name ${V.psQuote(name)} -Value ${typeof v === 'number' ? v : V.psQuote(v)} -Force -EA Stop`, 8000).catch(() => ({ ok: false }))
+      if (!r.ok) gOk = false
     }
-    snapshots.remove('pulse-mmcss-games')
+    if (gOk) snapshots.remove('pulse-mmcss-games'); else ok = false
   }
+  return ok
+}
 
-  // Restore power plan
-  if (pulseOrigPowerPlan) {
-    await runPS(`powercfg /setactive "${pulseOrigPowerPlan}"`)
-    pulseOrigPowerPlan = null
-  }
-
-  // Restore priorities of exactly the processes Pulse lowered (and only if they still carry the lowered class)
-  if (_pulseDeprioritised.length) {
-    await restoreLoweredPriorities(_pulseDeprioritised)
-    _pulseDeprioritised = []
-  }
-
+async function pulseRestoreAll(send) {
+  const journalOk = await pulseRestoreJournal(send).catch(() => false)
+  const legacyOk = await pulseLegacyRestore(send).catch(() => false)
+  pulseDeferredGame = false
   pulseStartTimestamp = null
-  send('◆ Pulse deactivated — all settings restored.', 'ok')
+  if (journalOk && legacyOk) { snapshots.remove('pulse-active'); send('◆ Pulse deactivated — everything it changed is back.', 'ok'); return true }
+  send('◆ Pulse deactivated, but some changes could NOT be put back. They are kept in the journal and the restore is retried at the next start.', 'err')
+  return false
+}
+
+/** Next start after a crash, a forced shutdown or a restart in the middle of a boost: put everything back before anything else runs. */
+async function pulseRecover() {
+  try {
+    const left = snapshots.load('pulse-active') || journalSvc().journal.list({ limit: 2000 }).some(e => e.control && e.control.startsWith('pulse:') && e.action === 'apply' && !e.undoneBy) ||
+      ['pulse-affinity', 'pulse-power', 'pulse-mmcss-games'].some(k => snapshots.load(k))
+    if (left && !pulseActivePreset) { puLog('◆ Pulse did not shut down cleanly last time — putting its changes back…', 'head'); await pulseRestoreAll(puLog) }
+    const wm = snapshots.load('watcher-mmcss')
+    if (wm && Number.isInteger(wm.value) && !activeGameProfile) {
+      const target = [10, 14, 18].includes(wm.value) ? 20 : wm.value
+      const r = await runPS(`Set-ItemProperty -Path "HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Multimedia\\SystemProfile" -Name SystemResponsiveness -Value ${target} -Force -EA Stop`, 8000).catch(() => ({ ok: false }))
+      if (r.ok) snapshots.remove('watcher-mmcss')
+    }
+  } catch { /* retried next start */ }
 }
 
 async function activatePulse(presetId, killBg, send) {
-  const delay = ms => new Promise(r => setTimeout(r, ms))
   const preset = PULSE_PRESETS[presetId]
   if (!preset) return { ok: false, error: 'Unknown preset' }
-  { const rawSend = send; send = (msg, level) => { rawSend(msg, level); const st = Pu2Steps.stepOf(msg, level); if (st) pulseSvc().report(st.id, st.state, st.detail) } }
-  pulseSvc().beginBoost(presetId, preset.name)
+  const svc = pulseSvc()
+  svc.beginBoost(presetId, preset.name)                // takes the "before" frames first, then nothing below can disturb them
   if (pulseActivePreset) await pulseRestoreAll(() => {})
 
   send(`◆ Pulse activating — ${preset.name}`, 'head')
   pulseActivePreset = presetId
   lastUsedPulsePreset = presetId
   pulseStartTimestamp = Date.now()
+  pulseBatchId = pulseNewId()
+  pulseVia = autoPulseTriggeredPreset ? 'game-watcher' : 'manual'
+  snapshots.save('pulse-active', { batchId: pulseBatchId, presetId, since: pulseStartTimestamp })
 
-  // Spec-aware tuning — read from cached system info (populated on app load via get-system-info)
-  const coreCount  = os.cpus().length
-  const isLaptop   = cachedSysInfo?.isLaptop ?? false
-  const ramGB      = cachedSysInfo?.ramGB     ?? 16
-  // MMCSS SystemResponsiveness: fewer cores need more aggressive scheduling
-  const sysResponsiveness = coreCount >= 18 ? 18 : coreCount >= 10 ? 14 : 10
-  // Power plan: Balanced on laptops to prevent thermal throttling
-  const powerPlanGuid = isLaptop
-    ? '381b4222-f694-41f0-9685-ff5bb260df2e'   // Balanced
-    : '8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c'  // High Performance
-  // Process priority: cpuIntensive games run better at AboveNormal on many-core systems
-  const effectivePriority = (preset.cpuIntensive && coreCount >= 12)
-    ? 'AboveNormal'
-    : preset.priority
+  try {
+    const facts = await pulseGatherFacts(preset)
+    const plan = Pu2Plan.plan(facts)
+    svc.setPlan(plan)
+    send(`  Plan: ${plan.changes.map(c => c.id).join(', ') || 'no changes'}${plan.recommend.length ? ` · ${plan.recommend.length} recommendation(s)` : ''}`, 'info')
 
-  // ── 1. Timer resolution: request 0.5ms via NtSetTimerResolution ──────────────
-  // 5000 = 0.5ms in 100ns units. Falls back silently if ntdll isn't available.
-  await runPS(`
-    try {
-      Add-Type -TypeDefinition @'
-using System; using System.Runtime.InteropServices;
-public class TimerRes { [DllImport("ntdll.dll")] public static extern int NtSetTimerResolution(uint r, bool set, out uint cur); }
-'@
-      $cur = [uint32]0
-      [TimerRes]::NtSetTimerResolution(5000, $true, [ref]$cur) | Out-Null
-      Write-Output "TIMER_OK"
-    } catch { Write-Output "TIMER_SKIP" }
-  `, 10000).then(r => {
-    if (r.out.trim() === 'TIMER_OK') send('  Timer resolution → 0.5ms', 'ok')
-    else send('  Timer resolution: skipped (ntdll unavailable)', 'info')
-  })
-  await delay(50)
+    for (const sk of plan.skipped) svc.report(sk.id, 'skip', `skipped: ${sk.reason}`, { vars: { reason: sk.reason, ...(sk.vars || {}) } })
 
-  // ── 2. CPU core unparking ─────────────────────────────────────────────────────
-  // Parked cores take ~1ms to wake — causes micro-stutters when game bursts load.
-  // Applied ONLY to the plan Pulse activates (never the user's other plans), with the previous values recorded for an exact undo.
-  // Skipped on laptops: causes heat spikes and accelerated battery drain.
-  if (!isLaptop) {
-    const r = await runPS(`
-      $sub = '${PULSE_SUB_PROCESSOR}'; $g = '${powerPlanGuid}'
-      foreach ($sg in @('${PULSE_PARK_GUID}','${PULSE_BOOST_GUID}')) {
-        foreach ($n in @('ACSettingIndex','DCSettingIndex')) {
-          $v = (Get-ItemProperty -Path "HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Power\\User\\PowerSchemes\\$g\\$sub\\$sg" -Name $n -EA SilentlyContinue).$n
-          Write-Output ("SNAP|" + $sg + "|" + $n + "|" + $v)
-        }
+    for (const c of plan.changes) {
+      if (c.id === 'power') {
+        await journalSvc().runRecorded('pulse:power', 'apply', { via: pulseVia, batchId: pulseBatchId }, async (ps, cmd) => { await cmd('powercfg /setactive ' + c.to) })
+        const now = await runPS('(powercfg /getactivescheme) -join " "', 8000)
+        if (String(now.out || '').toLowerCase().includes(c.to)) { svc.report('power', 'ok', 'High performance', { verified: true, vars: c.vars }); send('  Power plan → High Performance (verified)', 'ok') }
+        else { svc.report('power', 'fail', 'not switched', { vars: { reason: 'not-switched' } }); send('  Power plan: Windows did not switch it', 'err') }
+      } else if (c.id === 'priority') {
+        if (!c.target) { pulseDeferredGame = true; svc.report('priority', 'skip', 'waiting for the game', { vars: { reason: 'waiting' } }); send('  Game priority: waiting for the game to start', 'info') }
+        else await pulseApplyGamePriority(c.target, send)
+      } else if (c.id === 'deprio') {
+        const res = await pulseSetPriorities('pulse:deprio', c.targets.map(t => ({ id: t.pid, name: t.name, st: t.st, only: ['Normal'] })), c.level)
+        const done = c.targets.filter(t => { const o = res.get(t.pid); return o && o.st === 'SET' && o.b === c.level })
+        if (done.length) { svc.report('deprio', 'ok', done.map(t => t.name).join(', '), { verified: true, vars: { n: done.length, names: done.slice(0, 4).map(t => t.name).join(', '), failed: c.targets.length - done.length } }); send(`  ${done.length} background process(es) lowered: ${done.map(t => t.name).join(', ')}`, 'ok') }
+        else { svc.report('deprio', 'skip', 'none changed', { vars: { reason: 'none-verified' } }); send('  Background priority: nothing could be lowered', 'info') }
       }
-      powercfg /setacvalueindex $g $sub ${PULSE_PARK_GUID}  0   2>$null
-      powercfg /setdcvalueindex $g $sub ${PULSE_PARK_GUID}  0   2>$null
-      powercfg /setacvalueindex $g $sub ${PULSE_BOOST_GUID} 3   2>$null
-      powercfg /update-settings 2>$null
-      Write-Output "UNPARK_OK"
-    `, 20000)
-    const values = {}
-    for (const line of String(r.out || '').split(/\r?\n/)) {
-      const m = /^SNAP\|([0-9a-f-]{36})\|(ACSettingIndex|DCSettingIndex)\|(\d*)$/i.exec(line.trim())
-      if (m) values[`${m[1]}|${m[2]}`] = m[3] === '' ? null : Number(m[3])
     }
-    if (!snapshots.load('pulse-power')) snapshots.save('pulse-power', { guid: powerPlanGuid, values })
-    if (r.out.includes('UNPARK_OK')) send('  CPU core parking disabled', 'ok')
-  } else {
-    send('  Core unparking skipped (laptop — battery/heat safety)', 'info')
+  } catch (e) {
+    send(`  Pulse could not finish: ${e && e.message}`, 'err')
+    await pulseRestoreAll(send).catch(() => {})
+    pulseActivePreset = null
+    return { ok: false, error: String((e && e.message) || e).slice(0, 160) }
   }
-  await delay(50)
-
-  // ── 3. Switch power plan (High Performance on desktop, Balanced on laptop) ────
-  const planR = await runPS(`(powercfg /getactivescheme) -replace '.*GUID:\\s+(\\S+).*','$1'`)
-  pulseOrigPowerPlan = planR.out.trim()
-  await runPS(`powercfg /setactive ${powerPlanGuid}`).then(r => {
-    if (r.ok) send(`  Power plan → ${isLaptop ? 'Balanced (laptop)' : 'High Performance'}`, 'ok')
-    else send('  Power plan: already optimal or plan unavailable', 'info')
-  })
-  await delay(50)
-
-  // ── 4. MMCSS boost ────────────────────────────────────────────────────────────
-  // Save current value so we can restore it exactly
-  const mmcssR = await runPS(`(Get-ItemProperty -Path 'HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Multimedia\\SystemProfile' -EA SilentlyContinue).SystemResponsiveness`)
-  pulseOrigMmcssResponsiveness = parseInt(mmcssR.out.trim()) || 20
-  if (!snapshots.load('pulse-mmcss-games')) {
-    const g = await runPS(`(Get-ItemProperty -Path 'HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Multimedia\\SystemProfile\\Tasks\\Games' -EA SilentlyContinue | ForEach-Object { "$($_.'GPU Priority')|$($_.Priority)|$($_.'Scheduling Category')" })`)
-    const [gp, pr, sc] = String(g.out || '').trim().split('|')
-    const snapGames = {}
-    if (gp !== undefined && gp !== '' && !isNaN(Number(gp))) snapGames['GPU Priority'] = Number(gp)
-    if (pr !== undefined && pr !== '' && !isNaN(Number(pr))) snapGames['Priority'] = Number(pr)
-    if (sc) snapGames['Scheduling Category'] = sc
-    snapshots.save('pulse-mmcss-games', snapGames)
-  }
-  await runPS(`
-    $base = 'HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Multimedia\\SystemProfile'
-    Set-ItemProperty -Path $base -Name SystemResponsiveness -Value ${sysResponsiveness} -Force
-    $gbase = "$base\\Tasks\\Games"
-    Set-ItemProperty -Path $gbase -Name 'GPU Priority'        -Value 8      -Force -EA SilentlyContinue
-    Set-ItemProperty -Path $gbase -Name 'Priority'            -Value 6      -Force -EA SilentlyContinue
-    Set-ItemProperty -Path $gbase -Name 'Scheduling Category' -Value 'High' -Force -EA SilentlyContinue
-  `)
-  send(`  MMCSS Games scheduling → High (SystemResponsiveness=${sysResponsiveness}, ${coreCount} cores)`, 'ok')
-  await delay(50)
-
-  // ── 5. Interrupt affinity — move GPU + top NIC DPCs off CPU 0 ────────────────
-  // Only run on ≥ 6 core desktop systems — skipped on laptops (heat/battery risk)
-  // and low-core systems (HID starvation risk).
-  if (!isLaptop && coreCount >= 6) {
-    await runPS(`
-      $targetCpu = 3  # CPU 3 — away from OS scheduler (0), game thread (1), and HID (2)
-      $mask = [uint32](1 -shl $targetCpu)
-      $pciBase = 'HKLM:\\SYSTEM\\CurrentControlSet\\Enum\\PCI'
-      $netGuid = '{4d36e972-e325-11ce-bfc1-08002be10318}'
-      $displayGuid = '{4d36e968-e325-11ce-bfc1-08002be10318}'
-      $moved = 0
-      Get-ChildItem $pciBase -EA SilentlyContinue | ForEach-Object {
-        Get-ChildItem $_.PSPath -EA SilentlyContinue | ForEach-Object {
-          $props = Get-ItemProperty -Path $_.PSPath -EA SilentlyContinue
-          $cg = $props.ClassGUID
-          # Target GPU and top NIC only (not Wi-Fi)
-          $isDisplay = $cg -eq $displayGuid
-          $isEthernet = $cg -eq $netGuid -and $props.Service -notmatch 'iwifi|netathr|bcmwl|Netwtw|IntelWifi|rt[l6]8|rtswlan'
-          if ($isDisplay -or $isEthernet) {
-            $affPath = "$($_.PSPath)\\Device Parameters\\Interrupt Management\\Affinity Policy"
-            $oldP = (Get-ItemProperty -Path $affPath -Name DevicePolicy -EA SilentlyContinue).DevicePolicy
-            $oldM = (Get-ItemProperty -Path $affPath -Name AssignmentSetOverride -EA SilentlyContinue).AssignmentSetOverride
-            Write-Output ("AFF|" + $_.PSPath + "|" + $oldP + "|" + $oldM)
-            New-Item -Path $affPath -Force -EA SilentlyContinue | Out-Null
-            Set-ItemProperty -Path $affPath -Name DevicePolicy     -Value 4 -Force -EA SilentlyContinue
-            Set-ItemProperty -Path $affPath -Name AssignmentSetOverride -Value $mask -Force -EA SilentlyContinue
-            $moved++
-          }
-        }
-      }
-      Write-Output "AFFINITY_OK:$moved"
-    `, 20000).then(r => {
-      const aff = {}
-      for (const line of String(r.out || '').split(/\r?\n/)) {
-        const am = /^AFF\|(.+)\|(\d*)\|(\d*)$/.exec(line.trim())
-        if (am) aff[am[1]] = { p: am[2] === '' ? null : Number(am[2]), m: am[3] === '' ? null : Number(am[3]) }
-      }
-      snapshots.merge('pulse-affinity', aff)
-      const m = r.out.match(/AFFINITY_OK:(\d+)/)
-      if (m) send(`  Interrupt affinity routed for ${m[1]} device(s) → CPU 3`, 'ok')
-    })
-  } else if (isLaptop) {
-    send('  Interrupt affinity skipped (laptop)', 'info')
-  } else {
-    send(`  Interrupt affinity skipped (${coreCount} cores — HID safety)`, 'info')
-  }
-  await delay(50)
-
-  // ── 6. Kill background processes ─────────────────────────────────────────────
-  // Skipped on high-RAM systems (≥24GB): killing browsers evicts warm asset cache
-  // and causes stutters as the game reloads assets — costs more than it saves
-  if (killBg) {
-    if (ramGB >= 24) {
-      send(`  Background kill skipped (${ramGB}GB RAM — cache eviction would hurt performance)`, 'info')
-    } else {
-      let killed = 0
-      for (const name of preset.killList) {
-        const r = await runPS(`$p = Get-Process -Name '${name}' -EA SilentlyContinue; if ($p) { Stop-Process -Name '${name}' -Force -EA SilentlyContinue; Write-Output 'killed' }`)
-        if (r.out.trim() === 'killed') { send(`  Stopped: ${name}`, 'ok'); killed++ }
-      }
-      if (killed === 0) send('  No background processes found to stop', 'info')
-    }
-  }
-  await delay(50)
-
-  // ── 7. Game process priority ──────────────────────────────────────────────────
-  const exePattern = preset.exe.replace('_GTAProcess', '*GTAProcess')
-  const prioR = await runPS(`
-    $p = Get-Process -EA SilentlyContinue | Where-Object { $_.Name -like '${exePattern}' } | Select-Object -First 1
-    if ($p) {
-      try { $p.PriorityClass = '${effectivePriority}' } catch {}
-      Write-Output "PRIO_SET:$($p.Id)"
-    } else { Write-Output "PRIO_NOTFOUND" }
-  `)
-  const prioNote = effectivePriority !== preset.priority ? `, adjusted for ${coreCount} cores` : ''
-  if (prioR.out.startsWith('PRIO_SET')) send(`  Game priority → ${effectivePriority} (${preset.name}${prioNote})`, 'ok')
-  else send(`  Game process not found yet — priority will apply when game launches`, 'info')
-  await delay(50)
-
-  // ── 8. Background process deprioritisation ────────────────────────────────────
-  // Only processes currently at Normal priority are lowered, and each one is recorded so Stop restores exactly those.
-  _pulseDeprioritised = await lowerBackgroundPriorities(exePattern)
-  send(`  ${_pulseDeprioritised.length} background process(es) deprioritised`, 'ok')
 
   send(`◆ Pulse active — ${preset.name}`, 'head')
   presenceRefresh()
   mainWindow?.webContents.send('pulse-tick', { preset: presetId, active: true })
   updateTrayMenu()
-  pulseSvc().syncBoost(true, presetId, preset.name)
+  svc.syncBoost(true, presetId, preset.name)
   puKeysSync()
   return { ok: true }
+}
+
+/** Game priority AboveNormal on the game's main process, proven by reading it back. */
+async function pulseApplyGamePriority(g, send) {
+  const svc = pulseSvc()
+  const res = await pulseSetPriorities('pulse:priority', [{ id: g.pid, name: g.name, st: g.st, only: ['Normal', 'BelowNormal'] }], Pu2Plan.GAME_LEVEL)
+  const o = res.get(Number(g.pid))
+  if (o && o.st === 'SET' && o.b === Pu2Plan.GAME_LEVEL) { svc.report('priority', 'ok', `${g.name}: ${o.a} → ${o.b}`, { verified: true, vars: { name: g.name, from: o.a } }); send(`  Game priority → ${o.b} (${g.name}, verified)`, 'ok') }
+  else if (o && o.st === 'SKIP') svc.report('priority', 'skip', 'already set', { vars: { reason: 'already-set', cls: o.a } })
+  else { svc.report('priority', 'fail', 'refused', { vars: { reason: o && o.st === 'DENIED' ? 'denied' : 'not-changed', name: g.name } }); send(`  Game priority: Windows refused the change on ${g.name} (protected process?)`, 'err') }
+}
+
+/** The boost began before the game did: once the watcher sees the game, apply its priority and prove it. */
+async function pulseApplyDeferred() {
+  if (!pulseActivePreset || !pulseDeferredGame) return
+  const preset = PULSE_PRESETS[pulseActivePreset]; if (!preset) return
+  pulseDeferredGame = false
+  const pat = pulseExePattern(preset)
+  const r = await runPS(`Get-Process -EA SilentlyContinue | Where-Object { $_.ProcessName -like ${V.psQuote(pat)} } | Sort-Object WorkingSet64 -Descending | Select-Object -First 1 | ForEach-Object { $st = ''; try { $st = $_.StartTime.ToFileTimeUtc().ToString() } catch {}; $cls = ''; try { $cls = $_.PriorityClass.ToString() } catch {}; 'G|' + $_.Id + '|' + $_.ProcessName + '|' + $st + '|' + $cls }`, 10000)
+  const m = /^G\|(\d+)\|([^|]+)\|(\d*)\|(\w*)$/m.exec(String(r.out || '').replace(/\r/g, ''))
+  if (!m) { pulseDeferredGame = true; return }
+  await pulseApplyGamePriority({ pid: Number(m[1]), name: m[2], st: m[3] }, puLog)
 }
 
 async function deactivatePulse(send) {
@@ -11316,11 +11279,11 @@ ipcMain.handle('start-game-watcher', async () => {
       const mmcssBase = 'HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Multimedia\\SystemProfile'
       if (!snapshots.load('watcher-mmcss')) {   // remember the user's own value so game exit puts back exactly that
         const cur = await runPS(`(Get-ItemProperty -Path "${mmcssBase}" -Name SystemResponsiveness -EA SilentlyContinue).SystemResponsiveness`)
-        snapshots.save('watcher-mmcss', { value: /^\d+$/.test(cur.out.trim()) ? Number(cur.out.trim()) : 20 })
+        const seen = /^\d+$/.test(cur.out.trim()) ? Number(cur.out.trim()) : 20
+        snapshots.save('watcher-mmcss', { value: [10, 14, 18].includes(seen) ? 20 : seen })   // 10/14/18 are what older Pulse versions wrote and never put back; Windows' own default is 20
       }
       await runPS(`Set-ItemProperty -Path "${mmcssBase}" -Name SystemResponsiveness -Value 10 -Force`)
       await runPS(`Set-ItemProperty -Path "${mmcssBase}\\Tasks\\Games" -Name "GPU Priority" -Value 8 -Force`)
-      await runPS('Set-ItemProperty -Path "HKCU:\\System\\GameConfigStore" -Name GameDVR_Enabled -Value 0 -Force')
       mainWindow?.webContents.send('log', { msg: `✓ Auto-profile applied for ${presetName}`, level: 'ok', ts: new Date().toLocaleTimeString() })
 
       // Per-game tweak profile: apply if one is assigned to this game
@@ -11382,6 +11345,9 @@ ipcMain.handle('start-game-watcher', async () => {
       } else {
         mainWindow?.webContents.send('log', { msg: '⚠ PresentMon unavailable — FPS tracking disabled', level: 'warn', ts: new Date().toLocaleTimeString() })
       }
+
+      // A boost started before the game: its priority is applied now, and proven
+      if (pulseActivePreset && pulseDeferredGame) pulseApplyDeferred().catch(() => {})
 
       // Auto-Pulse: activate if enabled (preset already matched — use it directly)
       const currentSettings = loadSettings()
@@ -12364,7 +12330,6 @@ ipcMain.handle('diag2-export-save', async (_, req) => {
 // docs/PULSE_EVIDENCE.md. Frames come from the PresentMon tap in spawnPresentMon; window prefs live in jt_pulse.json;
 // one small debrief per recorded session lives in userData/pulse-debriefs. The boost itself is still activatePulse().
 const Pulse2 = require('./lib/pulse')
-const Pu2Steps = require('./lib/pulse/steps')
 const { screen: puScreen, globalShortcut: puKeys, webContents: puContents } = require('electron')
 let _pulse2 = null
 let _puHud = null
@@ -12412,21 +12377,41 @@ function pulseSvc() {
 }
 
 // Heaviest non-game process, as a share of the whole CPU. Runs only while a Pulse surface is open or a session is recording.
+let _puCpuPrev = null
+async function puBgSample() {
+  const r = await runPS('Get-Process -EA SilentlyContinue | ForEach-Object { try { "$($_.Id)|$($_.ProcessName)|$([math]::Round($_.TotalProcessorTime.TotalSeconds, 2))" } catch {} }', 8000)
+  if (!r.ok) return null
+  const cur = new Map()
+  for (const line of String(r.out || '').split(/\r?\n/)) {
+    const m = /^(\d+)\|([^|]+)\|([\d.]+)$/.exec(line.trim())
+    if (m) cur.set(Number(m[1]), { name: m[2], s: parseFloat(m[3]) })
+  }
+  return { t: Date.now(), cur }
+}
 async function puBgOnce() {
   const exclude = _puGameExe ? _puGameExe.toLowerCase() : null
-  const r = await runPS(`$n=[Environment]::ProcessorCount; Get-CimInstance Win32_PerfFormattedData_PerfProc_Process -EA SilentlyContinue | Where-Object { $_.Name -notin '_Total','Idle','System','Memory Compression' } | Sort-Object PercentProcessorTime -Descending | Select-Object -First 4 | ForEach-Object { "$($_.Name)|$([math]::Round($_.PercentProcessorTime / $n, 1))" }`, 8000)
-  if (!r.ok) return null
-  for (const line of String(r.out || '').split(/\r?\n/)) {
-    const [raw, pct] = line.split('|')
-    const name = String(raw || '').replace(/#\d+$/, '').trim()
-    const cpu = parseFloat(pct)
-    if (!name || !Number.isFinite(cpu)) continue
-    if (exclude && name.toLowerCase().startsWith(exclude)) continue
-    _puBg = { name, cpu }
-    _hub.ingest('pulse', { 'bg.cpu': cpu }, { rateHz: 0.2 })
-    return _puBg
+  let prev = _puCpuPrev
+  const now = await puBgSample()
+  if (!now) return null
+  _puCpuPrev = now
+  if (!prev || now.t - prev.t > 60000) { await new Promise(res => setTimeout(res, 1000)); prev = now; const again = await puBgSample(); if (!again) return null; _puCpuPrev = again; return puBgTop(prev, again, exclude) }
+  return puBgTop(prev, now, exclude)
+}
+function puBgTop(prev, now, exclude) {
+  const dt = (now.t - prev.t) / 1000, n = os.cpus().length
+  if (!(dt > 0.2)) return null
+  let best = null
+  for (const [id, c] of now.cur) {
+    const p = prev.cur.get(id)
+    if (!p || p.name !== c.name || ['Idle', 'System', 'Memory Compression', 'Registry'].includes(c.name)) continue
+    if (exclude && c.name.toLowerCase().startsWith(exclude)) continue
+    const cpu = Math.round(Math.max(0, (c.s - p.s) / dt / n * 1000)) / 10
+    if (!best || cpu > best.cpu) best = { name: c.name, cpu }
   }
-  return null
+  if (!best) return null
+  _puBg = best
+  _hub.ingest('pulse', { 'bg.cpu': best.cpu }, { rateHz: 0.2 })
+  return best
 }
 function puBgEnsure() {
   if (_puBgTimer) return
@@ -12434,7 +12419,7 @@ function puBgEnsure() {
     const need = _pulse2 && (_pulse2.subscribers > 0 || (_sessionRec && _sessionRec.active))
     if (!need) { clearInterval(_puBgTimer); _puBgTimer = null; return }
     puBgOnce().catch(() => {})
-  }, 5000)
+  }, 10000)
   if (_puBgTimer.unref) _puBgTimer.unref()
   puBgOnce().catch(() => {})
 }
@@ -12446,6 +12431,7 @@ async function puProbe() {
 $o.updateActive=[bool](Get-Process -Name TiWorker,MoUsoCoreWorker -EA SilentlyContinue)
 $o.pendingReboot=[bool]((Test-Path 'HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Component Based Servicing\\RebootPending') -or (Test-Path 'HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\WindowsUpdate\\Auto Update\\RebootRequired'))
 $o.plan=((powercfg /getactivescheme) -join ' ')
+$o.gm=(Get-ItemProperty 'HKCU:\\Software\\Microsoft\\GameBar' -Name AutoGameModeEnabled -EA SilentlyContinue).AutoGameModeEnabled
 $o | ConvertTo-Json -Compress`, 10000)
   let j = null
   try { j = JSON.parse(String(r.out || '').trim()) } catch { j = null }
@@ -12455,7 +12441,10 @@ $o | ConvertTo-Json -Compress`, 10000)
     topProc: top ? { name: top.name, cpu: top.cpu } : null,
     updateActive: j && typeof j.updateActive === 'boolean' ? j.updateActive : null,
     pendingReboot: j && typeof j.pendingReboot === 'boolean' ? j.pendingReboot : null,
-    powerPlan: m ? { name: m[2] || m[1], high: /^(8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c|e9a42b02-d5df-448d-aa00-03f14749eb61)$/i.test(m[1]) } : null,
+    powerPlan: m ? { name: m[2] || m[1], high: /^(8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c|e9a42b02-d5df-448d-aa00-03f14749eb61)$/i.test(m[1]), balanced: /^381b4222-f694-41f0-9685-ff5bb260df2e$/i.test(m[1]) } : null,
+    form: (() => { const p = capsProfileFresh(); const c = p ? Caps.deriveCaps(p) : null; return (c && c.form) || (cachedSysInfo && typeof cachedSysInfo.isLaptop === 'boolean' ? (cachedSysInfo.isLaptop ? 'laptop' : 'desktop') : null) })(),
+    x3d: (() => { const p = capsProfileFresh(); const c = p ? Caps.deriveCaps(p) : null; return c && c.cpu ? c.cpu.dualCcdX3d === true : null })(),
+    gameMode: j && typeof j.gm === 'number' ? j.gm !== 0 : null,
   }
 }
 
@@ -12610,9 +12599,12 @@ fvHandle('fivem2-server-remove', (a, s) => s.serverRemove(fvStr(a.id, 16)))
 fvHandle('fivem2-server-use', (a, s) => s.serverUse(fvStr(a.id, 16)))
 fvHandle('fivem2-server-live', (a, s) => s.serverLive(fvStr(a.id, 16)))
 fvHandle('fivem2-import-bookmarks', (a, s) => s.importBookmarks((Array.isArray(a.list) ? a.list : []).slice(0, 12).map(b => ({ name: fvStr(b && b.name, 80), host: fvStr(b && b.host, 253), port: b && b.port, cfxCode: fvStr(b && b.cfxCode, 12) }))))
-fvHandle('fivem2-route-start', (a, s) => s.routeStart(fvStr(a.id, 16)))
+fvHandle('fivem2-route-start', (a, s) => s.routeStart(fvStr(a.id, 16), { force: a.force === true }))
 fvHandle('fivem2-route-stop', (a, s) => s.routeStop())
 fvHandle('fivem2-route-snapshot', (a, s) => s.routeSnapshot())
+fvHandle('fivem2-route-history', (a, s) => s.routeHistory(fvStr(a.id, 16)))
+fvHandle('fivem2-fit', (a, s) => s.fitCheck(fvStr(a.id, 16)))
+fvHandle('fivem2-passport', (a, s) => s.passport(fvStr(a.id, 16)))
 fvHandle('fivem2-mtu', (a, s) => s.mtu(fvStr(a.id, 16)))
 fvHandle('fivem2-apply', async (a, s) => { _fvAdmin = await checkAdmin(); return s.apply(fvStr(a.id, 24)) })
 fvHandle('fivem2-undo', (a, s) => s.undo(fvStr(a.id, 24)))
@@ -12621,7 +12613,7 @@ fvHandle('fivem2-gfx-write', (a, s) => s.gfxWrite(fvMap(a.changes, 40)))
 fvHandle('fivem2-gfx-preset', (a, s) => s.gfxPreset(fvStr(a.name, 16)))
 fvHandle('fivem2-cache-clear', (a, s) => s.cacheClear())
 fvHandle('fivem2-mods', (a, s) => s.mods())
-fvHandle('fivem2-logs', (a, s) => s.logs())
+fvHandle('fivem2-logs', (a, s) => s.logs(fvStr(a.file, 80)))
 fvHandle('fivem2-legacy', (a, s) => s.legacy())
 fvHandle('fivem2-legacy-restore', (a, s) => s.legacyRestore(fvStr(a.id, 40)))
 fvHandle('fivem2-sessions', (a, s) => s.sessionList())
@@ -13504,13 +13496,14 @@ function spawnPresentMon(outputFile, gamePid) {
         if (!_pmHeader) {
           _pmHeader = t
           proc._msIdx = t.split(',').map(h => h.trim()).findIndex(h => /MsBetweenPresents|msFrameTime|msBetweenPresents/i.test(h))
+          proc._modeIdx = t.split(',').map(h => h.trim()).findIndex(h => /^PresentMode$/i.test(h))   // how frames reach the screen (flip / composed): measured, shown in the FiveM session view
           _pmFrameBuffer.push(t)
           continue
         }
         _pmFrameBuffer.push(t)
         if (proc._msIdx >= 0 && (proc._pulseTap || (_sessionRec && _sessionRec.active))) {
-          const v = parseFloat(t.split(',')[proc._msIdx])
-          if (v > 0) { if (_sessionRec && _sessionRec.active) _sessionRec.onFrame(v); if (proc._pulseTap && _pulse2) _pulse2.onFrame(v) }
+          const cols = t.split(','), v = parseFloat(cols[proc._msIdx])
+          if (v > 0) { if (_sessionRec && _sessionRec.active) { _sessionRec.onFrame(v); if (proc._modeIdx >= 0) _sessionRec.onPresentMode(cols[proc._modeIdx]) }; if (proc._pulseTap && _pulse2) _pulse2.onFrame(v) }
         }
         if (_pmFrameBuffer.length > PM_FRAME_BUF_MAX + 1) _pmFrameBuffer.splice(1, 1)
       }

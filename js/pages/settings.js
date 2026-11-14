@@ -37,6 +37,7 @@ function buildSettings(c) {
       ${ui.group('', [
         row(html`${tUI('language')} / Kieli`, '', html`<div class="j-seg"><button type="button" class="${ui.cls('j-seg-item', lang === 'en' && 'j-seg-active')}" onclick="setLanguage('en')">EN</button><button type="button" class="${ui.cls('j-seg-item', lang === 'fi' && 'j-seg-active')}" onclick="setLanguage('fi')">FI</button></div>`),
         row(tUI('settingsStartup'), tUI('settingsStartupDesc'), sw('settings-startup-check', 'settingsToggleStartup(this.checked)', tUI('settingsStartup'))),
+        row(tUI('settingsHideOnGame'), tUI('settingsHideOnGameDesc'), sw('settings-hide-on-game-check', 'settingsToggleHideOnGame(this.checked)', tUI('settingsHideOnGame'))),
         row(tUI('settingsAdvanced'), tUI('settingsAdvancedDesc'), html`<span id="settings-adv-pill">${sw('settings-adv-check', 'toggleAdvancedMode()', tUI('settingsAdvanced'))}</span>`),
         row(tUI('applyMode'), tUI('applyModeDesc'), html`<div class="j-seg">${['immediate', 'review'].map(v => html`<button type="button" data-applymode="${v}" class="${ui.cls('j-seg-item', (settings.applyMode || 'immediate') === v && 'j-seg-active')}" onclick="settingsSetApplyMode('${v}')">${tUI('applyMode_' + v)}</button>`)}</div>`),
         row(tUI('settingsUiSounds'), tUI('settingsUiSoundsDesc'), sw('settings-sounds-check', 'settingsToggleUiSounds(this.checked)', tUI('settingsUiSounds'))),
@@ -185,6 +186,7 @@ function buildSettings(c) {
   setChecked('settings-adv-check', !!settings.advancedMode)
   setChecked('settings-analytics-check', settings.analyticsConsent === true)
   setChecked('settings-startup-check', !!settings.startAtLogin)
+  setChecked('settings-hide-on-game-check', settings.hideOnGame === true)
 
   const verLabel = document.getElementById('settings-ver-label')
   if (verLabel) verLabel.textContent = appVersion || '…'

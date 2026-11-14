@@ -190,3 +190,12 @@ article.fv-twk[data-applied="true"] { border-color: var(--c-success-ring); }
   .fv-cols, .fv-split, .fv-ggrid { grid-template-columns: minmax(0, 1fr); }
 }
 html.motion-reduced .fv *, body.game-live .fv * { animation: none !important; }
+
+/* Fit Check, route memory, console coach */
+.fv .fv-fit, .fv .fv-hist { margin-top: var(--sp-4, 16px); }
+.fv .fv-fit[hidden], .fv .fv-hist[hidden] { display: none; }
+.fv .fv-cmd { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 6px 0 0; }
+.fv .fv-cmd code { padding: 2px 8px; border-radius: 6px; background: color-mix(in srgb, currentColor 8%, transparent); }
+.fv .fv-stats [data-tone="danger"] dd { color: var(--c-danger); }
+.fv .fv-stats [data-tone="warn"] dd { color: var(--c-warning); }
+.fv .fv-stats [data-tone="ok"] dd { color: var(--c-success); }

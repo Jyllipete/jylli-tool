@@ -640,6 +640,11 @@
 <script src="lib/fivem/ini.js"></script>
 <script src="lib/fivem/graphics.js"></script>
 <script src="lib/fivem/route-verdict.js"></script>
+<script src="lib/fivem/pacing.js"></script>
+<script src="lib/fivem/coach.js"></script>
+<script src="lib/fivem/history.js"></script>
+<script src="lib/fivem/fit.js"></script>
+<script src="lib/fivem/passport.js"></script>
 <script src="js/fivem/radar.js"></script>
 <script src="js/fivem/page.js"></script>
 <script src="js/gameconfig/sheet.js"></script>
@@ -649,6 +654,8 @@
 <script src="lib/pulse/river.js"></script>
 <script src="lib/pulse/score.js"></script>
 <script src="lib/pulse/steps.js"></script>
+<script src="lib/pulse/plan.js"></script>
+<script src="lib/pulse/measure.js"></script>
 <script src="js/pulse/ui.js"></script>
 <script src="js/pulse/river-view.js"></script>
 <script src="js/pulse/page.js"></script>
@@ -1830,6 +1837,12 @@ function settingsToggleDiscordRpc(on) {
   toast(tUI('settingsDiscordRpc') + tUI(on ? 'featureEnabled' : 'featureDisabled'), '', on ? 'ok' : 'info')
 }
 
+function settingsToggleHideOnGame(on) {
+  settings.hideOnGame = on
+  api.saveSettings(settings)
+  toast(tUI('settingsHideOnGame') + tUI(on ? 'featureEnabled' : 'featureDisabled'), '', on ? 'ok' : 'info')
+}
+
 async function settingsToggleStartup(on) {
   settings.startAtLogin = on
   api.saveSettings(settings)
@@ -2528,11 +2541,6 @@ const FIXES_DEFS = [
     handler: async (s) => { await api.minimize() }
   },
   {
-    id: 'fix-fivem-fullscreen', name: 'FiveM Fullscreen Fix', icon: '<i class="fa fa-expand jx-8"></i>', category: 'gaming',
-    desc: 'Fixes Alt+Enter not working / FiveM launching in windowed mode. Sets the Windows fullscreen compat flag and writes -fullscreen to GTA V commandline.txt.',
-    handler: async (s) => { await api.runTweak('fix-fivem-fullscreen', 'apply') }
-  },
-  {
     id: 'fix-valorant-cfg', name: 'Valorant Fix CFG', icon: '<i class="fa fa-shield-halved jx-21"></i>', category: 'gaming',
     desc: 'Enables Control Flow Guard (CFG) and related mitigations for Valorant/Vanguard',
     handler: async (s) => {
@@ -2638,7 +2646,6 @@ async function _fixBadgeRecommended(settings) {
   try {
     const games = await api.detectGames()
     const installed = new Set(games.filter(g => g.installed).map(g => g.id))
-    if (installed.has('gtav') || installed.has('fivem')) addBadge('fix-fivem-fullscreen')
     if (installed.has('valorant')) { addBadge('fix-valorant-cfg'); addBadge('fix-valorant-hvci') }
   } catch {}
   // Re-trigger active search so newly injected badges don't stay hidden if user already typed

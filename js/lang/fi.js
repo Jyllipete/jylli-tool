@@ -1084,6 +1084,8 @@ LANG.fi = {
       analyticsConsentAllow:'Jaa tilastot',
       settingsStartup:'Käynnistä Windowsin käynnistyksessä',
       settingsStartupDesc:'Käynnistä Jylli Tool automaattisesti Windowsin käynnistyessä',
+      settingsHideOnGame:'Piilota ilmaisinalueelle, kun peli käynnistyy',
+      settingsHideOnGameDesc:'Kun peli tunnistetaan, Jylli Tool piiloutuu ilmaisinalueelle. Se jatkaa toimintaansa; avaa se uudelleen ilmaisinalueen kuvakkeesta.',
       startupTaskFailed:'Käynnistystehtävän päivitys epäonnistui',
       fingerprintBannerTitle:'Laitteistoristiriita havaittu',
       fingerprintBannerDesc:'{n} käytetty säätö{s} ei välttämättä sovi nykyiselle laitteistollesi.',

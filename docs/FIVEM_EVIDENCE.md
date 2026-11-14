@@ -64,7 +64,7 @@ menu, never from invented tables. Keys the old defs listed but the file does not
 
 | Id | Verdict | Why |
 |---|---|---|
-| `fivem-priority` | kept (community) | IFEO `PerfOptions\CpuPriorityClass` is a documented Windows mechanism; FiveM benefit is community-reported. Restore deletes the value. |
+| `fivem-priority` | kept (community) | IFEO `PerfOptions\CpuPriorityClass` is a widely used Windows mechanism, but no Microsoft page documents these values (not verified); the FiveM benefit is community-reported. Restore deletes the value. The CPU & Memory tab can set the same value, so this tab refuses to overwrite a different one (`owned-elsewhere`). |
 | `fivem-io-priority` | kept (community) | IFEO `IoPriority`. Restore deletes the value. |
 | `fivem-fso` | kept (documented) | AppCompat flag `DISABLEDXMAXIMIZEDWINDOWEDMODE`; restore removes it. |
 | `fivem-gamebar` | kept (documented) | Game DVR off for this user. Original values journaled. |
@@ -93,3 +93,15 @@ Changes made by the old tab stay restorable (Client view, "Made by the old tab")
 A hitch is a one-second bin whose worst frame is far above the session median. The cause is named only when recorded
 telemetry within two seconds supports it (GPU or CPU near saturation, VRAM full, RAM pressure, clock or thermal drop);
 otherwise it is "unknown". Network events are listed beside frame hitches and never blamed for them.
+
+## Graphics step ranges (corrected)
+
+Rockstar's command-line list (<https://support.rockstargames.com/articles/2VjbVziQCiTiiVhDbmnexc/full-list-of-command-line-parameters-for-grand-theft-auto-v-on-PC>, **documented**) gives texture and shader 0-2, particle 0-2, reflection and postFX 0-3. A real `gta5_settings.xml` seen on a test PC (**measured**) holds TextureQuality 2, ShaderQuality 2, ParticleQuality 2, ReflectionQuality 3, PostFX 3, ShadowQuality 3, Tessellation 3, MSAA 4. The editor therefore offers texture/shader/particle 0-2 (step 0 is the game's "Normal"), reflection/postFX/shadow/grass 0-3, water 0-1. A value outside these that the file already has is kept and shown as custom, never rewritten. The Quality preset only raises settings, never lowers them. VRAM to texture step is a conservative community estimate (>= 6 GB very high, >= 3 GB high), not a measurement.
+
+## Server info that is hidden
+
+A server can answer every info request with "Nope." (`sv_requestParanoia` 2 or higher, <https://docs.fivem.net/docs/server-manual/server-commands/>, **documented**). When the game port still accepts a TCP connection the tab shows the server as online with "hides its player count" instead of unreachable.
+
+## Probing rules
+
+The route trace and the HTTP probes never start by themselves while FiveM runs, and the session starting stops a running trace; pressing Start trace is an explicit override.
