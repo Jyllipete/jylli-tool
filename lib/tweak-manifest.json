@@ -1533,6 +1533,60 @@
   "untracked": 0,
   "fidelity": "exact"
  },
+ "classic-context-menu": {
+  "touches": [],
+  "dynamic": false,
+  "untracked": 0,
+  "fidelity": "exact"
+ },
+ "explorer-this-pc": {
+  "touches": [
+   {
+    "kind": "reg",
+    "target": "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced\\LaunchTo",
+    "after": "1"
+   }
+  ],
+  "dynamic": false,
+  "untracked": 0,
+  "fidelity": "exact"
+ },
+ "menu-delay-short": {
+  "touches": [
+   {
+    "kind": "reg",
+    "target": "HKCU:\\Control Panel\\Desktop\\MenuShowDelay",
+    "after": "100"
+   }
+  ],
+  "dynamic": false,
+  "untracked": 0,
+  "fidelity": "exact"
+ },
+ "disable-llmnr": {
+  "touches": [
+   {
+    "kind": "reg",
+    "target": "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows NT\\DNSClient\\EnableMulticast",
+    "after": "0"
+   }
+  ],
+  "dynamic": false,
+  "untracked": 0,
+  "fidelity": "exact"
+ },
+ "bsod-no-autoreboot": {
+  "touches": [
+   {
+    "kind": "reg",
+    "target": "HKLM:\\SYSTEM\\CurrentControlSet\\Control\\CrashControl\\AutoReboot",
+    "after": "0"
+   }
+  ],
+  "dynamic": false,
+  "untracked": 0,
+  "fidelity": "exact"
+ },
  "driver-updates-off": {
   "touches": [
    {

@@ -131,6 +131,11 @@ Object.assign(LANG.en.tweakNames, {
   "driver-updates-off": "Windows Update drivers off",
   "auto-restart-guard": "No forced restart while signed in",
   "remote-assist-off": "Remote Assistance off",
+  "game-mode-on": "Windows Game Mode",
+  "classic-context-menu": "Full right-click menu",
+  "explorer-this-pc": "Open File Explorer to This PC",
+  "menu-delay-short": "Faster menus",
+  "bsod-no-autoreboot": "Keep the blue screen on screen",
 })
 Object.assign(LANG.en.tweakDescs, {
   "activity-history-off": "Stops Windows recording your app and file activity for the Timeline and uploading it to Microsoft, by policy.",
@@ -147,4 +152,9 @@ Object.assign(LANG.en.tweakDescs, {
   "driver-updates-off": "Stops Windows Update from installing drivers, so it cannot replace a graphics driver you chose. You then update drivers yourself.",
   "auto-restart-guard": "Windows will not restart by itself after updates while you are signed in. It has no effect if Automatic Updates is switched off by policy.",
   "remote-assist-off": "Blocks Remote Assistance invitations to this PC.",
+  "game-mode-on": "Game Mode is on by default. This sets it explicitly and shows it again if something switched it off. Windows then favours the game in front and holds back update and driver installs while it runs.",
+  "classic-context-menu": "Brings back the full Windows 10 right-click menu instead of the compact Windows 11 one, so Show more options is no longer needed. Restart Explorer or sign out to apply. Windows 11 only.",
+  "explorer-this-pc": "File Explorer opens to This PC instead of Home or Quick Access. A preference, not a speed change.",
+  "menu-delay-short": "Cuts the hover delay on Start and context submenus from 400 ms to 100 ms. Sign out to apply.",
+  "bsod-no-autoreboot": "Stops Windows restarting by itself after a blue screen, so you can read the stop code. You restart the PC yourself afterwards.",
 })

@@ -103,7 +103,9 @@ LANG.en.net2 = {
 }
 
 // Descriptions the old Network tab carried as literals inside buildNetwork; the lookup (tDesc) reads tweakDescs.
+Object.assign(LANG.en.tweakNames, { 'disable-llmnr': "LLMNR off" })
 Object.assign(LANG.en.tweakDescs, {
+  'disable-llmnr': "Turns off LLMNR, a legacy multicast name lookup that can be tricked into leaking credentials on shared networks. Windows tries DNS first, so normal browsing and games are unaffected. A security change, not a speed one.",
   "disable-ipv6": 'Makes Windows prefer IPv4 over IPv6 (IPv6 itself stays on). Can help when a game or server connects slowly over a broken IPv6 route. Needs a restart.',
   'disable-netbios': 'Turns off NetBIOS over TCP/IP, a legacy name service that modern games and websites do not use. Removes a source of chatter on the local network.',
   'disable-wpad': 'Stops the WinHTTP auto-proxy service, which looks for a proxy configuration every time the network changes.',

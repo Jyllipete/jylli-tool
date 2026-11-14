@@ -64,6 +64,11 @@ Object.assign(LANG.fi.tweakNames, {
   "driver-updates-off": "Windows Updaten ajurit pois",
   "auto-restart-guard": "Ei pakotettua uudelleenkäynnistystä sisäänkirjautuneena",
   "remote-assist-off": "Etäapu pois",
+  "game-mode-on": "Windowsin pelitila",
+  "classic-context-menu": "Täysi hiiren kakkospainikkeen valikko",
+  "explorer-this-pc": "Resurssienhallinta avautuu Tämä tietokone -näkymään",
+  "menu-delay-short": "Nopeammat valikot",
+  "bsod-no-autoreboot": "Sininen näyttö jää näkyviin",
 })
 Object.assign(LANG.fi.tweakDescs, {
   "activity-history-off": "Estää Windowsia tallentamasta sovellus- ja tiedostotoimintaasi aikajanalle ja lähettämästä sitä Microsoftille käytännöllä.",
@@ -80,4 +85,9 @@ Object.assign(LANG.fi.tweakDescs, {
   "driver-updates-off": "Estää Windows Updatea asentamasta ajureita, jolloin se ei korvaa valitsemaasi näytönohjaimen ajuria. Päivität ajurit itse.",
   "auto-restart-guard": "Windows ei käynnistä itseään uudelleen päivitysten jälkeen kun olet kirjautuneena. Ei vaikutusta, jos automaattiset päivitykset on poistettu käytöstä käytännöllä.",
   "remote-assist-off": "Estää etäapukutsut tälle koneelle.",
+  "game-mode-on": "Pelitila on oletuksena päällä. Tämä asettaa sen erikseen ja näyttää tilan uudelleen, jos jokin kytki sen pois. Windows suosii silloin ruudulla olevaa peliä ja lykkää päivitys- ja ajuriasennuksia pelin ajan.",
+  "classic-context-menu": "Palauttaa täyden Windows 10 -tyylisen hiiren kakkospainikkeen valikon Windows 11:n tiivistetyn tilalle, joten Näytä lisää asetuksia -vaihetta ei tarvita. Ota käyttöön käynnistämällä Resurssienhallinta uudelleen tai kirjautumalla ulos. Vain Windows 11.",
+  "explorer-this-pc": "Resurssienhallinta avautuu Tämä tietokone -näkymään Kotinäkymän tai pikakäytön sijaan. Mieltymys, ei nopeusmuutos.",
+  "menu-delay-short": "Lyhentää Käynnistä-valikon ja kontekstivalikoiden alivalikkojen viiveen 400 ms:stä 100 ms:iin. Ota käyttöön kirjautumalla ulos.",
+  "bsod-no-autoreboot": "Estää Windowsia käynnistymästä itsestään uudelleen sinisen näytön jälkeen, jotta ehdit lukea virhekoodin. Käynnistät koneen itse.",
 })

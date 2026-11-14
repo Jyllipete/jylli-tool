@@ -1,0 +1,31 @@
+'use strict'
+// Competitive Mode (js/compete/page.js, top of the Games tab). Group `compete`, read with tG('compete', key, vars).
+//   o_<step> option label   h_<step> what it does   r_<reason> why a step was skipped
+LANG.en.compete = {
+  title: 'Competitive Mode', pick: 'Select the game you\'d like to boost…', search: 'Search your games', none: 'No games found. Use Browse to pick a game\'s .exe.', browse: 'Browse…',
+  start: 'Start Competitive Mode', stop: 'Stop and restore', starting: 'Starting…', rescan: 'Rescan games', showOpts: 'Show options', hideOpts: 'Hide options',
+  shortcut: 'Create shortcut', shortcutDone: 'Shortcut added to your desktop. Windows will ask for permission when you use it, because tuning needs admin rights.', shortcutFail: 'Could not create the shortcut.',
+  found: 'Found {n} games. Pick one to begin.', foundOne: 'Found 1 game. Pick it to begin.', noneFound: 'No installed games found yet.',
+  waiting: 'Waiting for {name} to start… Nothing is changed until it runs.', running: '{name} is running · {n} changes in place · everything goes back when you close the game.', runningNone: '{name} is running · no changes were needed.', ending: 'Putting everything back…',
+  endedGame: 'Done. {applied} changes applied and {reverted} put back.', endedStop: 'Stopped. {reverted} changes put back.', endedNone: 'Could not see {name} start within three minutes. Nothing was changed.', history: 'See History',
+  note: 'Some anti-cheats may block priority and core changes. Those steps are skipped and shown below.',
+  e_busy: 'A session is already running.', e_unknown: 'That game is no longer in your list. Rescan and pick it again.', e_cannot: 'Jylli cannot start this game by itself. Start it from its launcher; use Browse for a program that has an .exe.', e_launch: 'The game could not be started.',
+  g_process: 'Game process', g_background: 'Background activity', g_system: 'System',
+  o_priority: 'Game priority', o_eco: 'Keep the game out of efficiency mode', o_cores: 'CPU cores', o_shield: 'Close background apps (Game Shield)', o_services: 'Pause Windows Search', o_tray: 'Minimise Jylli when the game starts', o_power: 'High performance power plan', o_standby: 'Clear standby memory at start',
+  h_priority: 'Raises the game\'s CPU priority for this session only. Above normal is safe for nearly everyone. High can starve other programs. Realtime is never used.',
+  h_eco: 'Tells Windows not to throttle the game to save power (EcoQoS). Read back to prove it took effect.',
+  h_cores: 'Limits the game to a set of CPU cores for this session. Only plans that fit your CPU are listed. It ends with the game.',
+  h_shield: 'Closes launchers and apps you do not need while you play and starts them again afterwards. Uses your Game Shield exclusions.',
+  h_services: 'Stops the Windows Search indexer for the session and starts it again afterwards. It is never disabled.',
+  h_tray: 'Minimises this window so it stays out of the way. Jylli keeps running so it can undo everything.',
+  h_power: 'Switches Balanced to High performance for the session. Skipped on laptops and dual-CCD X3D processors, where it can hurt.',
+  h_standby: 'Frees cached memory Windows is holding, once, right after the game starts. Off by default.',
+  p_normal: 'Normal (no change)', p_above: 'Above normal', p_high: 'High',
+  c_all: 'All cores', c_pcores: 'Performance cores only', c_vcache: 'V-Cache cores only', c_skip0: 'Skip core 0', c_custom: 'Custom…',
+  cu_all: 'All', cu_none: 'None', cu_smtOn: 'SMT on', cu_smtOff: 'SMT off', cu_cpu: 'CPU {n}', cu_thread: 'Second thread of a core', cu_hint: 'Pick at least 4 CPUs.',
+  premium: 'Premium', locked: 'Premium option. Select to see what it adds.',
+  s_ok: 'Applied', s_skip: 'Skipped', s_lock: 'Premium',
+  r_laptop: 'Laptop: left as it is', r_x3d: 'Dual-CCD X3D: Windows handles this', r_unknown: 'Current plan unknown', 'r_already-high': 'Already on High performance', 'r_not-balanced': 'Not on Balanced, so left alone', 'r_no-high': 'No High performance plan on this PC',
+  'r_already-set': 'Game already has a raised priority', 'r_not-on-this-pc': 'Not available on this CPU', 'r_custom-too-few': 'Pick at least 4 CPUs', 'r_custom-invalid': 'A selected CPU does not exist', 'r_custom-all': 'All CPUs selected: nothing to limit',
+  r_denied: 'Windows or an anti-cheat refused it', 'r_not-changed': 'Windows did not change it', 'r_not-switched': 'Windows did not switch it', 'r_not-purged': 'Nothing was freed', 'r_not-pinned': 'Could not limit the cores', 'r_not-started': 'Game Shield could not start', 'r_none-running': 'Already stopped', r_error: 'Failed', 'r_not-applied': 'Not applied', 'r_bad-exe': 'Not a valid program name', r_unproven: 'Could not confirm it',
+}

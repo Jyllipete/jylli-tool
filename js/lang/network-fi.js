@@ -94,7 +94,9 @@ LANG.fi.net2 = {
 }
 
 // Descriptions the old Network tab carried as literals inside buildNetwork; the lookup (tDesc) reads tweakDescs.
+Object.assign(LANG.fi.tweakNames, { 'disable-llmnr': "LLMNR pois" })
 Object.assign(LANG.fi.tweakDescs, {
+  'disable-llmnr': "Poistaa käytöstä LLMNR:n, vanhan multicast-nimihaun, jota voidaan huijata vuotamaan tunnistetietoja jaetuissa verkoissa. Windows kokeilee ensin DNS:ää, joten tavallinen selailu ja pelit eivät muutu. Tietoturvamuutos, ei nopeusmuutos.",
   "disable-ipv6": 'Saa Windowsin suosimaan IPv4:ää IPv6:n sijaan (IPv6 itse pysyy päällä). Voi auttaa, kun peli tai palvelin yhdistää hitaasti rikkinäisen IPv6-reitin kautta. Vaatii uudelleenkäynnistyksen.',
   'disable-netbios': 'Poistaa käytöstä NetBIOSin TCP/IP:n päällä, vanhan nimipalvelun, jota nykyiset pelit ja verkkosivut eivät käytä. Vähentää paikallisverkon turhaa liikennettä.',
   'disable-wpad': 'Pysäyttää WinHTTP:n automaattisen välityspalvelinpalvelun, joka etsii välityspalvelimen asetuksia aina, kun verkko vaihtuu.',

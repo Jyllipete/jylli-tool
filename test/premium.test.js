@@ -51,5 +51,6 @@ test('the copy makes no performance promises', () => {
 test('premium tabs are flagged in the routes so the tab bar shows the badge', () => {
   const R = require('../js/routes')
   const flagged = R.SECTIONS.flatMap(s => s.tabs).filter(t => t.premium).map(t => t.id).sort()
-  assert.deepStrictEqual(flagged, [...P.ORDER].sort())
+  // Games opens for everyone (Competitive Mode sits on top; the rest of the tab shows the pitch), so it carries no badge
+  assert.deepStrictEqual(flagged, P.ORDER.filter(id => id !== 'games').sort())
 })

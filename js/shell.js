@@ -29,7 +29,7 @@
     network: c => JylliNetworkPage.mount(c),   // js/network: the Path stage, Overview / Tune / Measure / History
     fixes: c => buildFixes(c),
     pulse: c => buildPulse(c),
-    games: async c => { if (!settings.isPremium) await JylliPremium.build(c, 'games'); else await buildGameOpti(c) },
+    games: async c => { await buildGameOpti(c) },   // Competitive Mode is open to everyone; buildGameOpti shows the pitch under it for free accounts
     apps: c => buildAppOptimizer(c),
     fivem: c => JylliFivemPage.mount(c),
     latency: c => buildLatencyMonitor(c),

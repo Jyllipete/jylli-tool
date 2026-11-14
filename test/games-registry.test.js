@@ -62,3 +62,16 @@ test('cover candidates cover both librarycache layouts', () => {
   const c = G.coverCandidates('S', 730, (...p) => p.join('/'))
   assert.ok(c[0].endsWith('730_library_600x900.jpg')); assert.ok(c.some(x => x.endsWith('730/library_600x900.jpg')))
 })
+
+test('Xbox packages: AUMID from the manifest, name from MicrosoftGame.config, bad rows dropped', () => {
+  const pkg = { family: 'Foo.Game_8wekyb3d8bbwe', name: 'Foo.Game', location: 'D:/XboxGames/Foo/Content',
+    manifest: '<Package><Properties><DisplayName>ms-resource:Name</DisplayName></Properties><Applications><Application Id="Game" Executable="g.exe"/></Applications></Package>',
+    config: '<Game><ShellVisuals DefaultDisplayName="Foo Quest" /></Game>' }
+  assert.deepStrictEqual(G.parseXboxPackage(pkg), { id: 'xbox:Foo.Game_8wekyb3d8bbwe', aumid: 'Foo.Game_8wekyb3d8bbwe!Game', name: 'Foo Quest', install: 'D:/XboxGames/Foo/Content' })
+  assert.strictEqual(G.parseXboxPackage(Object.assign({}, pkg, { manifest: '<Package/>' })), null)
+  assert.strictEqual(G.parseXboxPackage(Object.assign({}, pkg, { family: 'bad family;' })), null)
+  assert.strictEqual(G.parseXboxPackage(Object.assign({}, pkg, { config: '' })).name, 'Game')
+  const games = G.scan({ io: { readFile: () => null, listDir: () => [], join: (...p) => p.join('/') }, xbox: [pkg] })
+  assert.strictEqual(games[0].source, 'xbox')
+  assert.strictEqual(games[0].aumid, 'Foo.Game_8wekyb3d8bbwe!Game')
+})

@@ -68,6 +68,7 @@ const GAME_DATABASE = [
   { exe: 'modernwarfare.exe',          name: 'Call of Duty: Warzone',    genre: 'competitive' },
   { exe: 'modernwarfare2.exe',         name: 'Call of Duty: MW2',        genre: 'competitive' },
   { exe: 'blackops6.exe',              name: 'Call of Duty: BO6',        genre: 'competitive' },
+  { exe: 'cod.exe',                    name: 'Call of Duty (MW4, BO6, Warzone)', genre: 'competitive' },   // one shared exe in the Steam folder "Call of Duty HQ"
   { exe: 'overwatch.exe',              name: 'Overwatch 2',              genre: 'competitive' },
   { exe: 'rainbowsix.exe',             name: 'Rainbow Six Siege',        genre: 'competitive' },
   { exe: 'paladins.exe',               name: 'Paladins',                 genre: 'competitive' },
@@ -347,7 +348,8 @@ const PREMIUM_STORE_URL = 'https://jyllitool.netlify.app/'
 // One elevated instance only: two copies would both run the sensors, watchers and settings writers.
 const _gotInstanceLock = app.requestSingleInstanceLock()
 if (!_gotInstanceLock) app.exit(0)
-app.on('second-instance', () => {
+app.on('second-instance', (_e, argv) => {
+  try { competeFromArgv(argv).catch(() => {}) } catch {}
   try { if (mainWindow) { if (mainWindow.isMinimized()) mainWindow.restore(); mainWindow.show(); mainWindow.focus() } } catch {}
 })
 
@@ -1210,7 +1212,7 @@ app.on('will-quit', (e) => {
   const sessionEndPromise = duration > 10000
     ? webhookSessionEnd(duration, sessionPageVisits, sessionTweaksCount)
     : Promise.resolve()
-  const cleanup = Promise.all([(sessionEndPromise || Promise.resolve()).finally(() => presenceShutdown().catch(() => {})), resumeAllFrozen(), (_powerLimit ? _powerLimit.onQuit().catch(() => {}) : null), (pulseActivePreset ? pulseRestoreAll(() => {}).catch(() => {}) : null), snapshots?.load('update-guard') ? setUpdateGuard(false) : null])
+  const cleanup = Promise.all([(sessionEndPromise || Promise.resolve()).finally(() => presenceShutdown().catch(() => {})), resumeAllFrozen(), (_powerLimit ? _powerLimit.onQuit().catch(() => {}) : null), (pulseActivePreset ? pulseRestoreAll(() => {}).catch(() => {}) : null), (competeActive() ? competeSvc().stop().catch(() => {}) : null), snapshots?.load('update-guard') ? setUpdateGuard(false) : null])
   const timeout = new Promise(resolve => setTimeout(resolve, 6500))
   Promise.race([cleanup, timeout]).finally(() => {
     if (_updateReady && autoUpdater) {
@@ -3179,7 +3181,14 @@ async function getGamesRegistry(refresh) {
   const presets = {}
   for (const id of Object.keys(GAME_EXE_MAP)) presets[id] = id
   const epicDir = path.join(process.env.PROGRAMDATA || 'C:\\ProgramData', 'Epic', 'EpicGamesLauncher', 'Data', 'Manifests')
-  _gamesCache = { t: Date.now(), steamRoot: root, games: GamesRegistry.scan({ steamRoot: root, epicDir, io: GAMES_IO, presets }) }
+  let xbox = []
+  try {
+    const ps = "$o=@(); Get-AppxPackage | Where-Object { $_.InstallLocation -and (Test-Path (Join-Path $_.InstallLocation 'MicrosoftGame.config')) } | ForEach-Object { $c=Join-Path $_.InstallLocation 'MicrosoftGame.config'; $m=Join-Path $_.InstallLocation 'AppxManifest.xml'; $o += [pscustomobject]@{ family=$_.PackageFamilyName; name=$_.Name; location=$_.InstallLocation; config=(Get-Content -Raw -ErrorAction SilentlyContinue $c); manifest=(Get-Content -Raw -ErrorAction SilentlyContinue $m) } }; ConvertTo-Json -Compress -InputObject @($o)"
+    const r = await runPS(ps, 20000)
+    const parsed = JSON.parse(String(r.out || '[]').trim() || '[]')
+    if (Array.isArray(parsed)) xbox = parsed
+  } catch {}
+  _gamesCache = { t: Date.now(), steamRoot: root, games: GamesRegistry.scan({ steamRoot: root, epicDir, io: GAMES_IO, presets, xbox }) }
   return _gamesCache
 }
 ipcMain.handle('get-games-registry', async (_, opts) => { const g = await getGamesRegistry(!!(opts && opts.refresh)); return { ok: true, games: g.games.map(x => ({ id: x.id, source: x.source, name: x.name, aliases: x.aliases })) } })
@@ -7012,6 +7021,70 @@ if ($r.Count -eq 0) { Write-Output "NONE_FOUND" } else { foreach ($x in $r) { Wr
       s('Long file paths: back to the Windows default.', 'ok')
     }
   },
+  // ── Round 3 (competitor comparison 2026-11-14): see docs/WINDOWS_EVIDENCE.md
+  'classic-context-menu': {
+    safetyTier: 1,
+    // The empty InprocServer32 default under this CLSID is what turns the Windows 11 compact right-click menu back into the full one.
+    apply: async (s, ps) => {
+      await ps('New-Item -Path "HKCU:\\Software\\Classes\\CLSID\\{86ca1aa0-34aa-4e8b-a509-50c905bae2a2}\\InprocServer32" -Force -EA SilentlyContinue | Out-Null')
+      await ps('Set-ItemProperty -Path "HKCU:\\Software\\Classes\\CLSID\\{86ca1aa0-34aa-4e8b-a509-50c905bae2a2}\\InprocServer32" -Name "(default)" -Value "" -Force')
+      s('Full right-click menu: applied. Restart Explorer or sign out to see it.', 'ok')
+    },
+    restore: async (s, ps) => {
+      await ps('Remove-Item -Path "HKCU:\\Software\\Classes\\CLSID\\{86ca1aa0-34aa-4e8b-a509-50c905bae2a2}" -Recurse -Force -EA SilentlyContinue')
+      s('Compact right-click menu: back to the Windows default.', 'ok')
+    }
+  },
+  'explorer-this-pc': {
+    safetyTier: 1,
+    apply: async (s, ps) => {
+      await ps('New-Item -Path "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced" -Force -EA SilentlyContinue | Out-Null')
+      await ps('Set-ItemProperty -Path "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced" -Name LaunchTo -Value 1 -Type DWord -Force')
+      s('File Explorer now opens to This PC.', 'ok')
+    },
+    restore: async (s, ps) => {
+      await ps('Remove-ItemProperty -Path "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced" -Name LaunchTo -EA SilentlyContinue')
+      s('File Explorer start folder: back to the Windows default.', 'ok')
+    }
+  },
+  'menu-delay-short': {
+    safetyTier: 1,
+    // MenuShowDelay is a string value; Windows ships 400. 100 keeps menus from opening while the pointer is only passing over them.
+    apply: async (s, ps) => {
+      await ps('Set-ItemProperty -Path "HKCU:\\Control Panel\\Desktop" -Name MenuShowDelay -Value 100 -Type String -Force')
+      s('Menu delay set to 100 ms. Sign out to apply.', 'ok')
+    },
+    restore: async (s, ps) => {
+      await ps('Set-ItemProperty -Path "HKCU:\\Control Panel\\Desktop" -Name MenuShowDelay -Value 400 -Type String -Force')
+      s('Menu delay: back to the Windows default (400 ms). Sign out to apply.', 'ok')
+    }
+  },
+  'disable-llmnr': {
+    name: 'Disable LLMNR',
+    category: 'network',
+    safetyTier: 1,
+    gamerImpact: 'low',
+    apply: async (s, ps) => {
+      await ps('New-Item -Path "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows NT\\DNSClient" -Force -EA SilentlyContinue | Out-Null')
+      await ps('Set-ItemProperty -Path "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows NT\\DNSClient" -Name EnableMulticast -Value 0 -Type DWord -Force')
+      s('LLMNR off: applied.', 'ok')
+    },
+    restore: async (s, ps) => {
+      await ps('Remove-ItemProperty -Path "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows NT\\DNSClient" -Name EnableMulticast -EA SilentlyContinue')
+      s('LLMNR: back to the Windows default.', 'ok')
+    }
+  },
+  'bsod-no-autoreboot': {
+    safetyTier: 1,
+    apply: async (s, ps) => {
+      await ps('Set-ItemProperty -Path "HKLM:\\SYSTEM\\CurrentControlSet\\Control\\CrashControl" -Name AutoReboot -Value 0 -Type DWord -Force')
+      s('Blue screens now stay on screen until you restart.', 'ok')
+    },
+    restore: async (s, ps) => {
+      await ps('Set-ItemProperty -Path "HKLM:\\SYSTEM\\CurrentControlSet\\Control\\CrashControl" -Name AutoReboot -Value 1 -Type DWord -Force')
+      s('Automatic restart after a blue screen: back to the Windows default.', 'ok')
+    }
+  },
   'driver-updates-off': {
     safetyTier: 1,
     apply: async (s, ps) => {
@@ -10360,9 +10433,9 @@ const pulsePriorityUndo = {
 }
 
 /** Applies a priority to a list of processes under the journal and returns what the read-back proved: Map pid -> { st, a, b }. */
-async function pulseSetPriorities(control, items, to) {
+async function pulseSetPriorities(control, items, to, meta) {
   let res = new Map()
-  await journalSvc().runRecorded(control, 'apply', { via: pulseVia, batchId: pulseBatchId }, async (ps, cmd, note) => {
+  await journalSvc().runRecorded(control, 'apply', meta || { via: pulseVia, batchId: pulseBatchId }, async (ps, cmd, note) => {
     const r = await runPS(pulsePrioScript('set', items.map(x => ({ ...x, to }))), 30000)
     res = pulsePrioParse(r.out)
     for (const x of items) {
@@ -11216,6 +11289,171 @@ ipcMain.handle('detect-games', async () => {
   return found
 })
 
+// ─── Competitive Mode ───────────────────────────────────────────────────────────────────────────────────
+// Pick one game, press Start: launch it, apply the planned session steps once its process exists, put everything back when it closes.
+// Engine in lib/compete/ (plan = the only list of steps). Reuses Pulse's journaled priority/power helpers, Game Shield and the CPU & Memory pin/purge.
+const Compete = require('./lib/compete')
+const CompeteAct = require('./lib/compete/actions')
+const CompeteSvc = require('./lib/compete/services')
+const CompeteLaunch = require('./lib/compete/launch')
+let _compete = null
+const competeSend = (ch, payload) => { try { mainWindow?.webContents.send(ch, payload) } catch {} }
+const competeLog = (msg, level = 'info') => competeSend('log', { msg, level, ts: new Date().toLocaleTimeString() })
+const competeMeta = ctx => ({ via: 'manual', batchId: ctx.batchId })
+function competeActive() { return !!_compete && _compete.status().state !== 'idle' }
+
+/** Puts back what the journal recorded for Competitive Mode: priorities always (self-guarded), the power plan only if the user did not change it since. */
+async function competeRestoreJournal() {
+  const svc = journalSvc()
+  const entries = svc.journal.list({ limit: 2000 }).filter(e => e.control && e.control.startsWith('compete:') && e.action === 'apply' && !e.undoneBy)
+  for (const e of entries.reverse()) {
+    const isPower = e.control === 'compete:power'
+    let r
+    try { r = await svc.undo({ entryId: e.id }, { force: !isPower }) } catch (err) { r = { ok: false } }
+    if (!r.ok && isPower && r.conflict) svc.journal.markUndone(e.id, 'compete-left')   // the user changed the plan after we did: leave it as they set it
+  }
+}
+
+function competeResolveGame(id) {
+  if (typeof id === 'string' && id.startsWith('custom:')) {
+    const p = id.slice(7)
+    return CompeteLaunch.validExePath(p) ? { id, name: path.win32.basename(p).replace(/\.exe$/i, ''), customExe: p, source: 'custom' } : null
+  }
+  const g = _gamesCache && _gamesCache.games.find(x => x.id === id)
+  return g ? { id: g.id, name: g.name, install: g.install || null, aumid: g.aumid || null, source: g.source } : null
+}
+
+function competeSvc() {
+  if (_compete) return _compete
+  const mk = (id, fn) => async ctx => { try { return await fn(ctx) } catch (e) { return { ok: false, reason: 'error' } } }
+  _compete = Compete.create({
+    isPremium: () => !!auth && auth.isPremium(),
+    resolveGame: competeResolveGame,
+    listLines: async () => String((await runPS(CompeteAct.listScript(), 15000)).out || '').split(/\r?\n/),
+    lookup: async exe => { const s = CompeteAct.lookupScript(exe); return s ? CompeteAct.parseLookup((await runPS(s, 10000)).out) : null },
+    alive: async g => { const a = CompeteAct.aliveArgs(g); if (!a) return false; const r = await runFile('tasklist', a, { timeout: 8000 }); return r.ok ? CompeteAct.parseAliveTasklist(r.out, g) : true },   // a failed tasklist never ends the session
+    launch: async spec => {
+      if (spec.kind === 'url') { await shell.openExternal(spec.url); return }
+      if (spec.kind === 'shell') { spawn('explorer.exe', [spec.target], { detached: true, stdio: 'ignore' }).unref(); return }
+      spawn(spec.exe, [], { cwd: spec.cwd, detached: true, stdio: 'ignore' }).unref()
+    },
+    facts: async game => {
+      const profile = capsProfileFresh()
+      const caps = profile ? Caps.deriveCaps(profile) : null
+      const form = (caps && caps.form) || (cachedSysInfo && typeof cachedSysInfo.isLaptop === 'boolean' ? (cachedSysInfo.isLaptop ? 'laptop' : 'desktop') : null)
+      const r = await runPS("$p = ((powercfg /getactivescheme) -join ' '); $l = ((powercfg /list) -join [char]10); ConvertTo-Json -Compress @{ plan = $p; list = $l }", 12000)
+      let j = null; try { j = JSON.parse(String(r.out || '').trim()) } catch {}
+      const m = j && /([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\s*(?:\((.*?)\))?/i.exec(String(j.plan || ''))
+      const cp = cpumemSvc().corePlans()
+      return {
+        form, dualCcdX3d: caps && caps.cpu ? caps.cpu.dualCcdX3d === true : null,
+        activePlan: m ? { guid: m[1], name: m[2] || m[1] } : null,
+        highPerfAvailable: j ? new RegExp(Pu2Plan.HIGH_PERF, 'i').test(String(j.list || '')) : null,
+        coreKinds: cp.kinds, logical: cp.logical,
+      }
+    },
+    apply: {
+      priority: mk('priority', async ctx => {
+        const g = ctx.game
+        const res = await pulseSetPriorities('compete:priority', [{ id: g.pid, name: g.name, st: g.st, only: ['Normal', 'BelowNormal'] }], ctx.step.level, competeMeta(ctx))
+        const o = res.get(Number(g.pid))
+        if (o && o.st === 'SET' && o.b === ctx.step.level) { competeLog(`  Competitive Mode: ${g.name} priority → ${o.b} (verified)`, 'ok'); return { ok: true, detail: `${o.a} → ${o.b}` } }
+        return { ok: false, reason: o && o.st === 'DENIED' ? 'denied' : 'not-changed' }
+      }),
+      eco: mk('eco', async ctx => {
+        const s = CompeteAct.ecoScript(ctx.game.pid)
+        const r = s ? CompeteAct.parseEco((await runPS(s, 15000)).out) : 'denied'
+        return r === 'ok' ? { ok: true, detail: 'EcoQoS off' } : { ok: false, reason: r }
+      }),
+      power: mk('power', async ctx => {
+        await journalSvc().runRecorded('compete:power', 'apply', competeMeta(ctx), async (ps, cmd) => { await cmd('powercfg /setactive ' + ctx.step.to) })
+        const now = await runPS('(powercfg /getactivescheme) -join " "', 8000)
+        return String(now.out || '').toLowerCase().includes(ctx.step.to) ? { ok: true, detail: 'High performance' } : { ok: false, reason: 'not-switched' }
+      }),
+      standby: mk('standby', async () => { const r = await cpumemSvc().freeStandby(); return r && r.ok ? { ok: true, detail: `${r.freedMB || 0} MB` } : { ok: false, reason: 'not-purged' } }),
+      cores: mk('cores', async ctx => {
+        const exe = ctx.game.exe
+        if (ctx.step.kind === 'custom') {
+          const aff = require('./lib/cpumem/affinity'), act = require('./lib/cpumem/actions')
+          if (!aff.validExe(exe)) return { ok: false, reason: 'bad-exe' }
+          const r = act.parsePin((await runPS(act.pinScript(exe, aff.maskOf(ctx.step.cpus)), 20000)).out)
+          return r && r.pinned > 0 ? { ok: true, detail: `${ctx.step.cpus.length} CPUs` } : { ok: false, reason: 'not-pinned' }
+        }
+        const r = await cpumemSvc().pin({ exe, kind: ctx.step.kind })
+        return r && r.ok && r.processes > 0 ? { ok: true, detail: `${r.count}/${r.total}` } : { ok: false, reason: 'not-pinned' }
+      }),
+      shield: mk('shield', async () => { await gameShieldActivate({ force: true }); return _gsSession ? { ok: true } : { ok: false, reason: 'not-started' } }),
+      services: mk('services', async ctx => {
+        const paused = CompeteSvc.parsePaused((await runPS(CompeteSvc.pauseScript(), 20000)).out)
+        if (paused.length) snapshots.save('compete-services', { names: paused, batchId: ctx.batchId })
+        return paused.length ? { ok: true, detail: paused.join(', ') } : { ok: false, reason: 'none-running' }
+      }),
+      tray: mk('tray', async () => { try { mainWindow?.minimize() } catch {}; return { ok: true } }),
+    },
+    undo: {
+      priority: async () => { await competeRestoreJournal() },              // journal: priority + power are undone together, newest first
+      power: async () => { await competeRestoreJournal() },
+      services: async () => {
+        const s = snapshots.load('compete-services')
+        if (s && Array.isArray(s.names)) { const sc = CompeteSvc.resumeScript(s.names); if (sc) await runPS(sc, 20000); snapshots.remove('compete-services') }
+      },
+      shield: async () => { await gameShieldDeactivate() },
+      cores: async ctx => { const exe = ctx.game && ctx.game.exe; if (exe && require('./lib/cpumem/affinity').validExe(exe)) await cpumemSvc().unpin({ exe }).catch(() => {}) },
+    },
+    store: { load: k => snapshots.load(k), save: (k, v) => snapshots.save(k, v), remove: k => snapshots.remove(k) },
+    emit: (ch, p) => { competeSend(ch, p); try { presenceRefresh() } catch {} },
+    prefs: { read: () => cuRead('jt_compete.json', {}), write: v => cuWrite('jt_compete.json', v) },
+  })
+  return _compete
+}
+
+ipcMain.handle('compete-state', async () => {
+  const cp = cpumemSvc().corePlans()
+  const prefs = cuRead('jt_compete.json', {})
+  return { ...competeSvc().status(), premium: !!auth && auth.isPremium(), cores: cp, last: prefs.last || null, opts: prefs.opts || {}, services: CompeteSvc.SERVICES.map(s => s.name) }
+})
+ipcMain.handle('compete-games', async (_, req) => {
+  const g = await getGamesRegistry(!!(req && req.refresh))
+  return { ok: true, games: g.games.map(x => ({ id: x.id, source: x.source, name: x.name })) }
+})
+ipcMain.handle('compete-start', async (_, req) => {
+  await getGamesRegistry(false)
+  const id = String(req && req.gameId || '')
+  const r = await competeSvc().start({ gameId: id, opts: req && req.opts })
+  if (r.ok) competeLog(`◆ Competitive Mode: starting ${id}`, 'head')
+  return r
+})
+ipcMain.handle('compete-stop', async () => competeSvc().stop())
+ipcMain.handle('compete-shortcut', async (_, gameId) => {
+  if (!requiresPremium('compete-shortcut')) return { ok: false, reason: 'premium_required' }
+  await getGamesRegistry(false)
+  const game = competeResolveGame(String(gameId || ''))
+  if (!game || !CompeteLaunch.launchFor(game)) return { ok: false, error: 'unknown-game' }
+  try {
+    const file = path.join(app.getPath('desktop'), CompeteLaunch.shortcutName(game.name))
+    const args = (app.isPackaged ? '' : '"' + app.getAppPath() + '" ') + '--compete "' + game.id + '"'
+    const ok = shell.writeShortcutLink(file, 'create', { target: process.execPath, args, cwd: path.dirname(process.execPath), description: 'Jylli Tool Competitive Mode: ' + game.name, icon: process.execPath, iconIndex: 0 })
+    return { ok: !!ok, file }
+  } catch (e) { return { ok: false, error: 'write-failed' } }
+})
+/** `Jylli Tool.exe --compete <id>` (the desktop shortcut), also when the app is already open (second-instance). */
+async function competeFromArgv(argv) {
+  const id = CompeteLaunch.idFromArgv(argv)
+  if (!id || competeActive()) return
+  await getGamesRegistry(false)
+  const prefs = cuRead('jt_compete.json', {})
+  const r = await competeSvc().start({ gameId: id, opts: (prefs.opts || {})[id] })
+  if (r.ok) competeLog('◆ Competitive Mode: starting ' + id + ' from a shortcut', 'head')
+}
+ipcMain.handle('compete-browse', async () => {
+  const r = await dialog.showOpenDialog(mainWindow, { title: 'Select the game executable', properties: ['openFile'], filters: [{ name: 'Programs', extensions: ['exe'] }] })
+  if (r.canceled || !r.filePaths[0]) return { ok: false, canceled: true }
+  const p = r.filePaths[0]
+  return CompeteLaunch.validExePath(p) ? { ok: true, id: 'custom:' + p, name: path.win32.basename(p).replace(/\.exe$/i, '') } : { ok: false, error: 'bad-exe' }
+})
+setTimeout(() => { try { competeSvc().recover().catch(() => {}) } catch {} }, 5000)
+setTimeout(() => { competeFromArgv(process.argv).catch(() => {}) }, 9000)   // started from a desktop shortcut; after recover() so a leftover session is undone first   // a session that was running when the app or PC went down is put back
+
 // ─── Per-Game Auto Profile (process watcher) ──────────────────────────────────
 let gameWatcherInterval = null
 let activeGameProfile = null
@@ -11228,6 +11466,7 @@ ipcMain.handle('start-game-watcher', async () => {
 
   gameWatcherInterval = setInterval(async () => {
     try {
+    if (competeActive()) return   // Competitive Mode owns this game's session: no Auto-Pulse, Game Shield or profile on top of it
     const r = await runCmd('tasklist /fo csv /nh')
     if (!r.ok || !r.out) return
     const running = new Set(r.out.split('\n').map(l => l.split(',')[0]?.replace(/"/g, '').replace(/\.exe$/i, '').trim().toLowerCase()))
@@ -13925,10 +14164,11 @@ async function gsStopNames(session, names) {
   return [...stoppedNow]
 }
 
-async function gameShieldActivate() {
+async function gameShieldActivate(opts) {
   const cfg = gsSettings()
-  if (!cfg.enabled || _gsSession || !(auth && auth.isPremium())) return
-  const session = _gsSession = { stopped: new Map(), killCount: 0, freedMB: 0, midTimer: null, busy: false }
+  const forced = !!(opts && opts.force)   // Competitive Mode: the user asked for it for this session, whatever the Game Shield switch says
+  if ((!cfg.enabled && !forced) || _gsSession || !(auth && auth.isPremium())) return
+  const session = _gsSession = { stopped: new Map(), killCount: 0, freedMB: 0, midTimer: null, busy: false, forced }
   const names = GameShield.launchKillList({ ramPct: gsRamPct(), tier3Threshold: cfg.tier3, exclusions: cfg.exclusions })
   const killed = await gsStopNames(session, names)
   if (_gsSession !== session) return   // game already closed while we were stopping things
@@ -13943,7 +14183,7 @@ async function gameShieldMidTick() {
   s.busy = true
   try {
     const cfg = gsSettings()
-    if (!cfg.enabled) return
+    if (!cfg.enabled && !s.forced) return
     const names = GameShield.midSessionKillList({ ramPct: gsRamPct(), tier3Threshold: cfg.tier3, midThreshold: cfg.mid, exclusions: cfg.exclusions, alreadyStopped: [...s.stopped.keys()] })
     if (!names.length) return
     const killed = await gsStopNames(s, names)

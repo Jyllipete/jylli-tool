@@ -69,3 +69,12 @@ Sources: Microsoft Policy CSP / ADMX names; written from policy documentation, *
 ### Not shipped (unverified)
 - **paint-ai-off** (DisableCocreator/GenerativeFill/ImageCreator): Microsoft documents these as Policy CSP only; the registry path in guides (`HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Paint`) is community-sourced.
 - **onesettings-off** (DisableOneSettingsDownloads): no source confirmed this round.
+
+## Round 3 (competitor comparison, 2026-11-14)
+Checked a rival tool's Network, Tweaks and Security pages against ours. Registry values are the documented/commonly used ones; none is claimed to raise FPS.
+
+**Added (Windows tab):** `game-mode-on` (now a visible row; Game Mode is on by default, so it is a "set explicitly / repair" switch), `classic-context-menu` (HKCU CLSID `{86ca1aa0-…}\InprocServer32` empty default, Windows 11 only), `explorer-this-pc` (Explorer `LaunchTo=1`, preference), `menu-delay-short` (`MenuShowDelay` 100, default 400), `bsod-no-autoreboot` (`CrashControl\AutoReboot=0`, keeps the stop code readable; expert lane). All manual-only in Auto-Optimize.
+
+**Rejected:** Fast UDP Datagram Send, Nagle, TCP ACK frequency, QoS reserve, Network Throttling Index, TCP task offload (retired for lack of measurement, see TWEAK_EVIDENCE); Mouse Throttling (only background-window input); Text Input Service off (breaks typing/IMEs, CPU figure unsourced); Audio Enhancements off (per-endpoint writes, weak evidence); Network Data Usage off (old Killer-driver DPC reports, breaks metered limits); Safe Mode + Power Plans desktop menu (a safeboot flag can trap users); Vulnerable Driver Blocklist, SmartScreen, UAC, Control Flow Guard (security cost, no proven gain; `SHIELD_DENY` forbids UAC/SmartScreen/DeviceGuard); Kernel Paging Executive, NTFS last-access, Auto Maintenance, Foreground App Boost (already retired).
+
+**Not added yet:** Modern Standby fix (`PlatformAoAcOverride=0`). Only safe when S3 is offered by the firmware; needs a gate on `lib/power/sleep.js` output first.

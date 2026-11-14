@@ -17,7 +17,7 @@
     ] },
     { id: 'gaming', icon: 'gamepad', tabs: [
       { id: 'pulse', page: 'pulse', premium: true },
-      { id: 'games', page: 'game-opti', premium: true },
+      { id: 'games', page: 'game-opti' },
       { id: 'apps', page: 'app-optimizer' },
       { id: 'fivem', page: 'fivem', premium: true },
       { id: 'latency', page: 'latency-monitor', premium: true },

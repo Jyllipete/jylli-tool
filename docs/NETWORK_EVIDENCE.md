@@ -72,3 +72,6 @@ Same as the Windows tab: `journalSvc().applyBatch` (via `manual`, label `network
 - A per-adapter view: the stage describes the adapter that owns the default route; DNS is changed on every adapter that is up, as the tweaks always did.
 - Probes for Wi-Fi driver properties: names differ per vendor, so the state of `wifi-gaming-tune` stays `unknown`.
 - `disable-delivery-opt` lives on the Windows tab; the Network tab does not own it.
+
+## Round 3 (competitor comparison, 2026-11-14)
+Added `disable-llmnr` (policy `DNSClient\EnableMulticast=0`) in the Protocol lane beside NetBIOS and WPAD. Security hygiene only (LLMNR poisoning on shared networks), no speed claim, manual-only. Rejected: Fast UDP Datagram Send, Network Data Usage off (see WINDOWS_EVIDENCE Round 3).

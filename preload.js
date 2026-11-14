@@ -324,6 +324,14 @@ contextBridge.exposeInMainWorld('api', {
   getGameShieldExclusions: ()        => ipcRenderer.invoke('get-game-shield-exclusions'),
   setGameShieldExclusions: (list)    => ipcRenderer.invoke('set-game-shield-exclusions', list),
   onGameShieldEvent:    (cb)         => on('game-shield-event', cb),
+  competeState:         ()           => ipcRenderer.invoke('compete-state'),
+  competeGames:         (o)          => ipcRenderer.invoke('compete-games', o),
+  competeStart:         (req)        => ipcRenderer.invoke('compete-start', req),
+  competeStop:          ()           => ipcRenderer.invoke('compete-stop'),
+  competeShortcut:      (id)         => ipcRenderer.invoke('compete-shortcut', id),
+  competeBrowse:        ()           => ipcRenderer.invoke('compete-browse'),
+  onCompeteState:       (cb)         => on('compete-state', cb),
+  onCompeteEnded:       (cb)         => on('compete-ended', cb),
 
   // Game History / Custom Games
   addCustomGame:        (exe, name)  => ipcRenderer.invoke('add-custom-game', { exe, name }),

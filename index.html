@@ -27,6 +27,7 @@
 <link rel="stylesheet" href="css/diagnostics.css">
 <link rel="stylesheet" href="css/fivem.css">
 <link rel="stylesheet" href="css/gameconfig.css">
+<link rel="stylesheet" href="css/compete.css">
 <link rel="stylesheet" href="css/pulse.css">
 <link rel="stylesheet" href="css/home.css">
 <link rel="stylesheet" href="css/bios.css">
@@ -516,6 +517,8 @@
 <script src="js/lang/fivem-fi.js"></script>
 <script src="js/lang/gamecfg-en.js"></script>
 <script src="js/lang/gamecfg-fi.js"></script>
+<script src="js/lang/compete-en.js"></script>
+<script src="js/lang/compete-fi.js"></script>
 <script src="js/lang/pulse-en.js"></script>
 <script src="js/lang/pulse-fi.js"></script>
 <script src="js/lang/home-en.js"></script>
@@ -648,6 +651,8 @@
 <script src="js/fivem/radar.js"></script>
 <script src="js/fivem/page.js"></script>
 <script src="js/gameconfig/sheet.js"></script>
+<script src="js/compete/pure.js"></script>
+<script src="js/compete/page.js"></script>
 <script src="js/fivem/views.js"></script>
 <script src="lib/pulse/attribution.js"></script>
 <script src="lib/pulse/frames.js"></script>
@@ -1424,7 +1429,7 @@ document.addEventListener('keydown', e => {
 })
 
 // ─── Premium tier helpers ──────────────────────────────────────────────────────
-const PREMIUM_PAGES = ['hardware','fivem','pulse','latency-monitor','game-opti','scheduler','bios-tuner']
+const PREMIUM_PAGES = ['hardware','fivem','pulse','latency-monitor','scheduler','bios-tuner']
 
 function applyTierToNav() {
   PREMIUM_PAGES.forEach(page => {
@@ -6192,7 +6197,13 @@ let gpScanned = false
 let _gpScanRunning = false
 
 async function buildGameOpti(c) {
-  if (!settings.isPremium) { await JylliPremium.build(c, 'games'); return }
+  // Competitive Mode (js/compete/page.js) is open to everyone; its Premium rows lock inline. The rest of the tab is Premium.
+  const cpHost = document.createElement('div')
+  cpHost.id = 'cp-host'
+  c.appendChild(cpHost)
+  const cpPanel = JylliCompetePage.mount(cpHost)
+  registerPageCleanup('game-opti', () => { try { cpPanel.destroy() } catch {} })
+  if (!settings.isPremium) { const rest = document.createElement('div'); c.appendChild(rest); await JylliPremium.build(rest, 'games'); return }
   // Hero (js/ui/tab-kit.js): how many installed games have their profile applied, and one action for the rest
   const gpHost = document.createElement('div')
   gpHost.className = 'tk-hero'
