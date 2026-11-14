@@ -8896,6 +8896,29 @@ ipcMain.handle('install-update', () => {
 
 // What's New content
 const WHATS_NEW = [
+  { version: '1.6.1', date: 'Nov 2026', items: [
+    'New — Games tab "Library": your real Steam, Epic and Xbox library, a Play button, honest per-game tuning that you can undo, and play history',
+    'New — Competitive Mode: one-game booster at the top of Games (priority, power plan, memory cleanup, tray). Premium adds core selection, Game Shield, Windows Search pause and a desktop shortcut',
+    'New — 14 more Windows switches and a per-game settings editor',
+    'New — Six more tweaks: Classic context menu, Explorer opens This PC, shorter menu delay, no auto-reboot on BSOD, LLMNR off and a Game Mode row (all manual)',
+    'New — Pulse: before/after measurement windows, boost plan rules, preflight check and score updates',
+    'New — FiveM: Fit Check, route memory, passport, pacing and console coach, and corrected graphics ranges',
+    'Improved — BIOS: multi-source identity, capability matrix and verifiable backups',
+    'Improved — Tweak audit 2: Defender cloud-protection-weakening tweaks removed, honest descriptions, Restore gives back your real original value, and a Game Mode warning for X3D PCs',
+    'Fix — Launchers (Steam, Epic, EA, Riot and others) no longer get Idle priority, since games inherit it. Diagnostics repairs old leftovers',
+    'Fix — Processes tab: CPU hog rail restored',
+  ], items_fi: [
+    'Uusi — Pelit-välilehti "Kirjasto": oikea Steam-, Epic- ja Xbox-kirjastosi, Pelaa-painike, rehelliset peleittäiset säädöt jotka voi perua sekä pelihistoria',
+    'Uusi — Kilpailutila: yhden pelin tehostin Pelit-välilehden ylälaidassa (prioriteetti, virtasuunnitelma, muistin siivous, ilmaisinalue). Premium lisää ytimien valinnan, Game Shieldin, Windows-haun tauotuksen ja työpöytäpikakuvakkeen',
+    'Uusi — 14 uutta Windows-kytkintä ja peleittäinen asetusten muokkain',
+    'Uusi — Kuusi uutta säätöä: Klassinen kontekstivalikko, Resurssienhallinta avaa Tämä tietokone, lyhyempi valikkoviive, ei automaattista uudelleenkäynnistystä BSOD:ssa, LLMNR pois ja Game Mode -rivi (kaikki manuaalisia)',
+    'Uusi — Pulse: ennen/jälkeen-mittausikkunat, tehostussuunnitelman säännöt, esitarkistus ja pisteytyspäivitykset',
+    'Uusi — FiveM: Sopivuustarkistus, reittimuisti, passi, tahdistus ja konsolivalmentaja sekä korjatut grafiikka-alueet',
+    'Parannus — BIOS: monilähteinen tunnistus, ominaisuusmatriisi ja varmennettavat varmuuskopiot',
+    'Parannus — Säätöauditointi 2: Defender-pilvisuojausta heikentävät säädöt poistettu, kuvaukset korjattu, Palauta antaa oikean alkuperäisen arvon ja Game Mode -varoitus X3D-koneille',
+    'Korjaus — Launcherit (Steam, Epic, EA, Riot ym.) eivät enää saa Idle-prioriteettia, koska pelit perivät sen. Diagnostiikka korjaa vanhat jäänteet',
+    'Korjaus — Prosessit-välilehti: suoritinsyöpön kisko palautettu',
+  ]},
   { version: '1.6.0', date: 'Nov 2026', items: [
     'New — Power tab rebuilt: live power flow, plan comparison and safe tidy, sleep and wake diagnosis, battery health and energy sessions with cost, every change undoable',
     'New — Pulse: frame river, Limiter (what limits your FPS right now), session debriefs, boost receipt, cockpit window and in-game HUD',

@@ -1,6 +1,14 @@
 # Changelog
 
-## v1.6.0 (nykyinen)
+## v1.6.1 (nykyinen)
+
+- Uusi — Pelit-välilehti "Kirjasto": oikea Steam-, Epic- ja Xbox-kirjasto, Pelaa-painike, peleittäiset säädöt ja pelihistoria
+- Uusi — Kilpailutila: yhden pelin tehostin (Premium: ytimet, Game Shield, Windows-haun tauotus, pikakuvake)
+- Uusi — 14 Windows-kytkintä, peleittäinen asetusmuokkain ja kuusi uutta säätöä
+- Uusi — Pulse-mittausikkunat, FiveM Sopivuustarkistus ja konsolivalmentaja, BIOS-varmuuskopiot
+- Parannus — Säätöauditointi 2 ja 3; Korjaus — launcherien Idle-prioriteetti, Prosessit-kisko
+
+## v1.6.0
 
 - Uusi — Pulse: ruutuvirta, Rajoittaja (mikä FPS:ää rajoittaa juuri nyt), istuntoyhteenvedot, tehostuskuitti, ohjaamoikkuna ja pelinaikainen HUD
 - Uusi — Uudistetut välilehdet: Siivous, Bloatware, Diagnostiikka ja FiveM (reittitutka, istuntojen tallennus) mitattuine tuloksineen ja peruutettavine muutoksineen
