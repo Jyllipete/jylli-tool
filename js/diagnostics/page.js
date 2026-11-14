@@ -6,7 +6,7 @@
   const PROBE_SUBS = {
     reliability: ['stability'], events: ['stability'], minidumps: ['stability'], storage: ['storage'], battery: ['storage'], memory: ['memory'], ram: ['memory'],
     cpu: ['cpu'], thermal: ['cpu'], temps: ['cpu'], devices: ['drivers'], drivers: ['drivers'], runtimes: ['drivers'], updates: ['windows'], health: ['windows'],
-    tpm: ['security'], net: ['network'], profile: ['gpu', 'security', 'memory'], preflight: ['config'],
+    tpm: ['security'], net: ['network'], profile: ['gpu', 'security', 'memory'], preflight: ['config'], launchers: ['config'],
   }
   const DEEP_ONLY = ['health', 'thermal', 'ram']
   const SEV_ORDER = ['critical', 'high', 'medium', 'low', 'info']

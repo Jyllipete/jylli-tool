@@ -20,7 +20,7 @@ function harness(o = {}) {
       if (o.abort) return { ok: false, aborted: true, reason: 'restore-point-failed', guidance: 'Turn on System Protection', restorePoint: { ok: false } }
       const items = req.items.map(i => {
         if (o.fail && o.fail.includes(i.tweakId)) return { id: i.tweakId, action: i.action, status: 'failed', error: 'boom' }
-        if (!o.noFlip) { if (i.tweakId === 'game-dvr') reg[DVR] = i.action === 'apply' ? '0' : '1'; if (i.tweakId === 'compat-scanner-off') reg['s|PcaSvc'] = i.action === 'apply' ? 'Disabled' : 'Automatic' }
+        if (!o.noFlip) { if (i.tweakId === 'game-dvr') reg[DVR] = i.action === 'apply' ? '0' : '1'; if (i.tweakId === 'compat-scanner-off') reg['t|'+String.fromCharCode(92)+'Microsoft'+String.fromCharCode(92)+'Windows'+String.fromCharCode(92)+'Application Experience'+String.fromCharCode(92)+'|ProgramDataUpdater'] = i.action === 'apply' ? 'Disabled' : 'Automatic' }
         settings['tweak_' + i.tweakId] = i.action === 'apply' ? 'applied' : 'restored'
         return { id: i.tweakId, action: i.action, status: 'ok', journalId: 'j_' + i.tweakId, fidelity: 'exact' }
       })
@@ -40,7 +40,7 @@ test('scan: one read-only probe, models for both tabs, remembered state persiste
   const r = await h.svc.scan()
   assert.ok(r.ok && r.read && !r.stale)
   assert.strictEqual(h.calls.ps, 1)
-  assert.ok(r.models.windows.items.length > 25 && r.models.qol.items.length === 12)
+  assert.ok(r.models.windows.items.length > 20 && r.models.qol.items.length === 12)
   assert.ok(h.store.v.last.readings)
 })
 
@@ -139,5 +139,5 @@ test('summary: from the last read, null before any', async () => {
   assert.strictEqual(h.svc.summary(), null)
   await h.svc.scan()
   const s = h.svc.summary()
-  assert.ok(s.total > 25 && s.rec > 0)
+  assert.ok(s.total > 20 && s.rec > 0)
 })

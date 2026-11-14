@@ -28,7 +28,7 @@ test('Safe output is identical with or without the intensity argument', () => {
 })
 
 test('the Safe allowlist is unchanged by Maximum rows; Maximum and expert sets are disjoint from forever-banned', () => {
-  assert.equal(cat.allowedTweaks().size, 28)
+  assert.equal(cat.allowedTweaks().size, 27)   // fivem-priority left: it was retired and could never run
   for (const id of [...cat.MAX_TWEAKS, ...cat.EXPERT_TWEAKS]) assert.ok(!cat.FOREVER_BANNED.has(id), id)
   for (const id of cat.MAX_TWEAKS) assert.ok(!cat.EXPERT_TWEAKS.has(id), id)
 })

@@ -85,5 +85,6 @@ LANG.en.diag2 = {
   "t_cfg-hvci": "Memory Integrity is on", "w_cfg-hvci": "It adds protection and costs a little performance in games.", "t_cfg-hvci_ok": "Memory Integrity setting is default",
   "t_cfg-insider": "This is a Windows Insider build", "w_cfg-insider": "Pre-release builds can break drivers and anti-cheat.", "t_cfg-insider_ok": "Not an Insider build", "f_cfg-insider": "Open Insider settings",
   "t_cfg-overlays": "Overlays are installed: {list}", "w_cfg-overlays": "In-game overlays add a little latency to every frame.", "t_cfg-overlays_ok": "No game overlays found",
-  "t_cfg-conflicts": "{n} changes already made by something else", "w_cfg-conflicts": "{list}. These can conflict with Jylli Tool tweaks.", "t_cfg-conflicts_ok": "No conflicting changes"
+  "t_cfg-conflicts": "{n} changes already made by something else", "w_cfg-conflicts": "{list}. These can conflict with Jylli Tool tweaks.", "t_cfg-conflicts_ok": "No conflicting changes",
+  "t_launcher-idle-priority": "Game launchers are set to Idle priority: {list}", "w_launcher-idle-priority": "An older version of Jylli Tool did this. Games started from a launcher inherit its priority, so they can run slower whenever something else needs the CPU.", "t_launcher-idle-priority_ok": "No launcher is set to Idle priority", "f_launcher-idle-priority": "Put launchers back to normal", "fd_launcher-priority": "Launcher priorities are back to normal."
 }

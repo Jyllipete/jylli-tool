@@ -519,6 +519,8 @@
 <script src="js/lang/home-fi.js"></script>
 <script src="js/lang/boot-en.js"></script>
 <script src="js/lang/boot-fi.js"></script>
+<script src="js/lang/audit-en.js"></script>
+<script src="js/lang/audit-fi.js"></script>
 <script src="js/esc.js"></script>
 <script src="js/theme-sync.js"></script>
 <script src="js/ui.js"></script>
@@ -6658,9 +6660,9 @@ const APP_OPTI_DEFS = [
   { id:'spotify-optimize',     cat:'Media',         sub:'Spotify',      icon:_aoico('spotify.ico'),
     bullets:['Disables hardware acceleration','Sets Spotify.exe to IDLE CPU priority via IFEO'] },
   { id:'steam-optimize',       cat:'Launchers',     sub:'Valve',        icon:_aoico('Steam.ico'),
-    bullets:['Disables Steam startup to system tray','Inhibits bootstrap auto-restart (steam.cfg)','Sets steam.exe to IDLE CPU priority via IFEO'] },
+    bullets:['Starts Steam minimized to the tray','No priority change and no update blocking: games inherit a launcher priority'] },
   { id:'epic-optimize',        cat:'Launchers',     sub:'Epic Games',   icon:_aoico('Epic Games.ico'),
-    bullets:['Sets EpicGamesLauncher.exe to IDLE CPU + I/O priority','Disables auto-start in launcher config (bRunAtStartup=False)'] },
+    bullets:['Disables auto-start in launcher config (bRunAtStartup=False)','CPU priority is left alone: games inherit a launcher priority'] },
   { id:'ea-app-optimize',      cat:'Launchers',     sub:'Electronic Arts', icon:'<i class="fa fa-store jx-156"></i>',
     bullets:['Sets EA Desktop to IDLE CPU + I/O priority','Sets EA background service to IDLE CPU priority'] },
   { id:'riot-optimize',        cat:'Launchers',     sub:'Riot Games',   icon:'<i class="fa fa-shield-halved jx-156"></i>',
@@ -6668,7 +6670,7 @@ const APP_OPTI_DEFS = [
   { id:'obs-optimize',         cat:'Streaming',     sub:'OBS Project',  icon:_aoico('obs.ico'),
     bullets:['Sets obs64.exe to HIGH CPU priority via IFEO','Encoding threads compete less with game threads'] },
   { id:'nvidia-app-optimize',  cat:'System',        sub:'NVIDIA',       icon:_aoico('Nvidia App.ico'),
-    bullets:['Disables NvTelemetryContainer service (stops at boot)','Sets GeForce Experience to IDLE CPU priority'] },
+    bullets:['Disables NvTelemetryContainer service (stops at boot)','GeForce Experience keeps its normal CPU priority'] },
   { id:'playnite-optimize',    cat:'System',        sub:'Playnite',     icon:'<i class="fa fa-list-ul jx-636"></i>',
     bullets:['Sets Playnite.DesktopApp.exe to IDLE CPU priority','Sets Playnite to IDLE I/O priority'] },
   { id:'vscode-optimize',      cat:'System',        sub:'Microsoft',    icon:_aoico('VS Code.ico'),

@@ -295,7 +295,7 @@ test('plan: premium findings are stripped for free users, kept for premium', () 
   assert.ok(list.some(f => f.id === 'fivem'))
   assert.ok(!ao.plan.plan(list, { premium: false }).steps.some(s => s.findingId === 'fivem'))
   assert.ok(ao.plan.plan(list, { premium: false }).skipped.some(s => s.reason === 'premium'))
-  assert.ok(ao.plan.plan(list, { premium: true }).steps.some(s => s.tweakId === 'fivem-priority'))
+  assert.ok(ao.plan.plan(list, { premium: true }).steps.some(s => s.findingId === 'fivem'))
 })
 
 test('plan: exclude beats default, include adds an off-by-default finding, module toggle drops a module', () => {

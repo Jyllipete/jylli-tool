@@ -84,5 +84,6 @@ LANG.fi.diag2 = {
   "t_cfg-hvci": "Muistin eheys on päällä", "w_cfg-hvci": "Se lisää suojaa ja maksaa hieman suorituskykyä peleissä.", "t_cfg-hvci_ok": "Muistin eheyden asetus on oletus",
   "t_cfg-insider": "Tämä on Windows Insider -versio", "w_cfg-insider": "Esiversiot voivat rikkoa ajureita ja huijauksenestoa.", "t_cfg-insider_ok": "Ei Insider-versio", "f_cfg-insider": "Avaa Insider-asetukset",
   "t_cfg-overlays": "Peliohjelman päälle piirtyviä ohjelmia asennettu: {list}", "w_cfg-overlays": "Pelin sisäiset peittokuvat lisäävät hieman viivettä jokaiseen ruutuun.", "t_cfg-overlays_ok": "Peliohjelmien peittokuvia ei löytynyt",
-  "t_cfg-conflicts": "{n} muutosta, jotka jokin muu on jo tehnyt", "w_cfg-conflicts": "{list}. Ne voivat olla ristiriidassa Jylli Toolin virityksien kanssa.", "t_cfg-conflicts_ok": "Ei ristiriitaisia muutoksia"
+  "t_cfg-conflicts": "{n} muutosta, jotka jokin muu on jo tehnyt", "w_cfg-conflicts": "{list}. Ne voivat olla ristiriidassa Jylli Toolin virityksien kanssa.", "t_cfg-conflicts_ok": "Ei ristiriitaisia muutoksia",
+  "t_launcher-idle-priority": "Pelilauncherit on asetettu Idle-prioriteetille: {list}", "w_launcher-idle-priority": "Jylli Toolin vanha versio teki tämän. Launcherista käynnistetyt pelit perivät sen prioriteetin, joten ne voivat toimia hitaammin aina kun jokin muu tarvitsee suoritinta.", "t_launcher-idle-priority_ok": "Mikään launcher ei ole Idle-prioriteetilla", "f_launcher-idle-priority": "Palauta launcherit normaaliksi", "fd_launcher-priority": "Launcherien prioriteetit on palautettu normaaleiksi."
 }

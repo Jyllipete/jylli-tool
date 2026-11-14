@@ -19,7 +19,7 @@ A service or scheduled task that does not exist on this PC is left out of the ma
 ## What is measured (lib/windows/detect.js, one read-only PowerShell call)
 `Get-ItemPropertyValue` for registry values, `Get-Service` start type, `Get-ScheduledTask` state, `Test-Path` for `hiberfil.sys`, `Get-MMAgent` for memory compression. The script contains no write command (a test enforces it). Probes are hand-listed in the catalog next to each id, copied from what each tweak's `apply` writes, and shared keys are read once.
 
-Switches with no probe (`msi-mode` per-device keys, `gpu-per-app-preference`, `vrr-borderless`, `fth-reset`, `rt-scan-trim`, `defender-quiet`, `cortana-remnant-off`) show `unknown`. They are offered, they are journaled, they are not verified.
+Switches with no probe (`fth-reset`, `usb-suspend` (a powercfg setting), `cortana-remnant-off`) show `unknown`. Audit 2 fixed probes that read something the tweak does not write; `defender-quiet`, `rt-scan-trim`, `defender-core-off` and `defender-idle-priority` are retired. They are offered, they are journaled, they are not verified.
 
 ## Verification after a change (lib/windows/index.js `run`)
 Apply or restore goes through `journalSvc().applyBatch` (via `manual`, restore point rule of the journal: any tier 2+, more than 5 items, or a stale restore point; no restore point means no change). After the batch the whole probe runs again. Per item: `verified: true` when Windows now reads as asked, `false` when the change went through but the live value is different (reported as "Read differently", never as success), `null` when it cannot be read or waits for a restart.

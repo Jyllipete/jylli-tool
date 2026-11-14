@@ -75,7 +75,21 @@ function showLockScreen(deniedMsg) {
 
   cancelBtn.addEventListener('click', resetToIdle)
 
+  // Failure: go back to idle but keep the reason on screen (resetToIdle alone would erase it).
+  function failToIdle(msg, detail) {
+    resetToIdle()
+    showAuthRow()
+    document.getElementById('lock-spinner-icon')?.classList.remove('fa-spin')
+    status.textContent = msg
+    status.classList.add('j-lock-status-danger')
+    const hint = document.getElementById('lock-denied-hint')
+    if (hint && detail) { hint.textContent = detail; hint.hidden = false }
+    btn.disabled = false
+  }
+
   async function startAuth() {
+    document.getElementById('lock-spinner-icon')?.classList.add('fa-spin')
+    document.getElementById('lock-denied-hint').hidden = true
     btn.disabled = true
     status.textContent = tUI('lsOpeningBrowser')
     status.classList.remove('j-lock-status-danger')
@@ -83,8 +97,7 @@ function showLockScreen(deniedMsg) {
     try {
       const r = await api.authStart()
       if (!r?.ok) {
-        status.textContent = tUI('lsNoServer')
-        resetToIdle()
+        failToIdle(tUI('lsNoServer'), r?.error ? String(r.error) : '')
         return
       }
 
@@ -115,8 +128,7 @@ function showLockScreen(deniedMsg) {
         attempts++
         if (attempts > 60) {
           clearInterval(pollTimer); clearInterval(countdownTimer)
-          status.textContent = tUI('lsTimedOut')
-          resetToIdle()
+          failToIdle(tUI('lsTimedOut'))
           return
         }
         try {
@@ -155,8 +167,7 @@ function showLockScreen(deniedMsg) {
         } catch {}
       }, 2000)
     } catch (e) {
-      status.textContent = 'Error: ' + e.message
-      resetToIdle()
+      failToIdle(tUI('lsNoServer'), e?.message || '')
     }
   }
 

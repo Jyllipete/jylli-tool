@@ -38,7 +38,7 @@ test('catalog: no switch is owned by two tabs', () => {
 })
 test('catalog: what was Premium stays Premium, what was free stays free', () => {
   const premium = catalog.ITEMS.filter(i => i.premium).map(i => i.id).sort()
-  assert.deepStrictEqual(premium, ['cpu-parking', 'cstates', 'full-mitigation-wipe', 'hvci-offload', 'hypervisor-off', 'vbs-disable'])
+  assert.deepStrictEqual(premium, ['cpu-parking', 'cstates', 'hvci-offload', 'hypervisor-off', 'vbs-disable'])
   for (const id of ['power-throttling', 'global-timer-resolution', 'sysmain', 'memory-compression', 'spectre-meltdown']) assert.ok(!catalog.isPremium(id), id)
 })
 test('catalog: nothing tier 3 is recommended, every probe kind is known', () => {

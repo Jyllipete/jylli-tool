@@ -82,6 +82,7 @@ LANG.en.debloat2 = {
   "use_printers": "A printer is connected ({n})",
   "use_btPaired": "{n} Bluetooth devices paired",
   "use_xboxController": "An Xbox controller is connected",
+  "use_x3dDual": "A dual-CCD Ryzen X3D needs Game Bar to detect games",
   "whyIntent": "Needed for: {x}",
   "whyRecent": "Opened {n} days ago",
   "why_protected": "Protected: Xbox sign-in and the Store depend on it",

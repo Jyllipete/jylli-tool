@@ -82,6 +82,7 @@ LANG.fi.debloat2 = {
   "use_printers": "Tulostin on kytketty ({n})",
   "use_btPaired": "{n} Bluetooth-laitetta paritettu",
   "use_xboxController": "Xbox-ohjain on kytketty",
+  "use_x3dDual": "Kaksois-CCD Ryzen X3D tarvitsee Game Barin pelien tunnistukseen",
   "whyIntent": "Tarvitaan: {x}",
   "whyRecent": "Avattu {n} päivää sitten",
   "why_protected": "Suojattu: Xbox-kirjautuminen ja Store tarvitsevat sitä",

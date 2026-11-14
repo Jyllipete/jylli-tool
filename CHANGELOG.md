@@ -10,6 +10,7 @@
 - Uusi — Ensikäynnistys, opastetut kierrokset jokaiselle välilehdelle ja ehdotetut ensimmäiset siirrot
 - Uusi — Uudistettu käyttöliittymä: uusi sivupalkki, Aikajana, pikahaku, uudet ilmoitukset ja yhteinen välilehtirunko
 - Parannus — Muutospäiväkirja: kaikki säädöt voi perua, korkean riskin säädöt vaativat vahvistuksen ja palautuspisteen
+- Korjaus — Säätöauditointi 2: Defender-pilvisuojausta heikentävät säädöt poistettu, launcherien Idle-prioriteetti poistettu (peritään peleihin) ja Diagnostiikka korjaa vanhat jäänteet, Palauta antaa käyttäjän oikean alkuperäisen arvon, kuvaukset korjattu ja lisätty Game Mode -varoitus X3D-koneille
 - Parannus — Säätöjen auditointi: tehottomat säädöt poistettu ja jokainen näkyy vain koneilla, joille se sopii
 - Korjaus — Epäonnistuneet muutokset raportoidaan nyt oikein, eikä niitä enää merkitä onnistuneiksi
 - Tietoturva — Allekirjoitetut tokenit, eristetyt ikkunat ja vapaaehtoinen telemetria

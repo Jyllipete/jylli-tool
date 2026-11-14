@@ -49,7 +49,7 @@ let tray = null
 // ─── Discord Rich Presence ────────────────────────────────────────────────────
 const DISCORD_CLIENT_ID  = '1504472893818667152'
 const DISCORD_INVITE     = 'https://discord.gg/jylligraffat'
-const DISCORD_DOWNLOAD   = 'https://discord.com/channels/1295856827388399779/1295856828160282746'
+const DISCORD_DOWNLOAD   = 'https://jyllitool.netlify.app/'
 
 // The whole feature lives in lib/discord/ (presence.js = what is published, controller.js = connection + throttle); this file only feeds it.
 const DiscordController = require('./lib/discord/controller')
@@ -3374,6 +3374,12 @@ const RETIRED_TWEAKS = {
   'disable-hdcp':              'No performance effect, and it breaks protected video playback.',
   'bcd-tweaks':                'Boot menu timeout and boot log only change start-up cosmetics, not game performance.',
   'disable-auto-maintenance':  'Stops TRIM, updates and other upkeep for an anecdotal gain.',
+  // Retired in audit 2 (14 Nov 2026): security protections traded for a gain nobody has measured. Restore still puts the original back.
+  'defender-quiet':            'It turns off Defender cloud protection and sample submission (not just notifications), which also disables Block at First Sight; Microsoft recommends keeping cloud protection on and no measurement shows an FPS gain.',
+  'rt-scan-trim':              'It lowers Defender cloud protection and sample submission; it adds no scan exclusions, and no measurement shows an FPS gain.',
+  'defender-core-off':         'Current Windows ignores DisableAntiSpyware when Tamper Protection is on, so it mostly does nothing, and where it works it removes the antivirus for an unmeasured gain.',
+  'defender-idle-priority':    'No measurement shows it helps; lowering the antivirus scan priority only delays scans.',
+  'full-mitigation-wipe':      'It switches off CFG, SEHOP and ASLR system-wide for every program; no measurement shows an FPS gain that justifies that.',
 }
 // FiveM: the old fivem-* tweaks cannot be applied any more (docs/FIVEM_EVIDENCE.md). Only their restore stays, so changes made by an
 // earlier version can still be undone from the Client view ("Made by the old FiveM tab").
@@ -4240,8 +4246,8 @@ const TWEAKS = {
       s('Page file set to system-managed. Takes effect after a restart.', 'ok')
     },
     restore: async (s, ps) => {
-      await ps('Set-ItemProperty -Path "HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Memory Management" -Name PagingFiles -Value @() -Type MultiString -Force')
-      s('Page file setting restored (none).', 'ok')
+      // Never write an empty list: that means "no page file". The recorded original is put back by Undo / Restore when the journal has it.
+      s('No recorded original found; the page file setting was left as it is (system-managed is the safe default).', 'info')
     }
   },
   'trim-enable': {
@@ -4255,7 +4261,7 @@ const TWEAKS = {
       await cmd('fsutil behavior set DisableDeleteNotify 0')
       s('TRIM enabled: deleted blocks are handed back to the SSD so writes stay fast.', 'ok')
     },
-    restore: async (s, ps) => { await ps('Set-ItemProperty -Path "HKLM:\\SYSTEM\\CurrentControlSet\\Control\\FileSystem" -Name DisableDeleteNotification -Value 1 -Type DWord -Force'); s('TRIM setting restored.', 'ok') }
+    restore: async (s) => { s('No recorded original found; TRIM was left on (turning it off only hurts SSD performance and lifespan).', 'info') }
   },
   'telemetry-tasks': {
     name: 'Stop Background Telemetry Tasks',
@@ -6164,7 +6170,7 @@ const TWEAKS = {
   'fix-wifi': {
     name: 'Fix Wi-Fi Connectivity',
     category: 'network',
-    safetyTier: 1,
+    safetyTier: 2,
     gamerImpact: 'low',
     apply: async (s, ps, cmd) => {
       // ── 1. Restore all Wi-Fi dependent services to Automatic + start them ──
@@ -6272,7 +6278,6 @@ const TWEAKS = {
 
       // ── 9. Reset firewall to allow Wi-Fi traffic ─────────────────────────────
       await ps(`netsh advfirewall set allprofiles state on`)
-      await ps(`netsh advfirewall reset`)
       s('  ✓ Firewall reset to defaults', 'ok')
 
       s('✓ Wi-Fi fix complete. REBOOT REQUIRED for TCP/IP stack reset to take effect.', 'ok')
@@ -6823,6 +6828,7 @@ if ($r.Count -eq 0) { Write-Output "NONE_FOUND" } else { foreach ($x in $r) { Wr
     },
     restore: async (s, _, cmd) => {
       await cmd('sc config TapiSrv start= manual'); await cmd('sc start TapiSrv')
+      await cmd('sc config MixedRealityOpenXRSvc start= manual'); await cmd('sc config PhoneSvc start= manual')
       s('Telephony service restored.', 'ok')
     }
   },
@@ -6835,7 +6841,7 @@ if ($r.Count -eq 0) { Write-Output "NONE_FOUND" } else { foreach ($x in $r) { Wr
       s('Windows cloud settings sync disabled — prevents background sync and conflict scans.', 'ok')
     },
     restore: async (s, ps) => {
-      await ps('Remove-ItemProperty -Path "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\SettingSync" -Name DisableSettingSync -EA SilentlyContinue')
+      await ps('Remove-ItemProperty -Path "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\SettingSync" -Name DisableSettingSync,DisableSettingSyncUserOverride -EA SilentlyContinue')
       s('Cloud sync restored.', 'ok')
     }
   },
@@ -6904,6 +6910,7 @@ if ($r.Count -eq 0) { Write-Output "NONE_FOUND" } else { foreach ($x in $r) { Wr
     },
     restore: async (s, ps) => {
       await ps('Remove-ItemProperty -Path "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\Windows Search" -Name DisableWebSearch,ConnectedSearchUseWeb -EA SilentlyContinue')
+      await ps('Remove-ItemProperty -Path "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Search" -Name BingSearchEnabled -EA SilentlyContinue')
       s('Search box restored to default.', 'ok')
     }
   },
@@ -6917,6 +6924,7 @@ if ($r.Count -eq 0) { Write-Output "NONE_FOUND" } else { foreach ($x in $r) { Wr
     },
     restore: async (s, ps) => {
       await ps('Remove-ItemProperty -Path "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\Windows Search" -Name AllowCloudSearch -EA SilentlyContinue')
+      await ps('Remove-ItemProperty -Path "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Search" -Name CortanaConsent -EA SilentlyContinue')
       s('Cloud search restored.', 'ok')
     }
   },
@@ -6929,7 +6937,7 @@ if ($r.Count -eq 0) { Write-Output "NONE_FOUND" } else { foreach ($x in $r) { Wr
       s('Defender Security Center alerts and lock-screen toasts suppressed.', 'ok')
     },
     restore: async (s, ps) => {
-      await ps('Remove-ItemProperty -Path "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows Defender Security Center\\Notifications" -Name DisableNotifications -EA SilentlyContinue')
+      await ps('Remove-ItemProperty -Path "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows Defender Security Center\\Notifications" -Name DisableNotifications,DisableEnhancedNotifications -EA SilentlyContinue')
       s('Security notifications restored.', 'ok')
     }
   },
@@ -6944,6 +6952,7 @@ if ($r.Count -eq 0) { Write-Output "NONE_FOUND" } else { foreach ($x in $r) { Wr
     },
     restore: async (s, ps) => {
       await ps('Remove-ItemProperty -Path "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Notifications\\Settings\\Windows.Defender.SecurityCenter" -Name Enabled -EA SilentlyContinue')
+      await ps('Remove-ItemProperty -Path "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Notifications\\Settings\\Windows.SystemToast.SecurityAndMaintenance" -Name Enabled -EA SilentlyContinue')
       s('Security toast notifications restored.', 'ok')
     }
   },
@@ -6957,6 +6966,7 @@ if ($r.Count -eq 0) { Write-Output "NONE_FOUND" } else { foreach ($x in $r) { Wr
     },
     restore: async (s, _, cmd) => {
       await cmd('sc config SensorService start= manual'); await cmd('sc start SensorService')
+      await cmd('sc config SensrSvc start= manual'); await cmd('sc config SensorDataService start= manual'); await cmd('sc config lfsvc start= manual')
       s('Sensor services restored.', 'ok')
     }
   },
@@ -6990,8 +7000,11 @@ if ($r.Count -eq 0) { Write-Output "NONE_FOUND" } else { foreach ($x in $r) { Wr
       await ps('Set-ItemProperty -Path "HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Diagnostics\\DiagTrack" -Name DiagTrackAuthorization -Value 0 -Force')
       s('Telemetry forced to 0 — feedback prompts hidden, diagnostic pipelines cut. Reboot recommended.', 'warn')
     },
-    restore: async (s, _, cmd) => {
+    restore: async (s, ps, cmd) => {
       await cmd('sc config DiagTrack start= auto'); await cmd('sc start DiagTrack')
+      await cmd('sc config dmwappushservice start= demand'); await cmd('sc config diagnosticshub.standardcollector.service start= demand')
+      await ps('Remove-ItemProperty -Path "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\DataCollection" -Name AllowTelemetry -EA SilentlyContinue')
+      await ps('Remove-ItemProperty -Path "HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Diagnostics\\DiagTrack" -Name DiagTrackAuthorization -EA SilentlyContinue')
       s('Telemetry services restored.', 'ok')
     }
   },
@@ -7003,7 +7016,8 @@ if ($r.Count -eq 0) { Write-Output "NONE_FOUND" } else { foreach ($x in $r) { Wr
       await ps('Set-ItemProperty -Path "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Biometrics" -Name Enabled -Value 0 -Force')
       s('Windows Hello and biometric stack disabled. Removes lock-screen camera overhead.', 'ok')
     },
-    restore: async (s, _, cmd) => {
+    restore: async (s, ps, cmd) => {
+      await ps('Remove-ItemProperty -Path "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Biometrics" -Name Enabled -EA SilentlyContinue')
       await cmd('sc config WbioSrvc start= auto'); await cmd('sc start WbioSrvc')
       s('Biometrics service restored.', 'ok')
     }
@@ -7019,6 +7033,7 @@ if ($r.Count -eq 0) { Write-Output "NONE_FOUND" } else { foreach ($x in $r) { Wr
     restore: async (s, _, cmd) => {
       await cmd('sc config bthserv start= auto'); await cmd('sc start bthserv')
       await cmd('sc config BthAvctpSvc start= auto'); await cmd('sc start BthAvctpSvc')
+      await cmd('sc config BluetoothUserService start= demand'); await cmd('sc config BTAGService start= demand')
       s('Bluetooth services restored.', 'ok')
     }
   },
@@ -7044,6 +7059,8 @@ if ($r.Count -eq 0) { Write-Output "NONE_FOUND" } else { foreach ($x in $r) { Wr
     },
     restore: async (s, ps) => {
       await ps('Enable-ScheduledTask -TaskPath "\\Microsoft\\Windows\\Application Experience\\" -TaskName "ProgramDataUpdater" -EA SilentlyContinue')
+      await ps('Enable-ScheduledTask -TaskPath "\\Microsoft\\Windows\\Application Experience\\" -TaskName "AitAgent" -EA SilentlyContinue')
+      await ps('Enable-ScheduledTask -TaskPath "\\Microsoft\\Windows\\Application Experience\\" -TaskName "Microsoft Compatibility Appraiser" -EA SilentlyContinue')
       s('AppCompat tasks re-enabled.', 'ok')
     }
   },
@@ -7058,6 +7075,8 @@ if ($r.Count -eq 0) { Write-Output "NONE_FOUND" } else { foreach ($x in $r) { Wr
     },
     restore: async (s, ps) => {
       await ps('Enable-ScheduledTask -TaskPath "\\Microsoft\\Windows\\Application Experience\\" -TaskName "StartupAppTask" -EA SilentlyContinue')
+      for (const t of ['ProgramDataUpdater', 'AitAgent']) await ps('Enable-ScheduledTask -TaskPath "\\Microsoft\\Windows\\Application Experience\\" -TaskName "' + t + '" -EA SilentlyContinue')
+      await ps('Enable-ScheduledTask -TaskPath "\\Microsoft\\Windows\\DiskDiagnostic\\" -TaskName "Microsoft-Windows-DiskDiagnosticDataCollector" -EA SilentlyContinue')
       s('App experience tasks re-enabled.', 'ok')
     }
   },
@@ -9447,23 +9466,16 @@ if (-not (Get-ItemProperty -Path '${spotifyPerf}' -EA SilentlyContinue | Select-
   // ── Steam ─────────────────────────────────────────────────────────────────
   'steam-optimize': {
     safetyTier: 2,
-    apply: async (s, ps, cmd) => {
-      const steamPath = await ps('(Get-ItemProperty "HKLM:\\SOFTWARE\\WOW6432Node\\Valve\\Steam" -EA SilentlyContinue).InstallPath')
-      if (steamPath.out.trim()) {
-        const cfgPath = path.join(steamPath.out.trim(), 'steam.cfg')
-        fs.writeFileSync(cfgPath, 'BootStrapperInhibitAll=enable\nCleintAutoRestart=disable\n')
-        s('Steam: bootstrap inhibited, auto-restart disabled.', 'ok')
-      }
+    apply: async (s, ps) => {
+      // No steam.cfg (it blocks Steam updates) and no Idle priority (games started from Steam would inherit it).
       await ps(`Set-ItemProperty -Path 'HKCU:\\Software\\Valve\\Steam' -Name 'StartupMode' -Value 0 -Force -EA SilentlyContinue`)
-      await ps(`New-Item -Path 'HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\steam.exe\\PerfOptions' -Force -EA SilentlyContinue | Out-Null
-Set-ItemProperty -Path 'HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\steam.exe\\PerfOptions' -Name CpuPriorityClass -Value 1 -Force`)
-      s('Steam: startup minimized, web helper priority reduced.', 'ok')
+      s('Steam: start-up mode set to minimized.', 'ok')
     },
     restore: async (s, ps) => {
       const steamPathResult = await ps('(Get-ItemProperty "HKLM:\\SOFTWARE\\WOW6432Node\\Valve\\Steam" -EA SilentlyContinue).InstallPath')
       if (steamPathResult.out.trim()) {
         const cfgPath = path.join(steamPathResult.out.trim(), 'steam.cfg')
-        if (fs.existsSync(cfgPath)) { try { fs.unlinkSync(cfgPath); s('Steam: steam.cfg removed.', 'ok') } catch { s('Steam: could not remove steam.cfg.', 'warn') } }
+        if (fs.existsSync(cfgPath)) { try { if (fs.readFileSync(cfgPath, 'utf8').replace(/\r/g, '') === 'BootStrapperInhibitAll=enable\nCleintAutoRestart=disable\n') { fs.unlinkSync(cfgPath); s('Steam: steam.cfg written by an earlier version removed.', 'ok') } else { s('Steam: steam.cfg is not ours, left alone.', 'info') } } catch { s('Steam: could not remove steam.cfg.', 'warn') } }
         else { s('Steam: steam.cfg not found.', 'info') }
       }
       await ps(`Remove-ItemProperty -Path 'HKCU:\\Software\\Valve\\Steam' -Name 'StartupMode' -EA SilentlyContinue`)
@@ -9506,21 +9518,17 @@ Remove-ItemProperty -Path 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\
   // ── Epic Games ────────────────────────────────────────────────────────────
   'epic-optimize': {
     safetyTier: 2,
-    apply: async (s, ps) => {
-      const base = 'HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options'
-      await ps(`New-Item -Path "${base}\\EpicGamesLauncher.exe\\PerfOptions" -Force -EA SilentlyContinue | Out-Null
-Set-ItemProperty -Path "${base}\\EpicGamesLauncher.exe\\PerfOptions" -Name CpuPriorityClass -Value 1 -Force
-Set-ItemProperty -Path "${base}\\EpicGamesLauncher.exe\\PerfOptions" -Name IoPriority -Value 0 -Force`)
-      const cfgDir = path.join(process.env['LOCALAPPDATA'] || '', 'EpicGamesLauncher\\Saved\\Config\\Windows')
-      const cfgFile = path.join(cfgDir, 'GameUserSettings.ini')
+    apply: async (s) => {
+      // The launcher keeps its normal CPU priority: a launcher at Idle priority passes that on to the games it starts.
+      const cfgFile = path.join(process.env['LOCALAPPDATA'] || '', 'EpicGamesLauncher\\Saved\\Config\\Windows\\GameUserSettings.ini')
       if (fs.existsSync(cfgFile)) {
         let ini = fs.readFileSync(cfgFile, 'utf8')
         ini = ini.replace(/bRunAtStartup\s*=\s*.*/g, 'bRunAtStartup=False')
         if (!ini.includes('bRunAtStartup')) ini += '\nbRunAtStartup=False\n'
         fs.writeFileSync(cfgFile, ini)
-        s('Epic Games: startup disabled, low CPU/IO priority.', 'ok')
+        s('Epic Games: start with Windows turned off.', 'ok')
       } else {
-        s('Epic Games: low CPU/IO priority applied.', 'ok')
+        s('Epic Games: settings file not found, nothing changed.', 'info')
       }
     },
     restore: async (s, ps) => {
@@ -9542,15 +9550,7 @@ if (-not (Get-ItemProperty -Path '${epicPerf}' -EA SilentlyContinue | Select-Obj
   // ── EA App ────────────────────────────────────────────────────────────────
   'ea-app-optimize': {
     safetyTier: 2,
-    apply: async (s, ps) => {
-      const base = 'HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options'
-      await ps(`New-Item -Path "${base}\\EADesktop.exe\\PerfOptions" -Force -EA SilentlyContinue | Out-Null
-Set-ItemProperty -Path "${base}\\EADesktop.exe\\PerfOptions" -Name CpuPriorityClass -Value 1 -Force
-Set-ItemProperty -Path "${base}\\EADesktop.exe\\PerfOptions" -Name IoPriority -Value 0 -Force
-New-Item -Path "${base}\\EABackgroundService.exe\\PerfOptions" -Force -EA SilentlyContinue | Out-Null
-Set-ItemProperty -Path "${base}\\EABackgroundService.exe\\PerfOptions" -Name CpuPriorityClass -Value 1 -Force`)
-      s('EA App: desktop + background service set to IDLE priority.', 'ok')
-    },
+    apply: async () => { throw new Error('Retired: Launchers are no longer set to Idle priority: games they start inherit it (Microsoft CreateProcess docs), which can lower FPS. Nothing was changed.') },
     restore: async (s, ps) => {
       const eaPerf = 'HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\EADesktop.exe\\PerfOptions'
       const eaBgPerf = 'HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\EABackgroundService.exe\\PerfOptions'
@@ -9564,13 +9564,7 @@ if (-not (Get-ItemProperty -Path '${eaBgPerf}' -EA SilentlyContinue | Select-Obj
   // ── Riot Client ───────────────────────────────────────────────────────────
   'riot-optimize': {
     safetyTier: 2,
-    apply: async (s, ps) => {
-      const base = 'HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options'
-      await ps(`New-Item -Path "${base}\\RiotClientServices.exe\\PerfOptions" -Force -EA SilentlyContinue | Out-Null
-Set-ItemProperty -Path "${base}\\RiotClientServices.exe\\PerfOptions" -Name CpuPriorityClass -Value 1 -Force
-Set-ItemProperty -Path "${base}\\RiotClientServices.exe\\PerfOptions" -Name IoPriority -Value 0 -Force`)
-      s('Riot Client: set to IDLE CPU priority. Vanguard anti-cheat is unaffected.', 'ok')
-    },
+    apply: async () => { throw new Error('Retired: Launchers are no longer set to Idle priority: games they start inherit it (Microsoft CreateProcess docs), which can lower FPS. Nothing was changed.') },
     restore: async (s, ps) => {
       const riotPerf = 'HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\RiotClientServices.exe\\PerfOptions'
       await ps(`Remove-ItemProperty -Path '${riotPerf}' -Name CpuPriorityClass,IoPriority -EA SilentlyContinue
@@ -9585,10 +9579,6 @@ if (-not (Get-ItemProperty -Path '${riotPerf}' -EA SilentlyContinue | Select-Obj
       await ps(`Stop-Service -Name 'NvTelemetryContainer' -Force -EA SilentlyContinue
 Set-Service -Name 'NvTelemetryContainer' -StartupType Disabled -EA SilentlyContinue`)
       s('NVIDIA telemetry service disabled.', 'ok')
-      const base = 'HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options'
-      await ps(`New-Item -Path "${base}\\NVIDIA GeForce Experience.exe\\PerfOptions" -Force -EA SilentlyContinue | Out-Null
-Set-ItemProperty -Path "${base}\\NVIDIA GeForce Experience.exe\\PerfOptions" -Name CpuPriorityClass -Value 1 -Force`)
-      s('GeForce Experience: set to IDLE CPU priority.', 'ok')
     },
     restore: async (s, ps) => {
       await ps(`Set-Service -Name 'NvTelemetryContainer' -StartupType Automatic -EA SilentlyContinue
@@ -9604,13 +9594,7 @@ if (-not (Get-ItemProperty -Path '${nvidiaPerf}' -EA SilentlyContinue | Select-O
   // ── Playnite ──────────────────────────────────────────────────────────────
   'playnite-optimize': {
     safetyTier: 2,
-    apply: async (s, ps) => {
-      const base = 'HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options'
-      await ps(`New-Item -Path "${base}\\Playnite.DesktopApp.exe\\PerfOptions" -Force -EA SilentlyContinue | Out-Null
-Set-ItemProperty -Path "${base}\\Playnite.DesktopApp.exe\\PerfOptions" -Name CpuPriorityClass -Value 1 -Force
-Set-ItemProperty -Path "${base}\\Playnite.DesktopApp.exe\\PerfOptions" -Name IoPriority -Value 0 -Force`)
-      s('Playnite: set to IDLE CPU + IO priority. Won\'t compete with games.', 'ok')
-    },
+    apply: async () => { throw new Error('Retired: Launchers are no longer set to Idle priority: games they start inherit it (Microsoft CreateProcess docs), which can lower FPS. Nothing was changed.') },
     restore: async (s, ps) => {
       const playnitePerf = 'HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\Playnite.DesktopApp.exe\\PerfOptions'
       await ps(`Remove-ItemProperty -Path '${playnitePerf}' -Name CpuPriorityClass,IoPriority -EA SilentlyContinue
@@ -9675,10 +9659,10 @@ ipcMain.handle('scan-installed-apps', async () => {
     'steam-optimize':      () => fs.existsSync(path.join(pf86, 'Steam\\steam.exe')) || fs.existsSync(path.join(pf, 'Steam\\steam.exe')),
     'obs-optimize':        () => fs.existsSync(path.join(pf, 'obs-studio\\bin\\64bit\\obs64.exe')) || fs.existsSync(path.join(pf86, 'obs-studio\\bin\\64bit\\obs64.exe')),
     'epic-optimize':       () => fs.existsSync(path.join(pd, 'Epic\\EpicGamesLauncher\\Portal\\Binaries\\Win64\\EpicGamesLauncher.exe')) || fs.existsSync(path.join(pf, 'Epic Games\\Launcher\\Portal\\Binaries\\Win64\\EpicGamesLauncher.exe')),
-    'ea-app-optimize':     () => fs.existsSync(path.join(pf, 'Electronic Arts\\EA Desktop\\EA Desktop.exe')),
-    'riot-optimize':       () => fs.existsSync(path.join(lad, 'Riot Games\\RiotClientServices.exe')),
+    'ea-app-optimize':     () => false, // retired: launcher idle priority is inherited by the games it starts
+    'riot-optimize':       () => false,
     'nvidia-app-optimize': () => fs.existsSync(path.join(pf, 'NVIDIA Corporation\\NVIDIA app\\CEF\\NVIDIA app.exe')) || fs.existsSync(path.join(pf, 'NVIDIA Corporation\\GeForce Experience\\NVIDIA GeForce Experience.exe')),
-    'playnite-optimize':   () => fs.existsSync(path.join(appd, 'Playnite\\Playnite.DesktopApp.exe')),
+    'playnite-optimize':   () => false,
     'vscode-optimize':     () => fs.existsSync(path.join(lad, 'Programs\\Microsoft VS Code\\Code.exe')),
     'explorer-optimize':   () => true,
   }
@@ -9712,13 +9696,13 @@ ipcMain.handle('health-check-app-optimizer', async () => {
     'discord-optimize':    () => { try { const cfg = path.join(appd, 'discord\\settings.json'); if (!fs.existsSync(cfg)) return false; const d = JSON.parse(fs.readFileSync(cfg,'utf8')); return d.enableHardwareAcceleration === false && d.audioSubsystem === 'legacy' } catch { return false } },
     'discord-cpu-priority':() => readReg(`${ifeoBase}\\Discord.exe\\PerfOptions`, 'CpuPriorityClass') === 1,
     'spotify-optimize':    () => readReg(`${ifeoBase}\\Spotify.exe\\PerfOptions`, 'CpuPriorityClass') === 1,
-    'steam-optimize':      () => { try { const steamPath = (require('child_process').execSync('reg query "HKLM\\SOFTWARE\\WOW6432Node\\Valve\\Steam" /v InstallPath 2>nul',{encoding:'utf8'}).match(/InstallPath\s+REG_SZ\s+(.+)/) || [])[1]?.trim(); const cfgOk = steamPath ? fs.existsSync(path.join(steamPath, 'steam.cfg')) : false; const ifeoOk = readReg(`${ifeoBase}\\steam.exe\\PerfOptions`, 'CpuPriorityClass') === 1; return cfgOk && ifeoOk } catch { return false } },
+    'steam-optimize':      () => readReg('HKCU\\Software\\Valve\\Steam', 'StartupMode') === 0,
     'obs-optimize':        () => readReg(`${ifeoBase}\\obs64.exe\\PerfOptions`, 'CpuPriorityClass') === 3,
-    'epic-optimize':       () => readReg(`${ifeoBase}\\EpicGamesLauncher.exe\\PerfOptions`, 'CpuPriorityClass') === 1,
-    'ea-app-optimize':     () => readReg(`${ifeoBase}\\EADesktop.exe\\PerfOptions`, 'CpuPriorityClass') === 1,
-    'riot-optimize':       () => readReg(`${ifeoBase}\\RiotClientServices.exe\\PerfOptions`, 'CpuPriorityClass') === 1,
+    'epic-optimize':       () => { try { const f = path.join(process.env['LOCALAPPDATA'] || '', 'EpicGamesLauncher\\Saved\\Config\\Windows\\GameUserSettings.ini'); return fs.existsSync(f) && /bRunAtStartup\s*=\s*False/i.test(fs.readFileSync(f, 'utf8')) } catch { return false } },
+    'ea-app-optimize': () => false,
+    'riot-optimize': () => false,
     'nvidia-app-optimize': () => { try { const r = require('child_process').execSync('sc query NvTelemetryContainer 2>nul',{encoding:'utf8'}); return r.includes('STOPPED') || r.includes('DISABLED') } catch { return false } },
-    'playnite-optimize':   () => readReg(`${ifeoBase}\\Playnite.DesktopApp.exe\\PerfOptions`, 'CpuPriorityClass') === 1,
+    'playnite-optimize': () => false,
     'vscode-optimize':     () => readReg(`${ifeoBase}\\Code.exe\\PerfOptions`, 'CpuPriorityClass') === 1,
     'explorer-optimize':   () => readReg('HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Serialize', 'StartupDelayInMSec') === 0 && readReg('HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced', 'HideFileExt') === 0 && readReg('HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced', 'LaunchTo') === 1,
   }
@@ -10182,9 +10166,9 @@ async function pulseRestoreAll(send) {
       if (!PCI_PATH_RX.test(devPath)) continue
       const p = V.psQuote(devPath + '\\Device Parameters\\Interrupt Management\\Affinity Policy')
       const one = (name, val) => (val === null || val === undefined)
-        ? `Remove-ItemProperty -Path ${p} -Name ${name} -EA SilentlyContinue`
-        : `Set-ItemProperty -Path ${p} -Name ${name} -Value ${Number(val)} -Type DWord -Force -EA Stop`
-      const r = await runPS(one('DevicePolicy', v.p) + '; ' + one('AssignmentSetOverride', v.m), 8000).catch(() => ({ ok: false }))
+        ? `if (Test-Path -LiteralPath ${p}) { try { Remove-ItemProperty -Path ${p} -Name ${name} -EA Stop } catch { if (Get-ItemProperty -Path ${p} -Name ${name} -EA SilentlyContinue) { $bad = 1 } } }`
+        : `try { if (!(Test-Path -LiteralPath ${p})) { New-Item -Path ${p} -Force -EA Stop | Out-Null }; Set-ItemProperty -Path ${p} -Name ${name} -Value ${Number(val)} -Type DWord -Force -EA Stop } catch { $bad = 1 }`
+      const r = await runPS('$bad = 0; ' + one('DevicePolicy', v.p) + '; ' + one('AssignmentSetOverride', v.m) + '; exit $bad', 8000).catch(() => ({ ok: false }))
       if (!r.ok) affinityOk = false
     }
     // Keep the snapshot when a restore failed: deleting it would lose the only record of the original values.
@@ -10201,7 +10185,10 @@ async function pulseRestoreAll(send) {
         const m = /^([0-9a-f-]{36})\|(ACSettingIndex|DCSettingIndex)$/i.exec(key)
         if (!m) continue
         const p = V.psQuote(`HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Power\\User\\PowerSchemes\\${snap.guid}\\${PULSE_SUB_PROCESSOR}\\${m[1]}`)
-        await runPS(val === null ? `Remove-ItemProperty -Path ${p} -Name ${m[2]} -EA SilentlyContinue` : `Set-ItemProperty -Path ${p} -Name ${m[2]} -Value ${Number(val)} -Type DWord -Force -EA Stop`, 8000).then(r => { if (!r.ok) powerOk = false }).catch(() => { powerOk = false })
+        // Absent original = remove our value; a key/value that is already gone counts as restored (a bare Remove-ItemProperty on a missing key exits 1)
+        await runPS(val === null
+          ? `if (Test-Path -LiteralPath ${p}) { try { Remove-ItemProperty -Path ${p} -Name ${m[2]} -EA Stop } catch { if (Get-ItemProperty -Path ${p} -Name ${m[2]} -EA SilentlyContinue) { exit 1 } } }; exit 0`
+          : `try { if (!(Test-Path -LiteralPath ${p})) { New-Item -Path ${p} -Force -EA Stop | Out-Null }; Set-ItemProperty -Path ${p} -Name ${m[2]} -Value ${Number(val)} -Type DWord -Force -EA Stop; exit 0 } catch { exit 1 }`, 8000).then(r => { if (!r.ok) powerOk = false }).catch(() => { powerOk = false })
       }
       await runPS('powercfg /update-settings 2>$null', 8000).catch(() => {})
     }
@@ -11194,9 +11181,13 @@ ipcMain.handle('start-game-watcher', async () => {
         stopPresentMon(_pmSessionProc); _pmSessionProc = null
         let gamePid = null
         try {
-          const exeName = (PULSE_PRESETS[detectedGame]?.exe || '').replace(/\*$/, '').replace(/\.exe$/i, '')
+          const rawExe = (PULSE_PRESETS[detectedGame]?.exe || '')
+          const exeName = rawExe.replace(/\*$/, '').replace(/\.exe$/i, '')
+          // Same matching as the detector above: FiveM's real process is versioned (FiveM_b3095_GTAProcess), so match by suffix/prefix.
+          // An exact-name miss left gamePid null and PresentMon then captured every process, mixing other apps' frames into the FPS.
+          const pattern = /_gtaprocess$/i.test(exeName) ? '*_GTAProcess' : (/\*$/.test(rawExe) ? exeName + '*' : exeName)
           if (exeName && V.isProcessName(exeName)) {
-            const r = await runFile('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', `(Get-Process -Name ${V.psQuote(exeName)} -ErrorAction SilentlyContinue | Select-Object -First 1).Id`], { timeout: 4000 })
+            const r = await runFile('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', `(Get-Process -Name ${V.psQuote(pattern)} -ErrorAction SilentlyContinue | Sort-Object WorkingSet64 -Descending | Select-Object -First 1).Id`], { timeout: 4000 })
             const n = parseInt(r.out, 10); if (!isNaN(n) && n > 0) gamePid = n
           }
         } catch {}
@@ -11293,10 +11284,10 @@ ipcMain.handle('start-game-watcher', async () => {
       mainWindow?.webContents.send('log', { msg: '✓ Defaults restored.', level: 'ok', ts: new Date().toLocaleTimeString() })
 
       // Auto-Pulse: deactivate if it was auto-triggered
-      if (autoPulseTriggeredPreset) {
+      // Also end a boost the user started by hand for this same game, so the tab never keeps saying "End boost" after the game is gone.
+      if (autoPulseTriggeredPreset || (pulseActivePreset && pulseActivePreset === prev)) {
         const send = (msg, level) => mainWindow?.webContents.send('log', { msg, level, ts: new Date().toLocaleTimeString() })
-        const prevPreset = PULSE_PRESETS[autoPulseTriggeredPreset]
-        send(`◆ Auto-Pulse: deactivating (${prev} closed)`, 'info')
+        send(`◆ ${autoPulseTriggeredPreset ? 'Auto-Pulse' : 'Pulse'}: deactivating (${prev} closed)`, 'info')
         autoPulseTriggeredPreset = null
         mainWindow?.webContents.send('game-watcher-event', { event: 'auto-pulse-stop', gameId: prev })
         deactivatePulse(send).catch(() => {})
