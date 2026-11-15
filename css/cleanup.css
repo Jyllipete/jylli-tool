@@ -168,7 +168,7 @@
 .cu-auto-t h3 { margin: 0; font-size: 15px; font-weight: 600; text-transform: none; letter-spacing: 0; color: var(--c-text-primary); display: flex; align-items: center; gap: 10px; }
 .cu-auto-t p { margin: 2px 0 0; font-size: var(--font-size-sm, 12px); color: var(--c-text-tertiary); max-width: 60ch; }
 .cu-auto-ico { width: 40px; height: 40px; flex: none; display: grid; place-items: center; border-radius: 12px; color: var(--c-accent); background: var(--c-accent-muted); border: 1px solid var(--c-accent-ring); }
-.cu-prem { display: inline-flex; align-items: center; height: 20px; padding: 0 8px; border-radius: 999px; font-size: var(--font-size-sm, 12px); font-weight: 600; color: var(--c-accent); background: var(--c-accent-muted); border: 1px solid var(--c-accent-ring); }
+.cu-prem { display: inline-flex; align-items: center; height: 20px; padding: 0 8px; border-radius: 999px; font-size: var(--font-size-sm, 12px); font-weight: 600; color: var(--c-accent-fg, var(--c-accent)); background: var(--c-accent-muted); border: 1px solid var(--c-accent-ring); }
 .cu-lock { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 10px; padding: 52px 24px; border-radius: var(--r-xl); background: var(--surface-1); border: 1px dashed var(--hairline-strong); }
 .cu-lock h3 { margin: 0; font-size: 20px; text-transform: none; letter-spacing: -.01em; color: var(--c-text-primary); }
 .cu-lock p { margin: 0; max-width: 52ch; font-size: var(--font-size-base, 14px); line-height: 1.55; color: var(--c-text-secondary); }

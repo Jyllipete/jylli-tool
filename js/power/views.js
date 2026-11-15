@@ -9,7 +9,7 @@
   if (typeof document === 'undefined') return
 
   const Pl = () => root.JylliPowerPlans
-  const fmtDate = ts => { try { return new Date(ts).toLocaleString(root.currentLang === 'fi' ? 'fi-FI' : undefined, { dateStyle: 'medium', timeStyle: 'short' }) } catch (e) { return '' } }
+  const fmtDate = ts => { try { return new Date(ts).toLocaleString(currentLang === 'fi' ? 'fi-FI' : undefined, { dateStyle: 'medium', timeStyle: 'short' }) } catch (e) { return '' } }
   const head = (ctx, title, sub, right) => `<header class="nt-card-h"><div><b>${ctx.esc(title)}</b>${sub ? `<span>${ctx.esc(sub)}</span>` : ''}</div>${right || ''}</header>`
   const sk = () => '<div class="gp-sk"></div>'
   const note = (ctx, icon, text) => `<p class="gp-note"><i class="fa fa-${icon}" aria-hidden="true"></i>${ctx.esc(text)}</p>`

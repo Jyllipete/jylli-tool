@@ -6,7 +6,7 @@
   if (typeof module !== 'undefined' && module.exports) module.exports = V
   if (typeof document === 'undefined') return
 
-  const fmtDate = ts => { try { return new Date(ts).toLocaleString(root.currentLang === 'fi' ? 'fi-FI' : undefined, { dateStyle: 'medium', timeStyle: 'short' }) } catch (e) { return '' } }
+  const fmtDate = ts => { try { return new Date(ts).toLocaleString(currentLang === 'fi' ? 'fi-FI' : undefined, { dateStyle: 'medium', timeStyle: 'short' }) } catch (e) { return '' } }
 
   // ── sheet: one modal at a time, Esc / backdrop closes, Tab stays inside ──
   let sheet = null

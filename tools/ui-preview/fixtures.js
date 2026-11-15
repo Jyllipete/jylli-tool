@@ -47,6 +47,7 @@ function respond(name, args, ctx) {
   if (/^compete[A-Z]/.test(name)) return require('./compete-fixture').respond(name, args, ctx)
   if (/^games2|^getGameCover$/.test(name)) return require('./games-fixture').respond(name, args, ctx)
   if (/^apps2/.test(name)) return require('./apps-fixture').respond(name, args, ctx)
+  if (/^startup2/.test(name)) return require('./startup-fixture').respond(name, args, ctx)
   switch (name) {
     // BIOS workstation: runs the REAL model/doctor code on synthetic data (HP-style rows plus a few hundred generated ones to exercise the virtual grid)
     case 'bios2Status': {
@@ -107,8 +108,6 @@ function respond(name, args, ctx) {
     case 'getProcesses': return processes
     case 'freezeGetPids': return { ok: true, frozenPids: [] }
     case 'getStartupItems': return startupItems
-    case 'getBootImpact': return { ok: true, items: [] }
-    case 'toggleStartupItem': return { ok: true }
     case 'listRestorePoints': return restorePoints
     case 'getRestoreStatus': return { newestAt: now - 12 * 86400000, lastCreatedAt: null }
     case 'getChangelog': return [

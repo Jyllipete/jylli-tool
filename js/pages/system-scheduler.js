@@ -32,7 +32,7 @@ async function buildScheduler(c) {
           ${field('schedTaskLabel', html`<select class="j-select styled-select" id="sched-action" onchange="schedUpdateActionDesc()">
             <optgroup label="${tUI('schedCatCleaning')}">${opt('clean-temp', 'schedOptCleanTemp')}${opt('clean-nvidia', 'schedOptNvidiaCache')}${opt('clean-downloads', 'schedClearDownloads')}</optgroup>
             <optgroup label="${tUI('schedCatPerformance')}">${opt('defrag-c', 'schedOptDefrag')}${opt('clean-ram', 'schedFreeRam')}</optgroup>
-            <optgroup label="${tUI('schedCatSystem')}">${opt('flush-dns', 'schedOptFlushDns')}${opt('windows-update', 'schedCheckUpdates')}</optgroup>
+            <optgroup label="${tUI('schedCatSystem')}">${opt('flush-dns', 'schedOptFlushDns')}</optgroup>
           </select><div class="sched-action-desc j-field-hint" id="sched-action-desc"></div>`)}
           ${field('schedWhenLabel', html`<select class="j-select styled-select" id="sched-when" onchange="schedUpdateWhenRows()">
             ${opt('startup', 'schedOptStartup')}${opt('logon', 'schedOptLogin')}${opt('hourly', 'schedOptHourly')}${opt('daily-3am', 'schedOptDaily')}${opt('daily-custom', 'schedOptDailyCustom')}${opt('weekly-sun', 'schedOptWeekly')}${opt('weekly-custom', 'schedOptWeeklyCustom')}

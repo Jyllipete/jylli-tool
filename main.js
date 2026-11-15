@@ -393,6 +393,7 @@ const dnsSetDhcp   = a => runFile('netsh.exe', ['interface', 'ip', 'set', 'dns',
 const dnsSetStatic = (a, ip) => V.isIp(ip) ? runFile('netsh.exe', ['interface', 'ip', 'set', 'dns', `name=${a}`, 'static', ip, 'primary']) : Promise.resolve({ ok: false })
 const dnsAddServer = (a, ip) => V.isIp(ip) ? runFile('netsh.exe', ['interface', 'ip', 'add', 'dns', `name=${a}`, ip, 'index=2']) : Promise.resolve({ ok: false })
 const { runFile } = require('./lib/shell')
+const { writeFileAtomic } = require('./lib/atomic-write')
 // Current DNS servers of one adapter as a journal state: 'dhcp' (nothing set by hand) or the static list, read from the
 // adapter's Tcpip interface key so it does not depend on the Windows display language.
 async function dnsRead(a) {
@@ -442,7 +443,7 @@ function loadAnalytics() {
 }
 
 function saveAnalytics(data) {
-  try { fs.writeFileSync(ANALYTICS_PATH, JSON.stringify(data, null, 2)) } catch {}
+  try { writeFileAtomic(ANALYTICS_PATH, JSON.stringify(data, null, 2)) } catch {}
 }
 
 const { scrubPaths } = require('./lib/privacy')
@@ -2085,7 +2086,7 @@ ipcMain.handle('list-profiles', () => {
   if (!requiresPremium('list-profiles')) return {}
   return loadProfiles()
 })
-ipcMain.handle('save-profile', (_, { name, tweaks }) => {
+ipcMain.handle('save-profile', (_, { name, tweaks } = {}) => {
   if (!requiresPremium('save-profile')) return { ok: false, reason: 'premium_required' }
   const profiles = loadProfiles()
   profiles[name] = { version: 1, name, tweaks, rollbackData: {}, savedAt: Date.now() }
@@ -2112,7 +2113,7 @@ ipcMain.handle('delete-profile', (_, name) => {
   return { ok: true, hadAppliedTweaks }
 })
 
-ipcMain.handle('clone-profile', (_, { name, newName }) => {
+ipcMain.handle('clone-profile', (_, { name, newName } = {}) => {
   if (!requiresPremium('clone-profile')) return { ok: false, reason: 'premium_required' }
   const profiles = loadProfiles()
   if (!profiles[name]) return { ok: false, error: 'Source profile not found' }
@@ -2122,7 +2123,7 @@ ipcMain.handle('clone-profile', (_, { name, newName }) => {
   return { ok: true }
 })
 
-ipcMain.handle('rename-profile', (_, { name, newName }) => {
+ipcMain.handle('rename-profile', (_, { name, newName } = {}) => {
   if (!requiresPremium('rename-profile')) return { ok: false, reason: 'premium_required' }
   const profiles = loadProfiles()
   if (!profiles[name]) return { ok: false, error: 'Profile not found' }
@@ -2667,7 +2668,7 @@ try {
   } catch { return { available: false } }
 })
 
-ipcMain.handle('save-text-file', async (_, { filename, content }) => {
+ipcMain.handle('save-text-file', async (_, { filename, content } = {}) => {
   const { dialog } = require('electron')
   const { canceled, filePath } = await dialog.showSaveDialog(mainWindow, { defaultPath: filename, filters: [{ name: 'Text', extensions: ['txt'] }] })
   if (canceled || !filePath) return { ok: false }
@@ -3050,7 +3051,7 @@ function journalSvc() {
       emit: (ch, payload) => mainWindow?.webContents.send(ch, payload),
       loadSettings, saveSettings, writeLog: debugLog,
       noteSettingsWrites: patch => { for (const [k, v] of Object.entries(patch)) _settingsWriteLog.note(k, v) },
-      handlers: { 'pulse-priority': pulsePriorityUndo, 'gpu-power-limit': powerLimitSvc().undoHandler, dns: dnsUndoHandler, ...autoOptiUndoHandlers, ...powerUndoHandlers, ...debloatSvc().handlers, ...fivemSvc().handlers(), ...gamecfgSvc().handlers() },
+      handlers: { 'pulse-priority': pulsePriorityUndo, 'gpu-power-limit': powerLimitSvc().undoHandler, dns: dnsUndoHandler, ...autoOptiUndoHandlers, ...powerUndoHandlers, ...debloatSvc().handlers, ...fivemSvc().handlers(), ...gamecfgSvc().handlers(), ...startupSvc().handlers() },
       manifest: (() => { try { return require('./lib/tweak-manifest.json') } catch { return {} } })(),
     })
     try { _journalSvc.journal.rotate() } catch {}
@@ -3077,7 +3078,7 @@ function powerLimitSvc() {
       isLaptop: async () => { const rig = (await getRigSpec(false)).rig; return rig ? (rig.formFactor === 'laptop' ? true : rig.formFactor === 'tower' ? false : undefined) : undefined },
       isAdmin: () => checkAdmin(),
       readSentinel: async () => { try { return JSON.parse(fs.readFileSync(PL_SENTINEL(), 'utf8')) } catch { return null } },
-      writeSentinel: async s => { fs.writeFileSync(PL_SENTINEL(), JSON.stringify(s)) },
+      writeSentinel: async s => { writeFileAtomic(PL_SENTINEL(), JSON.stringify(s)) },
       clearSentinel: async () => { try { fs.unlinkSync(PL_SENTINEL()) } catch {} },
       record: f => journalSvc().journal.record(f),
       emit: (ch, payload) => mainWindow?.webContents.send(ch, payload),
@@ -3161,7 +3162,7 @@ ipcMain.handle('run-speed-test', async () => {
       let hist = []
       try { hist = JSON.parse(fs.readFileSync(SPEED_HISTORY(), 'utf8')) } catch {}
       hist.unshift({ t: res.startedAt, downMbps: res.downMbps, upMbps: res.upMbps, latencyMs: res.latency.ms, jitterMs: res.latency.jitterMs, loadedLatencyMs: res.loadedLatency.ms, colo: res.colo, bytes: res.bytes })
-      try { fs.writeFileSync(SPEED_HISTORY(), JSON.stringify(hist.slice(0, 50))) } catch {}
+      try { writeFileAtomic(SPEED_HISTORY(), JSON.stringify(hist.slice(0, 50))) } catch {}
     }
     return res
   } catch (e) { return { ok: false, reason: 'failed', error: String(e.message || e).slice(0, 200) } } finally { _speedRunning = false }
@@ -9744,7 +9745,7 @@ function appsSvc() {
     cpumem: { priority: o => cpumemSvc().priority(o), priorityClear: o => cpumemSvc().priorityClear(o) },
     files: {
       read: p => { try { return fs.readFileSync(p, 'utf8') } catch { return null } },
-      write: (p, t) => fs.writeFileSync(p, t),
+      write: (p, t) => writeFileAtomic(p, t),
       exists: p => { try { return fs.existsSync(p) } catch { return false } },
       list: d => { try { return fs.readdirSync(d) } catch { return [] } },
     },
@@ -10437,7 +10438,7 @@ async function deactivatePulse(send) {
   return { ok: true }
 }
 
-ipcMain.handle('pulse-start', async (_, { presetId, killBg }) => {
+ipcMain.handle('pulse-start', async (_, { presetId, killBg } = {}) => {
   if (!requiresPremium('pulse-start')) return { ok: false, reason: 'premium_required' }
   const send = (msg, level) => mainWindow?.webContents.send('log', { msg, level, ts: new Date().toLocaleTimeString() })
   return activatePulse(presetId, killBg, send)
@@ -10613,156 +10614,58 @@ Write-Output "CORES=$coreStr"
 }
 ipcMain.handle('pulse-thermal-audit', (_, ...a) => pulseThermalAuditCore(...a))
 
-// ─── Startup Boot Impact (Windows Diagnostics-Performance Event Log) ─────────
-// Reads Event ID 101 from Microsoft-Windows-Diagnostics-Performance/Operational.
-// Each event has a <Name> (process path) and <Duration> (milliseconds it delayed boot).
-// Returns a map of { lowercaseExeName: durationMs }.
-ipcMain.handle('get-boot-impact', async () => {
-  const r = await runPS(`
-    try {
-      $events = Get-WinEvent -LogName 'Microsoft-Windows-Diagnostics-Performance/Operational' -MaxEvents 300 -EA SilentlyContinue |
-        Where-Object { $_.Id -eq 101 }
-      $result = @{}
-      foreach ($e in $events) {
-        $xml   = [xml]$e.ToXml()
-        $name  = ($xml.Event.EventData.Data | Where-Object {$_.Name -eq 'Name'}).'#text'
-        $dur   = ($xml.Event.EventData.Data | Where-Object {$_.Name -eq 'Duration'}).'#text'
-        if ($name -and $dur) {
-          $exe = [System.IO.Path]::GetFileNameWithoutExtension($name).ToLower()
-          if (-not $result[$exe] -or [int]$dur -gt $result[$exe]) { $result[$exe] = [int]$dur }
-        }
-      }
-      $result | ConvertTo-Json -Compress
-    } catch { Write-Output '{}' }
-  `, 15000)
-  try { return JSON.parse(r.out?.trim() || '{}') } catch { return {} }
+// ─── Startup (lib/startup): everything that starts with Windows, read through Windows' own on/off switch, journaled, read back, undoable ───
+const Startup = require('./lib/startup')
+let _startup = null
+function startupSvc() {
+  if (_startup) return _startup
+  _startup = Startup.create({
+    runPS: (s, ms) => runPS(s, ms),
+    runRecorded: (...a) => journalSvc().runRecorded(...a),
+    isPremium: () => !!auth && auth.isPremium(),
+    isLaptop: async () => { const rig = (await getRigSpec(false)).rig; return !!rig && rig.formFactor === 'laptop' },
+    state: { read: () => cuRead('jt_startup.json', null), write: v => cuWrite('jt_startup.json', v) },
+    emit: cuSend,
+  })
+  return _startup
+}
+const SU_DELAYS = [30, 60, 120]
+ipcMain.handle('startup2-scan', async (_, req) => { try { return await startupSvc().scan({ forceBoot: !!(req && req.forceBoot) }) } catch (e) { return gmFail(e) } })
+ipcMain.handle('startup2-live', async () => { try { return await startupSvc().live() } catch (e) { return gmFail(e) } })
+ipcMain.handle('startup2-icons', async () => { try { return await startupSvc().icons() } catch (e) { return {} } })
+ipcMain.handle('startup2-state', () => { try { return startupSvc().state() } catch (e) { return gmFail(e) } })
+ipcMain.handle('startup2-run', async (_, req) => {
+  const items = Array.isArray(req && req.items) ? req.items.slice(0, 60).map(i => ({ id: gmStr(i && i.id, 400), action: gmStr(i && i.action, 10), sec: SU_DELAYS.includes(Number(i && i.sec)) ? Number(i.sec) : undefined })) : []
+  try { return await startupSvc().run({ items }) } catch (e) { return gmFail(e) }
 })
-
-// Delay a startup item using a Scheduled Task that runs it N seconds after logon.
-// The original registry Run entry is removed so the app does not launch twice.
-ipcMain.handle('delay-startup-item', async (_, req) => {
-  const { name, command, delaySec, key } = req || {}
-  const send = (msg, level) => mainWindow?.webContents.send('log', { msg, level, ts: new Date().toLocaleTimeString() })
-  if (typeof name !== 'string' || !name || name.length > 260 || typeof command !== 'string' || !command.trim() || command.length > 1000) return { ok: false, error: 'invalid_request' }
-  // A scheduled delay runs for the CURRENT user only, so machine-wide (HKLM) entries must not be moved into it.
-  if (key !== 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Run') return { ok: false, error: 'only_current_user_items' }
-  const safeDelay = Math.min(600, Math.max(5, assertPositiveInt(delaySec || 60, 'delaySec')))
-  const taskName = `JylliDelay_${name.replace(/[^\w]/g, '_').slice(0, 40)}`
-
-  // Split "C:\Program Files\App\app.exe" --flag  into executable + arguments so quoted paths and arguments survive.
-  const cmdTrim = command.trim()
-  let exe, args = ''
-  const q = /^"([^"]+)"\s*(.*)$/.exec(cmdTrim)
-  if (q) { exe = q[1]; args = q[2] } else { const sp = cmdTrim.search(/\s/); exe = sp < 0 ? cmdTrim : cmdTrim.slice(0, sp); args = sp < 0 ? '' : cmdTrim.slice(sp + 1) }
-
-  const r = await runPS(`
-    $trigger  = New-ScheduledTaskTrigger -AtLogOn -User $env:USERNAME
-    $trigger.Delay = 'PT${safeDelay}S'
-    $action   = New-ScheduledTaskAction -Execute ${V.psQuote(exe)} ${args ? '-Argument ' + V.psQuote(args) : ''}
-    $settings = New-ScheduledTaskSettingsSet -ExecutionTimeLimit (New-TimeSpan -Hours 1)
-    Register-ScheduledTask -TaskName ${V.psQuote(taskName)} -Trigger $trigger -Action $action -Settings $settings -RunLevel Limited -Force -EA Stop | Out-Null
-    if (Get-ScheduledTask -TaskName ${V.psQuote(taskName)} -EA SilentlyContinue) { Write-Output 'TASK_OK' }
-  `, 15000)
-
-  if (r.ok && /TASK_OK/.test(r.out)) {
-    // Remove the original Run entry only AFTER the replacement task is confirmed to exist, so nothing is ever lost.
-    await runPS(`Remove-ItemProperty -Path ${V.psQuote(key)} -Name ${V.psQuote(name)} -Force -EA SilentlyContinue`)
-    send(`✓ Startup delayed ${safeDelay}s: ${name}`, 'ok')
-    return { ok: true, taskName }
-  }
-  send(`✗ Could not create delay task: ${r.err}`, 'err')
-  return { ok: false, error: r.err }
-})
-
-// ─── Startup Manager ──────────────────────────────────────────────────────────
-ipcMain.handle('get-startup-items', async () => {
-  const hkcuRun = 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Run'
-  const hklmRun = 'HKLM:\\Software\\Microsoft\\Windows\\CurrentVersion\\Run'
-  const r = await runPS(`
-    $items = @()
-    $hkcuRun = '${hkcuRun}'
-    $hklmRun = '${hklmRun}'
-    if (Test-Path $hkcuRun) {
-      (Get-ItemProperty $hkcuRun).PSObject.Properties | Where-Object {$_.Name -notmatch '^PS'} | ForEach-Object {
-        $items += [PSCustomObject]@{Name=$_.Name;Command=$_.Value;Source='HKCU Registry';Enabled=$true;Impact='Low';Key=$hkcuRun}
-      }
-    }
-    $hkcuDis = $hkcuRun + '\\AutorunsDisabled'
-    if (Test-Path $hkcuDis) {
-      (Get-ItemProperty $hkcuDis).PSObject.Properties | Where-Object {$_.Name -notmatch '^PS'} | ForEach-Object {
-        $items += [PSCustomObject]@{Name=$_.Name;Command=$_.Value;Source='HKCU Registry';Enabled=$false;Impact='Low';Key=$hkcuRun}
-      }
-    }
-    if (Test-Path $hklmRun) {
-      (Get-ItemProperty $hklmRun).PSObject.Properties | Where-Object {$_.Name -notmatch '^PS'} | ForEach-Object {
-        $items += [PSCustomObject]@{Name=$_.Name;Command=$_.Value;Source='HKLM Registry';Enabled=$true;Impact='Medium';Key=$hklmRun}
-      }
-    }
-    $hklmDis = $hklmRun + '\\AutorunsDisabled'
-    if (Test-Path $hklmDis) {
-      (Get-ItemProperty $hklmDis).PSObject.Properties | Where-Object {$_.Name -notmatch '^PS'} | ForEach-Object {
-        $items += [PSCustomObject]@{Name=$_.Name;Command=$_.Value;Source='HKLM Registry';Enabled=$false;Impact='Medium';Key=$hklmRun}
-      }
-    }
-    Get-ScheduledTask | Where-Object {
-      ($_.Triggers.CimClass.CimClassName -contains 'MSFT_TaskLogonTrigger' -or $_.Triggers.CimClass.CimClassName -contains 'MSFT_TaskBootTrigger') -and
-      -not $_.TaskPath.StartsWith('\\Microsoft\\')
-    } | Select-Object TaskName,TaskPath,@{N='State';E={$_.State}} | ForEach-Object {
-      $items += [PSCustomObject]@{Name=$_.TaskName;Command=$_.TaskPath;Source='Task Scheduler';Enabled=($_.State -ne 'Disabled');Impact='Medium';Key=$_.TaskName}
-    }
-    $items | ConvertTo-Json -Depth 2
-  `, 20000)
+ipcMain.handle('startup2-tune', async () => { try { return await startupSvc().tuneRecommended() } catch (e) { return gmFail(e) } })
+ipcMain.handle('startup2-undo-run', async (_, req) => { try { return await startupSvc().undoRun({ runId: gmStr(req && req.runId, 40) }) } catch (e) { return gmFail(e) } })
+ipcMain.handle('startup2-history', () => { try { return startupSvc().history() } catch (e) { return gmFail(e) } })
+ipcMain.handle('startup2-ack', (_, req) => { try { return startupSvc().ack({ id: gmStr(req && req.id, 400) }) } catch (e) { return gmFail(e) } })
+ipcMain.handle('startup2-keep', async (_, req) => { try { return await startupSvc().keepSet({ id: gmStr(req && req.id, 400), on: !!(req && req.on) }) } catch (e) { return gmFail(e) } })
+ipcMain.handle('startup2-switch', async (_, req) => { try { return await startupSvc().switchSet({ id: gmStr(req && req.id, 40), on: !!(req && req.on) }) } catch (e) { return gmFail(e) } })
+ipcMain.handle('startup2-migrate', async () => { try { return await startupSvc().migrate() } catch (e) { return gmFail(e) } })
+// The file comes from the service's own scan (by entry id), never from a path sent by the page.
+ipcMain.handle('startup2-reveal', (_, req) => {
   try {
-    const data = JSON.parse(r.out)
-    return Array.isArray(data) ? data : [data]
+    const p = startupSvc().fileOf(gmStr(req && req.id, 400))
+    if (!p || !fs.existsSync(p)) return { ok: false, error: 'missing' }
+    shell.showItemInFolder(p)
+    return { ok: true }
+  } catch (e) { return gmFail(e) }
+})
+ipcMain.handle('startup2-open-settings', () => { try { shell.openExternal('ms-settings:startupapps'); return { ok: true } } catch (e) { return gmFail(e) } })
+// Older callers (Concierge, Arrival) still read the list in its old shape.
+ipcMain.handle('get-startup-items', async () => {
+  try {
+    const snap = await startupSvc().scan()
+    const SRC = { 'run-hkcu': 'HKCU Registry', 'run-hklm': 'HKLM Registry', 'run-hklm32': 'HKLM Registry', task: 'Task Scheduler' }
+    return (snap.entries || []).map(e => ({ Name: e.name, Command: e.cmd, Source: SRC[e.src] || 'Startup folder', Enabled: !!e.enabled || !!e.delayed, Impact: e.impact && e.impact.level ? e.impact.level[0].toUpperCase() + e.impact.level.slice(1) : 'Low', Key: e.id }))
   } catch { return [] }
 })
+// A program pinned "keep off" that switched itself back on is switched off again a minute after start, and after every scan.
+app.whenReady().then(() => { setTimeout(() => { startupSvc().scan().catch(() => {}) }, 60000) })
 
-const STARTUP_RUN_KEYS = new Set(['HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Run', 'HKLM:\\Software\\Microsoft\\Windows\\CurrentVersion\\Run'])
-ipcMain.handle('toggle-startup-item', async (_, req) => {
-  const { name, source, key, enable } = req || {}
-  const send = (msg, level) => mainWindow?.webContents.send('log', { msg, level, ts: new Date().toLocaleTimeString() })
-  if (typeof name !== 'string' || !name || name.length > 260) return { ok: false, error: 'invalid_name' }
-  const qName = V.psQuote(name)
-
-  if (source === 'Task Scheduler') {
-    const cmd = enable
-      ? `Enable-ScheduledTask -TaskName ${qName} -EA Stop`
-      : `Disable-ScheduledTask -TaskName ${qName} -EA Stop`
-    const r = await runPS(cmd)
-    if (!r.ok) {
-      send(`✗ Failed to ${enable ? 'enable' : 'disable'} task: ${name} — ${r.err}`, 'err')
-      return { ok: false, error: r.err }
-    }
-    send(`${enable ? 'Enabled' : 'Disabled'} task: ${name}`, 'ok')
-  } else {
-    // Only the two real Run keys may be touched (the renderer used to pass any path here).
-    if (typeof key !== 'string' || !STARTUP_RUN_KEYS.has(key)) return { ok: false, error: 'invalid_key' }
-    const qKey = V.psQuote(key)
-    // The value is moved between Run and Run\AutorunsDisabled with its ORIGINAL registry type — REG_EXPAND_SZ entries
-    // (%ProgramFiles%\… paths) used to be flattened to REG_SZ and then failed to launch.
-    const move = (fromKey, toKey) => `
-        $from = ${fromKey}; $to = ${toKey}; $n = ${qName}
-        $src = Get-Item -Path $from -EA SilentlyContinue
-        if ($null -eq $src -or $null -eq $src.GetValue($n, $null)) { Write-Error 'VALUE_NOT_FOUND'; exit 1 }
-        $val  = $src.GetValue($n, $null, 'DoNotExpandEnvironmentNames')
-        $kind = $src.GetValueKind($n).ToString()
-        New-Item -Path $to -Force -EA Stop | Out-Null
-        New-ItemProperty -Path $to -Name $n -Value $val -PropertyType $kind -Force -EA Stop | Out-Null
-        Remove-ItemProperty -Path $from -Name $n -Force -EA SilentlyContinue
-        if ($null -eq (Get-Item -Path $to).GetValue($n, $null)) { Write-Error 'WRITE_VERIFY_FAILED'; exit 1 }
-      `
-    const r = await runPS(enable
-      ? move(`(${qKey} + '\\AutorunsDisabled')`, qKey)
-      : move(qKey, `(${qKey} + '\\AutorunsDisabled')`))
-    if (!r.ok) {
-      send(`✗ Failed to ${enable ? 'enable' : 'disable'} startup item: ${name} — ${r.err}`, 'err')
-      return { ok: false, error: r.err }
-    }
-    send(`${enable ? 'Enabled' : 'Disabled'} startup item: ${name}`, 'ok')
-  }
-  return { ok: true }
-})
 
 // ─── Network Ping Test ────────────────────────────────────────────────────────
 ipcMain.handle('get-latency-sample', async () => {
@@ -11348,7 +11251,10 @@ ipcMain.handle('start-game-watcher', async () => {
 
   mainWindow?.webContents.send('log', { msg: '◆ Game Watcher started — monitoring for game launches…', level: 'ok', ts: new Date().toLocaleTimeString() })
 
+  let _gwBusy = false   // a slow tasklist or restore must never overlap the next tick
   gameWatcherInterval = setInterval(async () => {
+    if (_gwBusy) return
+    _gwBusy = true
     try {
     if (competeActive()) return   // Competitive Mode owns this game's session: no Auto-Pulse, Game Shield or profile on top of it
     const r = await runCmd('tasklist /fo csv /nh')
@@ -11562,7 +11468,7 @@ ipcMain.handle('start-game-watcher', async () => {
     }
     } catch (e) {
       mainWindow?.webContents.send('log', { msg: `Game watcher error: ${e.message}`, level: 'err', ts: new Date().toLocaleTimeString() })
-    }
+    } finally { _gwBusy = false }
   }, 5000)
 
   return { ok: true, status: 'started' }
@@ -11611,19 +11517,26 @@ ipcMain.handle('add-changelog-entry', (_, entry) => {
 ipcMain.handle('clear-changelog', () => saveChangelog([]) ? { ok: true } : { ok: false, error: 'changelog_write_failed' })
 
 // ─── Tweak Scheduler ─────────────────────────────────────────────────────────
-ipcMain.handle('schedule-tweak', async (_, { taskName, schedule, action, time, dayOfWeek }) => {
+ipcMain.handle('schedule-tweak', async (_, { taskName, schedule, action, time, dayOfWeek } = {}) => {
   if (!requiresPremium('schedule-tweak')) return { ok: false, reason: 'premium_required' }
   const send = (msg, level) => mainWindow?.webContents.send('log', { msg, level, ts: new Date().toLocaleTimeString() })
 
+  // The task runs as SYSTEM, whose %TEMP%, %LOCALAPPDATA% and %USERPROFILE% are not the user's: the user's own folders are written into the command here,
+  // as quoted literals, when the task is created. (Under SYSTEM these actions used to clean the wrong profile and do nothing.)
+  const q = s => "'" + String(s || '').replace(/'/g, "''") + "'"
+  const userTemp = process.env.TEMP || '', userLocal = process.env.LOCALAPPDATA || '', userProfile = process.env.USERPROFILE || ''
+  const sweep = p => (p ? 'Remove-Item -Path ' + q(p.replace(/[\\/]+$/, '') + '\\*') + ' -Recurse -Force -EA SilentlyContinue' : '')
   const psCommands = {
-    'clean-temp':        'Remove-Item -Path $env:TEMP\\* -Recurse -Force -EA SilentlyContinue; Remove-Item -Path C:\\Windows\\Temp\\* -Recurse -Force -EA SilentlyContinue',
+    'clean-temp':        [sweep(userTemp), 'Remove-Item -Path C:\\Windows\\Temp\\* -Recurse -Force -EA SilentlyContinue'].filter(Boolean).join('; '),
     'flush-dns':         'ipconfig /flushdns',
-    'clean-nvidia':      'Remove-Item -Path "$env:LOCALAPPDATA\\NVIDIA\\DXCache\\*" -Recurse -Force -EA SilentlyContinue; Remove-Item -Path "$env:LOCALAPPDATA\\NVIDIA\\GLCache\\*" -Recurse -Force -EA SilentlyContinue; Remove-Item -Path "$env:LOCALAPPDATA\\Temp\\NVIDIA Corporation\\NV_Cache\\*" -Recurse -Force -EA SilentlyContinue',
+    'clean-nvidia':      [sweep(userLocal + '\\NVIDIA\\DXCache'), sweep(userLocal + '\\NVIDIA\\GLCache'), sweep(userLocal + '\\Temp\\NVIDIA Corporation\\NV_Cache')].filter(Boolean).join('; '),
     'defrag-c':          'Optimize-Volume -DriveLetter C -Defrag -Verbose',
-    'clean-ram':         '[System.GC]::Collect(); Clear-RecycleBin -Force -EA SilentlyContinue',
-    'windows-update':    'Start-Process "ms-settings:windowsupdate-action"',
-    'clean-downloads':   'Remove-Item -Path "$env:USERPROFILE\\Downloads\\*" -Recurse -Force -EA SilentlyContinue',
+    // The same standby-list purge the CPU & Memory tab uses (needs the privileges SYSTEM has). It no longer empties the Recycle Bin.
+    'clean-ram':         require('./lib/cpumem/actions').purgeScript(),
+    // Only files not touched for 30 days, never folders: a scheduled task must not take away something you downloaded this week.
+    'clean-downloads':   userProfile ? 'Get-ChildItem -LiteralPath ' + q(userProfile + '\\Downloads') + ' -File -Recurse -Force -EA SilentlyContinue | Where-Object { $_.LastWriteTime -lt (Get-Date).AddDays(-30) } | Remove-Item -Force -EA SilentlyContinue' : '',
   }
+  if (action in psCommands && !psCommands[action]) return { ok: false, error: 'no_user_profile' }
   if (typeof taskName !== 'string' || taskName.length > 80 || !Object.prototype.hasOwnProperty.call(psCommands, action)) return { ok: false, error: 'invalid_request' }
   const psCommand = psCommands[action]
 
@@ -11702,7 +11615,7 @@ ipcMain.handle('run-scheduled-tweak', async (_, taskName) => {
   } catch(e) { return { ok: false, error: e.message } }
 })
 
-ipcMain.handle('toggle-scheduled-tweak', async (_, { taskName, enable }) => {
+ipcMain.handle('toggle-scheduled-tweak', async (_, { taskName, enable } = {}) => {
   if (!requiresPremium('toggle-scheduled-tweak')) return { ok: false, reason: 'premium_required' }
   if (!V.isJylliTaskName(taskName)) return { ok: false, error: 'invalid_task' }
   try {
@@ -11795,7 +11708,7 @@ ipcMain.handle('get-cleanup-history', () => {
   } catch { return [] }
 })
 
-ipcMain.handle('add-cleanup-history-entry', (_, { ts, freedBytes, itemCount, failedCount, diskFreeBytes }) => {
+ipcMain.handle('add-cleanup-history-entry', (_, { ts, freedBytes, itemCount, failedCount, diskFreeBytes } = {}) => {
   try {
     let entries = []
     if (CLEANUP_HISTORY_PATH && fs.existsSync(CLEANUP_HISTORY_PATH)) {
@@ -11804,7 +11717,7 @@ ipcMain.handle('add-cleanup-history-entry', (_, { ts, freedBytes, itemCount, fai
     if (!Array.isArray(entries)) entries = []
     entries.unshift({ ts: ts || Date.now(), freedBytes: freedBytes || 0, itemCount: itemCount || 0, failedCount: failedCount || 0, diskFreeBytes: diskFreeBytes || 0 })
     if (entries.length > 30) entries = entries.slice(0, 30)
-    if (CLEANUP_HISTORY_PATH) fs.writeFileSync(CLEANUP_HISTORY_PATH, JSON.stringify(entries), 'utf8')
+    if (CLEANUP_HISTORY_PATH) writeFileAtomic(CLEANUP_HISTORY_PATH, JSON.stringify(entries), 'utf8')
   } catch {}
   return { ok: true }
 })
@@ -11849,8 +11762,19 @@ ipcMain.handle('get-disk-projection', async () => {
 const Cleanup2 = require('./lib/cleanup')
 const cuSend = (ch, d) => { try { if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send(ch, d) } catch {} }
 const cuFile = n => path.join(app.getPath('userData'), n)
-const cuRead = (n, fallback) => { try { return JSON.parse(fs.readFileSync(cuFile(n), 'utf8')) } catch { return fallback } }
-const cuWrite = (n, v) => { try { fs.writeFileSync(cuFile(n), JSON.stringify(v), 'utf8') } catch {} }
+// State files are written to a temp file and renamed, so a crash or power cut mid-write can never leave a half-written file. The previous good copy is kept as .bak and read when the main file is missing or corrupt (a lost state file would forget Game time sessions, pins and history).
+const cuRead = (n, fallback) => {
+  for (const f of [cuFile(n), cuFile(n) + '.bak']) { try { return JSON.parse(fs.readFileSync(f, 'utf8')) } catch { /* try the backup */ } }
+  return fallback
+}
+const cuWrite = (n, v) => {
+  const f = cuFile(n), tmp = f + '.tmp'
+  try {
+    fs.writeFileSync(tmp, JSON.stringify(v), 'utf8')
+    try { JSON.parse(fs.readFileSync(f, 'utf8')); fs.copyFileSync(f, f + '.bak') } catch { /* no good previous copy to keep */ }
+    fs.renameSync(tmp, f)
+  } catch { try { fs.unlinkSync(tmp) } catch {} }
+}
 let _cuHas = null
 const cleanupSvc = Cleanup2.create({
   env: process.env,
@@ -13061,14 +12985,14 @@ const windowTheme = () => String(loadSettings().theme || '').replace(/[^a-z]/g, 
 // Colour scheme preference for windows (dark | light | system); the BrowserWindow background follows it so there is no flash
 const windowScheme = () => { const c = loadSettings().colorScheme; return c === 'light' || c === 'system' ? c : 'dark' }
 const windowBg = () => { const c = windowScheme(); return c === 'light' || (c === 'system' && !nativeTheme.shouldUseDarkColors) ? '#F1F1F3' : '#09090B' }
-ipcMain.handle('bios-hyper-v', async (_, { action }) => {
+ipcMain.handle('bios-hyper-v', async (_, { action } = {}) => {
   if (!requiresPremium('bios-hyper-v')) return { ok: false, reason: 'premium_required' }
   const cmd = action === 'apply' ? 'bcdedit /set hypervisorlaunchtype off' : 'bcdedit /set hypervisorlaunchtype auto'
   const r = await runCmd(cmd)
   return { ok: r.ok, error: r.err || null }
 })
 
-ipcMain.handle('bios-cstates', async (_, { action }) => {
+ipcMain.handle('bios-cstates', async (_, { action } = {}) => {
   if (!requiresPremium('bios-cstates')) return { ok: false, reason: 'premium_required' }
   const v = action === 'apply' ? 1 : 0
   const rs = []
@@ -14153,7 +14077,7 @@ ipcMain.handle('add-custom-game', async (_, { exe, name } = {}) => {
   try { list = JSON.parse(fs.readFileSync(customGamesPath, 'utf8')) } catch {}
   if (!list.find(g => g.exe === exe)) {
     list.push({ exe, name: name || path.basename(exe, '.exe'), addedAt: Date.now() })
-    fs.writeFileSync(customGamesPath, JSON.stringify(list, null, 2))
+    writeFileAtomic(customGamesPath, JSON.stringify(list, null, 2))
   }
   return { ok: true, games: list }
 })
@@ -14163,7 +14087,7 @@ ipcMain.handle('blacklist-unknown-game', async (_, exe) => {
   if (!/^[\w .\-()]{1,100}\.exe$/.test(exe)) return { ok: false, error: 'bad_exe' }
   const listPath = path.join(app.getPath('userData'), 'unknown-game-blacklist.json')
   const list = _readUserList('unknown-game-blacklist.json')
-  if (!list.includes(exe)) { list.push(exe); fs.writeFileSync(listPath, JSON.stringify(list, null, 2)) }
+  if (!list.includes(exe)) { list.push(exe); writeFileAtomic(listPath, JSON.stringify(list, null, 2)) }
   return { ok: true }
 })
 
@@ -14183,7 +14107,7 @@ ipcMain.handle('pulse-save-session', async (_, record) => {
   try { history = JSON.parse(fs.readFileSync(historyPath, 'utf8')) } catch {}
   history.unshift({ ...record, ts: Date.now() })
   if (history.length > 50) history.length = 50
-  fs.writeFileSync(historyPath, JSON.stringify(history, null, 2))
+  writeFileAtomic(historyPath, JSON.stringify(history, null, 2))
   return { ok: true }
 })
 

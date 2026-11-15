@@ -1,7 +1,5 @@
 {
- "missingFi": [
-  "tweakWarnings.vbs-disable"
- ],
+ "missingFi": [],
  "missingEn": [
   "tweakDescs.game-dvr",
   "tweakDescs.disable-fso",

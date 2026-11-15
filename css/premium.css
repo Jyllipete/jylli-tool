@@ -38,12 +38,13 @@
 .jp-cta-row { display: flex; flex-wrap: wrap; align-items: center; gap: 14px 18px; margin-top: 8px; }
 .jp-cta {
   display: inline-flex; align-items: center; gap: 10px; height: 44px; padding: 0 22px; border: 0; border-radius: 11px; cursor: pointer;
-  font: 600 var(--fs-4, 14px)/1 var(--font); color: #0b0b10; background: var(--c-accent);
+  font: 600 var(--fs-4, 14px)/1 var(--font); color: var(--on-accent, #0b0b10); background: var(--c-accent);
   box-shadow: 0 10px 28px -8px rgba(var(--c-accent-rgb), .75), inset 0 1px 0 rgba(255, 255, 255, .35);
   transition: transform .18s var(--ease-snap, ease-out), filter .18s, box-shadow .18s;
 }
 .jp-cta:hover { transform: translateY(-1px); filter: brightness(1.08); box-shadow: 0 14px 34px -8px rgba(var(--c-accent-rgb), .9), inset 0 1px 0 rgba(255, 255, 255, .4); }
 .jp-cta:active { transform: scale(.98); }
+#page-content .jp-cta, #page-content .jp-cta span, #page-content .jp-cta i { color: var(--on-accent, #0b0b10); }
 .jp-cta:focus-visible, .jp-bchip:focus-visible { outline: 2px solid var(--c-accent-fg); outline-offset: 2px; }
 .jp-price { display: flex; flex-direction: column; gap: 3px; }
 .jp-price b { font: 600 var(--fs-6, 20px)/1 var(--font); letter-spacing: -.02em; color: var(--c-text-primary); }

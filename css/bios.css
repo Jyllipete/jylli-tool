@@ -133,7 +133,7 @@
 .bw-seg { display: inline-flex; border: 1px solid var(--hairline); border-radius: var(--r-sm); overflow: hidden; }
 .bw-seg-b { padding: 3px 10px; border: 0; background: transparent; color: var(--c-text-secondary); font: inherit; font-size: var(--fs-1); cursor: pointer; }
 .bw-seg-b + .bw-seg-b { border-left: 1px solid var(--hairline); }
-.bw-seg-b.is-on { background: var(--c-accent); color: var(--c-on-accent, #fff); cursor: default; }
+.bw-seg-b.is-on { background: var(--c-accent); color: var(--on-accent, #0B0A14); cursor: default; }
 .bw-seg-b:focus-visible { outline: 2px solid var(--c-accent); outline-offset: -2px; }
 
 /* Instruments deck tab */

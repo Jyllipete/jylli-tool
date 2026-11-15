@@ -11,7 +11,7 @@
   if (typeof module !== 'undefined' && module.exports) module.exports = api
   if (typeof document === 'undefined') return
 
-  const hasKey = k => { try { const L = LANG; return !!((L[root.currentLang] && L[root.currentLang].gpu2 && k in L[root.currentLang].gpu2) || (L.en.gpu2 && k in L.en.gpu2)) } catch (e) { return false } }
+  const hasKey = k => { try { const L = LANG; return !!((L[currentLang] && L[currentLang].gpu2 && k in L[currentLang].gpu2) || (L.en.gpu2 && k in L.en.gpu2)) } catch (e) { return false } }
   const T = (k, v) => root.tG(hasKey(k) ? 'gpu2' : 'net2', k, v)
   const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]))
   const still = () => document.documentElement.classList.contains('motion-reduced') || document.body.classList.contains('game-live')
@@ -231,7 +231,7 @@
       const h = S.history, m = model()
       const restorable = m ? m.items.filter(i => i.remembered === 'applied').map(i => i.id) : []
       if (!h.batches.length) { slot.innerHTML = `<div class="nt-hist-empty"><i class="fa fa-clock-rotate-left" aria-hidden="true"></i><b>${esc(T('histEmptyT'))}</b><span>${esc(T('histEmptyS'))}</span></div>`; return }
-      const fmtDate = ts => { try { return new Date(ts).toLocaleString(root.currentLang === 'fi' ? 'fi-FI' : undefined, { dateStyle: 'medium', timeStyle: 'short' }) } catch (e) { return '' } }
+      const fmtDate = ts => { try { return new Date(ts).toLocaleString(currentLang === 'fi' ? 'fi-FI' : undefined, { dateStyle: 'medium', timeStyle: 'short' }) } catch (e) { return '' } }
       const label = e => {
         if (e.tweakId) return nameOf(e.tweakId)
         const d = e.detail

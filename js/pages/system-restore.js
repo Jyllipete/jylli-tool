@@ -11,7 +11,7 @@ function buildRestorePoints(c) {
 
   c.innerHTML = String(html`
     <div id="rp-admin-banner" class="j-callout j-callout-danger j-rp-banner" role="alert" style="display:none"><i class="fa fa-shield-exclamation" aria-hidden="true"></i><div class="j-grow">${tUI('rpAdminWarn')}</div>${ui.button({ label: tUI('rpRelaunchAdmin'), variant: 'danger', size: 'sm', onclick: 'api.relaunchAdmin()' })}</div>
-    <div id="rp-stale-banner" class="j-callout j-callout-warn j-rp-banner" role="status" style="display:none"><i class="fa fa-clock-rotate-left" aria-hidden="true"></i><div class="j-grow"><b>${tG('rpNudge', 'title')}</b><div id="rp-stale-text" class="j-muted"></div></div>${ui.button({ label: tUI('rpCreate'), variant: 'primary', size: 'sm', id: 'rp-stale-btn', onclick: 'doCreateRP()' })}</div>
+    <div id="rp-stale-banner" class="j-callout j-callout-warn j-rp-banner" role="status" style="display:none"><i class="fa fa-clock-rotate-left" aria-hidden="true"></i><div class="j-grow"><b>${tG('rpNudge', 'title')}</b><div id="rp-stale-text" class="j-muted"></div></div>${ui.button({ label: tUI('rpCreate'), variant: 'secondary', size: 'sm', id: 'rp-stale-btn', onclick: 'doCreateRP()' })}</div>
 
     ${ui.card({ title: tUI('rpHeroTitle'), sub: tUI('rpHeroDesc'), body: html`
       <div class="j-rp-stats">${stat('rp-stat-count', tUI('rpStatSnapshots'))}${stat('rp-stat-disk', tUI('rpStatDisk'))}${stat('rp-stat-age', tUI('rpStatLatest'))}</div>
@@ -35,7 +35,7 @@ function buildRestorePoints(c) {
             </tr></thead>
             <tbody id="rp-tbody"><tr><td colspan="4" class="rp-v2-loading-cell"><span class="rp-v2-skeleton"></span></td></tr></tbody>
           </table>
-          <div id="rp-empty" class="j-hidden">${raw(String(ui.empty({ icon: 'shield-halved', title: tUI('rpNotFound'), sub: tUI('rpEmptySub'), action: ui.button({ label: tUI('rpCreate'), icon: 'plus', variant: 'primary', onclick: 'doCreateRP()' }) })).replace('class="j-empty-title"', 'class="j-empty-title rp-v2-empty__title"'))}</div>
+          <div id="rp-empty" class="j-hidden">${raw(String(ui.empty({ icon: 'shield-halved', title: tUI('rpNotFound'), sub: tUI('rpEmptySub'), action: ui.button({ label: tUI('rpCreate'), icon: 'plus', variant: 'secondary', onclick: 'doCreateRP()' }) })).replace('class="j-empty-title"', 'class="j-empty-title rp-v2-empty__title"'))}</div>
         </div>
       </div>
       <div class="j-rp-side">

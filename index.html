@@ -24,6 +24,7 @@
 <link rel="stylesheet" href="css/power.css">
 <link rel="stylesheet" href="css/games.css">
 <link rel="stylesheet" href="css/apps.css">
+<link rel="stylesheet" href="css/startup.css">
 <link rel="stylesheet" href="css/cleanup.css">
 <link rel="stylesheet" href="css/diagnostics.css">
 <link rel="stylesheet" href="css/fivem.css">
@@ -524,6 +525,8 @@
 <script src="js/lang/games-fi.js"></script>
 <script src="js/lang/apps-en.js"></script>
 <script src="js/lang/apps-fi.js"></script>
+<script src="js/lang/startup-en.js"></script>
+<script src="js/lang/startup-fi.js"></script>
 <script src="js/lang/pulse-en.js"></script>
 <script src="js/lang/pulse-fi.js"></script>
 <script src="js/lang/home-en.js"></script>
@@ -588,7 +591,6 @@
 <script src="js/pages/gaming-latency.js"></script>
 <script src="js/pages/system-diagnostics.js"></script>
 <script src="js/pages/system-restore.js"></script>
-<script src="js/pages/clean-startup.js"></script>
 <script src="js/pages/gaming-pulse.js"></script>
 <script src="js/ui-helpers.js"></script>
 <script src="js/tours.js"></script>
@@ -661,6 +663,9 @@
 <script src="js/apps/pure.js"></script>
 <script src="js/apps/views.js"></script>
 <script src="js/apps/page.js"></script>
+<script src="js/startup/pure.js"></script>
+<script src="js/startup/views.js"></script>
+<script src="js/startup/page.js"></script>
 <script src="js/games/views.js"></script>
 <script src="js/games/page.js"></script>
 <script src="js/fivem/views.js"></script>
@@ -1530,7 +1535,6 @@ function showPage(page, tabId) {
       // Restore cached HTML — avoids full DOM rebuild on revisit
       c.innerHTML = _PAGE_CACHE.get(page)
       // Re-wire page-specific closures lost when HTML was serialised into the cache
-      if (page === 'startup-manager') _startupRewireAfterCacheRestore(c)
     } else {
       try {
         const building = Promise.resolve((route && Shell.TAB_BUILDERS[route.tab])?.(c))
@@ -2972,7 +2976,7 @@ function gsUpdateThreshold(type, value) {
 
 async function gsExclusionInit() {
   if (!api.getGameShieldExclusions) return
-  const { exclusions } = await api.getGameShieldExclusions().catch(() => ({ exclusions: [] }))
+  const { exclusions } = (await api.getGameShieldExclusions().catch(() => null)) || {}
   _gsExclusions = exclusions || []
   gsExclusionRenderPills()
 }
@@ -6165,6 +6169,16 @@ function buildAppOptimizer(c) {
   registerPageCleanup('app-optimizer', () => { try { page.destroy() } catch {} })
 }
 
+// ─── Page: Startup ────────────────────────────────────────────────────────────
+// Startup "Ignition": js/startup/{pure,views,page}.js on the engine in lib/startup (every startup source read through Windows' own on/off switch, boot timing, delay, keep-off).
+function buildStartupManager(c) {
+  const host = document.createElement('div')
+  host.id = 'su-host'
+  c.appendChild(host)
+  const page = JylliStartupPage.mount(host)
+  registerPageCleanup('startup-manager', () => { try { page.destroy() } catch {} })
+}
+
 // ─── Page: Cleanup ────────────────────────────────────────────────────────────
 // Cleanup: js/cleanup/{core,page,extras}.js on the engine in lib/cleanup. Everything on the tab comes from there.
 function buildCleanup(c) { JylliCleanupPage.mount(c) }
@@ -6400,7 +6414,7 @@ async function loadRPDiskUsage() {
   const info = document.getElementById('rp-disk-info')
   const pctEl = document.getElementById('rp-disk-pct')
   if (!fill || !info) return
-  const d = await api.getSrDiskUsage().catch(() => ({ available: false }))
+  const d = (await api.getSrDiskUsage().catch(() => null)) || { available: false }
   if (!d.available) { info.textContent = tUI('rpDiskUnavailable'); return }
   const usedGB  = (d.usedBytes  / 1073741824).toFixed(2)
   const allocGB = (d.allocBytes / 1073741824).toFixed(2)

@@ -11,7 +11,7 @@
   if (typeof module !== 'undefined' && module.exports) module.exports = api
   if (typeof document === 'undefined') return
 
-  const hasKey = k => { try { const L = LANG; return !!((L[root.currentLang] && L[root.currentLang].cpumem2 && k in L[root.currentLang].cpumem2) || (L.en.cpumem2 && k in L.en.cpumem2)) } catch (e) { return false } }
+  const hasKey = k => { try { const L = LANG; return !!((L[currentLang] && L[currentLang].cpumem2 && k in L[currentLang].cpumem2) || (L.en.cpumem2 && k in L.en.cpumem2)) } catch (e) { return false } }
   const T = (k, v) => root.tG(hasKey(k) ? 'cpumem2' : 'net2', k, v)
   const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]))
   const still = () => document.documentElement.classList.contains('motion-reduced') || document.body.classList.contains('game-live')
@@ -254,7 +254,7 @@
       const h = S.history, m = model()
       const restorable = m ? m.items.filter(i => i.remembered === 'applied').map(i => i.id) : []
       if (!h.batches.length) { slot.innerHTML = `<div class="nt-hist-empty"><i class="fa fa-clock-rotate-left" aria-hidden="true"></i><b>${esc(T('histEmptyT'))}</b><span>${esc(T('histEmptyS'))}</span></div>`; return }
-      const fmtDate = ts => { try { return new Date(ts).toLocaleString(root.currentLang === 'fi' ? 'fi-FI' : undefined, { dateStyle: 'medium', timeStyle: 'short' }) } catch (e) { return '' } }
+      const fmtDate = ts => { try { return new Date(ts).toLocaleString(currentLang === 'fi' ? 'fi-FI' : undefined, { dateStyle: 'medium', timeStyle: 'short' }) } catch (e) { return '' } }
       const label = e => (e.tweakId ? nameOf(e.tweakId) : T('histPriority', { exe: String(e.control || '').replace('cpumem:priority:', '') }))
       slot.innerHTML = `<div class="nt-hist-h"><div><b>${esc(T('histTitle'))}</b><span>${esc(T('histSub'))}</span></div>${restorable.length ? `<button type="button" class="nt-sec sm" data-h="all"><i class="fa fa-rotate-left" aria-hidden="true"></i>${esc(T('histRestoreAll', { n: restorable.length }))}</button>` : ''}</div>`
         + h.batches.map(b => {

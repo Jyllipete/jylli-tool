@@ -2006,7 +2006,7 @@ launchRuleFailed:'Asetusta ei voitu muuttaa', tkUgOn:'Update Guard päällä', t
       fanStopped:'FanControl pysäytetty',
       // Confirm dialogs
       killProcessTitle:'Lopeta prosessi', killProcessBody:'Tämä prosessi lopetetaan välittömästi.', killProcessOk:'Lopeta',
-      schedClearDlTitle:'Tyhjennä latauskansio', schedClearDlBody:'Tämä poistaa pysyvästi kaikki latauskansiosi tiedostot.', schedClearDlOk:'Aikatauluta silti',
+      schedClearDlTitle:'Tyhjennä latauskansio', schedClearDlBody:'Tämä poistaa pysyvästi latauskansiosi tiedostot, joita ei ole muutettu 30 päivään. Uudemmat tiedostot ja kansiot säilyvät.', schedClearDlOk:'Aikatauluta silti',
       schedRemoveTitle:'Poista ajastettu tehtävä', schedRemoveBody:'Tämä ajastettu tehtävä poistetaan.',
       schedOptHourly:'Joka tunti', schedOptDailyCustom:'Päivittäin valittuna aikana…', schedOptWeeklyCustom:'Viikoittain valittuna päivänä…',
       schedTimeLabel:'Kellonaika', schedDayLabel:'Viikonpäivä', schedLabelLabel:'Kutsumanimi', schedLabelPlaceholder:'Valinnainen (esim. "Aamuhuolto")',
@@ -2021,9 +2021,9 @@ launchRuleFailed:'Asetusta ei voitu muuttaa', tkUgOn:'Update Guard päällä', t
       schedDescFlushDns:'Tyhjentää DNS-ratkaisijan välimuistin — korjaa vanhentuneen DNS:n ja nopeuttaa uudelleenyhteyksiä.',
       schedDescNvidia:'Poistaa NVIDIA DXCache- ja GLCache-varjostintiedostot, jotka aiheuttavat nykimistä ajuripäivitysten jälkeen.',
       schedDescDefrag:'Suorittaa Optimize-Volume C:\\-asemalle — tiivistää pirstoutuneet tiedostot kiintolevyille, TRIM SSD-levyille.',
-      schedDescRam:'Supistaa kaikkien prosessien työmuistia ja tyhjentää roskakorin kaikilta käyttäjiltä käytetyn muistin vapauttamiseksi.',
+      schedDescRam:'Tyhjentää valmiusmuistilistan (välimuistissa olevan datan, jota Windows pitää uudelleenkäyttöä varten). Roskakoriin ei kosketa.',
       schedDescUpdate:'Käynnistää hiljaisen Windows Update -skannauksen taustalla UsoClientin avulla — ei ikkunaa tarvita.',
-      schedDescDownloads:'Poistaa pysyvästi kaikki tiedostot Lataukset-kansiostasi.',
+      schedDescDownloads:'Poistaa pysyvästi Lataukset-kansiosi tiedostot, joita ei ole muutettu 30 päivään.',
       schedYesterday:'Eilen', schedJustNow:'Juuri nyt',
       schedInMin:'{0} min kuluttua', schedInHours:'{0}h {1}m kuluttua', schedInDays:'{0}d kuluttua',
       schedEmptyState:'Ei ajastettuja Jylli-tehtäviä vielä. Luo yksi yllä.',
@@ -2627,6 +2627,7 @@ launchRuleFailed:'Asetusta ei voitu muuttaa', tkUgOn:'Update Guard päällä', t
       'bluetooth-hard-off':['Kaikki Bluetooth-laitteet (kuulokkeet, hiiret, ohjaimet) lakkaavat toimimasta palautukseen asti.'],
     },
     tweakWarnings: {
+      'vbs-disable': 'TIETOTURVAVAIKUTUS: poistaa muistin eheyden ja Credential Guardin kaltaiset suojaukset käytöstä. Hyöty on mitattavissa lähinnä vanhemmilla suorittimilla (noin 8 % Ryzen 7 5800X3D:llä 24H2:ssa). Jotkut huijauksenestot tarkistavat VBS:n ja Secure Bootin tilan, joten lue pelin vaatimukset. Vaatii uudelleenkäynnistyksen.',
       'wifi-gaming-tune': 'Lisää virrankulutusta akulla. Vähiten aggressiivinen verkonvaihto pitää sinut nykyisessä tukiasemassa vaikka lähellä olisi parempi.',
       'hypervisor-off': 'WSL2, Docker Desktop, Windows Sandbox ja Hyper-V-virtuaalikoneet lakkaavat toimimasta kunnes tämä kumotaan. Vaatii uudelleenkäynnistyksen.',
       'spectre-meltdown':'Poistaa ytimen tason CPU-tietoturvan. Ei koskaan jaetulle PC:lle.',
@@ -3633,7 +3634,7 @@ launchRuleFailed:'Asetusta ei voitu muuttaa', tkUgOn:'Update Guard päällä', t
       dial:'kirjattua muutosta', statToday:'Viimeiset 24 tuntia', statApplied:'Otettu käyttöön', statRestored:'Palautettu', loading:'Luetaan lokia', none:'Ei vielä kirjauksia', last:'Viimeisin muutos {t}', failed:'Historiaa ei voitu lukea',
       undoBatchTitle:'Perutaanko tämä erä?', undoBatchBody:'Jokainen tämän erän muutos palautetaan siihen, mitä se oli ennen. Voit ottaa ne käyttöön myöhemmin uudelleen.',
       undoSessionTitle:'Perutaanko koko istunto?', undoSessionBody:'Jokainen tässä istunnossa tehty muutos palautetaan siihen, mitä se oli ennen. Jo perutut muutokset ohitetaan.',
-    },
+    },
     procx: {
       hogTitle:'CPU-syöpöt', hogSub:'Jäädytä mikä tahansa prosessi. Se palautuu automaattisesti, kun pelisi sulkeutuu.', kill:'Lopeta prosessi', saved:'säästetty {n} s CPU:ta', freezeErr:'Prosessia ei voitu jäädyttää', ipcFailed:'Pyyntö epäonnistui',
     },
