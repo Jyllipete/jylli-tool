@@ -2,7 +2,7 @@
 // m_<id>Title / m_<id>Why: Next Best Move copy for the moves js/../lib/home/moves.js can raise.
 LANG.en.home2 = {
   "myPc": "My PC", "uptime": "Uptime", "lastOpt": "Last optimized", "never": "Never", "yes": "Yes", "no": "No", "up": "up", "down": "down", "close": "Close", "undo": "Undo", "checking": "Checking…",
-  "notMeasured": "not measured", "verifying": "Verifying remembered values…", "eyebrowLive": "Live reading", "dialAria": "Jylli Index: three bands for health, tuning and protection",
+  "notMeasured": "not measured", "verifying": "Verifying remembered values…", "eyebrowLive": "Live reading", "eyebrowCheckup": "From your checkup {ago}", "pil_health": "Health", "pil_tuned": "Tuned", "pil_protected": "Protected", "leadPartial1": "{p} is left out until it can be measured.", "dialAria": "Jylli Index: three bands for health, tuning and protection",
   "agoNow": "just now", "agoMin": "{n} min ago", "agoHour": "{n} h ago", "agoDay": "{n} d ago",
 
   "p_health": "Health", "p_tuned": "Tuned", "p_protected": "Protected",
@@ -17,25 +17,25 @@ LANG.en.home2 = {
   "wyRestore": "Restore point", "wyAdmin": "Administrator rights",
 
   "verdictLoading": "Reading your PC…", "verdictFail": "Home could not read this PC", "verdictNone": "Not enough measured yet",
-  "verdictStrong": "This PC is in great shape", "verdictFair": "This PC is doing fine, with room to improve",
+  "verdictStrong": "This PC is in great shape", "verdictFindings": "Mostly healthy, but a few problems need a look", "verdictFair": "This PC is doing fine, with room to improve",
   "verdictWeak_health": "Health needs attention", "verdictWeak_tuned": "This PC is not tuned yet", "verdictWeak_protected": "You are not protected yet",
   "leadNone": "Run a checkup and Jylli can put a number on this PC. Nothing is guessed in the meantime.", "leadQuick": "Based on the quick check. A full Vitals checkup makes this number far more exact.",
   "leadStale": "Your last checkup is old. Check again to see how the PC is doing today.", "leadPartial": "Based on {n} of 3 pillars. The others are left out until they can be measured.", "leadFull": "Based on all three pillars, measured on this PC.",
-  "trendUp": "+{n} in {d} days", "trendDown": "−{n} in {d} days", "trendFlat": "Steady for {d} days", "driftChip": "{n} changed back",
+  "trendUp": "+{n} in {d} days", "trendDown": "−{n} in {d} days", "trendFlat": "Steady for {d} days", "trendFlat_1": "Steady for 1 day", "trendUp_1": "+{n} in 1 day", "trendDown_1": "−{n} in 1 day", "driftChip": "{n} changed back",
 
   "moveFirst": "Do this first", "moveNext": "Next best move", "notNow": "Not now", "upNext": "Up next", "reversible": "Recorded, so you can undo it",
   "chipRam": "{size} of RAM in use by these", "chipScanned": "Scanned {ago}",
   "btn_restore": "Create restore point", "btn_autoOpti": "Run Auto-Optimize", "btn_tab": "Open", "btn_batch": "Apply", "btn_drift": "Apply again", "btn_admin": "Restart as admin", "btn_ai": "Apply",
-  "btn_checkup": "Run a checkup", "btn_checkupAgain": "Check again", "btn_checkDrift": "Check settings now", "confirmApply": "Apply {n} setting(s) now? Each one can be undone from the Rewind strip.",
+  "btn_checkup": "Run a checkup", "btn_checkupAgain": "Check again", "btn_checkDrift": "Check settings now", "confirmApply": "Apply {n} settings now? Each one can be undone from the Rewind strip.", "confirmApply_1": "Apply 1 setting now? It can be undone from the Rewind strip.",
   "moveDoneEyebrow": "Done", "moveDoneTitle": "Finished. Home is re-reading your PC.",
   "clearEyebrow": "All clear", "clearTitle": "Nothing needs you right now", "clearWhy": "Jylli found no move worth your time. It keeps watching and will say so when that changes.", "clearLast": "Last optimized {ago}.",
   "aiWhy": "Suggested for this PC ({pct}% match)",
 
   "m_protectTitle": "Create a restore point first", "m_protectWhy": "This PC has none. A restore point lets you roll Windows settings back if a change causes trouble.",
   "m_protectStaleTitle": "Refresh your restore point", "m_protectStaleWhy": "Your newest restore point is more than a week old. A fresh one takes about a minute.",
-  "m_vitalsTitle": "Fix {n} serious finding(s) from your checkup", "m_vitalsWhy": "Your last Vitals checkup found serious problems. Open the checkup to see what they are and how to fix them.",
+  "m_vitalsTitle": "Fix {n} serious findings from your checkup", "m_vitalsTitle_1": "Fix 1 serious finding from your checkup", "m_vitalsWhy": "Your last Vitals checkup found serious problems. Open the checkup to see what they are and how to fix them.",
   "m_checkupTitle": "Run your first Vitals checkup", "m_checkupWhy": "One checkup looks at crashes, disks, memory, drivers, Windows and security, and makes the Health pillar real.",
-  "m_driftTitle": "{n} tweak(s) were changed back", "m_driftWhy": "Some settings you applied no longer hold. Windows or an app may have changed them. Apply them again to get them back.",
+  "m_driftTitle": "{n} tweaks were changed back", "m_driftTitle_1": "1 tweak was changed back", "m_driftWhy": "Some settings you applied no longer hold. Windows or an app may have changed them. Apply them again to get them back.",
   "m_autoOptiFirstTitle": "Run Auto-Optimize for the first time", "m_autoOptiFirstWhy": "It scans this PC, picks only what suits it, applies it with a restore point, and measures the result.",
   "m_autoOptiAgainTitle": "Run Auto-Optimize again", "m_autoOptiAgainWhy": "It has been {days} days. Windows updates and new apps can change settings back without telling you.",
   "m_reclaimTitle": "Free {size} of safe-to-clear files", "m_reclaimWhy": "Your last Cleanup scan found caches and temp files that rebuild themselves. Nothing personal is touched.",
@@ -44,16 +44,16 @@ LANG.en.home2 = {
   "m_gameLiveTitle": "Watch this game session", "m_gameLiveWhy": "A game is running. Pulse records frame pacing and tells you what held it back.",
 
   "proofTitle": "Proof Ledger", "proofLead": "Only what was measured or recorded.",
-  "tileBootFaster": "Faster boot", "tileBootSlower": "Slower boot", "tileBootSub": "{a} s before, {b} s after", "tileReclaimed": "Space reclaimed", "tileReclaimedSub": "over {n} cleanup run(s)",
+  "tileBootFaster": "Faster boot", "tileBootSlower": "Slower boot", "tileBootSub": "{a} s before, {b} s after", "tileReclaimed": "Space reclaimed", "tileReclaimedSub": "over {n} cleanup runs", "tileReclaimedSub_1": "over 1 cleanup run",
   "tileRemoved": "Items removed", "tileRemovedSub": "{s} startup, {k} tasks, {a} apps and features", "tileTweaks": "Tweaks in place", "tileTweaksSub": "{n} applied, none changed back", "tileTweaksDrift": "{n} changed back", "tileTweaksUnchecked": "{n} applied, not re-checked yet",
-  "weekLine": "This week: {b} run(s), {c} change(s)", "weekUndone": "{n} undone", "weekFailed": "{n} failed", "undoLast": "Undo last Auto-Optimize run",
+  "weekLine": "This week: {b} runs, {c} changes", "weekUndone": "{n} undone", "weekFailed": "{n} failed", "undoLast": "Undo last Auto-Optimize run",
   "proofEmptyT": "Nothing to prove yet", "proofEmptyB": "After Auto-Optimize or a cleanup, this shows the real before and after: boot time, space reclaimed, items removed. It never shows a number that was not measured.",
 
   
   "rwHint": "Move across the strip to see a moment in time. Arrow keys work too.", "rwEmpty": "Nothing recorded yet. History builds as Jylli runs.", "rwNoData": "No reading recorded", "rwNoChange": "No change made around this time.",
-  "rwChange": "{n} change(s)", "rwUndone": "undone",
+  "rwChange": "{n} changes", "rwChange_1": "1 change", "rwUndone": "undone",
   "via_manual": "By you", "via_stage": "Stage", "via_auto-opti": "Auto-Optimize", "via_spw": "Profile wizard", "via_ai": "Suggested", "via_game-watcher": "Game profile", "via_scheduler": "Scheduled", "via_safety-revert": "Safety revert", "via_undo": "Undo",
-  "undoTitle": "Undo these changes?", "undoBody": "{n} change(s) will be put back exactly as they were before.", "undoLastBody": "Everything the last Auto-Optimize run changed will be put back.", "undoConflict": "Something else changed these settings since, so they were left alone.", "undoFailed": "Could not undo. Nothing was changed.",
+  "undoTitle": "Undo these changes?", "undoBody": "{n} changes will be put back exactly as they were before.", "undoBody_1": "1 change will be put back exactly as it was before.", "undoLastBody": "Everything the last Auto-Optimize run changed will be put back.", "undoConflict": "Something else changed these settings since, so they were left alone.", "undoFailed": "Could not undo. Nothing was changed.",
 
   
   "failEyebrow": "Could not read", "failLead": "Something stopped Home from reading this PC. Nothing was changed. Try again; if it keeps failing, restart Jylli Tool.", "retry": "Try again", 

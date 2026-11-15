@@ -37,7 +37,7 @@
     const dbg = gl.getExtension('WEBGL_debug_renderer_info')
     const rendererName = dbg ? gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER)
     renderer.toneMapping = T.NeutralToneMapping    // keeps the accent saturated where ACES/AgX bleach it to white
-    renderer.toneMappingExposure = 1.1
+    renderer.toneMappingExposure = 1.2
     renderer.shadowMap.enabled = true
     renderer.shadowMap.type = T.PCFSoftShadowMap
     renderer.setClearColor(0x000000, 0)
@@ -72,7 +72,7 @@
     key.shadow.bias = -0.0008; key.shadow.normalBias = 0.02
     scene.add(key)
     const rimLight = new T.DirectionalLight(0x9aa6ff, 3); rimLight.position.set(-8, 5, -7); scene.add(rimLight)
-    scene.add(new T.AmbientLight(0x8a8a9c, 1.5))
+    scene.add(new T.AmbientLight(0x8a8a9c, 2.2))
     // accent spill: the coloured light the case fans, GPU and pump throw into the interior; scaled by how bright the lights are
     const spills = [
       { pos: [2.6, 0.5, 1.8], i: 10, d: 13 },     // intake column
@@ -283,7 +283,7 @@
       // spill light follows the average glow, so a hot or busy rig lights its interior harder
       const avg = glowMats.length ? sum / glowMats.length / AMB : 1
       const heatCol = state && state.gpu && state.gpu.heat != null ? M.heatColor(state.gpu.heat, accent) : accent
-      spills.forEach((s, i) => { s.light.intensity = s.i * Math.min(1.8, avg) * power; if (i === 1) s.light.color.setRGB(...heatCol) })
+      spills.forEach((s, i) => { s.light.intensity = s.i * Math.max(1, Math.min(1.8, avg)) * power; if (i === 1) s.light.color.setRGB(...heatCol) })
       if (state && state.pump) { /* the pump has no moving part to show; its RPM only appears in the inspector */ }
     }
 

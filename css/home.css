@@ -266,3 +266,27 @@
 .hm button.hm-chip { min-height: 24px; cursor: pointer; font-family: inherit; }
 .hm button.hm-chip:hover { border-color: var(--hairline-strong); color: var(--c-text-primary); }
 :root[data-scheme="light"] .hm-pop { background: #FFFFFF; }
+
+/* ───────── first-impression polish ───────── */
+.hm-chiprow { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.hm-chiprow .hm-meta { display: contents; }
+.hm-track[data-measured="0"] { stroke-dasharray: 2 5; stroke: var(--hairline-strong); }
+/* point at one pillar and its band lights up, the others step back */
+.hm-arc, .hm-track { transition: opacity calc(200ms * var(--motion-scale, 1)); }
+.hm-hero:has(.hm-pillar[data-pillar="health"]:is(:hover, :focus-visible)) :is(.hm-arc, .hm-track):not([data-pillar="health"]),
+.hm-hero:has(.hm-pillar[data-pillar="tuned"]:is(:hover, :focus-visible)) :is(.hm-arc, .hm-track):not([data-pillar="tuned"]),
+.hm-hero:has(.hm-pillar[data-pillar="protected"]:is(:hover, :focus-visible)) :is(.hm-arc, .hm-track):not([data-pillar="protected"]) { opacity: .22; }
+/* small grey text was too faint on the dark hero */
+.hm-hero .hm-pillar-d, .hm-hero .hm-eyebrow, .hm-hero .hm-pillar-v small, .hm-hero .hm-dial-c small { color: var(--c-text-secondary); }
+
+/* wide Next Best Move card: text on the left, the buttons on the right, instead of a long empty strip */
+.hm-move { container-type: inline-size; }
+@container (min-width: 600px) {
+  .hm-move-c { display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: 24px; align-items: start; }
+  .hm-move-c > * { grid-column: 1; }
+  .hm-move-c > .hm-move-a { grid-column: 2; grid-row: 1 / span 4; align-self: center; flex-direction: column; align-items: stretch; margin-top: 0; }
+}
+
+/* What's new: the list scrolls inside the popover, the heading and Dismiss stay put (the hero clips anything that overflows it) */
+.hm-verdict .hm-pop { max-height: min(300px, 50vh); }
+.hm-pop ul { min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding-right: 4px; }

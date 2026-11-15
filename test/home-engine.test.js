@@ -244,3 +244,15 @@ test('moves: Lean and Cleanup carry what was measured, and when', () => {
   const none = V.rank({ ...calm(), debloat: { safe: 5, ram: null, ts: null } }).all.find(m => m.id === 'lean')
   assert.deepStrictEqual(none.facts, [], 'no measurement, no chip')
 })
+
+test('serious checkup findings stop "great shape" and cap the tone at warn', () => {
+  const f = n => Array.from({ length: n }, (_, k) => ({ id: 'x' + k, severity: 'high' }))
+  const clean = M.buildIndex({ now: NOW, diag: { score: 92, takenAt: NOW, findings: [] } })
+  assert.strictEqual(clean.verdictKey, 'verdictStrong')
+  assert.strictEqual(clean.tone, 'ok')
+  const bad = M.buildIndex({ now: NOW, diag: { score: 92, takenAt: NOW, findings: f(3) } })
+  assert.strictEqual(bad.verdictKey, 'verdictFindings')
+  assert.strictEqual(bad.serious, 3)
+  assert.strictEqual(bad.tone, 'warn')
+  assert.strictEqual(bad.score, clean.score)
+})

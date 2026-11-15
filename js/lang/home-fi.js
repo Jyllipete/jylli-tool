@@ -1,7 +1,7 @@
 // Home "Helm" -tekstit (ryhmä `home2`). Ladataan fi.js:n jälkeen. Tuote- ja laitteistonimiä ei käännetä.
 LANG.fi.home2 = {
   "myPc": "Oma kone", "uptime": "Käyntiaika", "lastOpt": "Viimeksi optimoitu", "never": "Ei koskaan", "yes": "Kyllä", "no": "Ei", "up": "ylös", "down": "alas", "close": "Sulje", "undo": "Kumoa", "checking": "Tarkistetaan…",
-  "notMeasured": "ei mitattu", "verifying": "Tarkistetaan muistettuja arvoja…", "eyebrowLive": "Reaaliaikainen lukema", "dialAria": "Jylli-indeksi: kolme kaistaa terveydelle, viritykselle ja suojaukselle",
+  "notMeasured": "ei mitattu", "verifying": "Tarkistetaan muistettuja arvoja…", "eyebrowLive": "Reaaliaikainen lukema", "eyebrowCheckup": "Tarkistuksestasi {ago}", "pil_health": "Terveys", "pil_tuned": "Viritys", "pil_protected": "Suojaus", "leadPartial1": "{p} jätetään pois, kunnes se voidaan mitata.", "dialAria": "Jylli-indeksi: kolme kaistaa terveydelle, viritykselle ja suojaukselle",
   "agoNow": "juuri nyt", "agoMin": "{n} min sitten", "agoHour": "{n} h sitten", "agoDay": "{n} pv sitten",
 
   "p_health": "Terveys", "p_tuned": "Viritys", "p_protected": "Suojaus",
@@ -16,25 +16,25 @@ LANG.fi.home2 = {
   "wyRestore": "Palautuspiste", "wyAdmin": "Järjestelmänvalvojan oikeudet",
 
   "verdictLoading": "Luetaan konettasi…", "verdictFail": "Home ei voinut lukea tätä konetta", "verdictNone": "Ei vielä tarpeeksi mitattu",
-  "verdictStrong": "Tämä kone on erinomaisessa kunnossa", "verdictFair": "Tämä kone voi hyvin, mutta parannettavaa on",
+  "verdictStrong": "Tämä kone on erinomaisessa kunnossa", "verdictFindings": "Pääosin terve, mutta muutama ongelma kaipaa huomiota", "verdictFair": "Tämä kone voi hyvin, mutta parannettavaa on",
   "verdictWeak_health": "Terveys vaatii huomiota", "verdictWeak_tuned": "Konetta ei ole vielä viritetty", "verdictWeak_protected": "Et ole vielä suojattu",
   "leadNone": "Tee tarkistus, niin Jylli voi antaa koneelle luvun. Mitään ei arvata sillä välin.", "leadQuick": "Perustuu pikatarkistukseen. Täysi Vitals-tarkistus tekee luvusta paljon tarkemman.",
   "leadStale": "Viimeisin tarkistus on vanha. Tarkista uudelleen nähdäksesi koneen tämänhetkisen kunnon.", "leadPartial": "Perustuu {n}/3 kaistaan. Muut jätetään pois, kunnes ne voidaan mitata.", "leadFull": "Perustuu kaikkiin kolmeen kaistaan, mitattu tällä koneella.",
-  "trendUp": "+{n} {d} päivässä", "trendDown": "−{n} {d} päivässä", "trendFlat": "Vakaa {d} päivää", "driftChip": "{n} palautui takaisin",
+  "trendUp": "+{n} {d} päivässä", "trendDown": "−{n} {d} päivässä", "trendFlat": "Vakaa {d} päivää", "trendFlat_1": "Vakaa 1 päivän", "trendUp_1": "+{n} 1 päivässä", "trendDown_1": "−{n} 1 päivässä", "driftChip": "{n} palautui takaisin",
 
   "moveFirst": "Tee tämä ensin", "moveNext": "Paras seuraava siirto", "notNow": "Ei nyt", "upNext": "Seuraavaksi", "reversible": "Tallennetaan, joten voit kumota",
   "chipRam": "{size} RAM-muistia näiden käytössä", "chipScanned": "Skannattu {ago}",
   "btn_restore": "Luo palautuspiste", "btn_autoOpti": "Aja Auto-Optimize", "btn_tab": "Avaa", "btn_batch": "Käytä", "btn_drift": "Käytä uudelleen", "btn_admin": "Käynnistä ylläpitäjänä", "btn_ai": "Käytä",
-  "btn_checkup": "Tee tarkistus", "btn_checkupAgain": "Tarkista uudelleen", "btn_checkDrift": "Tarkista säädöt nyt", "confirmApply": "Käytetäänkö {n} säätö(ä) nyt? Jokaisen voi kumota Rewind-palkista.",
+  "btn_checkup": "Tee tarkistus", "btn_checkupAgain": "Tarkista uudelleen", "btn_checkDrift": "Tarkista säädöt nyt", "confirmApply": "Käytetäänkö {n} säätöä nyt? Jokaisen voi kumota Rewind-palkista.", "confirmApply_1": "Käytetäänkö 1 säätö nyt? Sen voi kumota Rewind-palkista.",
   "moveDoneEyebrow": "Valmis", "moveDoneTitle": "Valmis. Home lukee konettasi uudelleen.",
   "clearEyebrow": "Kaikki kunnossa", "clearTitle": "Mikään ei tarvitse sinua juuri nyt", "clearWhy": "Jylli ei löytänyt siirtoa, joka olisi aikasi arvoinen. Se seuraa edelleen ja kertoo, kun tilanne muuttuu.", "clearLast": "Viimeksi optimoitu {ago}.",
   "aiWhy": "Ehdotettu tälle koneelle ({pct} % vastaavuus)",
 
   "m_protectTitle": "Luo ensin palautuspiste", "m_protectWhy": "Koneella ei ole yhtään. Palautuspisteen avulla voit palauttaa Windowsin asetukset, jos jokin muutos aiheuttaa ongelmia.",
   "m_protectStaleTitle": "Päivitä palautuspiste", "m_protectStaleWhy": "Uusin palautuspisteesi on yli viikon vanha. Tuoreen luominen vie noin minuutin.",
-  "m_vitalsTitle": "Korjaa {n} vakavaa löydöstä tarkistuksestasi", "m_vitalsWhy": "Viimeisin Vitals-tarkistus löysi vakavia ongelmia. Avaa tarkistus nähdäksesi, mitä ne ovat ja miten ne korjataan.",
+  "m_vitalsTitle": "Korjaa {n} vakavaa löydöstä tarkistuksestasi", "m_vitalsTitle_1": "Korjaa 1 vakava löydös tarkistuksestasi", "m_vitalsWhy": "Viimeisin Vitals-tarkistus löysi vakavia ongelmia. Avaa tarkistus nähdäksesi, mitä ne ovat ja miten ne korjataan.",
   "m_checkupTitle": "Tee ensimmäinen Vitals-tarkistus", "m_checkupWhy": "Yksi tarkistus katsoo kaatumiset, levyt, muistin, ajurit, Windowsin ja tietoturvan sekä tekee Terveys-kaistasta todellisen.",
-  "m_driftTitle": "{n} säätö(ä) palautui takaisin", "m_driftWhy": "Jotkin käyttämäsi asetukset eivät enää pidä. Windows tai sovellus on voinut muuttaa niitä. Käytä ne uudelleen palauttaaksesi ne.",
+  "m_driftTitle": "{n} säätöä palautui takaisin", "m_driftTitle_1": "1 säätö palautui takaisin", "m_driftWhy": "Jotkin käyttämäsi asetukset eivät enää pidä. Windows tai sovellus on voinut muuttaa niitä. Käytä ne uudelleen palauttaaksesi ne.",
   "m_autoOptiFirstTitle": "Aja Auto-Optimize ensimmäistä kertaa", "m_autoOptiFirstWhy": "Se skannaa koneen, valitsee vain sopivat säädöt, käyttää ne palautuspisteen kanssa ja mittaa tuloksen.",
   "m_autoOptiAgainTitle": "Aja Auto-Optimize uudelleen", "m_autoOptiAgainWhy": "Siitä on {days} päivää. Windows-päivitykset ja uudet sovellukset voivat muuttaa asetuksia takaisin kertomatta.",
   "m_reclaimTitle": "Vapauta {size} turvallisesti poistettavia tiedostoja", "m_reclaimWhy": "Viimeisin Siivous-skannaus löysi välimuisteja ja väliaikaistiedostoja, jotka rakentuvat itsestään uudelleen. Mitään henkilökohtaista ei kosketa.",
@@ -43,16 +43,16 @@ LANG.fi.home2 = {
   "m_gameLiveTitle": "Seuraa tätä pelisessiota", "m_gameLiveWhy": "Peli on käynnissä. Pulse tallentaa ruudunnopeuden tasaisuuden ja kertoo, mikä sitä hidasti.",
 
   "proofTitle": "Todistuskirja", "proofLead": "Vain mitattu tai tallennettu.",
-  "tileBootFaster": "Nopeampi käynnistys", "tileBootSlower": "Hitaampi käynnistys", "tileBootSub": "{a} s ennen, {b} s jälkeen", "tileReclaimed": "Vapautettu tila", "tileReclaimedSub": "{n} siivousajon aikana",
+  "tileBootFaster": "Nopeampi käynnistys", "tileBootSlower": "Hitaampi käynnistys", "tileBootSub": "{a} s ennen, {b} s jälkeen", "tileReclaimed": "Vapautettu tila", "tileReclaimedSub": "{n} siivousajon aikana", "tileReclaimedSub_1": "1 siivousajon aikana",
   "tileRemoved": "Poistetut kohteet", "tileRemovedSub": "{s} käynnistyskohdetta, {k} tehtävää, {a} sovellusta ja ominaisuutta", "tileTweaks": "Käytössä olevat säädöt", "tileTweaksSub": "{n} käytössä, yksikään ei palautunut", "tileTweaksDrift": "{n} palautui takaisin", "tileTweaksUnchecked": "{n} käytössä, ei vielä tarkistettu uudelleen",
   "weekLine": "Tällä viikolla: {b} ajoa, {c} muutosta", "weekUndone": "{n} kumottu", "weekFailed": "{n} epäonnistui", "undoLast": "Kumoa viimeisin Auto-Optimize-ajo",
   "proofEmptyT": "Ei vielä mitään todistettavaa", "proofEmptyB": "Auto-Optimizen tai siivouksen jälkeen tämä näyttää todellisen ennen ja jälkeen: käynnistysajan, vapautetun tilan ja poistetut kohteet. Se ei koskaan näytä lukua, jota ei ole mitattu.",
 
   
   "rwHint": "Liiku palkin yli nähdäksesi hetken. Nuolinäppäimet toimivat myös.", "rwEmpty": "Ei vielä tallennettua. Historia karttuu Jyllin toimiessa.", "rwNoData": "Lukemaa ei tallennettu", "rwNoChange": "Tämän ajan tienoilla ei tehty muutoksia.",
-  "rwChange": "{n} muutosta", "rwUndone": "kumottu",
+  "rwChange": "{n} muutosta", "rwChange_1": "1 muutos", "rwUndone": "kumottu",
   "via_manual": "Sinä", "via_stage": "Stage", "via_auto-opti": "Auto-Optimize", "via_spw": "Profiiliveivi", "via_ai": "Ehdotettu", "via_game-watcher": "Pelin profiili", "via_scheduler": "Ajastettu", "via_safety-revert": "Turvapalautus", "via_undo": "Kumoaminen",
-  "undoTitle": "Kumotaanko nämä muutokset?", "undoBody": "{n} muutosta palautetaan täsmälleen ennalleen.", "undoLastBody": "Kaikki, mitä viimeisin Auto-Optimize-ajo muutti, palautetaan.", "undoConflict": "Jokin muu on muuttanut näitä asetuksia sen jälkeen, joten ne jätettiin rauhaan.", "undoFailed": "Kumoaminen ei onnistunut. Mitään ei muutettu.",
+  "undoTitle": "Kumotaanko nämä muutokset?", "undoBody": "{n} muutosta palautetaan täsmälleen ennalleen.", "undoBody_1": "1 muutos palautetaan täsmälleen ennalleen.", "undoLastBody": "Kaikki, mitä viimeisin Auto-Optimize-ajo muutti, palautetaan.", "undoConflict": "Jokin muu on muuttanut näitä asetuksia sen jälkeen, joten ne jätettiin rauhaan.", "undoFailed": "Kumoaminen ei onnistunut. Mitään ei muutettu.",
 
   
   "failEyebrow": "Lukeminen epäonnistui", "failLead": "Jokin esti Homea lukemasta tätä konetta. Mitään ei muutettu. Yritä uudelleen; jos se ei onnistu, käynnistä Jylli Tool uudelleen.", "retry": "Yritä uudelleen", 

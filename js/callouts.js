@@ -26,7 +26,7 @@
   const sizeFor = win => ((win.right - win.left) >= 600 ? { w: W, h: H, compact: false } : { w: CW, h: CH, compact: true })
 
   /** 40 C and below stays neutral; warming toward red at 85 C and above. */
-  const heatColor = t => { const k = Math.max(0, Math.min(1, (t - 40) / 45)); return t == null || !Number.isFinite(t) || k === 0 ? '' : 'hsl(' + (210 - k * 195).toFixed(0) + ' 85% 55% / ' + (0.1 + k * 0.4).toFixed(2) + ')' }
+  const heatColor = t => { const k = Math.max(0, Math.min(1, (t - 50) / 45)); return t == null || !Number.isFinite(t) || k === 0 ? '' : 'hsl(' + (210 - k * 195).toFixed(0) + ' 85% 55% / ' + (0.1 + k * 0.4).toFixed(2) + ')' }
   const api = { layout, fits, sizeFor, heatColor, SIZE: { w: W, h: H } }
   root.JylliCallouts = api
   if (typeof module !== 'undefined' && module.exports) module.exports = api
@@ -84,7 +84,9 @@
     const k = root.JylliWorld && JylliWorld.reduced() ? 1 : 1 - Math.pow(0.75, dtMs / 50)
     for (const it of items) {
       const p = pos.get(it.id), a = anchors.find(x => x.id === it.id)
-      const hide = !p
+      const ns = it.el.querySelectorAll('.jx-co-n')
+      const nothing = ns.length > 0 && ns.length === it.el.querySelectorAll('.jx-co-n.j-metric-na').length   // every number is "not available"
+      const hide = !p || nothing
       if (it.hid !== hide) { it.hid = hide; it.el.hidden = hide; it.dot.style.display = it.line.style.display = hide ? 'none' : '' }
       if (hide) continue
       const heat = HEAT_KEY[it.id] && root.JylliTelemetry ? heatColor(JylliTelemetry.value(HEAT_KEY[it.id])) : ''

@@ -6,7 +6,9 @@
   if (typeof document === 'undefined') return
   const V = root.JylliHomeViews, P = root.JylliHomePure, TR = root.JylliHomeTrace, PR = root.JylliHomeProcesses
   const { esc, ic } = V
-  const T = (k, v) => tG('home2', k, v)
+  const hasKey = k => { try { return !!((LANG[currentLang] && LANG[currentLang].home2 && k in LANG[currentLang].home2) || (LANG.en.home2 && k in LANG.en.home2)) } catch (e) { return false } }
+  // one / many: a call with n = 1 (or d = 1) uses the key plus _1 when that key exists
+  const T = (k, v) => tG('home2', v && (v.n === 1 || v.d === 1) && hasKey(k + '_1') ? k + '_1' : k, v)
   const A = () => root.api
   const DAY = 86400000
   const RING_MS = 610000
@@ -55,9 +57,9 @@
             <div class="hm-eyebrow"><span class="hm-dot"></span><span id="hm-eyebrow">${esc(T('verifying'))}</span></div>
             <h2 id="hm-verdict">${esc(T('verdictLoading'))}</h2>
             <p id="hm-lead"></p>
-            <div class="hm-meta" id="hm-meta"></div>
-            ${showWn ? `<button type="button" class="hm-chip hm-wn" id="db-changelog-feed" data-act="wn" aria-expanded="false" aria-controls="hm-wn-pop">${ic('wand-magic-sparkles')} ${esc(T('whatsNewChip', { v: wn.version }))}</button>
-            <div class="hm-pop" id="hm-wn-pop" role="region" aria-label="${esc(T('whatsNewTitle', { v: wn.version }))}" hidden>
+            <div class="hm-chiprow"><div class="hm-meta" id="hm-meta"></div>
+            ${showWn ? `<button type="button" class="hm-chip hm-wn" id="db-changelog-feed" data-act="wn" aria-expanded="false" aria-controls="hm-wn-pop">${ic('wand-magic-sparkles')} ${esc(T('whatsNewChip', { v: wn.version }))}</button>` : ''}</div>
+            ${showWn ? `<div class="hm-pop" id="hm-wn-pop" role="region" aria-label="${esc(T('whatsNewTitle', { v: wn.version }))}" hidden>
               <h4>${esc(T('whatsNewTitle', { v: wn.version }))}</h4>
               <ul>${wn.items.slice(0, 6).map(i => `<li>${esc(String(i).replace(/^[A-Za-zÄÖäö]+ — /, ''))}</li>`).join('')}</ul>
               <button type="button" class="j-btn j-btn-sm" data-act="wn-close">${esc(T('dismiss'))}</button></div>` : ''}
@@ -102,6 +104,8 @@
     const q = s => el.querySelector(s)
     current = null
     const on = (target, ev, fn, o) => { target.addEventListener(ev, fn, o); S.off.push(() => target.removeEventListener(ev, fn, o)) }
+    // the "drag to rotate" hint has done its job once the rig has been touched
+    { const stage = q('#home-twin-stage'); if (stage) on(stage, 'pointerdown', () => { const h = q('#twin-hint'); if (h) h.hidden = true }, { once: true }) }
     const agoText = a => (a ? T(a.key, { n: a.n }) : '')
 
     // ── paint: hero ──
@@ -134,13 +138,13 @@
       hero.dataset.tone = idx.tone
       hero.dataset.verify = S.remembered ? '1' : '0'
       const bands = P.dial(idx)
-      requestAnimationFrame(() => bands.forEach(b => { const a = q(`.hm-arc[data-pillar="${b.key}"]`); if (a) { a.dataset.tone = b.tone; a.setAttribute('stroke-dasharray', b.dash) } }))
+      requestAnimationFrame(() => bands.forEach(b => { const a = q(`.hm-arc[data-pillar="${b.key}"]`); if (a) { a.dataset.tone = b.tone; a.setAttribute('stroke-dasharray', b.dash) } const t = q(`.hm-track[data-pillar="${b.key}"]`); if (t) t.dataset.measured = b.measured ? '1' : '0' }))
       animateScore(idx.score)
       q('#hm-pillars').innerHTML = V.PILLARS.map(k => V.pillarRow(T, k, idx, pillarDetail(k, snap))).join('')
       q('#hm-verdict').textContent = T(idx.verdictKey)
       const used = idx.used.length
-      q('#hm-lead').textContent = idx.score == null ? T('leadNone') : idx.pillars.health.source === 'quick' ? T('leadQuick') : idx.pillars.health.stale ? T('leadStale') : used < 3 ? T('leadPartial', { n: used }) : T('leadFull')
-      q('#hm-eyebrow').textContent = S.remembered ? T('verifying') : T('eyebrowLive', { ago: agoText(P.ago(snap.ts, snap.ts)) || T('agoNow') })
+      q('#hm-lead').textContent = idx.score == null ? T('leadNone') : idx.pillars.health.source === 'quick' ? T('leadQuick') : idx.pillars.health.stale ? T('leadStale') : used < 3 ? (idx.missing.length === 1 ? T('leadPartial1', { p: T('pil_' + idx.missing[0]) }) : T('leadPartial', { n: used })) : T('leadFull')
+      q('#hm-eyebrow').textContent = S.remembered ? T('verifying') : (snap.facts.diag && snap.facts.diag.takenAt ? T('eyebrowCheckup', { ago: agoText(P.ago(snap.facts.diag.takenAt, Date.now())) || T('agoNow') }) : T('eyebrowLive', { ago: agoText(P.ago(snap.ts, snap.ts)) || T('agoNow') }))
       const tr = snap.trend
       const chips = []
       if (tr) chips.push(`<span class="hm-chip" data-trend="${tr.delta > 0 ? 'up' : tr.delta < 0 ? 'down' : 'flat'}">${ic(tr.delta > 0 ? 'arrow-trend-up' : tr.delta < 0 ? 'arrow-trend-down' : 'minus')} ${esc(T(tr.delta > 0 ? 'trendUp' : tr.delta < 0 ? 'trendDown' : 'trendFlat', { n: Math.abs(tr.delta), d: tr.days }))}</span>`)
@@ -177,7 +181,8 @@
     const copyOf = m => {
       const c0 = P.moveCopy(m), vars = P.moveVars(m)
       if (!c0.group) return { title: c0.title, why: c0.why }
-      return { title: tG(c0.group, c0.titleKey, vars), why: tG(c0.group, c0.whyKey, vars) }
+      const one = c0.group === 'home2' && vars && vars.n === 1 && hasKey(c0.titleKey + '_1')
+      return { title: tG(c0.group, one ? c0.titleKey + '_1' : c0.titleKey, vars), why: tG(c0.group, c0.whyKey, vars) }
     }
     function paintMoves() {
       const r = movesNow()
@@ -244,7 +249,7 @@
       return notes
     }
     function paintCaption() {
-      const cpuShort = (si.cpu || '').replace(/\(R\)|\(TM\)|Intel Core |AMD Ryzen /gi, '').replace(/\s+/g, ' ').trim().split('@')[0].trim()
+      const cpuShort = (si.cpu || '').replace(/\((R|TM)\)/gi, '').replace(/\s+/g, ' ').trim().split('@')[0].trim().replace(/^(\d+(st|nd|rd|th) Gen )?(Intel|AMD) /i, '').replace(/ \d+-Core Processor$/i, '').replace(/ Processor$/i, '').trim()
       const gpuShort = (si.gpu || '').replace(/NVIDIA |AMD |GeForce |Radeon /gi, '').trim()
       const rows = [cpuShort && ['fa fa-microchip', cpuShort], gpuShort && ['fa fa-display', gpuShort], si.ramGB && ['fa fa-memory', si.ramGB + ' GB']].filter(Boolean)
       const notes = notesNow()

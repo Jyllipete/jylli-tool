@@ -19,7 +19,7 @@
     const a = (i * 6 - 90) * Math.PI / 180, r0 = i % 5 === 0 ? 94.5 : 96, r1 = 99
     return `<line x1="${(100 + r0 * Math.cos(a)).toFixed(1)}" y1="${(100 + r0 * Math.sin(a)).toFixed(1)}" x2="${(100 + r1 * Math.cos(a)).toFixed(1)}" y2="${(100 + r1 * Math.sin(a)).toFixed(1)}"/>`
   }).join('')}</g>
-      ${bands.map(b => `<circle class="hm-track" cx="100" cy="100" r="${b.r - 5.5}"/>`).join('')}
+      ${bands.map(b => `<circle class="hm-track" data-pillar="${b.key}" cx="100" cy="100" r="${b.r - 5.5}"/>`).join('')}
       ${bands.map(b => `<circle class="hm-arc" data-pillar="${b.key}" data-tone="idle" cx="100" cy="100" r="${b.r - 5.5}" pathLength="100" stroke-dasharray="0 100" transform="rotate(-90 100 100)"/>`).join('')}
     </svg>`
   }
