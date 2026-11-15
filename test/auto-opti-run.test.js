@@ -266,3 +266,31 @@ test('FiveM settings: only differing recommended values are written, the backup 
   assert.strictEqual(bad.status, 'failed')
   assert.strictEqual((await fivemSettings({ rec: null, fivem: null })).status, 'skipped')
 })
+
+test('FiveM settings: Auto-Optimize only lowers, never raises a graphics setting', async () => {
+  const { fivemSettings } = require('../lib/auto-opti/controls')
+  const { recommend, isLower } = require('../lib/auto-opti/fivem-rec')
+  const run = async (vals, vram = 6144) => {
+    let written = null
+    const fivem = { read: async () => ({ ok: true, vals, path: 'C:/x/gta5_settings.xml', size: 1 }), write: async c => { written = c; return { ok: true, size: 1 } }, vramMB: async () => vram }
+    const r = await fivemSettings({ rec: null, fivem })
+    return { r, written }
+  }
+  // A file already on Normal / cheap values is left alone (Pearl: 6 GB card, nothing was lowered, nothing may be raised).
+  const normal = { TextureQuality: '0', ShaderQuality: '0', ShadowQuality: '0', ReflectionQuality: '0', PostFX: '0', LodScale: '0.500000', AnisotropicFiltering: '4', CityDensity: '0.000000' }
+  const a = await run(normal)
+  assert.strictEqual(a.r.status, 'skipped'); assert.strictEqual(a.written, null)
+  // Values above the recommendation come down; values at or below it stay.
+  const b = await run({ TextureQuality: '1', ShaderQuality: '2', ShadowQuality: '3', PostFX: '3', MSAA: '8', GrassQuality: '0', CityDensity: '1.500000' })
+  assert.deepStrictEqual(Object.keys(b.written).sort(), ['CityDensity', 'MSAA', 'PostFX', 'ShadowQuality'])
+  assert.strictEqual(b.written.GrassQuality, undefined)
+  assert.strictEqual(b.written.TextureQuality, undefined)      // High on a 6 GB card is below the recommended Very High: not raised, not lowered
+  // Keys missing from the file are never added.
+  const c = await run({ ShadowQuality: '3', DoF: null })
+  assert.deepStrictEqual(Object.keys(c.written), ['ShadowQuality'])
+  // isLower follows the in-game step order and spells floats the way the file does.
+  assert.ok(isLower('ShadowQuality', '3', '1')); assert.ok(!isLower('ShadowQuality', '0', '1')); assert.ok(!isLower('ShadowQuality', '1', '1'))
+  assert.ok(isLower('LodScale', '2.000000', '1.000000')); assert.ok(!isLower('LodScale', '0.5', '1.000000'))
+  assert.ok(!isLower('NoSuchKey', '3', '0')); assert.ok(!isLower('ShadowQuality', 'garbage', '1'))
+  assert.ok(recommend(6144))
+})

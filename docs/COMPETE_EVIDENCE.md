@@ -5,7 +5,7 @@ session changes is applied once its process exists, and every one is put back wh
 [[TWEAK_EVIDENCE]]: nothing ships without a documented mechanism and a read-back.
 
 Engine: `lib/compete/` (`plan.js` is the only list of steps; `services.js` the only services it may pause; `launch.js` launch targets and process match;
-`actions.js` PowerShell; `index.js` the session). Wiring: `// ─── Competitive Mode` in `main.js`. Related: [[PULSE_EVIDENCE]], [[CPUMEM_EVIDENCE]].
+`actions.js` PowerShell; `index.js` the session). Wiring: `// ─── Competitive Mode` in `main.js`. Related: [[PULSE_EVIDENCE]], [[CPUMEM_EVIDENCE]], [[GAMEAUTO_EVIDENCE]] (the watcher pauses while Competitive Mode owns a game).
 
 ## In
 

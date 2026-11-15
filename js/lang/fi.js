@@ -3332,7 +3332,7 @@ launchRuleFailed:'Asetusta ei voitu muuttaa', tkUgOn:'Update Guard päällä', t
       'fT_power-laptop-ac': 'Kannettavasi on tehokkuustilassa verkkovirralla',
       'fW_power-laptop-ac': 'Windows käyttää virransäästötilaa verkkovirralla. Asetamme Parhaan suorituskyvyn vain silloin, kun laite on kiinni virrassa. Akulla mikään ei muutu.',
       'fT_power-desktop': 'Lisää suorituskykyinen virtasuunnitelma suorittimellesi',
-      'fW_power-desktop': 'Tasapainoinen odottaa ennen kellotaajuuksien nostoa. {vendor}-suorittimellesi tehty oma suunnitelma pitää boostin vastaavana, mikä parantaa ruudunpäivityksen tasaisuutta. Se kuluttaa tyhjäkäynnillä hieman enemmän.',
+      'fW_power-desktop': 'Tasapainoinen odottaa ennen kellotaajuuksien nostoa. {vendor}-suorittimellesi tehty oma suunnitelma pitää kellotaajuudet korkealla ja lepotilat pois. Se kuluttaa enemmän virtaa ja tuottaa enemmän lämpöä, ja vakiojäähyllä oleva suoritin voi kuristua. Oletuksena pois; ota käyttöön vain jos lämpötilat pysyvät alhaisina.',
       'fT_x3d-setup': '{cpu}: käytä V-Cache-ajoittimen odottamaa suunnitelmaa',
       'fW_x3d-setup': 'Kahden sirun X3D-suorittimet ohjaavat pelit välimuistiytimille vain Tasapainoisella suunnitelmalla ja Game Barin ollessa mukana. Suorituskykysuunnitelma rikkoo tämän. Vaihdamme Tasapainoiseen.',
       'fT_gpu-per-app': 'Aja pelit näytönohjaimella {gpu}',

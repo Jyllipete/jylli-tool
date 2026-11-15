@@ -14,6 +14,7 @@ Obsidian vault = this `docs/` folder. Rule across all evidence docs: **unverifie
 - [[DIAGNOSTICS_EVIDENCE]]: Diagnostics "Vitals"
 - [[FIVEM_EVIDENCE]]: FiveM "Uplink"
 - [[PULSE_EVIDENCE]]: Pulse "Flow"
+- [[GAMEAUTO_EVIDENCE]]: Game automation (Game Watcher, Update Guard, Game Shield, Auto-Pulse: sessions, ledger, restore, recovery)
 - [[HOME_EVIDENCE]]: Home "Helm" (Jylli Index, Next Best Move, Proof Ledger)
 
 ## Working notes

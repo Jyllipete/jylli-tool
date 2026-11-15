@@ -1268,7 +1268,8 @@ function uiReadyFlush() {
     for (const p of _uiLogBuf.splice(0)) wc.send('log', p)
     if (pulseActivePreset) wc.send('pulse-tick', { preset: pulseActivePreset, active: true })
     if (autoPulseTriggeredPreset) wc.send('game-watcher-event', { event: 'auto-pulse-start', gameId: autoPulseTriggeredPreset, presetId: autoPulseTriggeredPreset })
-    if (activeGameProfile) wc.send('game-watcher-event', { event: 'game-started', gameId: activeGameProfile })
+    if (activeGameProfile) wc.send('game-watcher-event', { event: 'game-started', gameId: activeGameProfile, displayName: activeGameName })
+    if (_gameAuto) wc.send('gameauto-event', { type: 'state', state: _gameAuto.snapshot() })
     if (_systemContext.gameRunning) wc.send('game-detected', { name: _systemContext.gameName, genre: _systemContext.gameGenre })
   } catch {}
 }
@@ -1297,7 +1298,12 @@ app.whenReady().then(async () => {
   snapshots = createSnapshotStore(path.join(userData, 'snapshots'))
   setTimeout(() => { appsSvc().recover().catch(() => {}) }, 6000)   // Game time left by a crash is put back
   setTimeout(() => { pulseRecover().catch(() => {}) }, 4000)   // a boost that was running when the PC lost power or the app crashed is put back first
-  if (snapshots.load('update-guard')) setUpdateGuard(false).catch(() => {})   // Windows Update must never stay disabled after Jylli Tool is gone
+  // Whatever a crash or forced shutdown left behind (Windows Update held, programs Game Shield stopped, a session in progress) is put back first;
+  // then the Game Watcher starts again if it was on. Windows Update must never stay disabled after Jylli Tool is gone.
+  setTimeout(() => {
+    try { const o = JSON.parse(fs.readFileSync(path.join(userData, 'auto-pulse-overrides.json'), 'utf8')); gameAutoSvc().migrateLegacy(Object.keys(o || {}).length) } catch { /* no old overrides */ }
+    gameAutoSvc().recover().catch(() => {}).finally(() => { if (loadSettings().gameWatcherEnabled) gameAutoSvc().startWatcher().catch(() => {}) })
+  }, 8000)
   startupTrace('createWindow starting')
   createWindow(); createTray()
   startupTrace('createWindow done')
@@ -1377,10 +1383,9 @@ foreach ($id in @(${ids.join(',')})) { try { [ProcFreeze]::NtResumeProcess((Get-
 // Every background timer / child process Jylli Tool starts. Windows does not kill children when the parent exits.
 function shutdownBackground() {
   for (const t of [...(presence ? presence.timers() : []), _contextDetectorTimer, _sensorHzTimer, _metricsInterval, _tierRefreshInterval, _hudPingInterval,
-                   gameWatcherInterval, _thermalTimer, _latTimer, _historySamplerTimer, _ariaTimer, _ariaFpsTimer, _updateGuardTimer]) {
+                   _thermalTimer, _latTimer, _historySamplerTimer, _ariaTimer, _ariaFpsTimer]) {
     try { if (t) { clearInterval(t); clearTimeout(t) } } catch {}
   }
-  try { gameShieldShutdown() } catch {}
   try { if (_historyDirty > 0) saveHistory() } catch {}
   try { stopPresentMon(_pmSessionProc); _pmSessionProc = null } catch {}
   try { stopPresentMon(_pmTweakProc); _pmTweakProc = null } catch {}
@@ -1408,9 +1413,12 @@ app.on('will-quit', (e) => {
   const sessionEndPromise = duration > 10000
     ? webhookSessionEnd(duration, sessionPageVisits, sessionTweaksCount)
     : Promise.resolve()
-  const cleanup = Promise.all([(sessionEndPromise || Promise.resolve()).finally(() => presenceShutdown().catch(() => {})), resumeAllFrozen(), (_powerLimit ? _powerLimit.onQuit().catch(() => {}) : null), (pulseActivePreset ? pulseRestoreAll(() => {}).catch(() => {}) : null), (competeActive() ? competeSvc().stop().catch(() => {}) : null), snapshots?.load('update-guard') ? setUpdateGuard(false) : null])
+  const cleanup = Promise.all([(sessionEndPromise || Promise.resolve()).finally(() => presenceShutdown().catch(() => {})), resumeAllFrozen(), (_powerLimit ? _powerLimit.onQuit().catch(() => {}) : null), (competeActive() ? competeSvc().stop().catch(() => {}) : null),
+    // a game in progress: the session ends the normal way (Game Shield programs restart, Windows Update is released, an automatic boost stops), then a boost the user started is put back
+    (_gameAuto ? _gameAuto.stopWatcher().catch(() => {}) : Promise.resolve()).then(() => (pulseActivePreset ? pulseRestoreAll(() => {}).catch(() => {}) : null)).then(() => (snapshots && snapshots.load('update-guard') ? ugSvc().release() : null)).catch(() => {})])
   const timeout = new Promise(resolve => setTimeout(resolve, 6500))
   Promise.race([cleanup, timeout]).finally(() => {
+    try { gameShieldShutdown() } catch {}   // if the restore above ran out of time, at least start the programs Game Shield stopped
     if (_updateReady && autoUpdater) {
       _installingUpdate = true
       try { autoUpdater.quitAndInstall(true, false); return } catch {}
@@ -2234,7 +2242,7 @@ ipcMain.handle('get-tweak-states', async () => {
 // read tokens nor write a premium flag.
 const PROTECTED_SETTINGS = ['authToken', 'hmacSecret', 'discordUserId', 'authExpiry', 'isPremium', 'settingsHmac']
 // Written by the main process itself; a stale copy held by the renderer must never overwrite them.
-const MAIN_OWNED_SETTINGS = ['discordPresence', 'declaredRig', 'lastRestorePointAt', 'lastAutoSnapshot', 'thermalLastAudit', 'aria_insights', 'gameShieldEnabled', 'gameShieldExclusions', 'updateGuardEnabled']
+const MAIN_OWNED_SETTINGS = ['discordPresence', 'declaredRig', 'lastRestorePointAt', 'lastAutoSnapshot', 'thermalLastAudit', 'aria_insights', 'gameShieldEnabled', 'gameShieldExclusions', 'updateGuardEnabled', 'gameWatcherEnabled', 'autoPulseEnabled', 'gameShieldTier3Threshold', 'gameShieldMidSessionThreshold']
 ipcMain.handle('load-settings', () => {
   startupTrace('IPC load-settings handler called')
   const s = { ...loadSettings() }
@@ -3421,9 +3429,9 @@ let _sessionRec = null, _sessionTimer = null
 function sessionRecStart(gameId) {
   try {
     _sessionRec = SessionRec.createRecorder()
-    _sessionRec.start({ gameId, gameName: (PULSE_PRESETS[gameId] && PULSE_PRESETS[gameId].name) || gameId })
-    _puGameExe = String((PULSE_PRESETS[gameId] && PULSE_PRESETS[gameId].exe) || '').replace(/\*$/, '').replace(/\.exe$/i, '') || null
-    pulseSvc().gameStarted(gameId, PULSE_PRESETS[gameId] && PULSE_PRESETS[gameId].name)
+    _sessionRec.start({ gameId, gameName: (PULSE_PRESETS[gameId] && PULSE_PRESETS[gameId].name) || (gameId === activeGameProfile && activeGameName) || gameId })
+    _puGameExe = String((PULSE_PRESETS[gameId] && PULSE_PRESETS[gameId].exe) || (gameId === activeGameProfile && activeGameExe) || '').replace(/\*$/, '').replace(/\.exe$/i, '') || null
+    pulseSvc().gameStarted(gameId, (PULSE_PRESETS[gameId] && PULSE_PRESETS[gameId].name) || (gameId === activeGameProfile && activeGameName) || undefined)
     puBgEnsure()
     clearInterval(_sessionTimer)
     _sessionTimer = setInterval(() => {
@@ -9946,7 +9954,7 @@ function appsSvc() {
     env: { appdata: process.env.APPDATA || '', localappdata: process.env.LOCALAPPDATA || '' },
     isPremium: () => !!auth && auth.isPremium(),
     settings: () => loadSettings(),
-    activeGame: () => (activeGameProfile ? { id: activeGameProfile, name: (PULSE_PRESETS[activeGameProfile] || {}).name || activeGameProfile } : null),
+    activeGame: () => (activeGameProfile ? { id: activeGameProfile, name: (PULSE_PRESETS[activeGameProfile] || {}).name || activeGameName || activeGameProfile } : null),
     legacyRestore: appsLegacyRestore,
     state: { read: () => cuRead('jt_apps.json', null), write: v => cuWrite('jt_apps.json', v) },
     emit: cuSend,
@@ -10331,13 +10339,13 @@ const PULSE_PRESETS = {
   csgo:         { name: 'CS2 / CS:GO',         exe: 'cs2' },
   fivem:        { name: 'FiveM',               exe: 'FiveM_GTAProcess' },
   warzone:      { name: 'Warzone',             exe: 'cod' },
-  apex:         { name: 'Apex Legends',        exe: 'r5apex' },
+  apex:         { name: 'Apex Legends',        exe: 'r5apex*' },        // r5apex.exe and r5apex_dx12.exe
   minecraft:    { name: 'Minecraft',           exe: 'javaw' },
   arma:         { name: 'Arma Reforger',       exe: 'ArmaReforger*' },
   tarkov:       { name: 'Escape from Tarkov',  exe: 'EscapeFromTarkov' },
   rocketleague: { name: 'Rocket League',       exe: 'RocketLeague' },
   rust:         { name: 'Rust',                exe: 'RustClient' },
-  r6:           { name: 'Rainbow Six Siege',   exe: 'RainbowSix' },
+  r6:           { name: 'Rainbow Six Siege',   exe: 'RainbowSix*' },    // RainbowSix.exe and RainbowSix_Vulkan.exe
   overwatch:    { name: 'Overwatch 2',         exe: 'Overwatch' },
 }
 
@@ -10596,6 +10604,7 @@ async function activatePulse(presetId, killBg, send) {
   updateTrayMenu()
   svc.syncBoost(true, presetId, preset.name)
   puKeysSync()
+  try { gameAutoSvc().pulseChanged(presetId) } catch {}   // the game session tells the user who started this boost
   return { ok: true }
 }
 
@@ -10624,12 +10633,13 @@ async function pulseApplyDeferred() {
 async function deactivatePulse(send) {
   pulseActivePreset = null
   presenceRefresh()
-  await pulseRestoreAll(send)
+  const restored = await pulseRestoreAll(send)   // false when something could not be put back (it stays in the journal and is retried at the next start)
   mainWindow?.webContents.send('pulse-tick', { active: false })
   updateTrayMenu()
   pulseSvc().syncBoost(false)
   puKeysSync()
-  return { ok: true }
+  try { gameAutoSvc().pulseChanged(null) } catch {}
+  return { ok: restored !== false }
 }
 
 ipcMain.handle('pulse-start', async (_, { presetId, killBg } = {}) => {
@@ -11473,253 +11483,240 @@ function gamesLearnRunning() {
   }).catch(() => {})
 }
 
-// ─── Per-Game Auto Profile (process watcher) ──────────────────────────────────
-let gameWatcherInterval = null
-let activeGameProfile = null
-let activeGameProfileTweaksApplied = false  // true when per-game tweak profile was applied by watcher
+// ─── Game sessions: Game Watcher, Update Guard, Game Shield, Auto-Pulse ───────
+// The session lifecycle lives in lib/gameauto (watching, one queue, ledger, restore, recovery). This block hands it the effects that
+// stay here: Apps game time, MMCSS, per-game profile, frame capture, presence. docs/GAMEAUTO_EVIDENCE.md.
+const GameAuto = require('./lib/gameauto')
+let activeGameProfile = null            // id of the game being played (the Pulse preset id when it has one)
+let activeGameProfileTweaksApplied = false  // true when a per-game tweak profile was applied by the session
+let activeGameName = null, activeGameExe = null
+let _gameAuto = null
+const gwLog = (msg, level) => sendLog({ msg, level, ts: new Date().toLocaleTimeString() })
+const MMCSS_BASE = 'HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Multimedia\\SystemProfile'
 
-ipcMain.handle('start-game-watcher', async () => {
-  if (gameWatcherInterval) return { ok: true, status: 'already running' }
+/** Per-game effects at the start of a session. Returns ledger events; Update Guard, Game Shield and Auto-Pulse are handled by the service. */
+async function gameSessionStart(game) {
+  const ev = []
+  activeGameProfile = game.id; activeGameName = game.name; activeGameExe = game.exe
+  _bgWakeUntil = Date.now() + 20000; bgNeedsUpdate()   // sensors warm up while PresentMon and the session start
+  gamesLearnRunning()
+  appsSvc().gameStart(appsGameOf(game.id)).catch(() => {})   // Game time: programs step back while the game runs
+  presenceRefresh()   // Discord shows the game
+  gwLog(`🎮 Game detected: ${game.name} — applying optimizations…`, 'head')
 
-  sendLog({ msg: '◆ Game Watcher started — monitoring for game launches…', level: 'ok', ts: new Date().toLocaleTimeString() })
-
-  let _gwBusy = false   // a slow tasklist or restore must never overlap the next tick
-  gameWatcherInterval = setInterval(async () => {
-    if (_gwBusy) return
-    _gwBusy = true
-    try {
-    if (competeActive()) return   // Competitive Mode owns this game's session: no Auto-Pulse, Game Shield or profile on top of it
-    const snap = await processSnapshot(2500)
-    if (!snap.ok) return
-    const running = snap.names
-
-    // Detect by matching directly against PULSE_PRESETS exe names
-    let detectedGame = null
-    for (const [presetId, preset] of Object.entries(PULSE_PRESETS)) {
-      const exeLower = preset.exe.toLowerCase()
-      const match = exeLower.includes('_gtaprocess')
-        ? [...running].some(p => p.endsWith('_gtaprocess'))
-        : exeLower.endsWith('*')
-          ? [...running].some(p => p.startsWith(exeLower.slice(0, -1)))
-          : running.has(exeLower)
-      if (match) { detectedGame = presetId; break }
-    }
-
-    if (detectedGame && activeGameProfile !== detectedGame) {
-      // New game detected — apply tweaks
-      activeGameProfile = detectedGame
-      _bgWakeUntil = Date.now() + 20000; bgNeedsUpdate()   // sensors warm up while PresentMon and the session start
-      const presetName = PULSE_PRESETS[detectedGame].name
-      mainWindow?.webContents.send('game-watcher-event', { event: 'game-started', gameId: detectedGame })
-      gamesLearnRunning()
-      appsSvc().gameStart(appsGameOf(detectedGame)).catch(() => {})   // Game time: programs step back while the game runs
-      gameShieldActivate().catch(() => {})
-      if (loadSettings().updateGuardEnabled && auth && auth.isPremium()) {
-        // Count pending updates first (the search needs the Windows Update service), warn, then hold updates — unless the game already closed
-        countPendingUpdates()
-          .then(count => { if (count > 0) mainWindow?.webContents.send('update-guard-warning', { count }) })
-          .catch(() => {})
-          .then(() => { if (activeGameProfile) return updateGuardSession(true) })
-          .catch(() => {})
-      }
-      sendLog({ msg: `🎮 Game detected: ${presetName} — applying optimizations…`, level: 'head', ts: new Date().toLocaleTimeString() })
-
-      presenceRefresh()   // Discord shows the game
-
-      // FiveM: silently ensure fullscreen compat flag is set on every session start
-      if (detectedGame === 'fivem') {
-        const compatPath = 'HKCU:\\Software\\Microsoft\\Windows NT\\CurrentVersion\\AppCompatFlags\\Layers'
-        await runPS(`New-Item -Path "${compatPath}" -Force -EA SilentlyContinue | Out-Null`)
-        for (const exe of ['FiveM.exe', 'GTA5.exe', 'FiveM_b3095_GTAProcess.exe']) {
-          const cur = await runPS(`(Get-ItemProperty -Path "${compatPath}" -Name "${exe}" -EA SilentlyContinue)."${exe}"`)
-          if (!(cur.out || '').includes('DISABLEDXMAXIMIZEDWINDOWEDMODE')) {
-            const base = (cur.out || '').trim()
-            const newVal = base ? `${base} DISABLEDXMAXIMIZEDWINDOWEDMODE` : '~ DISABLEDXMAXIMIZEDWINDOWEDMODE'
-            await runPS(`Set-ItemProperty -Path "${compatPath}" -Name "${exe}" -Value ${V.psQuote(newVal)} -Force`)
-          }
-        }
-      }
-
-      const mmcssBase = 'HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Multimedia\\SystemProfile'
-      if (!snapshots.load('watcher-mmcss')) {   // remember the user's own value so game exit puts back exactly that
-        const cur = await runPS(`(Get-ItemProperty -Path "${mmcssBase}" -Name SystemResponsiveness -EA SilentlyContinue).SystemResponsiveness`)
-        const seen = /^\d+$/.test(cur.out.trim()) ? Number(cur.out.trim()) : 20
-        snapshots.save('watcher-mmcss', { value: [10, 14, 18].includes(seen) ? 20 : seen })   // 10/14/18 are what older Pulse versions wrote and never put back; Windows' own default is 20
-      }
-      await runPS(`Set-ItemProperty -Path "${mmcssBase}" -Name SystemResponsiveness -Value 10 -Force`)
-      await runPS(`Set-ItemProperty -Path "${mmcssBase}\\Tasks\\Games" -Name "GPU Priority" -Value 8 -Force`)
-      sendLog({ msg: `✓ Auto-profile applied for ${presetName}`, level: 'ok', ts: new Date().toLocaleTimeString() })
-
-      // Per-game tweak profile: apply if one is assigned to this game
-      const curSettings = loadSettings()
-      const assignedProfile = gameProfileFor(curSettings, detectedGame)
-      if (assignedProfile) {
-        const profiles = loadProfiles()
-        const profile = profiles[assignedProfile]
-        if (profile) {
-          sendLog({ msg: `  Applying tweak profile: ${assignedProfile}`, level: 'info', ts: new Date().toLocaleTimeString() })
-          for (const [k, v] of Object.entries(profile.tweaks)) {
-            if (v === 'applied') {
-              const tweakId = k.replace(/^tweak_/, '')
-              if (hasTweak(tweakId) && !isPlanExcluded(tweakId)) {
-                await bundleApply(tweakId, bundleFails)
-              }
-            }
-          }
-          activeGameProfileTweaksApplied = true
-          sendLog({ msg: `  ✓ Tweak profile "${assignedProfile}" applied`, level: 'ok', ts: new Date().toLocaleTimeString() })
-          mainWindow?.webContents.send('game-watcher-event', { event: 'profile-applied', gameId: detectedGame, profileName: assignedProfile })
-        }
-      }
-
-      // ARIA: reset session accumulators for fresh session
-      _ariaSessionAnomalies = []
-      _ariaSessionPeaks = { cpu: 0, gpu: 0, ram: 0, cpuTemp: 0 }
-      _ariaSessionStart = Date.now()
-      if (_ariaEnabled) createFpsHud()
-
-      // PresentMon: start session-level frame time capture (resolve real game PID for accurate per-process capture)
-      if (presentMonAvailable()) {
-        stopPresentMon(_pmSessionProc); _pmSessionProc = null
-        let gamePid = null
-        try {
-          const rawExe = (PULSE_PRESETS[detectedGame]?.exe || '')
-          const exeName = rawExe.replace(/\*$/, '').replace(/\.exe$/i, '')
-          // Same matching as the detector above: FiveM's real process is versioned (FiveM_b3095_GTAProcess), so match by suffix/prefix.
-          // An exact-name miss left gamePid null and PresentMon then captured every process, mixing other apps' frames into the FPS.
-          const pattern = /_gtaprocess$/i.test(exeName) ? '*_GTAProcess' : (/\*$/.test(rawExe) ? exeName + '*' : exeName)
-          if (exeName && V.isProcessName(exeName)) {
-            const r = await runFile('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', `(Get-Process -Name ${V.psQuote(pattern)} -ErrorAction SilentlyContinue | Sort-Object WorkingSet64 -Descending | Select-Object -First 1).Id`], { timeout: 4000 })
-            const n = parseInt(r.out, 10); if (!isNaN(n) && n > 0) gamePid = n
-          }
-        } catch {}
-        _pmSessionProc = spawnPresentMon(null, gamePid)
-        if (_pmSessionProc) _pmSessionProc._pulseTap = true
-        if (_pmSessionProc) { sessionRecStart(detectedGame); bgNeedsUpdate() }
-        if (_pmSessionProc) {
-          _pmSessionFile = null
-          _pmSessionProc.once('exit', (code) => {
-            if (code !== 0 && code !== null) sendLog({ msg: `⚠ PresentMon exited early (code ${code}) — FPS data unavailable`, level: 'warn', ts: new Date().toLocaleTimeString() })
-          })
-          if (_ariaEnabled) ariaFpsStart()
-          sendLog({ msg: `◆ PresentMon session started${gamePid ? ` (PID ${gamePid})` : ' (all processes)'}`, level: 'info', ts: new Date().toLocaleTimeString() })
-        } else {
-          sendLog({ msg: '⚠ PresentMon failed to spawn — FPS tracking disabled', level: 'warn', ts: new Date().toLocaleTimeString() })
-        }
-      } else {
-        sendLog({ msg: '⚠ PresentMon unavailable — FPS tracking disabled', level: 'warn', ts: new Date().toLocaleTimeString() })
-      }
-
-      // A boost started before the game: its priority is applied now, and proven
-      if (pulseActivePreset && pulseDeferredGame) pulseApplyDeferred().catch(() => {})
-
-      // Auto-Pulse: activate if enabled (preset already matched — use it directly)
-      const currentSettings = loadSettings()
-      if (currentSettings.autoPulseEnabled && !pulseActivePreset) {
-        autoPulseTriggeredPreset = detectedGame
-        const send = (msg, level) => sendLog({ msg, level, ts: new Date().toLocaleTimeString() })
-        send(`◆ Auto-Pulse: activating for ${presetName}…`, 'head')
-        mainWindow?.webContents.send('game-watcher-event', { event: 'auto-pulse-start', gameId: detectedGame, presetId: detectedGame })
-        activatePulse(autoPulseOverrideFor(detectedGame) || detectedGame, false, send).catch(() => { autoPulseTriggeredPreset = null })
-      }
-
-    } else if (!detectedGame && activeGameProfile) {
-      // Game closed — restore
-      const prev = activeGameProfile
-      const hadProfileTweaks = activeGameProfileTweaksApplied
-      activeGameProfile = null
-      activeGameProfileTweaksApplied = false
-      mainWindow?.webContents.send('game-watcher-event', { event: 'game-closed', gameId: prev })
-      appsSvc().gameEnd().catch(() => {})
-      gameShieldDeactivate().catch(() => {})
-      updateGuardSession(false).catch(() => {})
-      sendLog({ msg: `Game closed: ${prev} — restoring defaults…`, level: 'info', ts: new Date().toLocaleTimeString() })
-
-      // Stop rolling FPS counter and hide display before PresentMon shuts down
-      ariaFpsStop()
-
-      // PresentMon: stop session capture, parse, send histogram to renderer
-      let _sessionFps = null
-      if (_pmSessionProc) {
-        stopPresentMon(_pmSessionProc); _pmSessionProc = null
-        await new Promise(r => setTimeout(r, 400))
-        sessionRecFinish(); _bgWakeUntil = 0; bgNeedsUpdate()
-        const sessionStats = _pmFrames.stats()
-        if (sessionStats) {
-          _sessionFps = { avgFps: Math.round(1000 / sessionStats.mean), low1Fps: Math.round(1000 / sessionStats.p1Low) }
-          mainWindow?.webContents.send('game-frame-session', { game: prev, stats: sessionStats })
-          sendLog({ msg: `◆ Frame session — avg: ${Math.round(1000 / sessionStats.mean)} FPS  1%Low: ${Math.round(1000 / sessionStats.p1Low)} FPS  0.1%Low: ${Math.round(1000 / sessionStats.p01Low)} FPS`, level: 'ok', ts: new Date().toLocaleTimeString() })
-        }
-        _pmFrames.reset()
-      }
-
-      // ARIA: build session summary and fire to renderer
-      if (_ariaEnabled && _ariaSessionStart) {
-        const durationMs = Date.now() - _ariaSessionStart
-        const anomalyCounts = {}
-        for (const a of _ariaSessionAnomalies) anomalyCounts[a.metric] = (anomalyCounts[a.metric] || 0) + 1
-        const sessionSummary = {
-          game: prev,
-          durationMs,
-          anomalyCounts,
-          peaks: { ..._ariaSessionPeaks },
-          insightsApplied: _ariaInsights.filter(i => i.game === prev).length,
-          fps: _sessionFps,
-        }
-        mainWindow?.webContents.send('aria-session-summary', sessionSummary)
-        sendLog({ msg: `◆ ARIA session summary: ${Object.keys(anomalyCounts).length} metrics anomalous over ${Math.round(durationMs/60000)} min`, level: 'info', ts: new Date().toLocaleTimeString() })
-        _ariaSessionAnomalies = []
-        _ariaSessionStart = null
-        _ariaSessionPeaks = { cpu: 0, gpu: 0, ram: 0, cpuTemp: 0 }
-      }
-
-      presenceRefresh()   // game closed (activeGameProfile is already null)
-
-      const wSend = (msg, level) => sendLog({ msg, level, ts: new Date().toLocaleTimeString() })
-
-      if (hadProfileTweaks && !pulseActivePreset) {
-        // Per-game tweak profile was applied without Pulse — restore the full stack
-        await pulseRestoreAll(wSend)
-      } else {
-        // Pulse handles its own restore; just reset MMCSS to defaults
-        const mmcssBase = 'HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Multimedia\\SystemProfile'
-        const snap = snapshots.load('watcher-mmcss')
-        if (snap && Number.isInteger(snap.value)) await runPS(`Set-ItemProperty -Path "${mmcssBase}" -Name SystemResponsiveness -Value ${snap.value} -Force`)
-        snapshots.remove('watcher-mmcss')
-      }
-      sendLog({ msg: '✓ Defaults restored.', level: 'ok', ts: new Date().toLocaleTimeString() })
-
-      // Auto-Pulse: deactivate if it was auto-triggered
-      // Also end a boost the user started by hand for this same game, so the tab never keeps saying "End boost" after the game is gone.
-      if (autoPulseTriggeredPreset || (pulseActivePreset && pulseActivePreset === prev)) {
-        const send = (msg, level) => sendLog({ msg, level, ts: new Date().toLocaleTimeString() })
-        send(`◆ ${autoPulseTriggeredPreset ? 'Auto-Pulse' : 'Pulse'}: deactivating (${prev} closed)`, 'info')
-        autoPulseTriggeredPreset = null
-        mainWindow?.webContents.send('game-watcher-event', { event: 'auto-pulse-stop', gameId: prev })
-        deactivatePulse(send).catch(() => {})
+  // FiveM: silently ensure fullscreen compat flag is set on every session start
+  if (game.pulse === 'fivem') {
+    const compatPath = 'HKCU:\\Software\\Microsoft\\Windows NT\\CurrentVersion\\AppCompatFlags\\Layers'
+    await runPS(`New-Item -Path "${compatPath}" -Force -EA SilentlyContinue | Out-Null`)
+    for (const exe of ['FiveM.exe', 'GTA5.exe', 'FiveM_b3095_GTAProcess.exe']) {
+      const cur = await runPS(`(Get-ItemProperty -Path "${compatPath}" -Name "${exe}" -EA SilentlyContinue)."${exe}"`)
+      if (!(cur.out || '').includes('DISABLEDXMAXIMIZEDWINDOWEDMODE')) {
+        const base = (cur.out || '').trim()
+        const newVal = base ? `${base} DISABLEDXMAXIMIZEDWINDOWEDMODE` : '~ DISABLEDXMAXIMIZEDWINDOWEDMODE'
+        await runPS(`Set-ItemProperty -Path "${compatPath}" -Name "${exe}" -Value ${V.psQuote(newVal)} -Force`)
       }
     }
-    } catch (e) {
-      sendLog({ msg: `Game watcher error: ${e.message}`, level: 'err', ts: new Date().toLocaleTimeString() })
-    } finally { _gwBusy = false }
-  }, 5000)
-
-  return { ok: true, status: 'started' }
-})
-
-ipcMain.handle('stop-game-watcher', async () => {
-  if (gameWatcherInterval) { clearInterval(gameWatcherInterval); gameWatcherInterval = null }
-  activeGameProfile = null
-  presenceRefresh()
-  appsSvc().gameEnd().catch(() => {})
-  // If auto-pulse was active, deactivate it
-  if (autoPulseTriggeredPreset) {
-    autoPulseTriggeredPreset = null
-    const send = (msg, level) => sendLog({ msg, level, ts: new Date().toLocaleTimeString() })
-    deactivatePulse(send).catch(() => {})
   }
-  sendLog({ msg: 'Game Watcher stopped.', level: 'info', ts: new Date().toLocaleTimeString() })
-  return { ok: true }
+
+  // MMCSS: remember the user's own value so the end of the session puts back exactly that, and read the change back
+  if (!snapshots.load('watcher-mmcss')) {
+    const cur = await runPS(`(Get-ItemProperty -Path "${MMCSS_BASE}" -Name SystemResponsiveness -EA SilentlyContinue).SystemResponsiveness`)
+    const seen = /^\d+$/.test(cur.out.trim()) ? Number(cur.out.trim()) : 20
+    snapshots.save('watcher-mmcss', { value: [10, 14, 18].includes(seen) ? 20 : seen })   // 10/14/18 are what older Pulse versions wrote and never put back; Windows' own default is 20
+  }
+  await runPS(`Set-ItemProperty -Path "${MMCSS_BASE}" -Name SystemResponsiveness -Value 10 -Force`)
+  await runPS(`Set-ItemProperty -Path "${MMCSS_BASE}\\Tasks\\Games" -Name "GPU Priority" -Value 8 -Force`)
+  const now = await runPS(`(Get-ItemProperty -Path "${MMCSS_BASE}" -Name SystemResponsiveness -EA SilentlyContinue).SystemResponsiveness`)
+  if (now.out.trim() === '10') { ev.push({ feature: 'mmcss', kind: 'applied', key: 'mmcss', detail: 'verified' }); gwLog(`✓ Auto-profile applied for ${game.name}`, 'ok') }
+  else ev.push({ feature: 'mmcss', kind: 'failed', detail: 'not-set' })
+
+  // Per-game tweak profile: apply if one is assigned to this game
+  const assignedProfile = gameProfileFor(loadSettings(), game.id)
+  const profile = assignedProfile ? loadProfiles()[assignedProfile] : null
+  if (profile) {
+    gwLog(`  Applying tweak profile: ${assignedProfile}`, 'info')
+    const fails = []   // (the old loop used a variable that did not exist here, so a profile never got past its first tweak)
+    for (const [k, v] of Object.entries(profile.tweaks || {})) {
+      if (v !== 'applied') continue
+      const tweakId = k.replace(/^tweak_/, '')
+      if (hasTweak(tweakId) && !isPlanExcluded(tweakId)) await bundleApply(tweakId, fails)
+    }
+    activeGameProfileTweaksApplied = true
+    // These tweaks are not undone when the game ends (they are kept until undone in History); the ledger says so instead of implying a restore.
+    ev.push(fails.length ? { feature: 'profile', kind: 'failed', detail: fails.map(f => f.id).join(', '), vars: { name: assignedProfile } } : { feature: 'profile', kind: 'applied', detail: 'kept', vars: { name: assignedProfile } })
+    gwLog(fails.length ? `  ⚠ Tweak profile "${assignedProfile}": ${fails.length} tweak(s) did not apply` : `  ✓ Tweak profile "${assignedProfile}" applied`, fails.length ? 'warn' : 'ok')
+    mainWindow?.webContents.send('game-watcher-event', { event: 'profile-applied', gameId: game.id, profileName: assignedProfile })
+  }
+
+  // ARIA: reset session accumulators for fresh session
+  _ariaSessionAnomalies = []
+  _ariaSessionPeaks = { cpu: 0, gpu: 0, ram: 0, cpuTemp: 0 }
+  _ariaSessionStart = Date.now()
+  if (_ariaEnabled) createFpsHud()
+
+  // PresentMon: start session-level frame time capture (resolve the real game PID for accurate per-process capture)
+  if (presentMonAvailable()) {
+    stopPresentMon(_pmSessionProc); _pmSessionProc = null
+    let gamePid = null
+    try {
+      const rawExe = (game.pulse && PULSE_PRESETS[game.pulse] ? PULSE_PRESETS[game.pulse].exe : game.exe) || ''
+      const exeName = rawExe.replace(/\*$/, '').replace(/\.exe$/i, '')
+      // Same matching as the detector: FiveM's real process is versioned (FiveM_b3095_GTAProcess), so match by suffix/prefix.
+      // An exact-name miss left gamePid null and PresentMon then captured every process, mixing other apps' frames into the FPS.
+      const pattern = /_gtaprocess$/i.test(exeName) ? '*_GTAProcess' : (/\*$/.test(rawExe) ? exeName + '*' : exeName)
+      if (exeName && V.isProcessName(exeName)) {
+        const r = await runFile('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', `(Get-Process -Name ${V.psQuote(pattern)} -ErrorAction SilentlyContinue | Sort-Object WorkingSet64 -Descending | Select-Object -First 1).Id`], { timeout: 4000 })
+        const n = parseInt(r.out, 10); if (!isNaN(n) && n > 0) gamePid = n
+      }
+    } catch {}
+    _pmSessionProc = spawnPresentMon(null, gamePid)
+    if (_pmSessionProc) _pmSessionProc._pulseTap = true
+    if (_pmSessionProc) { sessionRecStart(game.id); bgNeedsUpdate() }
+    if (_pmSessionProc) {
+      _pmSessionFile = null
+      _pmSessionProc.once('exit', (code) => {
+        if (code !== 0 && code !== null) gwLog(`⚠ PresentMon exited early (code ${code}) — FPS data unavailable`, 'warn')
+      })
+      if (_ariaEnabled) ariaFpsStart()
+      gwLog(`◆ PresentMon session started${gamePid ? ` (PID ${gamePid})` : ' (all processes)'}`, 'info')
+    } else gwLog('⚠ PresentMon failed to spawn — FPS tracking disabled', 'warn')
+  } else gwLog('⚠ PresentMon unavailable — FPS tracking disabled', 'warn')
+
+  // A boost started before the game: its priority is applied now, and proven
+  if (pulseActivePreset && pulseDeferredGame) pulseApplyDeferred().catch(() => {})
+  return ev
+}
+
+/** Per-game effects at the end of a session (game closed, another game started, or the watcher was stopped). Returns ledger events. */
+async function gameSessionEnd(game, reason) {
+  const ev = []
+  const prev = game.id
+  const hadProfileTweaks = activeGameProfileTweaksApplied
+  activeGameProfile = null; activeGameProfileTweaksApplied = false; activeGameName = null; activeGameExe = null
+  appsSvc().gameEnd().catch(() => {})
+  gwLog(`Game closed: ${game.name} — restoring defaults…`, 'info')
+
+  // Stop rolling FPS counter and hide display before PresentMon shuts down
+  ariaFpsStop()
+
+  // PresentMon: stop session capture, parse, send histogram to renderer
+  let _sessionFps = null
+  if (_pmSessionProc) {
+    stopPresentMon(_pmSessionProc); _pmSessionProc = null
+    await new Promise(r => setTimeout(r, 400))
+    sessionRecFinish(); _bgWakeUntil = 0; bgNeedsUpdate()
+    const sessionStats = _pmFrames.stats()
+    if (sessionStats) {
+      _sessionFps = { avgFps: Math.round(1000 / sessionStats.mean), low1Fps: Math.round(1000 / sessionStats.p1Low) }
+      mainWindow?.webContents.send('game-frame-session', { game: prev, stats: sessionStats })
+      gwLog(`◆ Frame session — avg: ${Math.round(1000 / sessionStats.mean)} FPS  1%Low: ${Math.round(1000 / sessionStats.p1Low)} FPS  0.1%Low: ${Math.round(1000 / sessionStats.p01Low)} FPS`, 'ok')
+    }
+    _pmFrames.reset()
+  }
+
+  // ARIA: build session summary and fire to renderer
+  if (_ariaEnabled && _ariaSessionStart) {
+    const durationMs = Date.now() - _ariaSessionStart
+    const anomalyCounts = {}
+    for (const a of _ariaSessionAnomalies) anomalyCounts[a.metric] = (anomalyCounts[a.metric] || 0) + 1
+    mainWindow?.webContents.send('aria-session-summary', {
+      game: prev, durationMs, anomalyCounts, peaks: { ..._ariaSessionPeaks },
+      insightsApplied: _ariaInsights.filter(i => i.game === prev).length, fps: _sessionFps,
+    })
+    gwLog(`◆ ARIA session summary: ${Object.keys(anomalyCounts).length} metrics anomalous over ${Math.round(durationMs / 60000)} min`, 'info')
+    _ariaSessionAnomalies = []
+    _ariaSessionStart = null
+    _ariaSessionPeaks = { cpu: 0, gpu: 0, ram: 0, cpuTemp: 0 }
+  }
+
+  presenceRefresh()   // game closed (activeGameProfile is already null)
+
+  if (hadProfileTweaks && !pulseActivePreset) {
+    // A per-game tweak profile was applied without Pulse: put back whatever Pulse's journal still holds
+    await pulseRestoreAll(gwLog)
+  }
+  // MMCSS goes back to the user's own value, read back; a failed restore keeps the snapshot so the next start retries it (pulseRecover)
+  const snap = snapshots.load('watcher-mmcss')
+  if (snap && Number.isInteger(snap.value)) {
+    await runPS(`Set-ItemProperty -Path "${MMCSS_BASE}" -Name SystemResponsiveness -Value ${snap.value} -Force`)
+    const back = await runPS(`(Get-ItemProperty -Path "${MMCSS_BASE}" -Name SystemResponsiveness -EA SilentlyContinue).SystemResponsiveness`)
+    const ok = back.out.trim() === String(snap.value)
+    if (ok) snapshots.remove('watcher-mmcss')
+    ev.push({ feature: 'mmcss', kind: 'restored', key: 'mmcss', ok, detail: ok ? 'ok' : 'not-restored' })
+  } else snapshots.remove('watcher-mmcss')
+  gwLog('✓ Defaults restored.', 'ok')
+  return ev
+}
+
+function gameAutoSvc() {
+  if (!_gameAuto) _gameAuto = GameAuto.create({
+    settings: () => loadSettings(),
+    saveSettings: patch => saveSettings({ ...loadSettings(), ...patch }),
+    premium: () => !!auth && auth.isPremium(),
+    processes: () => processSnapshot(2500),
+    sources: () => ({ presets: PULSE_PRESETS, known: GamesKnown.KNOWN, library: (() => { try { return gamesSvc().watchTargets() } catch { return [] } })() }),
+    competeActive: () => competeActive(),   // Competitive Mode owns its game's session: nothing else runs on top of it
+    state: { read: () => cuRead('jt_gameauto.json', null), write: v => cuWrite('jt_gameauto.json', v) },
+    updateGuard: ugSvc(),
+    shield: {
+      activate: game => gameShieldActivate({ game }),
+      deactivate: () => gameShieldDeactivate(),
+      recover: () => gameShieldRecover(),
+      active: () => !!_gsSession,
+    },
+    pulse: {
+      active: () => pulseActivePreset,
+      start: async id => {
+        autoPulseTriggeredPreset = id   // activatePulse records "started by the game watcher" from this
+        const r = await activatePulse(id, false, gwLog)
+        if (!r || !r.ok) { autoPulseTriggeredPreset = null; try { pulseSvc().syncBoost(false) } catch {} }
+        return r
+      },
+      stop: async () => { autoPulseTriggeredPreset = null; return deactivatePulse(gwLog) },
+    },
+    effects: { start: g => gameSessionStart(g), end: (g, reason) => gameSessionEnd(g, reason) },
+    emit: p => { try { mainWindow?.webContents.send('gameauto-event', p) } catch {} },
+    legacyEvent: p => { try { mainWindow?.webContents.send('game-watcher-event', p) } catch {} },
+    log: gwLog,
+  })
+  return _gameAuto
+}
+
+// One state object for the UI, one setter, one exclusion editor, one retry. Switches report the truth: a refusal or a failed save is { ok: false }.
+const gaNum = v => (Number.isFinite(Number(v)) ? Number(v) : undefined)
+ipcMain.handle('gameauto-state', () => { try { return { ok: true, state: gameAutoSvc().snapshot() } } catch (e) { return gmFail(e) } })
+ipcMain.handle('gameauto-set', async (_, patch) => {
+  const p = {}
+  const src = patch && typeof patch === 'object' ? patch : {}
+  for (const k of ['watcher', 'updateGuard', 'shield', 'autoPulse', 'libraryDetect', 'pulseReset', 'dismissLegacy']) if (typeof src[k] === 'boolean') p[k] = src[k]
+  if (gaNum(src.tier3) !== undefined) p.tier3 = gaNum(src.tier3)
+  if (gaNum(src.mid) !== undefined) p.mid = gaNum(src.mid)
+  if (src.pulseOff && typeof src.pulseOff.gameId === 'string' && src.pulseOff.gameId.length <= 60) p.pulseOff = { gameId: src.pulseOff.gameId, off: !!src.pulseOff.off }
+  try {
+    const r = await gameAutoSvc().set(p)
+    if (r && r.ok && typeof p.shield === 'boolean') gsUpdaterTasks(p.shield).catch(() => {})   // best effort, never changes the answer
+    return r
+  } catch (e) { return gmFail(e) }
+})
+ipcMain.handle('gameauto-exclusion', async (_, req) => {
+  const r = req && typeof req === 'object' ? req : {}
+  try { return await gameAutoSvc().exclusion({ add: typeof r.add === 'string' ? r.add.slice(0, 80) : undefined, remove: typeof r.remove === 'string' ? r.remove.slice(0, 80) : undefined }) } catch (e) { return gmFail(e) }
+})
+ipcMain.handle('gameauto-retry', async (_, what) => { try { return await gameAutoSvc().retry(what === 'shield' ? 'shield' : 'updateGuard') } catch (e) { return gmFail(e) } })
+
+// Older channel names keep working and answer through the service.
+ipcMain.handle('start-game-watcher', async () => { const r = await gameAutoSvc().set({ watcher: true }); return r.ok ? { ok: true, status: 'started' } : r })
+ipcMain.handle('stop-game-watcher', async () => { const r = await gameAutoSvc().set({ watcher: false }); return r.ok ? { ok: true } : r })
+ipcMain.handle('toggle-update-guard', async (_, on) => { const r = await gameAutoSvc().set({ updateGuard: !!on }); return r.ok ? { ok: true, active: !!on } : r })
+ipcMain.handle('toggle-game-shield', async (_, on) => {
+  const r = await gameAutoSvc().set({ shield: !!on })
+  if (r.ok) gsUpdaterTasks(!!on).catch(() => {})
+  return r.ok ? { ok: true, active: !!on } : r
+})
+ipcMain.handle('get-game-shield-exclusions', async () => ({ ok: true, exclusions: gsSettings().exclusions }))
+ipcMain.handle('set-game-shield-exclusions', async (_, list) => {
+  const exclusions = GameShield.normalizeExclusions(list)
+  return saveSettings({ ...loadSettings(), gameShieldExclusions: exclusions }) ? { ok: true, exclusions } : { ok: false, error: 'settings_write_failed' }
 })
 
 
@@ -12006,7 +12003,8 @@ const cuWrite = (n, v) => {
     fs.writeFileSync(tmp, JSON.stringify(v), 'utf8')
     try { JSON.parse(fs.readFileSync(f, 'utf8')); fs.copyFileSync(f, f + '.bak') } catch { /* no good previous copy to keep */ }
     fs.renameSync(tmp, f)
-  } catch { try { fs.unlinkSync(tmp) } catch {} }
+    return true
+  } catch { try { fs.unlinkSync(tmp) } catch {} return false }   // callers that care (gameauto) report a failed write instead of assuming it worked
 }
 let _cuHas = null
 const cleanupSvc = Cleanup2.create({
@@ -14125,70 +14123,24 @@ ipcMain.handle('close-fps-hud-settings', () => {
 })
 
 
-// ─── Game Shield / Update Guard ───────────────────────────────────────────────
-let _updateGuardTimer = null
-// -EA SilentlyContinue hides failures from the exit code, so the result is judged by reading the service's start type back.
-const wuStartType = async () => String((await runPS(`(Get-Service -Name wuauserv).StartType.ToString()`, 5000)).out || '').trim()
-async function setUpdateGuard(on) {
-  if (on) {
-    const cur = String((await runPS(`(Get-Service -Name wuauserv).StartType.ToString()`, 5000)).out || '').trim()
-    if (!snapshots.load('update-guard')) snapshots.save('update-guard', { prev: ['Automatic', 'Manual', 'Disabled'].includes(cur) ? cur : 'Manual' })
-    await runPS(`Set-Service -Name wuauserv -StartupType Disabled -EA SilentlyContinue; Stop-Service -Name wuauserv -Force -EA SilentlyContinue`)
-    const applied = (await wuStartType()) === 'Disabled'
-    if (!applied) { await setUpdateGuard(false); return false }   // could not disable it: put everything back so no half-state is left behind
-    clearTimeout(_updateGuardTimer)
-    _updateGuardTimer = setTimeout(() => {
-      _ugActive = false
-      setUpdateGuard(false).catch(() => {})
-      mainWindow?.webContents.send('update-guard-expired')
-      mainWindow?.webContents.send('update-guard-status', { blocked: false, blockCount: 0 })
-    }, 8 * 3600 * 1000)   // safety net: never leave Windows Update off for more than one long session
-    return true
-  }
-  clearTimeout(_updateGuardTimer); _updateGuardTimer = null
-  const snap = snapshots.load('update-guard')
-  const prev = ['Automatic', 'Manual'].includes(snap?.prev) ? snap.prev : 'Manual'
-  let restored = false
-  for (let attempt = 0; attempt < 2 && !restored; attempt++) {
-    await runPS(`Set-Service -Name wuauserv -StartupType ${prev} -EA SilentlyContinue; Start-Service -Name wuauserv -EA SilentlyContinue`)
-    restored = (await wuStartType()) === prev
-  }
-  // Keep the snapshot when the restore did not stick: the next start retries it (see the startup check) instead of leaving Windows Update off.
-  if (restored) snapshots.remove('update-guard')
-  else { debugLog('[update-guard] could not restore wuauserv to ' + prev); sendLog({ msg: 'Windows Update could not be switched back on. It will be retried when Jylli Tool starts; you can also set the Windows Update service to ' + prev + ' manually.', level: 'err', ts: new Date().toLocaleTimeString() }) }
-  return restored
+// ─── Update Guard / Game Shield ───────────────────────────────────────────────
+// Both are driven by the game session service (lib/gameauto): armed by their switch, applied when a game starts, put back when it ends.
+// Update Guard policy lives in lib/updateguard.js, Game Shield lists in lib/gameshield.js. docs/GAMEAUTO_EVIDENCE.md.
+const UpdateGuard = require('./lib/updateguard')
+let _ug = null
+function ugSvc() {
+  if (!_ug) _ug = UpdateGuard.create({
+    runPS: (c, t) => runPS(c, t),
+    snapshots: { load: k => snapshots.load(k), save: (k, v) => snapshots.save(k, v), remove: k => snapshots.remove(k) },
+    onExpire: r => { try { gameAutoSvc().ugExpired(r) } catch {} },
+  })
+  return _ug
 }
-// Pending-update count from the local update cache (offline search: no network scan while a game is starting). 0 on any failure.
-async function countPendingUpdates() {
-  const r = await runPS(`$q = (New-Object -ComObject Microsoft.Update.Session).CreateUpdateSearcher(); $q.Online = $false; $q.Search('IsInstalled=0 and IsHidden=0').Updates.Count`, 15000)
-  const n = parseInt(String(r.out || '').trim(), 10)
-  return Number.isFinite(n) && n > 0 ? n : 0
-}
-// Update Guard holds Windows Update off only while a game is running: armed by the toggle, activated by the game watcher, released on exit.
-let _ugActive = false
-async function updateGuardSession(on) {
-  if (on === _ugActive) return true
-  _ugActive = on
-  const ok = await setUpdateGuard(on)
-  if (on && !ok) _ugActive = false
-  mainWindow?.webContents.send('update-guard-status', { blocked: on && ok, blockCount: 0 })
-  return ok
-}
-ipcMain.handle('toggle-update-guard', async (_, on) => {
-  if (!requiresPremium('toggle-update-guard')) return { ok: false, reason: 'premium_required' }
-  on = !!on
-  saveSettings({ ...loadSettings(), updateGuardEnabled: on })
-  let ok = true
-  if (!on) ok = await updateGuardSession(false)
-  else if (activeGameProfile) ok = await updateGuardSession(true)   // a game is already running
-  return { ok, active: on }
-})
 
-// ─── Game Shield ──────────────────────────────────────────────────────────────
-// On game start: stop tier-1 background apps (and tier 3 when RAM is high); during the game: stop browsers/tier 3 when RAM passes the
-// mid-session threshold; on game exit: start everything that was stopped again. Lists and thresholds live in lib/gameshield.js.
 const GameShield = require('./lib/gameshield')
-let _gsSession = null   // { stopped: Map<name, path|null>, killCount, freedMB, midTimer, busy }
+// { stopped: Map<name, { path|null, mb, phase }>, killCount, freedMB, midTimer, busy, forced, protect: [exe] }
+let _gsSession = null
+const GS_SNAP = 'game-shield-session'
 
 const gsRamPct = () => Math.round((1 - os.freemem() / os.totalmem()) * 100)
 const gsSend = payload => { try { mainWindow?.webContents.send('game-shield-event', payload) } catch {} }
@@ -14199,8 +14151,16 @@ function gsSettings() {
   return { enabled: !!s.gameShieldEnabled, tier3, mid, exclusions: GameShield.normalizeExclusions(s.gameShieldExclusions) }
 }
 
+/** What Game Shield stopped is written down as it happens, so a crash or a failed restart can still be put right at the next start. */
+function gsPersist(session) {
+  try {
+    if (!session || !session.stopped.size) { snapshots.remove(GS_SNAP); return }
+    snapshots.save(GS_SNAP, { at: Date.now(), items: [...session.stopped.entries()].map(([name, v]) => ({ name, path: v.path, mb: v.mb, phase: v.phase })) })
+  } catch (e) { debugLog('[game-shield] could not save the session: ' + e.message) }
+}
+
 // Stops the named processes (names come from lib/gameshield constants only) and remembers where each ran from.
-async function gsStopNames(session, names) {
+async function gsStopNames(session, names, phase) {
   if (!names.length) return []
   const list = names.map(n => "'" + n + "'").join(',')
   const r = await runPS("Get-Process -Name " + list + " -EA SilentlyContinue | Select-Object Id,Name,Path,WorkingSet64 | ConvertTo-Json -Compress", 15000)
@@ -14214,24 +14174,31 @@ async function gsStopNames(session, names) {
     const k = await runFile('taskkill', ['/PID', String(p.Id), '/F'], { timeout: 8000 })
     if (!k.ok) continue
     stoppedNow.add(name)
+    const mb = Math.round((Number(p.WorkingSet64) || 0) / 1048576)
     session.killCount++
-    session.freedMB += Math.round((Number(p.WorkingSet64) || 0) / 1048576)
-    if (!session.stopped.has(name) || !session.stopped.get(name)) session.stopped.set(name, GameShield.isRelaunchable(p.Path) ? p.Path : null)
+    session.freedMB += mb
+    const old = session.stopped.get(name)
+    session.stopped.set(name, { path: (old && old.path) || (GameShield.isRelaunchable(p.Path) ? p.Path : null), mb: ((old && old.mb) || 0) + mb, phase: (old && old.phase) || phase })
   }
+  if (stoppedNow.size) gsPersist(session)
   return [...stoppedNow]
 }
 
+/** -> { ok, stopped: ['name.exe'], error? }. The running game's own program is never in the list. */
 async function gameShieldActivate(opts) {
   const cfg = gsSettings()
   const forced = !!(opts && opts.force)   // Competitive Mode: the user asked for it for this session, whatever the Game Shield switch says
-  if ((!cfg.enabled && !forced) || _gsSession || !(auth && auth.isPremium())) return
-  const session = _gsSession = { stopped: new Map(), killCount: 0, freedMB: 0, midTimer: null, busy: false, forced }
-  const names = GameShield.launchKillList({ ramPct: gsRamPct(), tier3Threshold: cfg.tier3, exclusions: cfg.exclusions })
-  const killed = await gsStopNames(session, names)
-  if (_gsSession !== session) return   // game already closed while we were stopping things
+  if (_gsSession) return { ok: true, stopped: [], already: true }
+  if ((!cfg.enabled && !forced) || !(auth && auth.isPremium())) return { ok: false, error: 'not-armed' }
+  const protect = opts && opts.game && opts.game.exe ? [String(opts.game.exe).toLowerCase()] : []
+  const session = _gsSession = { stopped: new Map(), killCount: 0, freedMB: 0, midTimer: null, busy: false, forced, protect }
+  const names = GameShield.launchKillList({ ramPct: gsRamPct(), tier3Threshold: cfg.tier3, exclusions: [...cfg.exclusions, ...protect] })
+  const killed = await gsStopNames(session, names, 'launch')
+  if (_gsSession !== session) return { ok: true, stopped: killed.map(n => n + '.exe') }   // the game already closed while we were stopping things
   gsLog(killed.length ? 'Game Shield: stopped ' + killed.join(', ') : 'Game Shield: nothing to stop', killed.length ? 'ok' : 'info')
   gsSend({ action: 'activated', killed: killed.map(n => n + '.exe') })
   session.midTimer = setInterval(() => gameShieldMidTick().catch(() => {}), 20000)
+  return { ok: true, stopped: killed.map(n => n + '.exe') }
 }
 
 async function gameShieldMidTick() {
@@ -14241,12 +14208,13 @@ async function gameShieldMidTick() {
   try {
     const cfg = gsSettings()
     if (!cfg.enabled && !s.forced) return
-    const names = GameShield.midSessionKillList({ ramPct: gsRamPct(), tier3Threshold: cfg.tier3, midThreshold: cfg.mid, exclusions: cfg.exclusions, alreadyStopped: [...s.stopped.keys()] })
+    const names = GameShield.midSessionKillList({ ramPct: gsRamPct(), tier3Threshold: cfg.tier3, midThreshold: cfg.mid, exclusions: [...cfg.exclusions, ...s.protect], alreadyStopped: [...s.stopped.keys()] })
     if (!names.length) return
-    const killed = await gsStopNames(s, names)
+    const killed = await gsStopNames(s, names, 'mid')
     if (_gsSession === s && killed.length) {
       gsLog('Game Shield: RAM high — stopped ' + killed.join(', '), 'warn')
       gsSend({ action: 'mid-session-kill', killed: killed.map(n => n + '.exe') })
+      try { gameAutoSvc().shieldMid(killed.map(n => n + '.exe')) } catch {}
     }
   } finally { s.busy = false }
 }
@@ -14260,22 +14228,75 @@ function gsRelaunch(p) {
   } catch { return false }
 }
 
+/** Which of these program names are running right now. */
+async function gsRunningNames(names) {
+  if (!names.length) return new Set()
+  const r = await runPS("Get-Process -Name " + names.map(n => "'" + n + "'").join(',') + " -EA SilentlyContinue | Select-Object -ExpandProperty Name", 10000)
+  return new Set((r.out || '').split(/\r?\n/).map(x => x.trim().toLowerCase()).filter(Boolean))
+}
+
+/**
+ * Starts the stopped programs again and checks that each one is really running afterwards.
+ * items: [{ name, path }] -> { restored: ['name.exe'], failed: [{ name: 'name.exe', verdict }] } (an already running program is not a failure and is not listed)
+ */
+async function gsRestoreItems(items) {
+  const running = await gsRunningNames(items.map(i => i.name))
+  const verdicts = new Map(), started = []
+  for (const it of items) {
+    const exists = !!it.path && GameShield.isRelaunchable(it.path) && fs.existsSync(it.path)
+    if (running.has(it.name)) { verdicts.set(it.name, 'already-running'); continue }
+    const ok = exists ? gsRelaunch(it.path) : false
+    if (ok) started.push(it.name)
+    verdicts.set(it.name, GameShield.restoreVerdict({ path: it.path, alreadyRunning: false, exists, started: ok }))
+  }
+  if (started.length) {
+    await new Promise(r => setTimeout(r, 3000))
+    const now = await gsRunningNames(started)
+    for (const n of started) if (!now.has(n)) verdicts.set(n, 'start-failed')
+  }
+  const restored = [], failed = []
+  for (const [name, v] of verdicts) {
+    if (v === 'restarted') restored.push(name + '.exe')
+    else if (v !== 'already-running') failed.push({ name: name + '.exe', verdict: v })
+  }
+  return { restored, failed }
+}
+
+/** Anything that could still be tried again (the program exists but did not start) stays on disk; the rest is reported once and dropped. */
+function gsKeepRetryable(items, failed) {
+  try {
+    const keep = items.filter(i => failed.some(f => f.name === i.name + '.exe' && (f.verdict === 'start-failed' || f.verdict === 'missing')) && i.path)
+    if (keep.length) snapshots.save(GS_SNAP, { at: Date.now(), items: keep })
+    else snapshots.remove(GS_SNAP)
+  } catch {}
+}
+
+/** -> { ok, restored, failed, stoppedCount, freedMB } */
 async function gameShieldDeactivate() {
   const s = _gsSession
-  if (!s) return
+  if (!s) return { ok: true, restored: [], failed: [], stoppedCount: 0, freedMB: 0 }
   _gsSession = null
   clearInterval(s.midTimer)
-  const paths = [...s.stopped.entries()].filter(([, p]) => p)
-  let running = new Set()
-  if (paths.length) {
-    const r = await runPS("Get-Process -Name " + paths.map(([n]) => "'" + n + "'").join(',') + " -EA SilentlyContinue | Select-Object -ExpandProperty Name", 10000)
-    running = new Set((r.out || '').split(/\r?\n/).map(x => x.trim().toLowerCase()).filter(Boolean))
-  }
-  const restored = []
-  for (const [name, p] of paths) { if (!running.has(name) && gsRelaunch(p)) restored.push(name + '.exe') }
-  gsLog(restored.length ? 'Game Shield: restarted ' + restored.join(', ') : 'Game Shield: session ended', 'ok')
+  const items = [...s.stopped.entries()].map(([name, v]) => ({ name, path: v.path }))
+  const r = items.length ? await gsRestoreItems(items) : { restored: [], failed: [] }
+  gsKeepRetryable(items, r.failed)
+  gsLog(r.restored.length ? 'Game Shield: restarted ' + r.restored.join(', ') : 'Game Shield: session ended', r.failed.length ? 'warn' : 'ok')
+  if (r.failed.length) gsLog('Game Shield could not restart: ' + r.failed.map(f => f.name + ' (' + f.verdict + ')').join(', '), 'err')
   gsSend({ action: 'session-summary', processesKilled: s.killCount, estimatedRamFreedMB: s.freedMB })
-  gsSend({ action: 'deactivated', restored })
+  gsSend({ action: 'deactivated', restored: r.restored })
+  return { ok: !r.failed.length, restored: r.restored, failed: r.failed, stoppedCount: s.killCount, freedMB: s.freedMB }
+}
+
+/** After a crash (or for a retry): start again what an earlier Game Shield session stopped and never put back. */
+async function gameShieldRecover() {
+  if (_gsSession) return null
+  const snap = snapshots.load(GS_SNAP)
+  const items = snap && Array.isArray(snap.items) ? snap.items.filter(i => i && typeof i.name === 'string' && /^[a-z0-9 _.\-()+]{1,64}$/.test(i.name)) : []
+  if (!items.length) { snapshots.remove(GS_SNAP); return null }
+  const r = await gsRestoreItems(items.map(i => ({ name: i.name, path: i.path })))
+  gsKeepRetryable(items, r.failed)
+  gsLog(r.restored.length ? 'Game Shield: restarted ' + r.restored.join(', ') + ' (left stopped by an earlier session)' : 'Game Shield: nothing left to restart', r.failed.length ? 'warn' : 'ok')
+  return { ok: !r.failed.length, restored: r.restored, failed: r.failed }
 }
 
 // App quitting mid-game: start the stopped apps again so the user is not left without them.
@@ -14284,35 +14305,33 @@ function gameShieldShutdown() {
   if (!s) return
   _gsSession = null
   clearInterval(s.midTimer)
-  for (const [, p] of s.stopped) { if (p) gsRelaunch(p) }
+  for (const [, v] of s.stopped) { if (v.path) gsRelaunch(v.path) }
+  try { snapshots.remove(GS_SNAP) } catch {}
 }
 
-ipcMain.handle('toggle-game-shield', async (_, on) => {
-  if (!requiresPremium('toggle-game-shield')) return { ok: false, reason: 'premium_required' }
-  on = !!on
-  if (!saveSettings({ ...loadSettings(), gameShieldEnabled: on })) return { ok: false, error: 'settings_write_failed' }
-  // Keeps the old behaviour: also silences the Edge/Google updater tasks while Game Shield is on.
-  const tasks = ['MicrosoftEdgeUpdateTaskMachineCore', 'MicrosoftEdgeUpdateTaskMachineUA', 'GoogleUpdateTaskMachineCore', 'GoogleUpdateTaskMachineUA']
-  const action = on ? 'Disable' : 'Enable'
-  const ps = tasks.map(t => `schtasks /Change /TN "${t}" /${action} 2>$null`).join('; ')
-  const tr = await runPS(ps, 15000).catch(() => ({ ok: false }))
-  if (!tr.ok) debugLog('[game-shield] updater tasks could not all be switched (they may not be installed)')
-  if (!on) await gameShieldDeactivate()
-  else if (activeGameProfile) gameShieldActivate().catch(() => {})   // a game is already running
-  return { ok: true, active: on }
-})
-
-ipcMain.handle('get-game-shield-exclusions', async () => {
-  if (!requiresPremium('get-game-shield-exclusions')) return { ok: false, reason: 'premium_required' }
-  return { ok: true, exclusions: gsSettings().exclusions }
-})
-
-ipcMain.handle('set-game-shield-exclusions', async (_, list) => {
-  if (!requiresPremium('set-game-shield-exclusions')) return { ok: false, reason: 'premium_required' }
-  const exclusions = GameShield.normalizeExclusions(list)
-  saveSettings({ ...loadSettings(), gameShieldExclusions: exclusions })
-  return { ok: true, exclusions }
-})
+// Edge and Google keep their own update tasks; Game Shield used to turn all four off and later on again, even ones the user had switched off.
+// Now the tasks that were enabled are remembered and only those are turned back on. Best effort: tasks that are not installed are ignored.
+const GS_TASKS = ['MicrosoftEdgeUpdateTaskMachineCore', 'MicrosoftEdgeUpdateTaskMachineUA', 'GoogleUpdateTaskMachineCore', 'GoogleUpdateTaskMachineUA']
+async function gsUpdaterTasks(on) {
+  try {
+    if (on) {
+      let snap = snapshots.load('game-shield-tasks')
+      if (!snap) {
+        const r = await runPS(GS_TASKS.map(t => "$s = (schtasks /Query /TN '" + t + "' /FO CSV /NH 2>$null); if ($s) { 'T|" + t + "|' + (($s -split ',')[2] -replace '\"','').Trim() }").join('\n'), 15000)
+        const enabled = []
+        for (const m of String(r.out || '').matchAll(/^T\|(\w+)\|(\w*)/gm)) if (GS_TASKS.includes(m[1]) && m[2] !== 'Disabled') enabled.push(m[1])
+        snap = { enabled }
+        snapshots.save('game-shield-tasks', snap)
+      }
+      for (const t of snap.enabled) await runPS('schtasks /Change /TN "' + t + '" /Disable 2>$null', 8000)
+    } else {
+      const snap = snapshots.load('game-shield-tasks')
+      for (const t of snap ? snap.enabled : GS_TASKS) await runPS('schtasks /Change /TN "' + t + '" /Enable 2>$null', 8000)
+      snapshots.remove('game-shield-tasks')
+    }
+    return { ok: true }
+  } catch (e) { debugLog('[game-shield] updater tasks could not all be switched: ' + e.message); return { ok: false } }
+}
 
 // ─── Game History / Custom Games ──────────────────────────────────────────────
 ipcMain.handle('add-custom-game', async (_, { exe, name } = {}) => {
@@ -14353,26 +14372,6 @@ ipcMain.handle('pulse-save-session', async (_, record) => {
   history.unshift({ ...record, ts: Date.now() })
   if (history.length > 50) history.length = 50
   writeFileAtomic(historyPath, JSON.stringify(history, null, 2))
-  return { ok: true }
-})
-
-// Per-game preset chosen for Auto-Pulse (game id -> preset id). Read by the game watcher when it activates Pulse.
-function autoPulseOverrideFor(gameId) {
-  try {
-    const o = JSON.parse(fs.readFileSync(path.join(app.getPath('userData'), 'auto-pulse-overrides.json'), 'utf8'))
-    const p = o && o[gameId]
-    return typeof p === 'string' && Object.prototype.hasOwnProperty.call(PULSE_PRESETS, p) ? p : null
-  } catch { return null }
-}
-ipcMain.handle('set-auto-pulse-override', async (_, { gameId, preset } = {}) => {
-  if (!requiresPremium('set-auto-pulse-override')) return { ok: false, reason: 'premium_required' }
-  if (!gameId || typeof gameId !== 'string') return { ok: false, error: 'no_game_id' }
-  if (preset && (typeof preset !== 'string' || !Object.prototype.hasOwnProperty.call(PULSE_PRESETS, preset))) return { ok: false, error: 'unknown_preset' }
-  const overridesPath = path.join(app.getPath('userData'), 'auto-pulse-overrides.json')
-  let overrides = {}
-  try { overrides = JSON.parse(fs.readFileSync(overridesPath, 'utf8')) } catch {}
-  if (preset) { overrides[gameId] = preset } else { delete overrides[gameId] }
-  try { fs.writeFileSync(overridesPath, JSON.stringify(overrides, null, 2)) } catch (e) { debugLog('[auto-pulse] override write failed: ' + e.message); return { ok: false, error: 'write_failed' } }
   return { ok: true }
 })
 

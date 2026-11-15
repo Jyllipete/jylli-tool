@@ -334,7 +334,13 @@ contextBridge.exposeInMainWorld('api', {
   // Game History / Custom Games
   addCustomGame:        (exe, name)  => ipcRenderer.invoke('add-custom-game', { exe, name }),
   getGameHistory:       ()           => ipcRenderer.invoke('get-game-history'),
-  setAutoPulseOverride: (gameId, preset) => ipcRenderer.invoke('set-auto-pulse-override', { gameId, preset }),
+
+  // Game sessions: Game Watcher + Update Guard + Game Shield + Auto-Pulse (lib/gameauto). Every answer is { ok } and means it really happened.
+  gameautoState:        ()           => ipcRenderer.invoke('gameauto-state'),
+  gameautoSet:          (patch)      => ipcRenderer.invoke('gameauto-set', patch),
+  gameautoExclusion:    (req)        => ipcRenderer.invoke('gameauto-exclusion', req),
+  gameautoRetry:        (what)       => ipcRenderer.invoke('gameauto-retry', what),
+  onGameautoEvent:      (cb)         => on('gameauto-event', cb),
 
   // Thermal Status
   thermalGetStatus:     ()           => ipcRenderer.invoke('thermal-get-status'),

@@ -100,7 +100,7 @@ Every change is a journal entry with control `pulse:power`, `pulse:priority` or 
 | Temperature | under 75 C | 75 C or more | 90 C or more | none |
 | Memory | under 70% | 70% or more | 85% or more | Game Shield |
 | Background load | under 20% | 20% or more | 35% or more | Game Shield |
-| Windows Update | not running | running | n/a | Update Guard |
+| Windows Update | not running | running | n/a | Update Guard (see [[GAMEAUTO_EVIDENCE]]: it holds one service, it does not block all update activity) |
 | Power plan | High / Ultimate, or Balanced on a laptop / dual-CCD X3D | Balanced on a plain desktop | n/a | the boost |
 | Game Mode | on | off | n/a | none (a Windows setting) |
 | Pending restart | none | waiting | n/a | none |

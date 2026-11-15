@@ -1,7 +1,7 @@
 'use strict'
 // Pulse tab: mounted from js/shell.js. One live subscription (pulse2-live, 4 Hz) feeds the hero, the Frame River, the Limiter,
 // the vitals and the boost receipt; Sessions, Rules and Pre-flight load on demand. Copy: LANG group `pulse2` (js/lang/pulse-*.js).
-// The launch rules keep the ids that the global launchRule*/gs* handlers in index.html find their elements by.
+// The Rules view is the game automation panel (js/gameauto): Game Watcher, Update Guard, Game Shield, Auto-Pulse.
 ;(function (root) {
   const isNode = typeof module !== 'undefined' && module.exports
   const UI = isNode ? require('./ui') : root.JylliPulseUI
@@ -48,13 +48,12 @@
       cta: { id: 'pulse-cta', icon: 'bolt', label: T('ctaChoose'), onClick: () => toggleBoost() },
       secondary: { id: 'pulse-live-btn', icon: 'window-restore', label: T('openCockpit'), onClick: () => A().pulse2OpenCockpit() },
     })
-    const armed = () => ['pulse-ug-check', 'pulse-gs-check', 'pulse-gw-check', 'pulse-ap-check'].filter(id => { const b = document.getElementById(id); return b && b.checked }).length
     function paintHero() {
       const L = S.live, sc = L ? L.score : null
       const cta = ctaState(S.boost, presetName(S.selected), S.busy)
       const eyebrow = S.boost.active ? T('stBoosted', { game: S.boost.name || presetName(S.selected) }) : L && L.fresh ? T('stPlaying', { game: (L.game && L.game.name) || '' }) : T('stReady')
       const ledger = (L ? L.scoreParts : []).map(p => ({ id: p.key, label: T('part_' + p.key), n: p.value == null ? '–' : Math.round(p.value * 100), total: p.value == null ? null : 100 }))
-      const upd = { eyebrow, ledger, stats: { fps: L && L.fps ? n0(L.fps.avg) : null, low: L && L.fps ? n0(L.fps.low1) : null, rules: armed() + '/4' },
+      const upd = { eyebrow, ledger, stats: { fps: L && L.fps ? n0(L.fps.avg) : null, low: L && L.fps ? n0(L.fps.low1) : null, rules: root.JylliGameAuto ? root.JylliGameAuto.armedText() : '–' },
         cta: { label: T(cta.key, cta.vars), icon: cta.icon, disabled: cta.disabled }, tone: root.JylliPulseScore.tone(sc) }
       if (sc == null) { upd.value = null; upd.pct = null } else { upd.pct = sc / 10 }
       hero.update(upd)
@@ -118,25 +117,11 @@
       views.sessions.innerHTML = S.sessions == null ? JylliTab.skeleton('rows', 4) : UI.sessionsHtml(S.sessions, T)
     }
 
-    // ── rules (same ids the index.html handlers use) ──
+    // ── rules: the game automation panel, then the HUD preferences ──
+    let ga = null
     function buildRules() {
-      const t3 = settings.gameShieldTier3Threshold ?? 70, t2 = settings.gameShieldMidSessionThreshold ?? 80
-      const shield = String(ui.html`<div class="j-pu-shield"><div id="gs-manifest" class="j-pu-manifest" style="display:none"></div>
-        <div class="j-pu-sub-block"><div class="j-pu-label"><i class="fa fa-heart" aria-hidden="true"></i>${tUI('gsExclusionsLabel')}</div><div id="gs-exclusions-row" class="j-pu-excl"><div id="gs-exclusion-pills" class="j-pu-pills"></div>
-        <input id="gs-exclusion-input" class="pu-in" type="text" placeholder="${tUI('gsExclusionsPlaceholder')}" aria-label="${tUI('gsExclusionsLabel')}" onkeydown="gsExclusionInputKey(event)"></div></div>
-        <div class="j-pu-sub-block"><div class="j-pu-label"><i class="fa fa-gauge-high" aria-hidden="true"></i>${tUI('gsSettingsLabel')}</div><div class="j-pu-sliders">
-        ${_puSlider({ id: 'gs-tier3-threshold', valId: 'gs-tier3-val', label: tUI('gsThresholdTier3'), hint: tUI('gsThresholdTier3Hint'), min: 50, max: 95, value: t3, kind: 'tier3', tone: 'accent' })}
-        ${_puSlider({ id: 'gs-midsession-threshold', valId: 'gs-midsession-val', label: tUI('gsThresholdMidSession'), hint: tUI('gsThresholdMidSessionHint'), min: 50, max: 95, value: t2, kind: 'midSession', tone: 'accent' })}</div></div></div>`)
-      const ap = String(ui.html`<div id="auto-pulse-badge" class="j-pu-ap" style="display:none"><i class="fa fa-wand-magic-sparkles" aria-hidden="true"></i><span>${tUI('autoPulseActiveLabel')}</span><strong class="apb-game"></strong>
-        <select id="ap-preset-override" class="pu-in" onchange="applyAutoPulsePresetOverride(this.value)" aria-label="${tUI('autoPulseOverrideTitle')}"></select>
-        <button type="button" class="pu-ghost" onclick="doAutoPulseManualStop()" aria-label="${tUI('pulseDeactivate')}"><i class="fa fa-xmark" aria-hidden="true"></i></button></div>`)
-      const rule = o => _puRule(o)
-      views.rules.innerHTML = `<div class="pu-rules" id="pulse-launch-rules"><div class="pu-stage-h"><h3 class="pu-h">${esc(tUI('launchRulesTitle'))}</h3><div id="pulse-launch-rules-armed" class="pu-muted"></div></div>
-        ${rule({ card: 'lr-card-ug', dot: 'pulse-ug-dot', check: 'pulse-ug-check', icon: 'shield-halved', title: tUI('settingsUpdateGuard'), desc: tUI('settingsUpdateGuardDesc'), rule: 'updateGuard', extra: 'id="ug-status-sub"', badge: '<span id="ug-block-count" class="pu-chip" data-tone="danger" style="display:none"></span>' })}
-        ${rule({ card: 'lr-card-gs', dot: 'pulse-gs-dot', check: 'pulse-gs-check', icon: 'bolt', title: tUI('settingsGameShield'), desc: tUI('settingsGameShieldDesc'), rule: 'gameShield', body: shield })}
-        ${rule({ card: 'lr-card-gw', dot: 'pulse-gw-dot', check: 'pulse-gw-check', icon: 'eye', title: tUI('settingsGameWatcher'), desc: tUI('settingsGameWatcherDesc'), rule: 'gameWatcher' })}
-        ${rule({ card: 'lr-card-ap', dot: 'pulse-ap-dot', check: 'pulse-ap-check', icon: 'wand-magic-sparkles', title: tUI('settingsAutoPulse'), desc: tUI('settingsAutoPulseDesc'), rule: 'autoPulse', body: ap })}</div>
-        <section class="pu-card" id="pu-prefs"></section>`
+      views.rules.innerHTML = '<div data-slot="ga"></div><section class="pu-card" id="pu-prefs"></section>'
+      ga = root.JylliGameAuto.mount(views.rules.querySelector('[data-slot="ga"]'), { where: 'pulse' })
     }
     function paintPrefs() {
       const p = S.prefs, host = q('#pu-prefs'); if (!p) return
@@ -232,8 +217,6 @@
 
     // ── boot ──
     buildRules(); paintGames(); paintReceipt(); paintHero(); paintSessions()
-    syncLaunchRuleChecks(); gsExclusionInit()
-    if (typeof updateLaunchRulesArmedCount === 'function') updateLaunchRulesArmedCount()
     S.unsub.push(A().onPulse2Live(l => { S.live = l; S.boost = l.boost; paintLive(); paintReceipt() }))
     S.unsub.push(A().onPulse2Event(onEvent))
     ;(async () => {
@@ -244,16 +227,16 @@
       if (prefs && prefs.ok) { S.prefs = prefs.prefs; paintPrefs() }
       if (sub && sub.ok) { S.live = sub.live; S.boost = sub.live.boost; if (sub.live.boost.presetId) S.selected = sub.live.boost.presetId }
       paintGames(); paintReceipt(); paintLive()
-      try { const ctx = await A().getSystemContext(); if (!S.disposed && ctx && ctx.gameRunning && typeof setLaunchRuleDots === 'function') setLaunchRuleDots(true) } catch { /* no context */ }
     })()
 
     root.registerPageCleanup('pulse', () => {
       S.disposed = true
+      if (ga) { try { ga.destroy() } catch { /* gone */ } }
       for (const u of S.unsub) { try { u() } catch { /* gone */ } }
       try { A().pulse2Unsubscribe() } catch { /* gone */ }
       if (S.river) S.river.destroy(); if (S.debRiver) S.debRiver.destroy()
       hero.destroy()
     })
-    root.JylliPulsePage._active = { show, S }
+    root.JylliPulsePage._active = { show, S, armedChanged: () => { if (!S.disposed) paintHero() } }
   }
 })(typeof window !== 'undefined' ? window : globalThis)

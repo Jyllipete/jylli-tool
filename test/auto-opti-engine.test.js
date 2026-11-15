@@ -193,13 +193,16 @@ test('dual-CCD X3D: balanced plan + Game Mode, never a max-performance plan or c
 })
 
 test('single-CCD X3D on Balanced gets the AMD plan, not the X3D special case', () => {
-  const t = tweaksOf(plan('x3d-single'))
+  const t = tweaksOf(plan('x3d-single', {}, { include: ['power-desktop'] }))
   assert.ok(t.includes('amd-power-plan')); assert.ok(!t.includes('x3d-balanced'))
+  assert.ok(!tweaksOf(plan('x3d-single')).includes('amd-power-plan'))     // offered, never part of a default run
 })
 
 test('Intel desktop on Balanced gets the Intel plan; High performance already is fine', () => {
   const p = P.healthy(); p.power = { guid: '381b4222-f694-41f0-9685-ff5bb260df2e', name: 'Balanced', kind: 'balanced', onAC: true }
-  assert.ok(tweaksOf(ao.plan.plan(ao.findings.findings(p, { useCase: 'fps' }), {})).includes('intel-power-plan'))
+  const fs = ao.findings.findings(p, { useCase: 'fps' })
+  assert.ok(tweaksOf(ao.plan.plan(fs, { include: ['power-desktop'] })).includes('intel-power-plan'))
+  assert.ok(!tweaksOf(ao.plan.plan(fs, {})).includes('intel-power-plan'))     // 100 % minimum + no idle states: opt-in only, a stock-cooled CPU can throttle
   assert.ok(!ids(F('healthy')).includes('power-desktop'))
 })
 
@@ -271,7 +274,7 @@ test('findings are sorted by impact first', () => {
 
 // ── plan ──
 test('plan: display first, plan-switch before powercfg tweaks, cleanup last', () => {
-  const pl = plan('cluttered')
+  const pl = plan('cluttered', {}, { include: ['power-desktop'] })
   const order = pl.steps.map(s => s.module)
   assert.strictEqual(order[0], 'display')
   assert.strictEqual(order[order.length - 1], 'cleanup')

@@ -23,6 +23,7 @@
 <link rel="stylesheet" href="css/gpu.css">
 <link rel="stylesheet" href="css/power.css">
 <link rel="stylesheet" href="css/games.css">
+<link rel="stylesheet" href="css/gameauto.css">
 <link rel="stylesheet" href="css/apps.css">
 <link rel="stylesheet" href="css/startup.css">
 <link rel="stylesheet" href="css/devices.css">
@@ -524,6 +525,8 @@
 <script src="js/lang/compete-fi.js"></script>
 <script src="js/lang/games-en.js"></script>
 <script src="js/lang/games-fi.js"></script>
+<script src="js/lang/gameauto-en.js"></script>
+<script src="js/lang/gameauto-fi.js"></script>
 <script src="js/lang/apps-en.js"></script>
 <script src="js/lang/apps-fi.js"></script>
 <script src="js/lang/startup-en.js"></script>
@@ -674,6 +677,9 @@
 <script src="js/devices/page.js"></script>
 <script src="js/games/views.js"></script>
 <script src="js/games/page.js"></script>
+<script src="lib/gameauto/model.js"></script>
+<script src="js/gameauto/views.js"></script>
+<script src="js/gameauto/page.js"></script>
 <script src="js/fivem/views.js"></script>
 <script src="lib/pulse/attribution.js"></script>
 <script src="lib/pulse/frames.js"></script>
@@ -1008,10 +1014,8 @@ async function init(isPremium = false) {
     }
   }, 5000)
 
-  // Restore game watcher if previously enabled
-  if (settings.gameWatcherEnabled) {
-    api.startGameWatcher().then(() => { gameWatcherRunning = true }).catch(() => {})
-  }
+  // Game Watcher: the main process starts it by itself after its recovery checks (settings.gameWatcherEnabled)
+  gameWatcherRunning = !!settings.gameWatcherEnabled
   // STANDARD users: force premium features off regardless of cached settings
   if (!settings.isPremium) {
     settings.autoPulseEnabled = false
@@ -1089,99 +1093,10 @@ async function init(isPremium = false) {
     showUnknownGameBanner(exe, name)
   })
 
-  // Update Guard live status — block counter badge
-  api.onUpdateGuardStatus?.(({ blocked, blockCount, deferredUntil, activeHoursSet }) => {
-    const dot = document.getElementById('pulse-ug-dot')
-    const pill = document.getElementById('ug-block-count')
-    if (dot) dot.style.background = blocked ? 'var(--c-success)' : 'var(--c-text-tertiary)'
-    if (pill) {
-      if (blockCount > 0) {
-        pill.textContent = `×${blockCount}`
-        pill.style.display = 'inline-block'
-      } else {
-        pill.style.display = 'none'
-      }
-    }
-    const sub = document.getElementById('ug-status-sub')
-    if (sub) {
-      if (blocked) {
-        sub.textContent = blockCount > 0 ? tUI('ugBlockedLabel').replace('{n}', blockCount) : tUI('ugFrozenLabel')
-      } else if (deferredUntil) {
-        sub.textContent = tUIf('ugRescheduled', { when: deferredUntil })
-        setTimeout(() => { if (sub) sub.textContent = tUI('settingsUpdateGuardDesc') }, 12000)
-      } else if (activeHoursSet) {
-        sub.textContent = tUIf('ugActiveHours', { hours: activeHoursSet })
-        toast(tUI('tkUpdGuard'), tUIf('tkUpdQuiet', { hours: activeHoursSet }), 'ok', 6000)
-        setTimeout(() => { if (sub) sub.textContent = tUI('settingsUpdateGuardDesc') }, 15000)
-      } else {
-        sub.textContent = tUI('settingsUpdateGuardDesc')
-      }
-    }
-  })
-
-  // Update Guard: pending update risk warning (fired async after pre-game sweep)
-  api.onUpdateGuardWarning?.(({ count }) => {
-    if (count > 0) toast(
-      tUIf(count > 1 ? 'ugPendingMany' : 'ugPendingOne', { n: count }),
-      tUI('ugPendingMsg'), 'info', 6000
-    )
-  })
-
-  // Game Shield manifest — show killed/restored process pills
-  api.onGameShieldEvent?.(({ action, killed, restored, processesKilled, estimatedRamFreedMB }) => {
-    const manifest = document.getElementById('gs-manifest')
-    const dot = document.getElementById('pulse-gs-dot')
-    if (!manifest) return
-    if (action === 'activated' && killed?.length) {
-      if (dot) dot.style.background = 'var(--c-accent)'
-      const shown = killed.slice(0, 5).map(exe => {
-        const name = exe.replace(/\.exe$/i, '')
-        const pill = document.createElement('span')
-        pill.className = 'gs-pill'
-        pill.textContent = name
-        pill.style.cssText = 'font-size:8px;background:rgba(142,68,173,0.18);color:var(--c-accent-fg);border:1px solid rgba(142,68,173,0.35);border-radius:10px;padding:1px 6px;white-space:nowrap'
-        return pill
-      })
-      manifest.innerHTML = ''
-      shown.forEach(p => manifest.appendChild(p))
-      if (killed.length > 5) {
-        const more = document.createElement('span')
-        more.style.cssText = 'font-size:8px;color:var(--muted);padding:1px 4px'
-        more.textContent = tUI('gsManifestMore').replace('{n}', killed.length - 5)
-        manifest.appendChild(more)
-      }
-      manifest.style.display = 'flex'
-    } else if (action === 'session-summary') {
-      if (processesKilled > 0 || estimatedRamFreedMB > 0) {
-        toast(
-          tUIf('gsFreedT', { mb: estimatedRamFreedMB }),
-          tUIf('gsFreedB', { n: processesKilled }),
-          'ok', 5000
-        )
-      }
-    } else if (action === 'deactivated' || action === 'mid-session-kill') {
-      if (action === 'deactivated') {
-        if (dot) dot.style.background = 'var(--c-text-tertiary)'
-        // Flash pills green briefly then hide
-        manifest.querySelectorAll('.gs-pill').forEach(p => {
-          p.style.background = 'rgba(var(--c-success-rgb),0.18)'
-          p.style.color = 'var(--c-success)'
-          p.style.borderColor = 'rgba(var(--c-success-rgb),0.35)'
-        })
-        setTimeout(() => { manifest.style.display = 'none'; manifest.innerHTML = '' }, 2000)
-      } else if (action === 'mid-session-kill' && killed?.length) {
-        // Append mid-session kills to manifest
-        killed.forEach(exe => {
-          const name = exe.replace(/\.exe$/i, '')
-          const pill = document.createElement('span')
-          pill.className = 'gs-pill'
-          pill.textContent = name
-          pill.style.cssText = 'font-size:8px;background:rgba(var(--c-danger-rgb),0.18);color:var(--c-danger);border:1px solid rgba(var(--c-danger-rgb),0.35);border-radius:10px;padding:1px 6px;white-space:nowrap'
-          manifest.appendChild(pill)
-        })
-      }
-    }
-  })
+  // Game automation: the main process owns Game Watcher, Update Guard, Game Shield and Auto-Pulse (lib/gameauto). These mirrors only
+  // feed older readers (Games tab hero, tips); the panel itself (js/gameauto) reads the state directly.
+  api.gameautoState?.().then(r => { if (r && r.ok) syncGameAutoMirrors(r.state) }).catch(() => {})
+  api.onGameautoEvent?.(ev => { if (ev && ev.type === 'state' && ev.state) syncGameAutoMirrors(ev.state) })
 
   // System context detector — game-detected / game-exited toasts
   api.offGameDetected?.()
@@ -1191,14 +1106,12 @@ async function init(isPremium = false) {
     toast(tUI('gameDetectedMsg'), d.name || d.exe, 'ok', 4000)
     const ind = document.getElementById('game-watch-indicator')
     if (ind) ind.style.display = 'flex'
-    setLaunchRuleDots(true)
   })
   api.offGameExited?.()
   api.onGameExited?.(d => {
     window._gameRunning = false
     Shell.state(pulseIsActive ? 'pulse' : 'idle')
     toast(tUI('gameExitedMsg'), d.name || d.exe, 'info', 4000)
-    setLaunchRuleDots(false)
     // ProcessFreeze: collect savings and show report
     const savings = {}
     Object.entries(_pfFrozenLocal).forEach(([pid, s]) => {
@@ -1708,103 +1621,17 @@ function fingerprintDismiss() {
 }
 
 
-// ─── Launch Rules (Pulse tab) ─────────────────────────────────────────────────
-
-function _syncLrCardOpacity(cardId, checked) {
-  const el = document.getElementById(cardId)
-  if (el) el.classList.toggle('lr-off', !checked)   // the switch carries the state; dimming the whole card made an idle Pulse look broken
-}
-
-// Update Guard / Game Shield: the switch only stays on when the main process confirmed it. A refusal (premium, a service that would not
-// change) puts the switch and the saved flag back and says why, instead of toasting "on" over a protection that is not running.
-async function launchRuleCommit(call, on, flag, cardId, okKey, offKey) {
-  let r
-  try { r = await call(on) } catch (e) { r = { ok: false, error: String((e && e.message) || e) } }
-  if (r && r.ok === false) {
-    settings[flag] = !on
-    syncLaunchRuleChecks(); _syncLrCardOpacity(cardId, !on); updateLaunchRulesArmedCount()
-    toast(tUI('launchRuleFailed'), String(r.reason === 'premium_required' ? tUI('premiumLockTitle') : (r.error || r.reason || '')).slice(0, 200), 'err', 7000)
-    return false
-  }
-  if (on && !gameWatcherRunning) toggleGameWatcher()
-  toast(tUI(on ? okKey : offKey), '', on ? 'ok' : 'info')
-  return true
-}
-
-function launchRuleToggle(rule, on) {
-  if (rule === 'updateGuard') {
-    settings.updateGuardEnabled = on
-    launchRuleCommit(api.toggleUpdateGuard, on, 'updateGuardEnabled', 'lr-card-ug', 'tkUgOn', 'tkUgOff')
-    _syncLrCardOpacity('lr-card-ug', on)
-  } else if (rule === 'gameShield') {
-    settings.gameShieldEnabled = on
-    launchRuleCommit(api.toggleGameShield, on, 'gameShieldEnabled', 'lr-card-gs', 'tkGsOn', 'tkGsOff')
-    _syncLrCardOpacity('lr-card-gs', on)
-  } else if (rule === 'gameWatcher') {
-    if (on !== gameWatcherRunning) toggleGameWatcher()
-    _syncLrCardOpacity('lr-card-gw', on)
-  } else if (rule === 'autoPulse') {
-    if (on !== autoPulseEnabled) toggleAutoPulse()
-    _syncLrCardOpacity('lr-card-ap', on)
-  }
-  updateLaunchRulesArmedCount()
-}
-
-function syncLaunchRuleChecks() {
-  const ug = document.getElementById('pulse-ug-check')
-  const gs = document.getElementById('pulse-gs-check')
-  const gw = document.getElementById('pulse-gw-check')
-  const ap = document.getElementById('pulse-ap-check')
-  if (ug) ug.checked = !!settings.updateGuardEnabled
-  if (gs) gs.checked = !!settings.gameShieldEnabled
-  if (gw) gw.checked = !!settings.gameWatcherEnabled
-  if (ap) ap.checked = !!settings.autoPulseEnabled
-  _syncLrCardOpacity('lr-card-ug', !!settings.updateGuardEnabled)
-  _syncLrCardOpacity('lr-card-gs', !!settings.gameShieldEnabled)
-  _syncLrCardOpacity('lr-card-gw', !!settings.gameWatcherEnabled)
-  _syncLrCardOpacity('lr-card-ap', !!settings.autoPulseEnabled)
-  updateLaunchRulesArmedCount()
-}
-
-function updateLaunchRulesArmedCount() {
-  const el = document.getElementById('pulse-launch-rules-armed')
-  if (!el) return
-  const rules = [
-    !!settings.updateGuardEnabled,
-    !!settings.gameShieldEnabled,
-    !!settings.gameWatcherEnabled,
-  ]
-  if (settings.isPremium) rules.push(!!settings.autoPulseEnabled)
-  const armed = rules.filter(Boolean).length
-  const total = rules.length
-  el.textContent = tUI('launchRulesArmed').replace('{n}', armed).replace('{total}', total)
-  el.style.color = armed === 0 ? 'var(--muted)' : armed === total ? 'var(--c-success)' : 'var(--c-warning)'
-}
-
-function setLaunchRuleDots(active) {
-  const rules = ['ug', 'gs', 'gw', 'ap']
-  const enabled = {
-    ug: !!settings.updateGuardEnabled,
-    gs: !!settings.gameShieldEnabled,
-    gw: !!settings.gameWatcherEnabled,
-    ap: !!settings.autoPulseEnabled,
-  }
-  for (const r of rules) {
-    const dot = document.getElementById(`pulse-${r}-dot`)
-    if (!dot) continue
-    if (active && enabled[r]) {
-      dot.classList.add('lr-dot-active')
-    } else {
-      dot.classList.remove('lr-dot-active')
-    }
-  }
-  // Reset Update Guard block counter pill on game exit
-  if (!active) {
-    const pill = document.getElementById('ug-block-count')
-    if (pill) pill.style.display = 'none'
-    const sub = document.getElementById('ug-status-sub')
-    if (sub) sub.textContent = tUI('settingsUpdateGuardDesc')
-  }
+// ─── Game automation mirrors ──────────────────────────────────────────────────
+// The switches live in js/gameauto (Pulse > Rules, Games > Automation) and the main process owns the saved flags.
+function syncGameAutoMirrors(st) {
+  if (!st || !st.settings) return
+  gameWatcherRunning = !!(st.watcher && st.watcher.running)
+  autoPulseEnabled = !!st.settings.autoPulseEnabled || !!st.settings.autoPulse
+  settings.gameWatcherEnabled = !!st.settings.watcher
+  settings.autoPulseEnabled = !!st.settings.autoPulse
+  settings.updateGuardEnabled = !!st.settings.updateGuard
+  settings.gameShieldEnabled = !!st.settings.shield
+  window._gameAutoState = st
 }
 
 // Telemetry is opt-in: nothing is sent until the user says yes (first run, or once for existing installs).
@@ -2874,50 +2701,6 @@ window.applyTweak = async function(id, action = 'apply') {
   return result
 }
 
-async function toggleGameWatcher() {
-  if (!gameWatcherRunning) {
-    const btn = document.getElementById('watcher-toggle-btn')
-    if (btn) { btn.innerHTML = `<i class="fa fa-spinner fa-spin"></i> ${tUI('pfScanning')}`; btn.disabled = true }
-    await api.startGameWatcher()
-    gameWatcherRunning = true
-    settings.gameWatcherEnabled = true
-    saveSettingsDebounced()
-    const dot = document.getElementById('watcher-status-dot')
-    if (dot) { dot.style.background = 'var(--success)'; dot.style.animation = 'pulse 1.5s infinite' }
-    if (btn) { btn.innerHTML = `<i class="fa fa-stop"></i> ${tUI('gpWatcherOn')}`; btn.className = 'btn btn-danger'; btn.disabled = false }
-    const lbl = document.getElementById('watcher-active-game')
-    if (lbl) lbl.textContent = tUI('watcherWatchingLabel')
-    toast(tUI('autoProfilesOn'), tUI('autoProfilesOnBody'), 'ok')
-  } else {
-    await api.stopGameWatcher()
-    gameWatcherRunning = false
-    settings.gameWatcherEnabled = false
-    saveSettingsDebounced()
-    const dot = document.getElementById('watcher-status-dot')
-    const btn = document.getElementById('watcher-toggle-btn')
-    if (dot) { dot.style.background = 'var(--muted)'; dot.style.animation = '' }
-    if (btn) { btn.innerHTML = `<i class="fa fa-play"></i> ${tUI('gpWatcherOff')}`; btn.className = 'btn btn-info' }
-    const lbl = document.getElementById('watcher-active-game')
-    if (lbl) lbl.textContent = tUI('watcherEnableLabel')
-    toast(tUI('autoProfilesOff'), '', 'info')
-  }
-}
-
-function toggleAutoPulse() {
-  autoPulseEnabled = !autoPulseEnabled
-  settings.autoPulseEnabled = autoPulseEnabled
-  saveSettingsDebounced()
-  const toggle = document.getElementById('auto-pulse-toggle')
-  if (toggle) {
-    toggle.style.background = autoPulseEnabled ? 'var(--c-success)' : 'var(--surface-3)'
-    toggle.style.borderColor = autoPulseEnabled ? 'var(--success)' : 'var(--hairline-strong)'
-    toggle.querySelector('div').style.left = autoPulseEnabled ? '16px' : '2px'
-    toggle.nextElementSibling.style.color = autoPulseEnabled ? 'var(--success)' : 'var(--c-info)'
-    toggle.nextElementSibling.textContent = tUI('autoPulseLabel')
-  }
-  toast(autoPulseEnabled ? tUI('autoPulseOnTitle') : tUI('autoPulseOffTitle'), autoPulseEnabled ? tUI('autoPulseOnBody') : '', autoPulseEnabled ? 'ok' : 'info')
-}
-
 function showUnknownGameBanner(exe, name) {
   // Show a dismissible inline banner asking user to add the unknown game
   const container = document.getElementById('toast-container')
@@ -2956,114 +2739,6 @@ async function blacklistUnknownGame(exe) {
   await api.blacklistUnknownGame?.(exe).catch(() => {})
   document.getElementById('unknown-game-banner')?.remove()
   window._pendingCustomGame = null
-}
-
-let _gsExclusions = []
-
-function gsUpdateThreshold(type, value) {
-  const v = parseInt(value, 10)
-  const fillPct = Math.round((v - 50) / 45 * 100) + '%'
-  if (type === 'tier3') {
-    settings.gameShieldTier3Threshold = v
-    const el = document.getElementById('gs-tier3-threshold')
-    if (el) el.style.setProperty('--gs-fill-pct', fillPct)
-    const valEl = document.getElementById('gs-tier3-val')
-    if (valEl) valEl.textContent = v + '%'
-    if ((settings.gameShieldMidSessionThreshold ?? 80) <= v) {
-      settings.gameShieldMidSessionThreshold = Math.min(95, v + 5)
-      const mEl = document.getElementById('gs-midsession-threshold')
-      const mVal = document.getElementById('gs-midsession-val')
-      if (mEl) {
-        mEl.value = settings.gameShieldMidSessionThreshold
-        mEl.style.setProperty('--gs-fill-pct', Math.round((settings.gameShieldMidSessionThreshold - 50) / 45 * 100) + '%')
-      }
-      if (mVal) mVal.textContent = settings.gameShieldMidSessionThreshold + '%'
-    }
-  } else {
-    const tier3 = settings.gameShieldTier3Threshold ?? 70
-    const clamped = Math.max(v, tier3 + 5)
-    settings.gameShieldMidSessionThreshold = clamped
-    const el = document.getElementById('gs-midsession-threshold')
-    if (el) {
-      el.style.setProperty('--gs-fill-pct', Math.round((clamped - 50) / 45 * 100) + '%')
-      if (clamped !== v) el.value = clamped
-    }
-    const valEl = document.getElementById('gs-midsession-val')
-    if (valEl) valEl.textContent = clamped + '%'
-  }
-  saveSettingsDebounced()
-}
-
-async function gsExclusionInit() {
-  if (!api.getGameShieldExclusions) return
-  const { exclusions } = (await api.getGameShieldExclusions().catch(() => null)) || {}
-  _gsExclusions = exclusions || []
-  gsExclusionRenderPills()
-}
-
-function gsExclusionRenderPills() {
-  const container = document.getElementById('gs-exclusion-pills')
-  if (!container) return
-  container.innerHTML = ''
-  for (const exe of _gsExclusions) {
-    const span = document.createElement('span')
-    span.style.cssText = 'font-size:8px;background:rgba(var(--c-success-rgb),0.15);color:var(--c-success);border:1px solid rgba(var(--c-success-rgb),0.35);border-radius:10px;padding:1px 6px;display:inline-flex;align-items:center;gap:3px'
-    span.textContent = exe
-    const btn = document.createElement('button')
-    btn.style.cssText = 'background:none;border:none;color:var(--muted);cursor:pointer;font-size:11px;padding:0;line-height:1'
-    btn.textContent = '×'
-    btn.dataset.exe = exe
-    btn.addEventListener('click', () => gsExclusionRemove(btn.dataset.exe))
-    span.appendChild(btn)
-    container.appendChild(span)
-  }
-}
-
-async function gsExclusionInputKey(e) {
-  if (e.key !== 'Enter') return
-  const input = document.getElementById('gs-exclusion-input')
-  const val = (input?.value || '').trim().toLowerCase()
-  if (!val) return
-  const exe = val.endsWith('.exe') ? val : val + '.exe'
-  if (_gsExclusions.includes(exe)) { input.value = ''; return }
-  _gsExclusions.push(exe)
-  input.value = ''
-  gsExclusionRenderPills()
-  await api.setGameShieldExclusions?.(_gsExclusions).catch(() => {})
-}
-
-async function gsExclusionRemove(exe) {
-  _gsExclusions = _gsExclusions.filter(e => e !== exe)
-  gsExclusionRenderPills()
-  await api.setGameShieldExclusions?.(_gsExclusions).catch(() => {})
-}
-
-async function applyAutoPulsePresetOverride(sel) {
-  const badge = document.getElementById('auto-pulse-badge')
-  const gameId = badge?.querySelector('.apb-game')?.textContent
-  if (!gameId) return
-  const preset = sel.value || null
-  const sv = await api.setAutoPulseOverride(gameId, preset).catch(() => null)
-  if (!sv || sv.ok === false) { toast(tUI('tkFailed'), tUI('tkOpFailed'), 'err'); return }
-  if (preset && preset !== gameId) {
-    // Hot-swap: stop current preset and start the override
-    await api.pulseStop().catch(() => {})
-    await api.pulseStart({ presetId: preset, killBg: false }).catch(() => {})
-    toast(tUI('autoPulseOverrideTitle') || 'Preset override applied', preset, 'ok', 3000)
-  } else if (!preset) {
-    toast(tUI('autoPulseOverrideCleared') || 'Preset override cleared', '', 'info', 2000)
-  }
-}
-
-async function doAutoPulseManualStop() {
-  const wasAutoActive = autoPulseActive
-  autoPulseActive = false
-  const badge = document.getElementById('auto-pulse-badge')
-  if (badge) badge.style.display = 'none'
-  await api.pulseStop()
-  syncPulseUIState()
-  // If stopped while auto-triggered and game is still running → snooze mode
-  toast(tUI('autoPulseStoppedTitle'), wasAutoActive ? tUI('autoPulseSnoozedBody') : tUI('autoPulseStoppedBody'), 'info')
 }
 
 const GAME_EMOJIS = { fortnite:'<i class="fa fa-wind"></i>', gtav:'<i class="fa fa-car"></i>', valorant:'<i class="fa fa-crosshairs"></i>', 'arma-reforger':'<i class="fa fa-helmet-safety"></i>', minecraft:'<i class="fa fa-cube"></i>', cs2:'<i class="fa fa-crosshairs"></i>', apex:'<i class="fa fa-dragon"></i>', warzone:'<i class="fa fa-skull"></i>', rust:'<i class="fa fa-wrench"></i>', 'the-finals':'<i class="fa fa-trophy"></i>' }

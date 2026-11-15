@@ -36,3 +36,34 @@ test('isRelaunchable accepts only absolute .exe paths', () => {
   assert.ok(!G.isRelaunchable('C:\\a\\b.bat'))
   assert.ok(!G.isRelaunchable(null))
 })
+
+test('validateExclusion explains every rejection', () => {
+  assert.deepEqual(G.validateExclusion(' OBS64 ', []), { ok: true, value: 'obs64.exe' })
+  assert.equal(G.validateExclusion('', []).reason, 'empty')
+  assert.equal(G.validateExclusion('a;calc', []).reason, 'format')
+  assert.equal(G.validateExclusion('..\\x.exe', []).reason, 'format')
+  assert.equal(G.validateExclusion('OBS64.exe', ['obs64.exe']).reason, 'duplicate')
+  assert.equal(G.validateExclusion('new', Array.from({ length: 50 }, (_, i) => 'p' + i + '.exe')).reason, 'limit')
+})
+
+test('coverage says which phase would close a program, null when Game Shield never would', () => {
+  assert.equal(G.coverage('OneDrive.exe'), 'launch')
+  assert.equal(G.coverage('discord'), 'tier3')
+  assert.equal(G.coverage('chrome.exe'), 'mid')
+  assert.equal(G.coverage('obs64.exe'), null)
+  assert.equal(G.coverage('steam.exe'), null)
+})
+
+test('steam and the Steam client are never in any kill list', () => {
+  const all = [...G.TIER1, ...G.TIER3, ...G.BROWSERS]
+  assert.ok(!all.includes('steam') && !all.includes('steamservice'))
+})
+
+test('restoreVerdict covers every outcome', () => {
+  const ok = 'C:\\Apps\\a.exe'
+  assert.equal(G.restoreVerdict({ path: ok, alreadyRunning: true }), 'already-running')
+  assert.equal(G.restoreVerdict({ path: null }), 'no-path')
+  assert.equal(G.restoreVerdict({ path: ok, exists: false }), 'missing')
+  assert.equal(G.restoreVerdict({ path: ok, exists: true, started: false }), 'start-failed')
+  assert.equal(G.restoreVerdict({ path: ok, exists: true, started: true }), 'restarted')
+})

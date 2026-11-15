@@ -46,6 +46,7 @@ function respond(name, args, ctx) {
   if (/^diag2/.test(name)) return require('./diag-fixture').respond(name, args, ctx)
   if (/^compete[A-Z]/.test(name)) return require('./compete-fixture').respond(name, args, ctx)
   if (/^games2|^getGameCover$/.test(name)) return require('./games-fixture').respond(name, args, ctx)
+  if (/^gameauto[A-Z]/.test(name)) return require('./gameauto-fixture').respond(name, args, ctx)
   if (/^apps2/.test(name)) return require('./apps-fixture').respond(name, args, ctx)
   if (/^startup2/.test(name)) return require('./startup-fixture').respond(name, args, ctx)
   if (/^devices2/.test(name)) return require('./devices-fixture').respond(name, args, ctx)

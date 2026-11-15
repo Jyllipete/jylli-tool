@@ -358,8 +358,6 @@
         case 'clear': S.q = ''; S.chip = 'all'; qIn.value = ''; paintTools(); paintGrid(); break
         case 'journal': root.showPage('changelog'); break
         case 'gopulse': root.showPage('pulse'); break
-        case 'watcher': case 'autoWatcher': await root.toggleGameWatcher(); paintAll(); break
-        case 'autopulse': root.toggleAutoPulse(); setTimeout(() => paintView('auto'), 50); break
         case 'reveal': { root.showPage(b.dataset.tab === 'gpu' ? 'hardware' : 'windows-opti', b.dataset.tab); const m = { gamemode: 'game-mode-on', gamedvr: 'game-dvr' }[b.dataset.id]; setTimeout(() => { try { root.JylliWindowsPage.reveal(m) } catch (er) { /* tab opens anyway */ } }, 400); break }
         case 'bundle-new': await bundleNew(); break
         case 'bundle-go': await bundleGo(b.dataset.name); break
