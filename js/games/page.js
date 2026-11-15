@@ -14,7 +14,7 @@
   const lsGet = k => { try { return localStorage.getItem(k) } catch (e) { return null } }
   const lsSet = (k, v) => { try { localStorage.setItem(k, v) } catch (e) { /* storage may be unavailable */ } }
   const toast = (...a) => { try { root.toast(...a) } catch (e) { /* toast is optional */ } }
-  const hasKey = k => { try { const L = root.LANG; return !!((L[root.currentLang] && L[root.currentLang].games2 && k in L[root.currentLang].games2) || (L.en.games2 && k in L.en.games2)) } catch (e) { return false } }
+  const hasKey = k => { try { const L = LANG; return !!((L[currentLang] && L[currentLang].games2 && k in L[currentLang].games2) || (L.en.games2 && k in L.en.games2)) } catch (e) { return false } }
   // one / many: a call with n = 1 uses the key plus _1 when that key exists
   const T = (k, v) => root.tG('games2', v && v.n === 1 && hasKey(k + '_1') ? k + '_1' : k, v)
   const covers = new Map()     // library id -> data URL | null (asked, none)
@@ -329,7 +329,7 @@
     host.addEventListener('click', async e => {
       const chip = e.target.closest('[data-chip]')
       if (chip) { S.chip = chip.dataset.chip; lsSet('ga_chip', S.chip); paintTools(); paintGrid(); return }
-      const lay = e.target.closest('[data-layout]')
+      const lay = e.target.closest('button[data-layout]')   // not the grid wrapper, which also carries data-layout (it styles the grid)
       if (lay) { S.layout = lay.dataset.layout; lsSet('ga_layout', S.layout); paintTools(); paintGrid(); return }
       const b = e.target.closest('[data-act]'); if (!b || b.disabled) return
       const id = b.dataset.id, act = b.dataset.act
