@@ -1,4 +1,14 @@
 const { app, BrowserWindow, ipcMain, dialog, shell, Tray, Menu, nativeImage, Notification, safeStorage, nativeTheme } = require('electron')
+// Main-window calls that have not answered yet: while one runs (tweak batch, cleanup, speed test...) the tray never unloads the page.
+let _trayBusy = 0
+{
+  const _handle = ipcMain.handle.bind(ipcMain)
+  ipcMain.handle = (ch, fn) => _handle(ch, async (e, ...a) => {
+    const track = typeof mainWindow !== 'undefined' && mainWindow && !mainWindow.isDestroyed() && e && e.sender === mainWindow.webContents
+    if (track) _trayBusy++
+    try { return await fn(e, ...a) } finally { if (track) _trayBusy-- }
+  })
+}
 const path = require('path')
 const { exec, execFile, spawn } = require('child_process')
 const fs = require('fs')
@@ -45,6 +55,18 @@ let pulseWindow = null
 const sendToPulse = (ch, payload) => { try { if (pulseWindow && !pulseWindow.isDestroyed()) pulseWindow.webContents.send(ch, payload) } catch {} }
 let fivemHudWindow = null
 let tray = null
+const TrayNeeds = require('./lib/tray')
+const { createFrames } = require('./lib/pm-frames')
+// Tray state: hidden = window not shown; unloaded = its page is gone too (rebuilt from the tray icon). docs/TRAY_FOOTPRINT.md
+let _trayHidden = false, _trayUnloaded = false, _trayUnloadTimer = null, _trayResumePage = null, _trayUiReady = false
+const _uiLogBuf = []
+/** A log line for the page; kept (last 200) while the page is unloaded and replayed when it is back. */
+function sendLog(p) {
+  try {
+    if (_trayUnloaded) { _uiLogBuf.push(p); if (_uiLogBuf.length > 200) _uiLogBuf.shift(); return }
+    if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('log', p)
+  } catch {}
+}
 
 // ─── Discord Rich Presence ────────────────────────────────────────────────────
 const DISCORD_CLIENT_ID  = '1504472893818667152'
@@ -168,16 +190,41 @@ function _checkUnknownGame(psLines) {
   mainWindow?.webContents.send('unknown-game-candidate', pick)
 }
 
+// One process listing shared by the context detector and the Game Watcher (they used to run one each).
+let _procSnap = null, _procSnapP = null
+function processSnapshot(maxAgeMs = 3000) {
+  if (_procSnap && Date.now() - _procSnap.t < maxAgeMs) return Promise.resolve(_procSnap)
+  if (_procSnapP) return _procSnapP
+  _procSnapP = new Promise(res => {
+    execFile('tasklist.exe', ['/fo', 'csv', '/nh'], { windowsHide: true, timeout: 8000, maxBuffer: 8 * 1024 * 1024 }, (err, out) => {
+      const exes = new Set(), names = new Set()
+      if (!err && out) for (const l of String(out).split('\n')) { const n = l.split(',')[0].replace(/"/g, '').trim().toLowerCase(); if (n) { exes.add(n); names.add(n.replace(/\.exe$/i, '')) } }
+      _procSnap = { t: Date.now(), ok: !err && exes.size > 0, exes, names }
+      res(_procSnap)
+    })
+  }).finally(() => { _procSnapP = null })
+  return _procSnapP
+}
+
 async function _updateSystemContext() {
   try {
     const { execFile } = require('child_process')
+    // Hidden in the tray: the process list only (no install paths, no RAM/CPU queries), shared with the Game Watcher.
+    const light = !uiWanted()
+    let psLines
+    if (light) {
+      const snap = await processSnapshot(3000)
+      if (!snap.ok) return
+      psLines = [...snap.exes]
+    } else {
     const psOut = await new Promise((res) => {
       execFile('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command',
         // Second output form "@@exe|path" is only emitted for processes running from a game-store library folder (unknown-game detection)
         `Get-Process | ForEach-Object { $n = $_.Name.ToLower() + ".exe"; $n; if ($_.Path -match 'steamapps.common|Epic Games|GOG Galaxy.Games|GOG Games|XboxGames|Riot Games') { '@@' + $n + '|' + $_.Path } }`
       ], { windowsHide: true, timeout: 8000 }, (err, stdout) => res(err ? '' : stdout))
     })
-    const psLines = psOut.split(/\r?\n/).map(l => l.trim()).filter(Boolean)
+    psLines = psOut.split(/\r?\n/).map(l => l.trim()).filter(Boolean)
+    }
     const currentExes = new Set(psLines.filter(l => !l.startsWith('@@')))
 
     // Only do the expensive lookup if the process list changed
@@ -186,7 +233,7 @@ async function _updateSystemContext() {
 
     if (changed) {
       _lastProcessList = currentExes
-      _checkUnknownGame(psLines)
+      if (!light) _checkUnknownGame(psLines)
 
       // Game detection
       let foundGame = null
@@ -228,8 +275,8 @@ async function _updateSystemContext() {
         // Settings > "Hide Jylli Tool to the tray when a game starts". Not in the first seconds after launch (the user just opened the app on purpose),
         // and only the window is hidden: detection, Pulse and the tray keep running, so the game exit is still noticed.
         if (settings.hideOnGame === true && mainWindow && !mainWindow.isDestroyed() && mainWindow.isVisible() && Date.now() - sessionStartTime > 15000) {
-          mainWindow.hide(); updateTrayMenu()
-          mainWindow.webContents.send('log', { msg: `Game detected (${_systemContext.gameName || 'game'}): Jylli Tool hidden to the tray. Open it from the tray icon.`, level: 'info', ts: new Date().toLocaleTimeString() })
+          hideToTray('game')
+          sendLog({ msg: `Game detected (${_systemContext.gameName || 'game'}): Jylli Tool hidden to the tray. Open it from the tray icon.`, level: 'info', ts: new Date().toLocaleTimeString() })
         }
         if (settings.gameAutoOptimize) _triggerGameAutoOptimize()
         // Auto-open FiveM HUD if the detected game is FiveM/GTA5 and setting is enabled
@@ -250,6 +297,7 @@ async function _updateSystemContext() {
       }
     }
 
+    if (light) { _systemContext.lastUpdated = Date.now(); return }
     // Lightweight metrics — battery + RAM (cheap, always update)
     const { powerMonitor } = require('electron')
     _systemContext.onBattery = !powerMonitor.isOnBatteryPower?.() === false
@@ -350,7 +398,7 @@ const _gotInstanceLock = app.requestSingleInstanceLock()
 if (!_gotInstanceLock) app.exit(0)
 app.on('second-instance', (_e, argv) => {
   try { competeFromArgv(argv).catch(() => {}) } catch {}
-  try { if (mainWindow) { if (mainWindow.isMinimized()) mainWindow.restore(); mainWindow.show(); mainWindow.focus() } } catch {}
+  try { if (mainWindow && mainWindow.isMinimized()) mainWindow.restore(); showFromTray('second-instance') } catch {}
 })
 
 // No window may ever navigate away from its bundled page or open new windows: a remote page would inherit the preload bridge.
@@ -698,8 +746,8 @@ function _processSensorFrame(chunk) {
     for (let i = 0; i < _sensorSchema.length; i++) {
       _sensorValues[_sensorSchema[i].id] = frame.readFloatLE(i * 4)
     }
-    if (++_sensorDecimate % 4 === 0) {
-      mainWindow?.webContents.send('sensor-tick', { ..._sensorValues, hz: _sensorHz })
+    if (++_sensorDecimate % 4 === 0 && windowShown()) {
+      mainWindow.webContents.send('sensor-tick', { ..._sensorValues, hz: _sensorHz })
     }
   }
 }
@@ -708,7 +756,7 @@ let _sensorFrame = null
 // Connects to the sensor helper's named pipe. The handshake line is parsed on raw Buffers (decoding binary float frames as UTF-8 corrupts
 // them and misaligns every later frame), and a failed attempt retries a few times instead of leaving the bridge dead for the session.
 function connectSensorPipe(attempt) {
-  if (_sensorSocket || attempt > 10) return
+  if (_sensorSocket || attempt > 10 || !_sensorProcess) return
   const sock = _net.connect('\\\\.\\pipe\\JylliSensor')
   _sensorSocket = sock
   let hs = Buffer.alloc(0), hsDone = false
@@ -736,16 +784,26 @@ function connectSensorPipe(attempt) {
 }
 
 function startSensorBridge() {
+  if (_sensorProcess) return
   if (!fs.existsSync(SENSOR_EXE)) { startupTrace('SensorBridge: exe not found, using WMI fallback'); return }
-  _sensorProcess = spawn(SENSOR_EXE, [], { windowsHide: true, stdio: 'ignore', detached: false })
-  _sensorProcess.on('error', () => { _sensorProcess = null })
-  _sensorProcess.unref()
+  const proc = _sensorProcess = spawn(SENSOR_EXE, [], { windowsHide: true, stdio: 'ignore', detached: false })
+  proc.on('error', () => { if (_sensorProcess === proc) _sensorProcess = null })
+  proc.on('exit', () => { if (_sensorProcess === proc) _sensorProcess = null })
+  proc.unref()
   setTimeout(() => connectSensorPipe(0), 800)
+  if (_sensorHzTimer) clearInterval(_sensorHzTimer)
   _sensorHzTimer = setInterval(() => {
     _sensorHz = _sensorHzCounter
     _sensorHzCounter = 0
-    mainWindow?.webContents.send('sensor-rate', { hz: _sensorHz, active: !!_sensorSocket })
+    if (windowShown()) mainWindow.webContents.send('sensor-rate', { hz: _sensorHz, active: !!_sensorSocket })
   }, 1000)
+}
+/** Sensors off (tray, nothing needs them): the helper process is stopped, the last readings are dropped so nothing reads them as live. */
+function pauseSensorBridge() {
+  if (_sensorHzTimer) { clearInterval(_sensorHzTimer); _sensorHzTimer = null }
+  if (_sensorSocket)  { try { _sensorSocket.destroy() } catch {} ; _sensorSocket = null }
+  if (_sensorProcess) { try { _sensorProcess.kill()   } catch {} ; _sensorProcess = null }
+  _sensorValues = {}; _sensorHz = 0; _sensorFrame = null
 }
 
 function stopSensorBridge() {
@@ -763,6 +821,13 @@ const TELEMETRY_EXPECTED_KEYS = ['cpu.load', 'cpu.temp.package', 'cpu.power', 'r
 let _ort        = null
 let _ortSession = null
 let _ortProvider = 'none'  // 'npu' | 'gpu' | 'cpu' | 'none'
+let _ortTried = false, _ortLoading = null
+/** The advisor model is only read into memory when something asks for it (Home moves, recommendations), not at start-up. */
+function ensureOrt() {
+  if (_ortSession || _ortTried) return Promise.resolve()
+  if (!_ortLoading) _ortLoading = loadOrtModel().catch(() => {}).finally(() => { _ortTried = true; _ortLoading = null })
+  return _ortLoading
+}
 
 // Canonical tweak IDs used for feature vector construction (must match model training order)
 const TWEAK_CANONICAL = [
@@ -824,8 +889,8 @@ function buildAdvisorFeatures(sysInfo, ariaInsights, settings) {
     })
   }
   // Frame stats from PresentMon buffer
-  if (_pmFrameBuffer.length > 2) {
-    const parsed = parsePresentMonCsvFromBuffer(_pmFrameBuffer)
+  if (_pmFrames.size > 2) {
+    const parsed = _pmFrames.stats()
     if (parsed) {
       f[26] = Math.min(parsed.mean > 0 ? (1000 / parsed.mean) / 400 : 0, 1)
       f[27] = Math.min(parsed.p1Low > 0 ? (1000 / parsed.p1Low) / 400 : 0, 1)
@@ -843,6 +908,7 @@ function buildAdvisorFeatures(sysInfo, ariaInsights, settings) {
 
 ipcMain.handle('ai-get-recommendations', async () => {
   if (!requiresPremium('ai-get-recommendations')) return { ok: false, reason: 'premium_required' }
+  await ensureOrt()
   if (!_ortSession) return { ok: false, reason: 'model_not_loaded' }
   try {
     const settings = loadSettings()
@@ -861,14 +927,14 @@ ipcMain.handle('ai-get-recommendations', async () => {
   }
 })
 
-ipcMain.handle('ai-get-status', () => ({
-  loaded: !!_ortSession,
-  provider: _ortProvider,
-}))
+ipcMain.handle('ai-get-status', async () => {
+  if (uiWanted()) await ensureOrt()
+  return { loaded: !!_ortSession, provider: _ortProvider }
+})
 
 // ─── Window ───────────────────────────────────────────────────────────────────
-function createWindow() {
-  mainWindow = new BrowserWindow({
+function createWindow(opts = {}) {
+  const win = mainWindow = new BrowserWindow({
     width: 1280,
     height: 820,
     minWidth: 1060,
@@ -887,7 +953,7 @@ function createWindow() {
     }
   })
 
-  mainWindow.loadFile('index.html')
+  mainWindow.loadFile('index.html', opts.resume ? { query: { resume: String(opts.resume) } } : undefined)
 
   mainWindow.webContents.on('before-input-event', (e, input) => {
     if (input.key === 'F12' || (input.control && input.shift && input.key === 'I')) e.preventDefault()
@@ -896,6 +962,8 @@ function createWindow() {
   mainWindow.once('ready-to-show', () => {
     startupTrace('ready-to-show fired — showing window')
     mainWindow.show()
+    // Rebuilt from the tray: the session was verified when the app started and the tier refresh keeps running; only a missing session matters.
+    if (opts.resume) { try { if (!auth.hasSession()) mainWindow?.webContents.send('auth-required') } catch {} ; return }
     // Auth gate: verify from main process so renderer can't bypass via DevTools
     ;(async () => {
       try {
@@ -918,9 +986,7 @@ function createWindow() {
   // Minimize → hide to tray instead of taskbar minimize
   mainWindow.on('minimize', (e) => {
     e.preventDefault()
-    mainWindow.hide()
-    pauseBackgroundPolling()
-    updateTrayMenu()
+    hideToTray('minimize')
   })
   // Discord status follows the window: hidden (tray) clears it, shown brings it back — whichever path hid or showed the window
   mainWindow.on('show', () => presenceSet({ hidden: false }))
@@ -933,14 +999,16 @@ function createWindow() {
   })
 
   mainWindow.on('closed', () => {
-    mainWindow = null
+    if (mainWindow === win) mainWindow = null
     if (_thermalTimer)  { clearInterval(_thermalTimer);  _thermalTimer  = null }
     if (_latTimer)      { clearInterval(_latTimer);      _latTimer      = null }
+    if (win.__trayUnload) return   // unloaded from the tray: ARIA keeps sampling for the game, the page is rebuilt later
     if (_ariaTimer)     { clearInterval(_ariaTimer);     _ariaTimer     = null }
     if (_ariaFpsTimer)  { clearInterval(_ariaFpsTimer);  _ariaFpsTimer  = null }
   })
 
   mainWindow.webContents.on('did-finish-load', () => {
+    if (opts.resume) return
     // Auto-check for updates 10s after load so the UI is settled before any prompt appears
     setTimeout(() => {
       if (autoUpdater) autoUpdater.checkForUpdates().catch(() => {})
@@ -967,7 +1035,7 @@ function updateTrayMenu() {
   const bundleItems = Object.values(bundles).map(b => ({
     label: b.name,
     click: async () => {
-      const send = (msg, level) => mainWindow?.webContents.send('log', { msg, level, ts: new Date().toLocaleTimeString() })
+      const send = (msg, level) => sendLog({ msg, level, ts: new Date().toLocaleTimeString() })
       send(`◆ Loading bundle: ${b.name}…`, 'head')
       const bundleFails = []
       // Apply tweak profile
@@ -1017,7 +1085,7 @@ function updateTrayMenu() {
       enabled: !!auth && auth.isPremium(),
       click: async () => {
         if (!requiresPremium('tray-pulse')) return
-        const send = (msg, level) => mainWindow?.webContents.send('log', { msg, level, ts: new Date().toLocaleTimeString() })
+        const send = (msg, level) => sendLog({ msg, level, ts: new Date().toLocaleTimeString() })
         if (pulseOn) {
           autoPulseTriggeredPreset = null
           await deactivatePulse(send)
@@ -1048,11 +1116,7 @@ function updateTrayMenu() {
     { type: 'separator' },
     {
       label: shown ? 'Hide window' : 'Show window',
-      click: () => {
-        if (shown) { mainWindow.hide(); pauseBackgroundPolling() }
-        else if (mainWindow) { mainWindow.show(); mainWindow.focus(); resumeBackgroundPolling() }
-        updateTrayMenu()
-      },
+      click: () => { if (shown) hideToTray('menu'); else showFromTray('menu') },
     },
     {
       label: 'Quit Jylli Tool',
@@ -1074,15 +1138,142 @@ function createTray() {
 
   // Single click restores the window
   tray.on('click', () => {
-    if (mainWindow) {
-      if (mainWindow.isVisible()) { mainWindow.focus() }
-      else { mainWindow.show(); mainWindow.focus(); resumeBackgroundPolling() }
-    }
-    updateTrayMenu()
+    if (windowShown()) mainWindow.focus()
+    else showFromTray('tray')
   })
 
   updateTrayMenu()
 }
+
+// ─── Tray mode ────────────────────────────────────────────────────────────────
+// Hidden window: the page's timers stop, sensors sleep unless something needs them (lib/tray.js), and after a minute the page itself is
+// unloaded (rebuilt on the last tab from the tray icon). Game Watcher, Pulse, hide-on-game and the tray menu live in this process and keep running.
+function windowShown() { return !!mainWindow && !mainWindow.isDestroyed() && mainWindow.isVisible() && !mainWindow.isMinimized() }
+/** The app means to show its window (also during start-up, before it is visible). */
+function uiWanted() { return !!mainWindow && !mainWindow.isDestroyed() && !_trayHidden }
+let _bgWakeUntil = 0   // a game was just detected: sensors warm up before the session starts recording
+let _telemetryWokeAt = 0
+
+function bgFacts() {
+  const open = w => !!(w && !w.isDestroyed())
+  let powerGuard = false
+  try { powerGuard = fs.existsSync(PL_SENTINEL()) } catch {}
+  return {
+    visible: uiWanted(),
+    session: !!(_sessionRec && _sessionRec.active) || Date.now() < _bgWakeUntil,
+    powerGuard,
+    hud: open(fivemHudWindow) || open(_fpsHudWindow) || open(_puHud) || open(pulseWindow),
+    aria: !!_ariaEnabled,
+  }
+}
+
+const _sensorExeOk = (() => { let v = null; return () => (v === null ? (v = fs.existsSync(SENSOR_EXE)) : v) })()
+/** Starts or stops the live sensors (PowerShell poller, nvidia-smi, JylliSensor) to match what needs them. Cheap when nothing changed. */
+function bgNeedsUpdate() {
+  try {
+    const wake = TrayNeeds.liveSensors(bgFacts())
+    if (wake) {
+      if (_telemetry && !_telemetry.isStarted()) { _telemetry.resume(); _telemetryWokeAt = Date.now() }
+      if (!_sensorProcess && _sensorExeOk()) startSensorBridge()
+      lowerHelperPriority()
+    } else {
+      if (_telemetry && _telemetry.isStarted()) _telemetry.pause()
+      pauseSensorBridge()
+    }
+  } catch {}
+}
+// The samplers are background work: under a CPU-bound game they must be the first to give way.
+function lowerHelperPriority() {
+  try {
+    const os = require('os'), lvl = os.constants.priority.PRIORITY_BELOW_NORMAL
+    const pids = [...(_telemetry ? _telemetry.pids() : []), _sensorProcess && _sensorProcess.pid]
+    for (const pid of pids) { if (pid) { try { os.setPriority(pid, lvl) } catch {} } }
+  } catch {}
+}
+
+function hideToTray(reason) {
+  if (!mainWindow || mainWindow.isDestroyed()) return
+  _trayHidden = true
+  try { mainWindow.hide() } catch {}
+  pauseBackgroundPolling()
+  updateTrayMenu()
+  bgNeedsUpdate()
+  clearTimeout(_trayUnloadTimer)
+  _trayUnloadTimer = setTimeout(tryUnloadMainPage, TrayNeeds.UNLOAD_AFTER_MS)
+  if (_trayUnloadTimer.unref) _trayUnloadTimer.unref()
+  debugLog('[tray] hidden (' + reason + ')')
+}
+
+function showFromTray(reason) {
+  if (!app.isReady()) return
+  clearTimeout(_trayUnloadTimer); _trayUnloadTimer = null
+  if (!mainWindow || mainWindow.isDestroyed()) {
+    if (!_trayUnloaded) return                       // start-up: createWindow has not run yet
+    _trayHidden = false
+    createWindow({ resume: _trayResumePage || 'dashboard' })
+    setTimeout(() => { if (_trayUnloaded) uiReadyFlush() }, 25000).unref()   // a page that never reports ready must not buffer logs for ever
+  } else if (_trayUnloaded) {
+    return                                           // already rebuilding: ready-to-show will show it
+  } else {
+    _trayHidden = false
+    mainWindow.show(); mainWindow.focus()
+  }
+  resumeBackgroundPolling()
+  bgNeedsUpdate()
+  updateTrayMenu()
+  debugLog('[tray] shown (' + reason + ')')
+}
+
+async function tryUnloadMainPage() {
+  _trayUnloadTimer = null
+  if (!_trayHidden || !mainWindow || mainWindow.isDestroyed() || windowShown()) return
+  let ok = _trayBusy === 0
+  if (ok) { try { ok = (await mainWindow.webContents.executeJavaScript('!window.JylliTray || window.JylliTray.canUnload()', true)) !== false } catch { ok = true } }
+  if (!_trayHidden || !mainWindow || mainWindow.isDestroyed()) return
+  if (!ok || _trayBusy > 0) { _trayUnloadTimer = setTimeout(tryUnloadMainPage, TrayNeeds.RETRY_MS); if (_trayUnloadTimer.unref) _trayUnloadTimer.unref(); return }
+  unloadMainPage()
+}
+
+function unloadMainPage() {
+  const w = mainWindow
+  if (!w || w.isDestroyed()) return
+  _trayUnloaded = true
+  w.__trayUnload = true
+  try { if (_ortSession && _ortSession.release) _ortSession.release() } catch {}
+  _ortSession = null; _ortProvider = 'none'; _ortTried = false
+  mainWindow = null
+  try { w.destroy() } catch {}
+  bgNeedsUpdate()
+  updateTrayMenu()
+  debugLog('[tray] page unloaded')
+  setTimeout(trimWorkingSets, 3000).unref()
+}
+
+// One call that hands the pages of every remaining Electron process back to Windows (they are paged in again when touched).
+function trimWorkingSets() {
+  try {
+    const pids = app.getAppMetrics().map(m => m.pid).filter(n => Number.isInteger(n) && n > 0)
+    if (!pids.length) return
+    runPS(`Add-Type -Namespace JT -Name Ws -MemberDefinition '[DllImport("kernel32.dll")] public static extern bool SetProcessWorkingSetSize(System.IntPtr h, System.IntPtr a, System.IntPtr b);'
+foreach ($id in @(${pids.join(',')})) { try { $p = Get-Process -Id $id -EA Stop; [JT.Ws]::SetProcessWorkingSetSize($p.Handle, [IntPtr](-1), [IntPtr](-1)) | Out-Null } catch {} }`, 8000).catch(() => {})
+  } catch {}
+}
+
+/** The rebuilt page is up: replay what was logged while it was gone and put back the live state it would otherwise miss. */
+function uiReadyFlush() {
+  _trayUnloaded = false
+  const wc = mainWindow && !mainWindow.isDestroyed() ? mainWindow.webContents : null
+  if (!wc) return
+  try {
+    for (const p of _uiLogBuf.splice(0)) wc.send('log', p)
+    if (pulseActivePreset) wc.send('pulse-tick', { preset: pulseActivePreset, active: true })
+    if (autoPulseTriggeredPreset) wc.send('game-watcher-event', { event: 'auto-pulse-start', gameId: autoPulseTriggeredPreset, presetId: autoPulseTriggeredPreset })
+    if (activeGameProfile) wc.send('game-watcher-event', { event: 'game-started', gameId: activeGameProfile })
+    if (_systemContext.gameRunning) wc.send('game-detected', { name: _systemContext.gameName, genre: _systemContext.gameGenre })
+  } catch {}
+}
+ipcMain.on('ui-ready', e => { if (mainWindow && !mainWindow.isDestroyed() && e.sender === mainWindow.webContents) uiReadyFlush() })
+ipcMain.on('ui-page-changed', (e, page) => { if (typeof page === 'string' && /^[a-z0-9-]{1,40}$/i.test(page)) _trayResumePage = page })
 
 
 // Session-level tracking (populated by renderer via IPC)
@@ -1114,8 +1305,9 @@ app.whenReady().then(async () => {
   setStartupTask(!!loadSettings().startAtLogin).catch(() => {})
   startLhm()
   startSensorBridge()
-  loadOrtModel().catch(() => {})
+  puBgFlag(false)   // a flag left by a crash would keep the poller sampling
   startContextDetector()
+  setInterval(bgNeedsUpdate, 5000).unref()   // sensors follow what needs them (window shown, a recording session, HUDs, GPU limit guard, ARIA)
   // Auto-snapshot on launch if overdue
   setTimeout(async () => {
     if (!mainWindow || mainWindow.isDestroyed()) return
@@ -1127,7 +1319,7 @@ app.whenReady().then(async () => {
       const now = new Date()
       const msPerDay = 86400000
       if (last && (now - last) < days * msPerDay) return
-      const send = (msg, level) => mainWindow?.webContents.send('log', { msg, level, ts: new Date().toLocaleTimeString() })
+      const send = (msg, level) => sendLog({ msg, level, ts: new Date().toLocaleTimeString() })
       send(`Auto-snapshot (every ${days}d): creating restore point…`, 'head')
       const result = await createRestorePointInternal(send)
       if (result.ok !== false) {
@@ -1199,7 +1391,8 @@ if (process.argv.includes('--perf-log')) {
   app.whenReady().then(() => setInterval(() => {
     try {
       const m = app.getAppMetrics().map(p => ({ type: p.type, cpu: +p.cpu.percentCPUUsage.toFixed(2), memMB: Math.round((p.memory.workingSetSize || 0) / 1024) }))
-      fs.appendFileSync(path.join(app.getPath('userData'), 'perf.log'), JSON.stringify({ t: new Date().toISOString(), procs: m }) + '\n')
+      const tray = { hidden: _trayHidden, unloaded: _trayUnloaded, telemetry: !!(_telemetry && _telemetry.isStarted()), sensor: !!_sensorProcess }
+      fs.appendFileSync(path.join(app.getPath('userData'), 'perf.log'), JSON.stringify({ t: new Date().toISOString(), tray, procs: m }) + '\n')
     } catch {}
   }, 5000))
 }
@@ -1444,7 +1637,7 @@ function saveSettings(data) {
     debugLog(`[Settings] Save failed: ${e.message}`)
     if (Date.now() - _settingsFailAt > 60000) {
       _settingsFailAt = Date.now()
-      try { mainWindow?.webContents.send('log', { msg: 'Settings could not be saved (' + String(e.message).slice(0, 120) + '). Your last change may be lost after a restart.', level: 'err', ts: new Date().toLocaleTimeString() }) } catch {}
+      try { sendLog({ msg: 'Settings could not be saved (' + String(e.message).slice(0, 120) + '). Your last change may be lost after a restart.', level: 'err', ts: new Date().toLocaleTimeString() }) } catch {}
     }
     return false
   }
@@ -1857,7 +2050,7 @@ let _sysInfoInflight = null   // one detection at a time: a second caller waits 
 const sysInfoFile = () => path.join(app.getPath('userData'), 'jt_sysinfo.json')
 ipcMain.handle('get-system-info', (_, opts) => {
   startupTrace('IPC get-system-info handler entered')
-  if (cachedSysInfo && !opts?.refresh && Date.now() - _sysInfoAt < 10 * 60 * 1000) return cachedSysInfo
+  if (cachedSysInfo && !opts?.refresh && (opts?.resume || Date.now() - _sysInfoAt < 10 * 60 * 1000)) return cachedSysInfo   // resume = page rebuilt from the tray: the PC did not change
   if (_sysInfoInflight) { startupTrace('get-system-info: joining the detection already running'); return _sysInfoInflight }
   _sysInfoInflight = runSystemInfo().finally(() => { _sysInfoInflight = null })
   return _sysInfoInflight
@@ -2294,7 +2487,7 @@ ipcMain.handle('run-tweak', async (_, req) => {
   const { id, action } = req || {}
   if (typeof id !== 'string' || typeof action !== 'string') return { ok: false, error: 'invalid_request' }
   const send = (msg, level = 'info') => {
-    mainWindow?.webContents.send('log', { msg, level, ts: new Date().toLocaleTimeString(), source: id })
+    sendLog({ msg, level, ts: new Date().toLocaleTimeString(), source: id })
   }
 
   send(`Running: ${id} [${action}]`, 'head')
@@ -2337,6 +2530,7 @@ function telemetrySvc() {
       isVisible: () => !!mainWindow && !mainWindow.isDestroyed() && mainWindow.isVisible() && !mainWindow.isMinimized(),
       scriptPath: assetPath('lib', 'os-poller.ps1'),
       getSensorValues: () => _sensorValues, sensorRunning: () => !!_sensorSocket, log: debugLog,
+      bgFlagPath: PU_BG_FLAG(), onBg: puBgFromPoller,
     })
   }
   return _telemetry
@@ -2345,6 +2539,7 @@ async function collectMetrics() {
   const t = telemetrySvc()
   t.start()
   if (t.osHealthy()) { _lastMetrics = _hub.legacyMetrics(); return }
+  if (Date.now() - _telemetryWokeAt < 10000) return   // the poller was just started: wait for it instead of spawning three PowerShells
   return collectMetricsLegacy()
 }
 async function collectMetricsLegacy() {
@@ -2508,6 +2703,7 @@ ipcMain.handle('get-metrics', async (e) => {
     try { if (telemetrySvc().osHealthy()) return _hub.legacyMetrics() } catch {}
     return _lastMetrics ?? {}
   }
+  if (!uiWanted()) return _lastMetrics ?? {}   // a page in the tray must not restart the polling that hiding it stopped
   if (!_lastMetrics) await collectMetrics()
   if (!_metricsInterval) {
     _metricsInterval = setInterval(collectMetrics, 3000)
@@ -2518,12 +2714,10 @@ ipcMain.handle('get-metrics', async (e) => {
 function pauseBackgroundPolling() {
   if (_metricsInterval) { clearInterval(_metricsInterval); _metricsInterval = null }
   stopContextDetector()
-  if (loadSettings().lowResourceMode) {
-    // Throttle to 30s intervals instead of fully stopping
-    _metricsInterval = setInterval(collectMetrics, 30000)
-    _contextDetectorTimer = setInterval(_updateSystemContext, 30000)
-    if (_thermalTimer) { clearInterval(_thermalTimer); _thermalTimer = null }
-  }
+  // The detector keeps going in the tray (hide-on-game, the CPU/GPU/Power game hooks) but as one tasklist, see _updateSystemContext.
+  const low = !!loadSettings().lowResourceMode
+  _contextDetectorTimer = setInterval(_updateSystemContext, low ? 30000 : 10000)
+  if (low && _thermalTimer) { clearInterval(_thermalTimer); _thermalTimer = null }
 }
 
 function resumeBackgroundPolling() {
@@ -2567,7 +2761,7 @@ async function guardRestorePoint(id, send) {
 }
 
 ipcMain.handle('create-restore-point', async (_, desc) => {
-  const send = (msg, level) => mainWindow?.webContents.send('log', { msg, level, ts: new Date().toLocaleTimeString() })
+  const send = (msg, level) => sendLog({ msg, level, ts: new Date().toLocaleTimeString() })
   send('Creating System Restore Point…', 'head')
   return createRestorePointInternal(send, desc || 'JylliTool_Restore')
 })
@@ -2611,7 +2805,7 @@ ipcMain.handle('check-is-admin', async () => {
 })
 
 ipcMain.handle('delete-restore-point', async (_, seq) => {
-  const send = (msg, level) => mainWindow?.webContents.send('log', { msg, level, ts: new Date().toLocaleTimeString() })
+  const send = (msg, level) => sendLog({ msg, level, ts: new Date().toLocaleTimeString() })
   const n = assertPositiveInt(seq, 'seq')
   send(`Deleting restore point #${n}…`, 'head')
 
@@ -2706,7 +2900,7 @@ $apps | ConvertTo-Json -Depth 2
 })
 
 ipcMain.handle('uninstall-win32-apps', async (_, items) => {
-  const send = (msg, level) => mainWindow?.webContents.send('log', { msg, level, ts: new Date().toLocaleTimeString() })
+  const send = (msg, level) => sendLog({ msg, level, ts: new Date().toLocaleTimeString() })
   if (!Array.isArray(items) || items.length === 0 || items.length > 500) return []
   send(`Uninstalling ${items.length} app(s)…`, 'head')
   const results = []
@@ -2781,7 +2975,7 @@ ipcMain.handle('get-unused-devices', async () => {
 })
 
 ipcMain.handle('remove-devices', async (_, ids) => {
-  const send = (msg, level) => mainWindow?.webContents.send('log', { msg, level, ts: new Date().toLocaleTimeString() })
+  const send = (msg, level) => sendLog({ msg, level, ts: new Date().toLocaleTimeString() })
   if (!Array.isArray(ids) || ids.length > 500) return { ok: false }
   let _done = 0
   const progress = ok => { _done++; mainWindow?.webContents.send('device-remove-progress', { current: _done, total: ids.length, ok }) }
@@ -3062,7 +3256,7 @@ function journalSvc() {
 async function invokeTweak(id, action = 'apply', send, meta) {
   retireTweaks()
   if (!hasTweak(id, action)) throw new Error(`Unknown tweak or action: ${String(id).slice(0, 60)}/${String(action).slice(0, 12)}`)
-  const log = send || ((msg, level = 'info') => mainWindow?.webContents.send('log', { msg, level, ts: new Date().toLocaleTimeString(), source: id }))
+  const log = send || ((msg, level = 'info') => sendLog({ msg, level, ts: new Date().toLocaleTimeString(), source: id }))
   return journalSvc().invokeTweak(id, action, log, meta)
 }
 
@@ -3099,7 +3293,7 @@ ipcMain.handle('gpu-power-limit-reset', async () => {
 })
 // Thermal guard + crash recovery. Both only act when the app itself changed the limit (the sentinel file exists).
 app.whenReady().then(() => {
-  setTimeout(() => powerLimitSvc().recover().then(r => { if (r.recovered) mainWindow?.webContents.send('log', { msg: 'GPU power limit was restored to its original value after the last session ended unexpectedly.', level: 'warn', ts: new Date().toLocaleTimeString() }) }).catch(() => {}), 8000)
+  setTimeout(() => powerLimitSvc().recover().then(r => { if (r.recovered) sendLog({ msg: 'GPU power limit was restored to its original value after the last session ended unexpectedly.', level: 'warn', ts: new Date().toLocaleTimeString() }) }).catch(() => {}), 8000)
   setInterval(() => {
     if (_plDefaultW == null || !fs.existsSync(PL_SENTINEL())) return
     powerLimitSvc().guard(_hub.value('gpu0.temp.core'), _hub.value('gpu0.power.limit'), _plDefaultW).catch(() => {})
@@ -3696,7 +3890,7 @@ async function runAutoOptiInner(sysInfo, batchId = null) {
   try { return await runAutoOptiBody(sysInfo, batchId) } finally { discordTaskEnd(t) }
 }
 async function runAutoOptiBody(sysInfo, batchId = null) {
-  const send = (msg, level) => mainWindow?.webContents.send('log', { msg, level, ts: new Date().toLocaleTimeString() })
+  const send = (msg, level) => sendLog({ msg, level, ts: new Date().toLocaleTimeString() })
   const progress = (step, total, label, id = '', status = 'running') => mainWindow?.webContents.send('auto-opti-progress', { step, total, label, id, status })
 
   const runMode = sysInfo?.runMode || 'smart'
@@ -8156,7 +8350,7 @@ Write-Output $n`, 20000)
 // ─── Fix IPC handler ──────────────────────────────────────────────────────────
 ipcMain.handle('run-fix', async (_, fixId) => {
   const send = (msg, level = 'info') => {
-    mainWindow?.webContents.send('log', { msg, level, ts: new Date().toLocaleTimeString() })
+    sendLog({ msg, level, ts: new Date().toLocaleTimeString() })
   }
   send(`Running fix: ${fixId}`, 'head')
   try {
@@ -8768,7 +8962,7 @@ try {
   autoUpdater.autoDownload = false
   autoUpdater.autoInstallOnAppQuit = true
 
-  const sendLog = (msg) => mainWindow?.webContents.send('log', { msg, level: 'info', ts: new Date().toLocaleTimeString() })
+  const sendLog = (msg) => sendLog({ msg, level: 'info', ts: new Date().toLocaleTimeString() })
 
   autoUpdater.on('checking-for-update',  ()     => {}) // silent — no need to show in output log
   autoUpdater.on('update-available',     (info) => { sendLog(`Update available: v${info.version} — click "Update" to download`); mainWindow?.webContents.send('update-available', info) })
@@ -9708,7 +9902,7 @@ if (-not (Get-ItemProperty -Path '${codePerf}' -EA SilentlyContinue | Select-Obj
 
 /** Puts one old change back (journal undo first, then the old restore code). Firefox: only user.js files this app wrote (header check), never the user's own. */
 async function appsLegacyRestore(id) {
-  const send = (msg, level) => mainWindow?.webContents.send('log', { msg, level, ts: new Date().toLocaleTimeString() })
+  const send = (msg, level) => sendLog({ msg, level, ts: new Date().toLocaleTimeString() })
   const t = APP_OPTIMIZER_TWEAKS[id]
   if (!t || typeof t.restore !== 'function') return false
   send('Apps: putting back ' + id, 'head')
@@ -9807,7 +10001,7 @@ const GAME_EXE_MAP = {
 
 async function applyGameTweakImpl({ gameId, action, installPath }) {
   if (!requiresPremium('apply-game-tweak')) return { ok: false, reason: 'premium_required' }
-  const send = (msg, level) => mainWindow?.webContents.send('log', { msg, level, ts: new Date().toLocaleTimeString() })
+  const send = (msg, level) => sendLog({ msg, level, ts: new Date().toLocaleTimeString() })
   const exes = GAME_EXE_MAP[gameId] || []
   const ifeoBase = 'HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options'
   const mmcssBase = 'HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Multimedia\\SystemProfile'
@@ -10440,13 +10634,13 @@ async function deactivatePulse(send) {
 
 ipcMain.handle('pulse-start', async (_, { presetId, killBg } = {}) => {
   if (!requiresPremium('pulse-start')) return { ok: false, reason: 'premium_required' }
-  const send = (msg, level) => mainWindow?.webContents.send('log', { msg, level, ts: new Date().toLocaleTimeString() })
+  const send = (msg, level) => sendLog({ msg, level, ts: new Date().toLocaleTimeString() })
   return activatePulse(presetId, killBg, send)
 })
 
 ipcMain.handle('pulse-stop', async () => {
   if (!requiresPremium('pulse-stop')) return { ok: false, reason: 'premium_required' }
-  const send = (msg, level) => mainWindow?.webContents.send('log', { msg, level, ts: new Date().toLocaleTimeString() })
+  const send = (msg, level) => sendLog({ msg, level, ts: new Date().toLocaleTimeString() })
   autoPulseTriggeredPreset = null  // clear auto-pulse state on manual stop too
   return deactivatePulse(send)
 })
@@ -10747,7 +10941,7 @@ ipcMain.handle('run-ping-tests-v2', async (_, opts = {}) => {
   const mode = opts.mode === 'deep' ? 'deep' : 'quick'
   const pingCount = mode === 'deep' ? 30 : 10
   const doBufferbloat = !!opts.bufferbloat
-  mainWindow?.webContents.send('log', { msg: `◆ Ping v2: ${mode} mode (${pingCount} pings), bufferbloat=${doBufferbloat}`, level: 'head', ts: new Date().toLocaleTimeString() })
+  sendLog({ msg: `◆ Ping v2: ${mode} mode (${pingCount} pings), bufferbloat=${doBufferbloat}`, level: 'head', ts: new Date().toLocaleTimeString() })
 
   const targets = [
     { name: 'Cloudflare DNS',    host: '1.1.1.1',                    category: 'DNS' },
@@ -10898,7 +11092,7 @@ ipcMain.handle('benchmark-dns', async () => {
 
 // ─── Game Detection ───────────────────────────────────────────────────────────
 ipcMain.handle('detect-games', async () => {
-  const send = (msg, level) => mainWindow?.webContents.send('log', { msg, level, ts: new Date().toLocaleTimeString() })
+  const send = (msg, level) => sendLog({ msg, level, ts: new Date().toLocaleTimeString() })
   send('Scanning for installed games…', 'info')
 
   const GAME_DEFINITIONS = [
@@ -11287,7 +11481,7 @@ let activeGameProfileTweaksApplied = false  // true when per-game tweak profile 
 ipcMain.handle('start-game-watcher', async () => {
   if (gameWatcherInterval) return { ok: true, status: 'already running' }
 
-  mainWindow?.webContents.send('log', { msg: '◆ Game Watcher started — monitoring for game launches…', level: 'ok', ts: new Date().toLocaleTimeString() })
+  sendLog({ msg: '◆ Game Watcher started — monitoring for game launches…', level: 'ok', ts: new Date().toLocaleTimeString() })
 
   let _gwBusy = false   // a slow tasklist or restore must never overlap the next tick
   gameWatcherInterval = setInterval(async () => {
@@ -11295,9 +11489,9 @@ ipcMain.handle('start-game-watcher', async () => {
     _gwBusy = true
     try {
     if (competeActive()) return   // Competitive Mode owns this game's session: no Auto-Pulse, Game Shield or profile on top of it
-    const r = await runCmd('tasklist /fo csv /nh')
-    if (!r.ok || !r.out) return
-    const running = new Set(r.out.split('\n').map(l => l.split(',')[0]?.replace(/"/g, '').replace(/\.exe$/i, '').trim().toLowerCase()))
+    const snap = await processSnapshot(2500)
+    if (!snap.ok) return
+    const running = snap.names
 
     // Detect by matching directly against PULSE_PRESETS exe names
     let detectedGame = null
@@ -11314,6 +11508,7 @@ ipcMain.handle('start-game-watcher', async () => {
     if (detectedGame && activeGameProfile !== detectedGame) {
       // New game detected — apply tweaks
       activeGameProfile = detectedGame
+      _bgWakeUntil = Date.now() + 20000; bgNeedsUpdate()   // sensors warm up while PresentMon and the session start
       const presetName = PULSE_PRESETS[detectedGame].name
       mainWindow?.webContents.send('game-watcher-event', { event: 'game-started', gameId: detectedGame })
       gamesLearnRunning()
@@ -11327,7 +11522,7 @@ ipcMain.handle('start-game-watcher', async () => {
           .then(() => { if (activeGameProfile) return updateGuardSession(true) })
           .catch(() => {})
       }
-      mainWindow?.webContents.send('log', { msg: `🎮 Game detected: ${presetName} — applying optimizations…`, level: 'head', ts: new Date().toLocaleTimeString() })
+      sendLog({ msg: `🎮 Game detected: ${presetName} — applying optimizations…`, level: 'head', ts: new Date().toLocaleTimeString() })
 
       presenceRefresh()   // Discord shows the game
 
@@ -11353,7 +11548,7 @@ ipcMain.handle('start-game-watcher', async () => {
       }
       await runPS(`Set-ItemProperty -Path "${mmcssBase}" -Name SystemResponsiveness -Value 10 -Force`)
       await runPS(`Set-ItemProperty -Path "${mmcssBase}\\Tasks\\Games" -Name "GPU Priority" -Value 8 -Force`)
-      mainWindow?.webContents.send('log', { msg: `✓ Auto-profile applied for ${presetName}`, level: 'ok', ts: new Date().toLocaleTimeString() })
+      sendLog({ msg: `✓ Auto-profile applied for ${presetName}`, level: 'ok', ts: new Date().toLocaleTimeString() })
 
       // Per-game tweak profile: apply if one is assigned to this game
       const curSettings = loadSettings()
@@ -11362,7 +11557,7 @@ ipcMain.handle('start-game-watcher', async () => {
         const profiles = loadProfiles()
         const profile = profiles[assignedProfile]
         if (profile) {
-          mainWindow?.webContents.send('log', { msg: `  Applying tweak profile: ${assignedProfile}`, level: 'info', ts: new Date().toLocaleTimeString() })
+          sendLog({ msg: `  Applying tweak profile: ${assignedProfile}`, level: 'info', ts: new Date().toLocaleTimeString() })
           for (const [k, v] of Object.entries(profile.tweaks)) {
             if (v === 'applied') {
               const tweakId = k.replace(/^tweak_/, '')
@@ -11372,7 +11567,7 @@ ipcMain.handle('start-game-watcher', async () => {
             }
           }
           activeGameProfileTweaksApplied = true
-          mainWindow?.webContents.send('log', { msg: `  ✓ Tweak profile "${assignedProfile}" applied`, level: 'ok', ts: new Date().toLocaleTimeString() })
+          sendLog({ msg: `  ✓ Tweak profile "${assignedProfile}" applied`, level: 'ok', ts: new Date().toLocaleTimeString() })
           mainWindow?.webContents.send('game-watcher-event', { event: 'profile-applied', gameId: detectedGame, profileName: assignedProfile })
         }
       }
@@ -11400,19 +11595,19 @@ ipcMain.handle('start-game-watcher', async () => {
         } catch {}
         _pmSessionProc = spawnPresentMon(null, gamePid)
         if (_pmSessionProc) _pmSessionProc._pulseTap = true
-        if (_pmSessionProc) sessionRecStart(detectedGame)
+        if (_pmSessionProc) { sessionRecStart(detectedGame); bgNeedsUpdate() }
         if (_pmSessionProc) {
           _pmSessionFile = null
           _pmSessionProc.once('exit', (code) => {
-            if (code !== 0 && code !== null) mainWindow?.webContents.send('log', { msg: `⚠ PresentMon exited early (code ${code}) — FPS data unavailable`, level: 'warn', ts: new Date().toLocaleTimeString() })
+            if (code !== 0 && code !== null) sendLog({ msg: `⚠ PresentMon exited early (code ${code}) — FPS data unavailable`, level: 'warn', ts: new Date().toLocaleTimeString() })
           })
           if (_ariaEnabled) ariaFpsStart()
-          mainWindow?.webContents.send('log', { msg: `◆ PresentMon session started${gamePid ? ` (PID ${gamePid})` : ' (all processes)'}`, level: 'info', ts: new Date().toLocaleTimeString() })
+          sendLog({ msg: `◆ PresentMon session started${gamePid ? ` (PID ${gamePid})` : ' (all processes)'}`, level: 'info', ts: new Date().toLocaleTimeString() })
         } else {
-          mainWindow?.webContents.send('log', { msg: '⚠ PresentMon failed to spawn — FPS tracking disabled', level: 'warn', ts: new Date().toLocaleTimeString() })
+          sendLog({ msg: '⚠ PresentMon failed to spawn — FPS tracking disabled', level: 'warn', ts: new Date().toLocaleTimeString() })
         }
       } else {
-        mainWindow?.webContents.send('log', { msg: '⚠ PresentMon unavailable — FPS tracking disabled', level: 'warn', ts: new Date().toLocaleTimeString() })
+        sendLog({ msg: '⚠ PresentMon unavailable — FPS tracking disabled', level: 'warn', ts: new Date().toLocaleTimeString() })
       }
 
       // A boost started before the game: its priority is applied now, and proven
@@ -11422,7 +11617,7 @@ ipcMain.handle('start-game-watcher', async () => {
       const currentSettings = loadSettings()
       if (currentSettings.autoPulseEnabled && !pulseActivePreset) {
         autoPulseTriggeredPreset = detectedGame
-        const send = (msg, level) => mainWindow?.webContents.send('log', { msg, level, ts: new Date().toLocaleTimeString() })
+        const send = (msg, level) => sendLog({ msg, level, ts: new Date().toLocaleTimeString() })
         send(`◆ Auto-Pulse: activating for ${presetName}…`, 'head')
         mainWindow?.webContents.send('game-watcher-event', { event: 'auto-pulse-start', gameId: detectedGame, presetId: detectedGame })
         activatePulse(autoPulseOverrideFor(detectedGame) || detectedGame, false, send).catch(() => { autoPulseTriggeredPreset = null })
@@ -11438,7 +11633,7 @@ ipcMain.handle('start-game-watcher', async () => {
       appsSvc().gameEnd().catch(() => {})
       gameShieldDeactivate().catch(() => {})
       updateGuardSession(false).catch(() => {})
-      mainWindow?.webContents.send('log', { msg: `Game closed: ${prev} — restoring defaults…`, level: 'info', ts: new Date().toLocaleTimeString() })
+      sendLog({ msg: `Game closed: ${prev} — restoring defaults…`, level: 'info', ts: new Date().toLocaleTimeString() })
 
       // Stop rolling FPS counter and hide display before PresentMon shuts down
       ariaFpsStop()
@@ -11448,14 +11643,14 @@ ipcMain.handle('start-game-watcher', async () => {
       if (_pmSessionProc) {
         stopPresentMon(_pmSessionProc); _pmSessionProc = null
         await new Promise(r => setTimeout(r, 400))
-        sessionRecFinish()
-        const sessionStats = parsePresentMonCsvFromBuffer(_pmFrameBuffer)
+        sessionRecFinish(); _bgWakeUntil = 0; bgNeedsUpdate()
+        const sessionStats = _pmFrames.stats()
         if (sessionStats) {
           _sessionFps = { avgFps: Math.round(1000 / sessionStats.mean), low1Fps: Math.round(1000 / sessionStats.p1Low) }
           mainWindow?.webContents.send('game-frame-session', { game: prev, stats: sessionStats })
-          mainWindow?.webContents.send('log', { msg: `◆ Frame session — avg: ${Math.round(1000 / sessionStats.mean)} FPS  1%Low: ${Math.round(1000 / sessionStats.p1Low)} FPS  0.1%Low: ${Math.round(1000 / sessionStats.p01Low)} FPS`, level: 'ok', ts: new Date().toLocaleTimeString() })
+          sendLog({ msg: `◆ Frame session — avg: ${Math.round(1000 / sessionStats.mean)} FPS  1%Low: ${Math.round(1000 / sessionStats.p1Low)} FPS  0.1%Low: ${Math.round(1000 / sessionStats.p01Low)} FPS`, level: 'ok', ts: new Date().toLocaleTimeString() })
         }
-        _pmFrameBuffer = []
+        _pmFrames.reset()
       }
 
       // ARIA: build session summary and fire to renderer
@@ -11472,7 +11667,7 @@ ipcMain.handle('start-game-watcher', async () => {
           fps: _sessionFps,
         }
         mainWindow?.webContents.send('aria-session-summary', sessionSummary)
-        mainWindow?.webContents.send('log', { msg: `◆ ARIA session summary: ${Object.keys(anomalyCounts).length} metrics anomalous over ${Math.round(durationMs/60000)} min`, level: 'info', ts: new Date().toLocaleTimeString() })
+        sendLog({ msg: `◆ ARIA session summary: ${Object.keys(anomalyCounts).length} metrics anomalous over ${Math.round(durationMs/60000)} min`, level: 'info', ts: new Date().toLocaleTimeString() })
         _ariaSessionAnomalies = []
         _ariaSessionStart = null
         _ariaSessionPeaks = { cpu: 0, gpu: 0, ram: 0, cpuTemp: 0 }
@@ -11480,7 +11675,7 @@ ipcMain.handle('start-game-watcher', async () => {
 
       presenceRefresh()   // game closed (activeGameProfile is already null)
 
-      const wSend = (msg, level) => mainWindow?.webContents.send('log', { msg, level, ts: new Date().toLocaleTimeString() })
+      const wSend = (msg, level) => sendLog({ msg, level, ts: new Date().toLocaleTimeString() })
 
       if (hadProfileTweaks && !pulseActivePreset) {
         // Per-game tweak profile was applied without Pulse — restore the full stack
@@ -11492,12 +11687,12 @@ ipcMain.handle('start-game-watcher', async () => {
         if (snap && Number.isInteger(snap.value)) await runPS(`Set-ItemProperty -Path "${mmcssBase}" -Name SystemResponsiveness -Value ${snap.value} -Force`)
         snapshots.remove('watcher-mmcss')
       }
-      mainWindow?.webContents.send('log', { msg: '✓ Defaults restored.', level: 'ok', ts: new Date().toLocaleTimeString() })
+      sendLog({ msg: '✓ Defaults restored.', level: 'ok', ts: new Date().toLocaleTimeString() })
 
       // Auto-Pulse: deactivate if it was auto-triggered
       // Also end a boost the user started by hand for this same game, so the tab never keeps saying "End boost" after the game is gone.
       if (autoPulseTriggeredPreset || (pulseActivePreset && pulseActivePreset === prev)) {
-        const send = (msg, level) => mainWindow?.webContents.send('log', { msg, level, ts: new Date().toLocaleTimeString() })
+        const send = (msg, level) => sendLog({ msg, level, ts: new Date().toLocaleTimeString() })
         send(`◆ ${autoPulseTriggeredPreset ? 'Auto-Pulse' : 'Pulse'}: deactivating (${prev} closed)`, 'info')
         autoPulseTriggeredPreset = null
         mainWindow?.webContents.send('game-watcher-event', { event: 'auto-pulse-stop', gameId: prev })
@@ -11505,7 +11700,7 @@ ipcMain.handle('start-game-watcher', async () => {
       }
     }
     } catch (e) {
-      mainWindow?.webContents.send('log', { msg: `Game watcher error: ${e.message}`, level: 'err', ts: new Date().toLocaleTimeString() })
+      sendLog({ msg: `Game watcher error: ${e.message}`, level: 'err', ts: new Date().toLocaleTimeString() })
     } finally { _gwBusy = false }
   }, 5000)
 
@@ -11520,10 +11715,10 @@ ipcMain.handle('stop-game-watcher', async () => {
   // If auto-pulse was active, deactivate it
   if (autoPulseTriggeredPreset) {
     autoPulseTriggeredPreset = null
-    const send = (msg, level) => mainWindow?.webContents.send('log', { msg, level, ts: new Date().toLocaleTimeString() })
+    const send = (msg, level) => sendLog({ msg, level, ts: new Date().toLocaleTimeString() })
     deactivatePulse(send).catch(() => {})
   }
-  mainWindow?.webContents.send('log', { msg: 'Game Watcher stopped.', level: 'info', ts: new Date().toLocaleTimeString() })
+  sendLog({ msg: 'Game Watcher stopped.', level: 'info', ts: new Date().toLocaleTimeString() })
   return { ok: true }
 })
 
@@ -11557,7 +11752,7 @@ ipcMain.handle('clear-changelog', () => saveChangelog([]) ? { ok: true } : { ok:
 // ─── Tweak Scheduler ─────────────────────────────────────────────────────────
 ipcMain.handle('schedule-tweak', async (_, { taskName, schedule, action, time, dayOfWeek } = {}) => {
   if (!requiresPremium('schedule-tweak')) return { ok: false, reason: 'premium_required' }
-  const send = (msg, level) => mainWindow?.webContents.send('log', { msg, level, ts: new Date().toLocaleTimeString() })
+  const send = (msg, level) => sendLog({ msg, level, ts: new Date().toLocaleTimeString() })
 
   // The task runs as SYSTEM, whose %TEMP%, %LOCALAPPDATA% and %USERPROFILE% are not the user's: the user's own folders are written into the command here,
   // as quoted literals, when the task is created. (Under SYSTEM these actions used to clean the wrong profile and do nothing.)
@@ -12427,7 +12622,7 @@ let _puBgTimer = null
 let _puGameExe = null
 const PU_DEBRIEF_DIR = () => path.join(app.getPath('userData'), 'pulse-debriefs')
 const PU_MAX_DEBRIEFS = 50
-const puLog = (msg, level) => mainWindow?.webContents.send('log', { msg, level, ts: new Date().toLocaleTimeString() })
+const puLog = (msg, level) => sendLog({ msg, level, ts: new Date().toLocaleTimeString() })
 
 function puDebriefs() {
   const file = id => path.join(PU_DEBRIEF_DIR(), id + '.json')
@@ -12450,7 +12645,7 @@ function pulseSvc() {
   if (!_pulse2) {
     _pulse2 = Pulse2.create({
       hub: _hub,
-      send: (id, ch, p) => { const wc = puContents.fromId(id); if (!wc || wc.isDestroyed()) return false; wc.send(ch, p); return true },
+      send: (id, ch, p) => { const wc = puContents.fromId(id); if (!wc || wc.isDestroyed()) return false; if (mainWindow && wc === mainWindow.webContents && !windowShown()) return true; wc.send(ch, p); return true },
       state: { read: () => cuRead('jt_pulse.json', null), write: v => cuWrite('jt_pulse.json', v) },
       sessions: { list: () => SessionRec.list(SESSIONS_DIR(), fs, path), get: id => SessionRec.load(SESSIONS_DIR(), id, fs, path) },
       debriefs: puDebriefs(),
@@ -12502,15 +12697,34 @@ function puBgTop(prev, now, exclude) {
   _hub.ingest('pulse', { 'bg.cpu': best.cpu }, { rateHz: 0.2 })
   return best
 }
+// The telemetry poller (one long-lived PowerShell) reports the busiest processes every 10 s while this flag file exists, so a recording
+// session no longer spawns a PowerShell per sample on top of the game. The spawn below is only the fallback when the poller is not delivering.
+const PU_BG_FLAG = () => path.join(app.getPath('userData'), 'pulse-bg.flag')
+let _puBgPollerAt = 0
+function puBgFlag(on) { try { if (on) fs.writeFileSync(PU_BG_FLAG(), '1'); else fs.unlinkSync(PU_BG_FLAG()) } catch {} }
+function puBgFromPoller(rows) {
+  const exclude = _puGameExe ? _puGameExe.toLowerCase() : null
+  _puBgPollerAt = Date.now()
+  for (const r of Array.isArray(rows) ? rows : []) {
+    const name = String(r && r.n || '')
+    if (!name || ['Idle', 'System', 'Memory Compression', 'Registry'].includes(name)) continue
+    if (exclude && name.toLowerCase().startsWith(exclude)) continue
+    _puBg = { name, cpu: Number(r.c) || 0 }
+    _hub.ingest('pulse', { 'bg.cpu': _puBg.cpu }, { rateHz: 0.2 })
+    return
+  }
+}
 function puBgEnsure() {
+  puBgFlag(true)
   if (_puBgTimer) return
+  _puBgPollerAt = Date.now()   // grace: the poller needs a moment to deliver its first sample
   _puBgTimer = setInterval(() => {
     const need = _pulse2 && (_pulse2.subscribers > 0 || (_sessionRec && _sessionRec.active))
-    if (!need) { clearInterval(_puBgTimer); _puBgTimer = null; return }
+    if (!need) { clearInterval(_puBgTimer); _puBgTimer = null; puBgFlag(false); return }
+    if (Date.now() - _puBgPollerAt < 25000) return   // the poller delivers
     puBgOnce().catch(() => {})
   }, 10000)
   if (_puBgTimer.unref) _puBgTimer.unref()
-  puBgOnce().catch(() => {})
 }
 
 // One probe of the PC for the pre-flight checklist. Anything that cannot be read is null (shown as "not measured").
@@ -13331,17 +13545,16 @@ ipcMain.handle('latency-budget-start', async () => {
   }
   if (_latTimer) clearInterval(_latTimer)
   _latTimer = setInterval(() => {
-    if (_pmFrameBuffer.length < 3) return
+    const _pmRows = _pmFrames.tailRows(ARIA_FPS_TAIL_LINES)
+    if (_pmRows.length < 3) return
     try {
-      const header = _pmFrameBuffer[0].split(',').map(h => h.trim())
+      const header = _pmRows[0].split(',').map(h => h.trim())
       const idxBetween  = header.findIndex(h => /MsBetweenPresents/i.test(h))
       const idxInApi    = header.findIndex(h => /MsInPresentAPI/i.test(h))
       const idxRender   = header.findIndex(h => /MsUntilRenderComplete/i.test(h))
       const idxDisplayed= header.findIndex(h => /MsUntilDisplayed/i.test(h))
       if (idxBetween === -1) return
-      const tail = _pmFrameBuffer.length > ARIA_FPS_TAIL_LINES + 1
-        ? _pmFrameBuffer.slice(_pmFrameBuffer.length - ARIA_FPS_TAIL_LINES)
-        : _pmFrameBuffer.slice(1)
+      const tail = _pmRows.slice(1)
       const frames = tail.map(row => {
         const cols = row.split(',')
         return {
@@ -13432,20 +13645,24 @@ function saveHistory() {
   } catch {}
 }
 
+// CPU and RAM for the 30-day graph come straight from Node (os.cpus deltas = the average load over the last minute, os.freemem): the sampler
+// used to start a PowerShell + two CIM queries every minute, which the tray cannot afford.
+let _histCpuPrev = null
+function histCpuPct() {
+  const cpus = require('os').cpus()
+  let idle = 0, total = 0
+  for (const c of cpus) { const t = c.times; idle += t.idle; total += t.user + t.nice + t.sys + t.idle + t.irq }
+  const prev = _histCpuPrev; _histCpuPrev = { idle, total }
+  if (!prev || total <= prev.total) return null
+  return Math.round((1 - (idle - prev.idle) / (total - prev.total)) * 1000) / 10
+}
 async function takeSample() {
   try {
-    const script = `
-$cpu = (Get-CimInstance Win32_Processor | Measure-Object -Property LoadPercentage -Average).Average
-$os  = Get-CimInstance Win32_OperatingSystem
-$ramPct = [math]::Round(($os.TotalVisibleMemorySize - $os.FreePhysicalMemory) / $os.TotalVisibleMemorySize * 100)
-Write-Output "CPU=$cpu"
-Write-Output "RAM=$ramPct"
-`
-    const r = await _runPSRaw(script, 15000)
-    if (!r.ok) return
-    const get = (k) => parseFloat(r.out.match(new RegExp(k + '=([\\d.]+)'))?.[1] || '0')
-    const sample = { ts: Date.now(), cpu: get('CPU'), ram: get('RAM') }
-    _historyData.push(sample)
+    const os = require('os')
+    const cpu = histCpuPct()
+    if (cpu == null) return   // first call only primes the counters
+    const ram = Math.round((1 - os.freemem() / os.totalmem()) * 100)
+    _historyData.push({ ts: Date.now(), cpu, ram })
     if (_historyData.length > HISTORY_MAX_POINTS) {
       _historyData = _historyData.slice(_historyData.length - HISTORY_MAX_POINTS)
     }
@@ -13491,8 +13708,7 @@ const ARIA_FPS_TAIL_LINES  = 400  // ~5-7s of frames at 60fps
 // ─── PresentMon frame time tracking ─────────────────────────────────────────
 let _pmSessionProc      = null  // persistent PresentMon process during a game session
 let _pmSessionFile      = null  // CSV output path for the current session
-let _pmFrameBuffer      = []    // rolling CSV rows from stdout; [0] = header, [1..N] = data rows
-const PM_FRAME_BUF_MAX  = 100000  // ~11 min at 150fps; full session in memory
+const _pmFrames          = createFrames()   // frame times (ring of 100k = ~11 min at 150 fps) + the last 400 raw rows; lib/pm-frames.js
 let _pmTweakProc        = null  // per-tweak PresentMon process (started on aria-before-tweak)
 let _pmTweakFile        = null  // CSV output path for the current tweak measurement
 
@@ -13572,29 +13788,19 @@ function spawnPresentMon(outputFile, gamePid) {
   if (gamePid) args.push('--process_id', String(gamePid), '--terminate_on_proc_exit')
   try {
     const proc = require('child_process').spawn(PRESENTMON_EXE, args, { windowsHide: true, stdio: ['ignore', 'pipe', 'ignore'], detached: false })
-    _pmFrameBuffer = []
-    let _pmHeader = null
+    _pmFrames.reset()
     let _linePartial = ''
     proc.stdout.on('data', chunk => {
       const text = _linePartial + chunk.toString('utf8')
       const parts = text.split('\n')
       _linePartial = parts.pop()
       for (const line of parts) {
-        const t = line.trim()
-        if (!t) continue
-        if (!_pmHeader) {
-          _pmHeader = t
-          proc._msIdx = t.split(',').map(h => h.trim()).findIndex(h => /MsBetweenPresents|msFrameTime|msBetweenPresents/i.test(h))
-          proc._modeIdx = t.split(',').map(h => h.trim()).findIndex(h => /^PresentMode$/i.test(h))   // how frames reach the screen (flip / composed): measured, shown in the FiveM session view
-          _pmFrameBuffer.push(t)
-          continue
+        // O(1) per frame: the ring keeps the frame time, the present mode (flip / composed: shown in the FiveM session view) and a short raw tail
+        const v = _pmFrames.pushLine(line)
+        if (v > 0 && (proc._pulseTap || (_sessionRec && _sessionRec.active))) {
+          if (_sessionRec && _sessionRec.active) { _sessionRec.onFrame(v); if (_pmFrames.modeIdx >= 0) _sessionRec.onPresentMode(_pmFrames.lastMode) }
+          if (proc._pulseTap && _pulse2) _pulse2.onFrame(v)
         }
-        _pmFrameBuffer.push(t)
-        if (proc._msIdx >= 0 && (proc._pulseTap || (_sessionRec && _sessionRec.active))) {
-          const cols = t.split(','), v = parseFloat(cols[proc._msIdx])
-          if (v > 0) { if (_sessionRec && _sessionRec.active) { _sessionRec.onFrame(v); if (proc._modeIdx >= 0) _sessionRec.onPresentMode(cols[proc._modeIdx]) }; if (proc._pulseTap && _pulse2) _pulse2.onFrame(v) }
-        }
-        if (_pmFrameBuffer.length > PM_FRAME_BUF_MAX + 1) _pmFrameBuffer.splice(1, 1)
       }
     })
     return proc
@@ -13630,6 +13836,7 @@ function ariaStat(arr) {
 
 // Collect a lightweight metrics snapshot (no PowerShell — uses last known values)
 function ariaSnapshot() {
+  try { if (_telemetry && _telemetry.osHealthy()) _lastMetrics = _hub.legacyMetrics() } catch {}
   if (!_lastMetrics) return null
   return {
     ts:      Date.now(),
@@ -13705,7 +13912,7 @@ let _fpsHudWindow = null
 
 function ariaFpsTick() {
   if (!_ariaEnabled || !activeGameProfile) return
-  const result = parsePresentMonBuffer(_pmFrameBuffer, ARIA_FPS_TAIL_LINES)
+  const result = parsePresentMonBuffer(_pmFrames.tailRows(ARIA_FPS_TAIL_LINES), ARIA_FPS_TAIL_LINES)
   if (result) {
     mainWindow?.webContents.send('aria-fps-tick', result); sendToPulse('aria-fps-tick', result)
     _fpsHudWindow?.webContents.send('aria-fps-tick', result)
@@ -13948,7 +14155,7 @@ async function setUpdateGuard(on) {
   }
   // Keep the snapshot when the restore did not stick: the next start retries it (see the startup check) instead of leaving Windows Update off.
   if (restored) snapshots.remove('update-guard')
-  else { debugLog('[update-guard] could not restore wuauserv to ' + prev); mainWindow?.webContents.send('log', { msg: 'Windows Update could not be switched back on. It will be retried when Jylli Tool starts; you can also set the Windows Update service to ' + prev + ' manually.', level: 'err', ts: new Date().toLocaleTimeString() }) }
+  else { debugLog('[update-guard] could not restore wuauserv to ' + prev); sendLog({ msg: 'Windows Update could not be switched back on. It will be retried when Jylli Tool starts; you can also set the Windows Update service to ' + prev + ' manually.', level: 'err', ts: new Date().toLocaleTimeString() }) }
   return restored
 }
 // Pending-update count from the local update cache (offline search: no network scan while a game is starting). 0 on any failure.
@@ -13985,7 +14192,7 @@ let _gsSession = null   // { stopped: Map<name, path|null>, killCount, freedMB, 
 
 const gsRamPct = () => Math.round((1 - os.freemem() / os.totalmem()) * 100)
 const gsSend = payload => { try { mainWindow?.webContents.send('game-shield-event', payload) } catch {} }
-const gsLog = (msg, level = 'info') => { try { mainWindow?.webContents.send('log', { msg, level, ts: new Date().toLocaleTimeString() }) } catch {} }
+const gsLog = (msg, level = 'info') => { try { sendLog({ msg, level, ts: new Date().toLocaleTimeString() }) } catch {} }
 function gsSettings() {
   const s = loadSettings()
   const { tier3, mid } = GameShield.clampThresholds(s.gameShieldTier3Threshold, s.gameShieldMidSessionThreshold)

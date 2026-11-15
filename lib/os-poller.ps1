@@ -1,3 +1,4 @@
+param([string]$BgFlag = '')
 $ErrorActionPreference = 'SilentlyContinue'
 $ProgressPreference = 'SilentlyContinue'
 [Console]::OutputEncoding = [Text.Encoding]::UTF8
@@ -20,6 +21,7 @@ try { $dIdle = New-Object Diagnostics.PerformanceCounter('PhysicalDisk', '% Idle
 try { $dRd = New-Object Diagnostics.PerformanceCounter('PhysicalDisk', 'Disk Read Bytes/sec', '_Total', $true); $null = $dRd.NextValue() } catch {}
 try { $dWr = New-Object Diagnostics.PerformanceCounter('PhysicalDisk', 'Disk Write Bytes/sec', '_Total', $true); $null = $dWr.NextValue() } catch {}
 $rx = @(); $tx = @(); $gpuC = @(); $tick = 0; $lastInst = [DateTime]::MinValue
+$bgPrev = $null; $bgPrevT = $null; $cores = [Environment]::ProcessorCount
 while ($true) {
   if (([DateTime]::UtcNow - $lastInst).TotalSeconds -gt 10) {   # adapters and GPU engines come and go; refresh the instance lists
     $rx = New-Counters 'Network Interface' 'Bytes Received/sec' '^(?!.*(isatap|Loopback|Teredo|Pseudo)).*$'
@@ -46,6 +48,19 @@ while ($true) {
   if ($tick % 30 -eq 0) { $script:dtemp = $null; try { $c = Get-PhysicalDisk | Select-Object -First 1 | Get-StorageReliabilityCounter -ErrorAction Stop; if ($c.Temperature -gt 0) { $script:dtemp = [int]$c.Temperature } } catch {} }
   if ($null -ne $script:dtemp) { $o.diskTemp = $script:dtemp }
   $o.processes = $script:procs
+  # Busiest processes, as a share of the whole CPU, every 10th second and only while Jylli Tool asks for it (the flag file exists).
+  if ($BgFlag -and (Test-Path -LiteralPath $BgFlag)) {
+    if ($tick % 10 -eq 0) {
+      $t = [DateTime]::UtcNow; $cur = @{}
+      foreach ($p in [Diagnostics.Process]::GetProcesses()) { try { $cur[$p.Id] = @($p.ProcessName, $p.TotalProcessorTime.TotalSeconds) } catch {}; $p.Dispose() }
+      if ($bgPrev) {
+        $dt = ($t - $bgPrevT).TotalSeconds; $rows = @()
+        foreach ($id in $cur.Keys) { $b = $bgPrev[$id]; if ($b -and $b[0] -eq $cur[$id][0] -and $dt -gt 0) { $c = [math]::Round(($cur[$id][1] - $b[1]) / $dt / $cores * 100, 1); if ($c -gt 0) { $rows += [pscustomobject]@{ n = $cur[$id][0]; c = $c } } } }
+        $o.bg = @($rows | Sort-Object c -Descending | Select-Object -First 5)
+      }
+      $bgPrev = $cur; $bgPrevT = $t
+    }
+  } else { $bgPrev = $null }
   [Console]::Out.WriteLine(($o | ConvertTo-Json -Compress -Depth 4))
   [Console]::Out.Flush()
   $tick++

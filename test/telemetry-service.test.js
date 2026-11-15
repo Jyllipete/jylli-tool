@@ -60,3 +60,22 @@ test('os line: drive activity keys exist only when the counters reported', () =>
   const none = osSamples({ cpuLoad: 7 })
   assert.ok(!('disk.load' in none) && !('disk.read' in none) && !('disk.write' in none))
 })
+
+test('pause kills both children and the timers, resume starts them once, double calls are harmless', () => {
+  const hub = createHub()
+  const procs = [], killed = []
+  let timers = 0, cleared = 0
+  const svc = createTelemetryService({
+    hub, spawn: () => { const p = fakeProc(); const k = p.kill; p.kill = () => { killed.push(1); k() }; procs.push(p); return p }, exists: () => true,
+    emit() {}, scriptPath: 'x', setTimer: () => ++timers, clearTimer: () => { cleared++ },
+  })
+  svc.pause()                                   // never started: nothing to do
+  assert.strictEqual(procs.length, 0)
+  svc.start(); assert.strictEqual(procs.length, 2); assert.strictEqual(svc.isStarted(), true)
+  svc.subscribe()
+  svc.pause(); svc.pause()
+  assert.strictEqual(killed.length, 2); assert.strictEqual(cleared, 2); assert.strictEqual(svc.isStarted(), false)
+  svc.resume(); svc.resume()
+  assert.strictEqual(procs.length, 4); assert.strictEqual(svc.isStarted(), true)
+  svc.pause()
+})

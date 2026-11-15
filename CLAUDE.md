@@ -65,3 +65,4 @@ Settings tab toggle calls `setLanguage(lang)`.
 ## Working style
 - Keep answers short. No recap of changes beyond one or two sentences.
 - Run tests/builds with output filtered to errors only (`| tail -30` or `| grep -i error`).
+- Tray mode: `// ─── Tray mode` in main.js (`hideToTray`/`showFromTray`/`unloadMainPage`, `bgNeedsUpdate` sensors on demand, `processSnapshot`, `sendLog` buffer, IPC `ui-ready`/`ui-page-changed`); pure rules `lib/tray.js`, frame ring `lib/pm-frames.js`, poller `lib/os-poller.ps1` (`-BgFlag`); renderer `?resume=` + `window.JylliTray.canUnload` in index.html; `docs/TRAY_FOOTPRINT.md`, `tools/perf/tray-footprint.ps1`

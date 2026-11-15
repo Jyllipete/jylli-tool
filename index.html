@@ -877,6 +877,18 @@ async function init(isPremium = false) {
   // Resolves once the splash is gone; Arrival and tours wait on it.
   var _bootResolve
   window._bootFinished = new Promise(function(res) { _bootResolve = res })
+  // The window was rebuilt from the tray (main passes ?resume=<page>): no boot sequence, splash or stage, straight back to that page.
+  var _resumePage = (function() { try { var r = new URLSearchParams(location.search).get('resume'); return r && /^[a-z0-9-]{1,40}$/i.test(r) ? r : null } catch (e) { return null } })()
+  if (_resumePage) { var _ld = document.getElementById('loading'); if (_ld) _ld.style.display = 'none' }
+  // Main asks before it unloads a hidden page: not while a tour, the arrival flow or Auto-Optimize is open.
+  window.JylliTray = {
+    canUnload: function() {
+      try { if (window.JylliArrival && JylliArrival.active) return false } catch (e) {}
+      try { if (window.JylliTour && JylliTour.active) return false } catch (e) {}
+      try { if (window.JylliAutoOpti && JylliAutoOpti.active) return false } catch (e) {}
+      return !(window._jtKeepAlive > 0)
+    }
+  }
   function finishLoading() {
     var el = document.getElementById('loading')
     if (!el) { _bootResolve(); return }
@@ -895,7 +907,7 @@ async function init(isPremium = false) {
     setTimeout(hide, 1050)
   }
 
-  try { window.JylliBootStage && JylliBootStage.start() } catch (e) { api.startupTrace?.(`boot stage failed to start: ${e?.message}`) }
+  if (!_resumePage) { try { window.JylliBootStage && JylliBootStage.start() } catch (e) { api.startupTrace?.(`boot stage failed to start: ${e?.message}`) } }
   api.offAutoOptiProgress()
   api.onAutoOptiProgress(({ step, total, label, id, status }) => {
     if (window._aomProgressHandler) { window._aomProgressHandler({ step, total, label, id, status }); return }
@@ -909,7 +921,7 @@ async function init(isPremium = false) {
   // Start detection — IPC events from it resolve each stepPromise with real data.
   // Safety: if detection finishes without firing all events, resolve remaining steps.
   api.startupTrace?.('invoking api.getSystemInfo()')
-  const sysInfoPromise = api.getSystemInfo().catch(e => { api.startupTrace?.(`getSystemInfo catch: ${e?.message}`); return {} })
+  const sysInfoPromise = api.getSystemInfo(_resumePage ? { resume: true } : undefined).catch(e => { api.startupTrace?.(`getSystemInfo catch: ${e?.message}`); return {} })
   // Early fast path: set admin badge as soon as data arrives, independent of animation timing.
   // Prevents NOT ADMIN badge when boot animation hangs and the 35s timeout fires before animDonePromise.
   sysInfoPromise.then(info => {
@@ -922,7 +934,7 @@ async function init(isPremium = false) {
   })
   // The sequence registers its spec-progress listener in this same tick, before any event can arrive.
   api.startupTrace?.('boot scan: JylliBoot.run')
-  const fullInfo = await JylliBoot.run({ api, sysInfoPromise, settings })
+  const fullInfo = _resumePage ? await sysInfoPromise : await JylliBoot.run({ api, sysInfoPromise, settings })
   api.startupTrace?.('boot scan finished')
 
   // isAdmin comes from detectSystemInfo() — no separate IPC call needed.
@@ -945,7 +957,7 @@ async function init(isPremium = false) {
   window._sysInfoAssigned = true
 
   // Brief pause so user sees all steps done before app opens.
-  await new Promise(r => setTimeout(r, 300))
+  await new Promise(r => setTimeout(r, _resumePage ? 0 : 300))
 
   api.startupTrace?.('hiding loading screen — app is opening')
   document.getElementById('app').classList.remove('hidden')
@@ -965,8 +977,9 @@ async function init(isPremium = false) {
   if (!sysInfo.isAdmin) appendLog('NOT running as Administrator — tweaks requiring registry/system access will fail.', 'err')
 
   initUiSounds()
-  showPage('dashboard')
+  showPage(_resumePage && JylliRoutes.resolve(_resumePage) ? _resumePage : 'dashboard')
   startMetrics()
+  api.uiReady?.()
 
   // Delegated toggle bounce — fires once on any .toggle-switch input change
   document.addEventListener('change', function(e) {
@@ -1490,6 +1503,7 @@ function showPage(page, tabId) {
   }
   if (route) page = route.page
   currentPage = page
+  try { api.uiPageChanged && api.uiPageChanged(page) } catch (e) {}
   if (route) Shell.render(route)
   if (route) { try { JylliWorld.route(route) } catch {} }
 

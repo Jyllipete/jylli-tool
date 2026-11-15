@@ -265,6 +265,10 @@ contextBridge.exposeInMainWorld('api', {
   aiGetRecommendations: ()     => ipcRenderer.invoke('ai-get-recommendations'),
   aiGetStatus:          ()     => ipcRenderer.invoke('ai-get-status'),
 
+  // Tray mode: the page tells main when it is up (logs and live state that arrived while it was unloaded are replayed) and which page it shows
+  uiReady:              ()     => ipcRenderer.send('ui-ready'),
+  uiPageChanged:        (p)    => ipcRenderer.send('ui-page-changed', p),
+
   // Sensor bridge (1000Hz LHM named-pipe)
   onSensorTick:         (cb)   => on('sensor-tick', cb),
   onSensorRate:         (cb)   => on('sensor-rate', cb),
