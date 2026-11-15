@@ -31,6 +31,7 @@
     { id: 'system', icon: 'sliders', tabs: [
       { id: 'diagnostics', page: 'preflight' },
       { id: 'processes', page: 'process-manager' },
+      { id: 'devices', page: 'devices' },
       { id: 'bios', page: 'bios-tuner', premium: true },
       { id: 'scheduler', page: 'scheduler', premium: true },
       { id: 'restore', page: 'restore-points' },

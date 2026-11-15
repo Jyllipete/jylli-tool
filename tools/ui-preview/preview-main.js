@@ -42,7 +42,7 @@ const BOOT = !!arg('boot', false)   // --boot: shoot the boot scan while it runs
 const GALLERY = !!arg('gallery', false)   // shoot tools/ui-preview/gallery.html (every component) instead of the app
 
 const PAGES = ['dashboard', 'preflight', 'fixes', 'restore-points', 'performance', 'gaming', 'network', 'privacy-cleanup', 'startup-manager', 'process-manager',
-  'latency-monitor', 'bios-tuner', 'pulse', 'fivem', 'scheduler', 'changelog', 'settings']
+  'latency-monitor', 'bios-tuner', 'pulse', 'fivem', 'scheduler', 'changelog', 'settings', 'devices']
 const SECONDARY = ['pulse.html', 'pulse-hud.html', 'arma-settings.html', 'fps-hud.html', 'fivem-hud.html', 'fps-hud-settings.html']
 
 // the mock needs the list of API methods: read it from the real preload so it can never drift

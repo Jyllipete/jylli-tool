@@ -48,6 +48,7 @@ function respond(name, args, ctx) {
   if (/^games2|^getGameCover$/.test(name)) return require('./games-fixture').respond(name, args, ctx)
   if (/^apps2/.test(name)) return require('./apps-fixture').respond(name, args, ctx)
   if (/^startup2/.test(name)) return require('./startup-fixture').respond(name, args, ctx)
+  if (/^devices2/.test(name)) return require('./devices-fixture').respond(name, args, ctx)
   switch (name) {
     // BIOS workstation: runs the REAL model/doctor code on synthetic data (HP-style rows plus a few hundred generated ones to exercise the virtual grid)
     case 'bios2Status': {

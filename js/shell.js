@@ -13,7 +13,7 @@
     windows: 'tabWindows', qol: 'tabQoL', cpumem: 'tabCPUMem', gpu: 'tabGPU', power: 'tabPower', network: 'tabNetwork', fixes: 'tabFixes',
     pulse: 'tabPulse', games: 'tabGames', apps: 'tabApps', fivem: 'tabFiveM', latency: 'tabLatency', replay: 'tabReplay',
     cleanup: 'tabCleanup', debloat: 'tabDebloater', startup: 'tabStartup',
-    diagnostics: 'tabDiagnostics', processes: 'tabProcesses', bios: 'tabBios', scheduler: 'tabScheduler', restore: 'tabRestore', history: 'tabHistory',
+    diagnostics: 'tabDiagnostics', processes: 'tabProcesses', devices: 'tabDevices', bios: 'tabBios', scheduler: 'tabScheduler', restore: 'tabRestore', history: 'tabHistory',
   }
   // Tabs that were behind the "Advanced mode" switch in the old sidebar
   const ADVANCED_TABS = new Set(['latency', 'processes', 'bios'])
@@ -39,6 +39,7 @@
     startup: c => buildStartupManager(c),
     diagnostics: c => buildPreflight(c),
     processes: c => buildProcessManager(c),
+    devices: c => JylliDevicesPage.mount(c),   // js/devices: mice, keyboards, monitors, audio, controllers; every fact with its source and confidence (free for everyone)
     bios: async c => { if (!settings.isPremium) { await JylliPremium.build(c, 'bios'); return } await JylliBios.build(c) },
     scheduler: c => buildScheduler(c),
     restore: c => buildRestorePoints(c),

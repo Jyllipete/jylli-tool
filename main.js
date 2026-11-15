@@ -10666,6 +10666,44 @@ ipcMain.handle('get-startup-items', async () => {
 // A program pinned "keep off" that switched itself back on is switched off again a minute after start, and after every scan.
 app.whenReady().then(() => { setTimeout(() => { startupSvc().scan().catch(() => {}) }, 60000) })
 
+// ─── Devices (lib/devices): mice, keyboards, monitors, audio, controllers ... each fact with its source and confidence; read-only except the keyboard repeat setting ───
+const Devices = require('./lib/devices')
+const DevAppsKnown = require('./lib/apps/known')
+let _devices = null
+const devExpand = p => String(p).replace(/%([^%]+)%/g, (m, n) => { const k = Object.keys(process.env).find(x => x.toLowerCase() === n.toLowerCase()); return k ? process.env[k] : m })
+const devIsFile = p => { try { return fs.statSync(p).isFile() } catch { return false } }
+const devExists = p => { try { fs.accessSync(p); return true } catch { return false } }
+function devicesSvc() {
+  if (_devices) return _devices
+  _devices = Devices.create({
+    runPS: (s, ms) => runPS(s, ms),
+    runRecorded: (...a) => journalSvc().runRecorded(...a),
+    undoControl: c => journalSvc().undoControl(c),
+    getRig: async () => { const r = await getRigSpec(false); return r && r.rig ? r.rig : null },
+    // Only what the Windows tab already read (never starts a scan of its own): the two mouse switches this tab links to.
+    windowsStatus: () => {
+      const out = {}, c = windowsSvc().cached()
+      const walk = v => { if (!v || typeof v !== 'object') return; if (Array.isArray(v.items)) for (const i of v.items) if (i && typeof i.id === 'string') out[i.id] = String(i.status || 'unknown'); for (const k of Object.keys(v)) if (v[k] && typeof v[k] === 'object' && k !== 'items') walk(v[k]) }
+      if (c) walk(c.models)
+      return out
+    },
+    // true = Jylli can start it (an .exe file at a known path). A program that is installed in a folder but has no known launcher is left out, so the page never offers a button that cannot work.
+    appInstalled: () => { const out = {}; for (const a of DevAppsKnown.APPS) if (a.role === 'peripheral') out[a.id] = a.install.some(p => { const e = devExpand(p); return /.exe$/i.test(e) && devIsFile(e) }); return out },
+    // Only an .exe file that exists in a folder Jylli already knows for that program; a folder entry is "installed" but never launched.
+    resolveApp: id => { const a = DevAppsKnown.BY_ID[id]; if (!a || a.role !== 'peripheral') return null; for (const p of a.install) { const e = devExpand(p); if (/\.exe$/i.test(e) && devIsFile(e)) return e } return null },
+    openPath: p => shell.openPath(p),
+    state: { read: () => cuRead('jt_devices.json', null), write: v => cuWrite('jt_devices.json', v) },
+    emit: cuSend,
+  })
+  return _devices
+}
+ipcMain.handle('devices2-scan', async (_, req) => { try { return await devicesSvc().scan({ force: !!(req && req.force) }) } catch (e) { return gmFail(e) } })
+ipcMain.handle('devices2-poll', async (_, req) => { try { return await devicesSvc().pollTest({ seconds: Number(req && req.seconds) || 4 }) } catch (e) { return gmFail(e) } })
+ipcMain.handle('devices2-kbd-set', async (_, req) => { try { return await devicesSvc().kbdSet({ delay: req && req.delay, speed: req && req.speed }) } catch (e) { return gmFail(e) } })
+ipcMain.handle('devices2-kbd-undo', async () => { try { return await devicesSvc().kbdUndo() } catch (e) { return gmFail(e) } })
+ipcMain.handle('devices2-forget', (_, req) => { try { return devicesSvc().forget({ id: gmStr(req && req.id, 80) }) } catch (e) { return gmFail(e) } })
+ipcMain.handle('devices2-open-app', async (_, req) => { try { return await devicesSvc().openApp({ id: gmStr(req && req.id, 40) }) } catch (e) { return gmFail(e) } })
+
 
 // ─── Network Ping Test ────────────────────────────────────────────────────────
 ipcMain.handle('get-latency-sample', async () => {
