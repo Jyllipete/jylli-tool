@@ -1707,8 +1707,21 @@ function settingsToggleHideOnGame(on) {
   toast(tUI('settingsHideOnGame') + tUI(on ? 'featureEnabled' : 'featureDisabled'), '', on ? 'ok' : 'info')
 }
 
+async function settingsToggleStartInTray(on) {
+  settings.startInTray = on
+  try {
+    const r = await api.setStartInTray(on); if (r && r.ok === false) throw new Error(r.error || 'failed')
+    toast(tUI('settingsStartInTray') + tUI(on ? 'featureEnabled' : 'featureDisabled'), '', on ? 'ok' : 'info')
+  } catch {
+    settings.startInTray = !on
+    const c = document.getElementById('settings-start-tray-check'); if (c) c.checked = !on
+    toast(tUI('settingsStartInTray'), tUI('startupTaskFailed'), 'err')
+  }
+}
+
 async function settingsToggleStartup(on) {
   settings.startAtLogin = on
+  if (on) { settings.startInTray = true; const c = document.getElementById('settings-start-tray-check'); if (c) c.checked = true }   // turned on now: starts hidden in the tray (people who already had it keep their window until they choose otherwise)
   api.saveSettings(settings)
   try {
     const sr = await api.setStartup(on); if (sr && sr.ok === false) throw new Error(sr.error || "startup task failed")

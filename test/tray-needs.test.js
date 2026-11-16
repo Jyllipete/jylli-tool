@@ -14,3 +14,12 @@ test('every reason is reported by name and wakes the sensors', () => {
 })
 
 test('the page is unloaded after a minute', () => { assert.strictEqual(UNLOAD_AFTER_MS, 60000) })
+
+test('LibreHardwareMonitor runs only while something wants it', () => {
+  const T = require('../lib/tray')
+  assert.equal(T.lhmWanted({}), false)                       // hidden, no game, nothing reading it
+  assert.equal(T.lhmWanted({ visible: true }), true)
+  assert.equal(T.lhmWanted({ session: true }), true)
+  assert.equal(T.lhmWanted({}, true), true)                  // a reader asked for it in the last minute
+  assert.equal(T.lhmWanted({ aria: true, hud: true, powerGuard: true }), false)   // those are served by the sensor bridge, not by LHM
+})

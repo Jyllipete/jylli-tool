@@ -20,6 +20,20 @@ $dIdle = $null; $dRd = $null; $dWr = $null   # whole-system drive activity; a PC
 try { $dIdle = New-Object Diagnostics.PerformanceCounter('PhysicalDisk', '% Idle Time', '_Total', $true); $null = $dIdle.NextValue() } catch {}
 try { $dRd = New-Object Diagnostics.PerformanceCounter('PhysicalDisk', 'Disk Read Bytes/sec', '_Total', $true); $null = $dRd.NextValue() } catch {}
 try { $dWr = New-Object Diagnostics.PerformanceCounter('PhysicalDisk', 'Disk Write Bytes/sec', '_Total', $true); $null = $dWr.NextValue() } catch {}
+$memOk = $false
+try {
+  Add-Type -TypeDefinition @'
+using System; using System.Runtime.InteropServices;
+public static class JtMem {
+  [StructLayout(LayoutKind.Sequential)] public class MS { public uint dwLength; public uint dwMemoryLoad; public ulong ullTotalPhys; public ulong ullAvailPhys; public ulong ullTotalPageFile; public ulong ullAvailPageFile; public ulong ullTotalVirtual; public ulong ullAvailVirtual; public ulong ullAvailExtendedVirtual; public MS() { dwLength = (uint)Marshal.SizeOf(typeof(MS)); } }
+  [DllImport("kernel32.dll", SetLastError = true)] [return: MarshalAs(UnmanagedType.Bool)] static extern bool GlobalMemoryStatusEx([In, Out] MS m);
+  [DllImport("kernel32.dll")] static extern ulong GetTickCount64();
+  public static long UptimeSec() { return (long)(GetTickCount64() / 1000UL); }
+  public static ulong[] Get() { MS m = new MS(); return GlobalMemoryStatusEx(m) ? new ulong[] { m.ullTotalPhys, m.ullAvailPhys } : null; }
+}
+'@
+  $memOk = $null -ne [JtMem]::Get()
+} catch {}
 $rx = @(); $tx = @(); $gpuC = @(); $tick = 0; $lastInst = [DateTime]::MinValue
 $bgPrev = $null; $bgPrevT = $null; $cores = [Environment]::ProcessorCount
 while ($true) {
@@ -31,9 +45,15 @@ while ($true) {
   }
   $o = [ordered]@{ t = [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds() }
   if ($cpuC) { $o.cpuLoad = [math]::Round([math]::Min(100, $cpuC.NextValue()), 1) }
-  $os = Get-CimInstance Win32_OperatingSystem
-  if ($os) { $o.ramTotalGB = [math]::Round($os.TotalVisibleMemorySize / 1MB, 2); $o.ramUsedGB = [math]::Round(($os.TotalVisibleMemorySize - $os.FreePhysicalMemory) / 1MB, 2) }
-  if ($os) { $o.uptimeSec = [int]((Get-Date) - $os.LastBootUpTime).TotalSeconds }
+  # RAM and uptime straight from the kernel (GlobalMemoryStatusEx, TickCount64): no WMI query every second (that work is billed to WmiPrvSE.exe).
+  # If the helper type could not be compiled, the old WMI read is the fallback, so the numbers are never missing.
+  $m = $null; if ($memOk) { try { $m = [JtMem]::Get() } catch {} }
+  if ($m) { $o.ramTotalGB = [math]::Round($m[0] / 1GB, 2); $o.ramUsedGB = [math]::Round(($m[0] - $m[1]) / 1GB, 2); $o.uptimeSec = [int][JtMem]::UptimeSec() }
+  else {
+    $os = Get-CimInstance Win32_OperatingSystem
+    if ($os) { $o.ramTotalGB = [math]::Round($os.TotalVisibleMemorySize / 1MB, 2); $o.ramUsedGB = [math]::Round(($os.TotalVisibleMemorySize - $os.FreePhysicalMemory) / 1MB, 2) }
+    if ($os) { $o.uptimeSec = [int]((Get-Date) - $os.LastBootUpTime).TotalSeconds }
+  }
   try { $d = New-Object IO.DriveInfo ($env:SystemDrive); $o.diskTotalGB = [math]::Round($d.TotalSize / 1GB, 1); $o.diskUsedGB = [math]::Round(($d.TotalSize - $d.AvailableFreeSpace) / 1GB, 1) } catch {}
   if ($dIdle) { $o.diskIdle = [math]::Round([math]::Max(0, [math]::Min(100, $dIdle.NextValue())), 1) }
   if ($dRd) { $o.diskRead = [math]::Round($dRd.NextValue()) }

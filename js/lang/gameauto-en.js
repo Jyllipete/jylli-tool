@@ -74,7 +74,7 @@ LANG.en.gameauto = {
   // ledger
   ledgerT: 'Session record', ledgerS: 'What the automation changed during a game and whether it was put back.', ledgerEmpty: 'No game sessions yet. Start a game and the record appears here.', ledgerNoEvents: 'Nothing was changed during this session.',
   ledgerNow: 'This session: {game}', ledgerLast: 'Last session: {game}', ledgerSince: 'Started {since} ago', ledgerEnded: 'Ended: {why} · played {dur}',
-  end_exit: 'game closed', end_switch: 'another game started', 'end_watcher-stopped': 'Game Watcher was turned off', end_crash: 'Jylli Tool closed during the game',
+  end_exit: 'game closed', end_switch: 'another game started', 'end_watcher-stopped': 'Game Watcher was turned off', end_crash: 'Jylli Tool closed during the game', 'end_competitive-mode': 'Competitive Mode took over',
   allRestored: 'Everything restored', needsAttention: '{n} need attention', histT: 'Earlier sessions',
   ev_generic: '{feature}: {kind}',
   ev_updateGuard_applied: 'Windows Update held', ev_updateGuard_restored: 'Windows Update put back as it was', 'ev_updateGuard_restored_windows-reenabled': 'Windows Update put back (Windows had already switched it on during the game)',
@@ -87,6 +87,10 @@ LANG.en.gameauto = {
   ev_autoPulse_failed: 'Pulse could not start: {detail}', 'ev_autoPulse_skipped_no-preset': 'No Pulse preset for this game', 'ev_autoPulse_skipped_off-for-game': 'Auto-Pulse is off for this game',
   'ev_autoPulse_info_manual-boost-left-alone': 'Your own Pulse boost was left alone', 'ev_autoPulse_info_stopped-by-user': 'You stopped Pulse; Auto-Pulse stays off for this game',
   ev_mmcss_applied: 'Game scheduling priority raised (checked)', ev_mmcss_restored: 'Scheduling priority put back to your value', ev_mmcss_restored_fail: 'Scheduling priority could not be put back. It is retried at the next start.', ev_mmcss_failed: 'Game scheduling priority could not be set',
+  'ev_profile_applied_kept-counts': 'Tweak profile “{name}”: {n} applied, {already} were already on. They stay until you undo them in History.', 'ev_profile_failed_tweak-failed': 'Tweak profile “{name}”: {id} did not apply ({error})',
+  'ev_profile_skipped_refused-tier': 'Tweak profile “{name}”: {id} was not applied (too risky to run automatically)', 'ev_profile_skipped_refused-excluded': 'Tweak profile “{name}”: {id} was not applied (you excluded it from automatic runs)', 'ev_profile_skipped_unknown-tweak': 'Tweak profile “{name}”: {id} no longer exists and was skipped',
+  ev_apps_applied: '{n} background process(es) stepped back for this game', ev_apps_restored: 'Background programs put back', ev_apps_restored_fail: 'Some background programs could not be put back', 'ev_apps_restored_fail_left': '{left} background process(es) could not be put back', ev_apps_failed: 'Game time could not start', 'ev_apps_info_nothing-to-lower': 'Game time found nothing to step back', 'ev_apps_info_still-ending': 'Game time from the previous game was still ending, so it did not start for this one',
+  'ev_autoPulse_info_taken-over-by-user': 'You started your own Pulse boost. It ends with the game.',
   ev_profile_applied: 'Tweak profile “{name}” applied. It stays until you undo it in History.', ev_profile_failed: 'Tweak profile “{name}”: some tweaks did not apply ({detail})',
   'ev_watcher_info_app-closed-during-session': 'Jylli Tool closed during this game. What was left over was put back when it started again.',
 

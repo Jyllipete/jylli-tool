@@ -10,6 +10,9 @@ let _trayBusy = 0
   })
 }
 const path = require('path')
+// --perf-log only: count every child process we start (lib/perf/spawn-ledger.js). Must run before child_process is destructured.
+const _perfMarks = { start: Date.now() }
+const _spawnLedger = process.argv.includes('--perf-log') ? require('./lib/perf/spawn-ledger').install(require('child_process')) : null
 const { exec, execFile, spawn } = require('child_process')
 const fs = require('fs')
 const os = require('os')
@@ -206,6 +209,30 @@ function processSnapshot(maxAgeMs = 3000) {
   return _procSnapP
 }
 
+// Unknown-game detection needs the install path of each process (only the ones running from a game-store library folder are listed).
+// That is one PowerShell, so it runs at most once a minute and never twice at once; the names themselves come from the shared tasklist
+// (before: this PowerShell ran every 10 s next to two more for RAM and CPU, with no guard against overlapping).
+let _pathScanBusy = false, _pathScanAt = 0
+function _pathScanMaybe() {
+  if (_pathScanBusy || Date.now() - _pathScanAt < 60000) return
+  _pathScanBusy = true; _pathScanAt = Date.now()
+  execFile('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command',
+    `Get-Process | ForEach-Object { $n = $_.Name.ToLower() + ".exe"; $n; if ($_.Path -match 'steamapps.common|Epic Games|GOG Galaxy.Games|GOG Games|XboxGames|Riot Games') { '@@' + $n + '|' + $_.Path } }`
+  ], { windowsHide: true, timeout: 8000 }, (err, stdout) => {
+    _pathScanBusy = false
+    if (!err) { try { _checkUnknownGame(String(stdout).split(/\r?\n/).map(l => l.trim()).filter(Boolean)) } catch {} }
+  })
+}
+// Whole-machine CPU busy % from Node's own counters (no process): null until two samples exist.
+let _cpuPrev = null
+function _cpuBusyPct() {
+  let idle = 0, total = 0
+  for (const c of os.cpus()) { const t = c.times; idle += t.idle; total += t.user + t.nice + t.sys + t.idle + t.irq }
+  const prev = _cpuPrev; _cpuPrev = { idle, total }
+  if (!prev || total <= prev.total) return null
+  return Math.round(100 * (1 - (idle - prev.idle) / (total - prev.total)))
+}
+
 async function _updateSystemContext() {
   try {
     const { execFile } = require('child_process')
@@ -217,13 +244,10 @@ async function _updateSystemContext() {
       if (!snap.ok) return
       psLines = [...snap.exes]
     } else {
-    const psOut = await new Promise((res) => {
-      execFile('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command',
-        // Second output form "@@exe|path" is only emitted for processes running from a game-store library folder (unknown-game detection)
-        `Get-Process | ForEach-Object { $n = $_.Name.ToLower() + ".exe"; $n; if ($_.Path -match 'steamapps.common|Epic Games|GOG Galaxy.Games|GOG Games|XboxGames|Riot Games') { '@@' + $n + '|' + $_.Path } }`
-      ], { windowsHide: true, timeout: 8000 }, (err, stdout) => res(err ? '' : stdout))
-    })
-    psLines = psOut.split(/\r?\n/).map(l => l.trim()).filter(Boolean)
+      const snap = await processSnapshot(3000)
+      if (!snap.ok) return
+      psLines = [...snap.exes]
+      _pathScanMaybe()
     }
     const currentExes = new Set(psLines.filter(l => !l.startsWith('@@')))
 
@@ -233,7 +257,6 @@ async function _updateSystemContext() {
 
     if (changed) {
       _lastProcessList = currentExes
-      if (!light) _checkUnknownGame(psLines)
 
       // Game detection
       let foundGame = null
@@ -268,9 +291,7 @@ async function _updateSystemContext() {
       // Fire game-detected / game-exited events
       const settings = loadSettings()
       if (!wasRunning && _systemContext.gameRunning) {
-        try { cpumemSvc().gameStarted(foundGame && foundGame.exe) } catch {}
-        try { gpuSvc().gameStarted() } catch {}
-        try { powerSvc().gameStarted() } catch {}
+        liveGameReason('context', true, foundGame && foundGame.exe)
         mainWindow?.webContents.send('game-detected', { name: _systemContext.gameName, genre: _systemContext.gameGenre })
         // Settings > "Hide Jylli Tool to the tray when a game starts". Not in the first seconds after launch (the user just opened the app on purpose),
         // and only the window is hidden: detection, Pulse and the tray keep running, so the game exit is still noticed.
@@ -288,9 +309,7 @@ async function _updateSystemContext() {
         if (gName.startsWith('fivem') && requiresPremium('fivem2-session')) { try { fivemSvc().gameStarted() } catch {} }
       } else if (wasRunning && !_systemContext.gameRunning) {
         try { if (_fivem) _fivem.gameEnded() } catch {}
-        try { if (_cpumem) _cpumem.gameEnded() } catch {}
-        try { if (_gpu) _gpu.gameEnded() } catch {}
-        try { if (_power) _power.gameEnded() } catch {}
+        liveGameReason('context', false)
         mainWindow?.webContents.send('game-exited', { name: _systemContext.gameName })
         // Auto-close FiveM HUD on game exit
         if (fivemHudWindow && !fivemHudWindow.isDestroyed()) closeFivemHud()
@@ -301,23 +320,14 @@ async function _updateSystemContext() {
     // Lightweight metrics — battery + RAM (cheap, always update)
     const { powerMonitor } = require('electron')
     _systemContext.onBattery = !powerMonitor.isOnBatteryPower?.() === false
-    try {
-      const memR = await new Promise((res) => {
-        execFile('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command',
-          `$os = Get-CimInstance Win32_OperatingSystem; [Math]::Round(($os.TotalVisibleMemorySize - $os.FreePhysicalMemory) / $os.TotalVisibleMemorySize * 100)`
-        ], { windowsHide: true, timeout: 5000 }, (err, stdout) => res(err ? '' : stdout.trim()))
-      })
-      _systemContext.ramPressurePct = parseInt(memR, 10) || 0
-    } catch {}
+    try { const tot = os.totalmem(); _systemContext.ramPressurePct = tot ? Math.round((tot - os.freemem()) / tot * 100) : 0 } catch {}
 
     // Idle detection — track when CPU stayed low
     try {
-      const cpuR = await new Promise((res) => {
-        execFile('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command',
-          `(Get-CimInstance Win32_Processor | Measure-Object -Property LoadPercentage -Average).Average`
-        ], { windowsHide: true, timeout: 5000 }, (err, stdout) => res(err ? '' : stdout.trim()))
-      })
-      const cpuPct = parseInt(cpuR, 10) || 0
+      const nodePct = _cpuBusyPct()
+      const hubPct = _hub && _hub.value ? _hub.value('cpu.load') : null   // the telemetry hub when it is fresh, else Node's own counters
+      const cpuPct = hubPct != null ? Math.round(hubPct) : nodePct
+      if (cpuPct == null) throw new Error('no sample yet')
       _systemContext.cpuSustainedHigh = cpuPct > 75
       if (cpuPct < 20 && !_systemContext.gameRunning) {
         if (!_systemContext.idleSince) _systemContext.idleSince = Date.now()
@@ -330,7 +340,27 @@ async function _updateSystemContext() {
   } catch {}
 }
 
+// The CPU & Memory / GPU / Power live views pause while a game runs. Two things know a game is running (this detector, and the game session of
+// lib/gameauto), so each is a "reason" and the services hear about it once: a game only the session recognises (library or custom games) now
+// pauses them too, and the first reason to end never un-pauses them while the other still holds.
+const _liveGameReasons = new Set()
+function liveGameReason(reason, on, exe) {
+  const before = _liveGameReasons.size > 0
+  if (on) _liveGameReasons.add(reason); else _liveGameReasons.delete(reason)
+  const after = _liveGameReasons.size > 0
+  if (!before && after) {
+    try { cpumemSvc().gameStarted(exe) } catch {}
+    try { gpuSvc().gameStarted() } catch {}
+    try { powerSvc().gameStarted() } catch {}
+  } else if (before && !after) {
+    try { if (_cpumem) _cpumem.gameEnded() } catch {}
+    try { if (_gpu) _gpu.gameEnded() } catch {}
+    try { if (_power) _power.gameEnded() } catch {}
+  }
+}
+
 function startContextDetector() {
+  if (_contextDetectorTimer) { clearInterval(_contextDetectorTimer); _contextDetectorTimer = null }   // never two timers
   _updateSystemContext()
   _contextDetectorTimer = setInterval(_updateSystemContext, 10000)
 }
@@ -680,7 +710,9 @@ process.on('unhandledRejection', (err) => { webhookError('unhandledRejection', e
 // ─── LibreHardwareMonitor lifecycle ──────────────────────────────────────────
 let _lhmProcess = null
 let _lhmPermFixed = false
+let _lhmStartedAt = 0, _lhmWerSet = false, _lhmUseUntil = 0
 function startLhm() {
+  if (_lhmProcess) return
   const lhmExe = assetPath('assets', 'lhm', 'LibreHardwareMonitor.exe')
   if (!fs.existsSync(lhmExe)) {
     setTimeout(() => mainWindow?.webContents.send('lhm-status', { ok: false, reason: 'not_found' }), 3000)
@@ -690,8 +722,9 @@ function startLhm() {
   // condition on startup that triggers an unhandled .NET exception dialog
   // even when the window is hidden. DontShowUI silences it system-wide for
   // this exe; --no-gui eliminates the WinForms tree entirely at the source.
-  regAdd('HKLM', 'SOFTWARE\\Microsoft\\Windows\\Windows Error Reporting\\LocalDumps\\LibreHardwareMonitor.exe', 'DontShowUI', 'REG_DWORD', '1')
+  if (!_lhmWerSet) { _lhmWerSet = true; regAdd('HKLM', 'SOFTWARE\\Microsoft\\Windows\\Windows Error Reporting\\LocalDumps\\LibreHardwareMonitor.exe', 'DontShowUI', 'REG_DWORD', '1') }
   try {
+    _lhmStartedAt = Date.now()
     _lhmProcess = spawn(lhmExe, ['--no-pawnio', '--no-gui'], {
       cwd: assetPath('assets', 'lhm'),
       detached: false,
@@ -713,9 +746,19 @@ function startLhm() {
       }
     })
     _lhmProcess.unref()
+    { const p = _lhmProcess; p.once('exit', () => { if (_lhmProcess === p) _lhmProcess = null }) }   // a crash or our own stop clears the handle (it used to stay set)
   } catch (e) {
     mainWindow?.webContents.send('lhm-status', { ok: false, reason: e?.code || 'spawn_error' })
   }
+}
+/** LibreHardwareMonitor is only worth its memory and its sensor-driver polling while something reads it. It runs while the window is wanted or a game
+ *  session is recording (bgNeedsUpdate), and for a minute after a reader (Pulse thermal audit, BIOS sensors, temperatures) asked for it.
+ *  Resolves once it has had time to publish its WMI sensors. */
+async function ensureLhm() {
+  _lhmUseUntil = Date.now() + 60000
+  if (!_lhmProcess) startLhm()
+  const wait = _lhmStartedAt + 2500 - Date.now()
+  if (_lhmProcess && wait > 0) await new Promise(r => setTimeout(r, wait))
 }
 function stopLhm() {
   if (_lhmProcess) { try { _lhmProcess.kill() } catch {} ; _lhmProcess = null }
@@ -960,7 +1003,7 @@ function createWindow(opts = {}) {
   })
 
   mainWindow.once('ready-to-show', () => {
-    startupTrace('ready-to-show fired — showing window')
+    startupTrace('ready-to-show fired — showing window'); if (_perfMarks && !_perfMarks.shown) _perfMarks.shown = Date.now() - _perfMarks.start
     mainWindow.show()
     // Rebuilt from the tray: the session was verified when the app started and the tier refresh keeps running; only a missing session matters.
     if (opts.resume) { try { if (!auth.hasSession()) mainWindow?.webContents.send('auth-required') } catch {} ; return }
@@ -1027,7 +1070,7 @@ async function bundleApply(id, fails) {
 function updateTrayMenu() {
   if (!tray) return
   const pulseOn = !!pulseActivePreset
-  const autoPulseOn = !!autoPulseTriggeredPreset
+  const autoPulseOn = !!(_pulseOwner && _pulseOwner.autoPreset())
   const shown = mainWindow && mainWindow.isVisible()
 
   // Build Profiles submenu from saved game bundles
@@ -1087,7 +1130,6 @@ function updateTrayMenu() {
         if (!requiresPremium('tray-pulse')) return
         const send = (msg, level) => sendLog({ msg, level, ts: new Date().toLocaleTimeString() })
         if (pulseOn) {
-          autoPulseTriggeredPreset = null
           await deactivatePulse(send)
           mainWindow?.webContents.send('tray-pulse-changed', { active: false })
         } else {
@@ -1163,7 +1205,7 @@ function bgFacts() {
     session: !!(_sessionRec && _sessionRec.active) || Date.now() < _bgWakeUntil,
     powerGuard,
     hud: open(fivemHudWindow) || open(_fpsHudWindow) || open(_puHud) || open(pulseWindow),
-    aria: !!_ariaEnabled,
+    aria: !!_ariaEnabled && !!activeGameProfile,   // ARIA's alerts only reach a window while a game runs; before, it kept three sensor processes alive in the tray for ever
   }
 }
 
@@ -1171,7 +1213,9 @@ const _sensorExeOk = (() => { let v = null; return () => (v === null ? (v = fs.e
 /** Starts or stops the live sensors (PowerShell poller, nvidia-smi, JylliSensor) to match what needs them. Cheap when nothing changed. */
 function bgNeedsUpdate() {
   try {
-    const wake = TrayNeeds.liveSensors(bgFacts())
+    const facts = bgFacts()
+    const wake = TrayNeeds.liveSensors(facts)
+    if (TrayNeeds.lhmWanted(facts, Date.now() < _lhmUseUntil)) { if (!_lhmProcess && facts.visible) startLhm() } else if (_lhmProcess) stopLhm()
     if (wake) {
       if (_telemetry && !_telemetry.isStarted()) { _telemetry.resume(); _telemetryWokeAt = Date.now() }
       if (!_sensorProcess && _sensorExeOk()) startSensorBridge()
@@ -1210,7 +1254,8 @@ function showFromTray(reason) {
   if (!mainWindow || mainWindow.isDestroyed()) {
     if (!_trayUnloaded) return                       // start-up: createWindow has not run yet
     _trayHidden = false
-    createWindow({ resume: _trayResumePage || 'dashboard' })
+    // The page the user left, or the dashboard; with no remembered PC facts yet (started hidden at logon) the normal boot sequence runs instead of the resume shortcut
+    createWindow(cachedSysInfo || _trayResumePage ? { resume: _trayResumePage || 'dashboard' } : {})
     setTimeout(() => { if (_trayUnloaded) uiReadyFlush() }, 25000).unref()   // a page that never reports ready must not buffer logs for ever
   } else if (_trayUnloaded) {
     return                                           // already rebuilding: ready-to-show will show it
@@ -1239,6 +1284,9 @@ function unloadMainPage() {
   if (!w || w.isDestroyed()) return
   _trayUnloaded = true
   w.__trayUnload = true
+  // A route trace (FiveM / Network tab) is a PowerShell ping loop plus a timer that only its page could stop; with the page gone nobody sees it.
+  try { if (_fivem) _fivem.routeStop() } catch {}
+  try { if (_network) _network.routeStop() } catch {}
   try { if (_ortSession && _ortSession.release) _ortSession.release() } catch {}
   _ortSession = null; _ortProvider = 'none'; _ortTried = false
   mainWindow = null
@@ -1267,13 +1315,13 @@ function uiReadyFlush() {
   try {
     for (const p of _uiLogBuf.splice(0)) wc.send('log', p)
     if (pulseActivePreset) wc.send('pulse-tick', { preset: pulseActivePreset, active: true })
-    if (autoPulseTriggeredPreset) wc.send('game-watcher-event', { event: 'auto-pulse-start', gameId: autoPulseTriggeredPreset, presetId: autoPulseTriggeredPreset })
+    { const ap = _pulseOwner && _pulseOwner.autoPreset(); if (ap) wc.send('game-watcher-event', { event: 'auto-pulse-start', gameId: ap, presetId: ap }) }
     if (activeGameProfile) wc.send('game-watcher-event', { event: 'game-started', gameId: activeGameProfile, displayName: activeGameName })
     if (_gameAuto) wc.send('gameauto-event', { type: 'state', state: _gameAuto.snapshot() })
     if (_systemContext.gameRunning) wc.send('game-detected', { name: _systemContext.gameName, genre: _systemContext.gameGenre })
   } catch {}
 }
-ipcMain.on('ui-ready', e => { if (mainWindow && !mainWindow.isDestroyed() && e.sender === mainWindow.webContents) uiReadyFlush() })
+ipcMain.on('ui-ready', e => { if (mainWindow && !mainWindow.isDestroyed() && e.sender === mainWindow.webContents) { if (!_perfMarks.uiReady) _perfMarks.uiReady = Date.now() - _perfMarks.start; uiReadyFlush() } })
 ipcMain.on('ui-page-changed', (e, page) => { if (typeof page === 'string' && /^[a-z0-9-]{1,40}$/i.test(page)) _trayResumePage = page })
 
 
@@ -1283,6 +1331,8 @@ let sessionTweaksCount = 0
 let _sessionTweakList  = []
 let _lastAction        = null
 
+// `Jylli Tool.exe --tray` (the logon task when "Start hidden in the tray" is on): start without a window. Settings > Start with Windows.
+const START_IN_TRAY = process.argv.includes('--tray')
 app.whenReady().then(async () => {
   startupTrace('whenReady#2 (main startup) entered')
   const userData = app.getPath('userData')
@@ -1296,21 +1346,37 @@ app.whenReady().then(async () => {
   auth = createAuth({ BOT_URL, userDataDir: userData, safeStorage, userAgent: 'jylli-tool/' + APP_VERSION })
   await auth.ready   // stored session is decrypted (async safeStorage) before any window asks about premium
   snapshots = createSnapshotStore(path.join(userData, 'snapshots'))
-  setTimeout(() => { appsSvc().recover().catch(() => {}) }, 6000)   // Game time left by a crash is put back
-  setTimeout(() => { pulseRecover().catch(() => {}) }, 4000)   // a boost that was running when the PC lost power or the app crashed is put back first
-  // Whatever a crash or forced shutdown left behind (Windows Update held, programs Game Shield stopped, a session in progress) is put back first;
-  // then the Game Watcher starts again if it was on. Windows Update must never stay disabled after Jylli Tool is gone.
-  setTimeout(() => {
-    try { const o = JSON.parse(fs.readFileSync(path.join(userData, 'auto-pulse-overrides.json'), 'utf8')); gameAutoSvc().migrateLegacy(Object.keys(o || {}).length) } catch { /* no old overrides */ }
-    gameAutoSvc().recover().catch(() => {}).finally(() => { if (loadSettings().gameWatcherEnabled) gameAutoSvc().startWatcher().catch(() => {}) })
-  }, 8000)
-  startupTrace('createWindow starting')
-  createWindow(); createTray()
-  startupTrace('createWindow done')
+  // What a crash, a forced shutdown or a power cut left behind is put back first, one owner after the other (before: four independent timers at 4, 5, 6 and
+  // 8 s that could overlap, e.g. the Pulse restore still running while the watcher opened a session for a game that was already running):
+  // a boost, Apps Game time, a Competitive Mode session, then the session service (Windows Update must never stay disabled after Jylli Tool is gone).
+  // Only then does the Game Watcher start again if it was on, and a Competitive Mode shortcut (--compete) run.
+  setTimeout(async () => {
+    const step = async fn => { try { await fn() } catch { /* each one is retried at the next start */ } }
+    await step(() => pulseRecover())
+    await step(() => appsSvc().recover())
+    await step(() => competeSvc().recover())
+    await step(() => { try { const o = JSON.parse(fs.readFileSync(path.join(userData, 'auto-pulse-overrides.json'), 'utf8')); gameAutoSvc().migrateLegacy(Object.keys(o || {}).length) } catch { /* no old overrides */ } })
+    await step(() => gameAutoSvc().recover())
+    if (loadSettings().gameWatcherEnabled) gameAutoSvc().startWatcher().catch(() => {})
+    await step(() => competeFromArgv(process.argv))
+  }, 4000)
+  if (START_IN_TRAY) {
+    // Started by the Windows logon task with --tray: no window and no page until the tray icon is used. The main process keeps everything that
+    // is not about the window running (Game Watcher, Auto-Pulse, Update Guard, Game Shield, the tray menu); it only needs the account state,
+    // which the window's first paint normally refreshes, so that is done here.
+    startupTrace('start hidden in the tray (--tray): no window')
+    _trayHidden = true; _trayUnloaded = true
+    createTray()
+    ;(async () => { try { if (auth.hasSession()) { const r = await refreshAuth(); if (r && r.ok) startTierRefresh() } } catch { /* the window checks again when it opens */ } })()
+    try { presenceSet({ hidden: true }) } catch {}
+  } else {
+    startupTrace('createWindow starting')
+    createWindow(); createTray()
+    startupTrace('createWindow done')
+  }
   { const p = presenceSvc(); if (loadSettings().discordRpcEnabled !== false) p.setEnabled(true).catch(() => {}) }
   setStartupTask(!!loadSettings().startAtLogin).catch(() => {})
-  startLhm()
-  startSensorBridge()
+  if (uiWanted()) { startLhm(); startSensorBridge() }   // started hidden (--tray): the sensors wait until something needs them (ensureLhm, bgNeedsUpdate)
   puBgFlag(false)   // a flag left by a crash would keep the poller sampling
   startContextDetector()
   setInterval(bgNeedsUpdate, 5000).unref()   // sensors follow what needs them (window shown, a recording session, HUDs, GPU limit guard, ARIA)
@@ -1392,14 +1458,22 @@ function shutdownBackground() {
 }
 
 // Dev flag: node/electron . --perf-log  -> app.getAppMetrics() every 5 s into userData/perf.log (checks the idle-CPU and memory budgets).
+// Each line also has the child processes started in that window (`spawns`), this process' own CPU (`mainCpuMs`), whether LibreHardwareMonitor
+// is alive, and the start-up milestones (`marks`, ms since the process started) once they exist. tools/perf/bench.ps1 summarises it.
 if (process.argv.includes('--perf-log')) {
-  app.whenReady().then(() => setInterval(() => {
-    try {
-      const m = app.getAppMetrics().map(p => ({ type: p.type, cpu: +p.cpu.percentCPUUsage.toFixed(2), memMB: Math.round((p.memory.workingSetSize || 0) / 1024) }))
-      const tray = { hidden: _trayHidden, unloaded: _trayUnloaded, telemetry: !!(_telemetry && _telemetry.isStarted()), sensor: !!_sensorProcess }
-      fs.appendFileSync(path.join(app.getPath('userData'), 'perf.log'), JSON.stringify({ t: new Date().toISOString(), tray, procs: m }) + '\n')
-    } catch {}
-  }, 5000))
+  app.whenReady().then(() => {
+    _perfMarks.ready = Date.now() - _perfMarks.start
+    let lastCpu = process.cpuUsage()
+    setInterval(() => {
+      try {
+        const m = app.getAppMetrics().map(p => ({ type: p.type, cpu: +p.cpu.percentCPUUsage.toFixed(2), memMB: Math.round((p.memory.workingSetSize || 0) / 1024) }))
+        const tray = { hidden: _trayHidden, unloaded: _trayUnloaded, telemetry: !!(_telemetry && _telemetry.isStarted()), sensor: !!_sensorProcess, lhm: !!_lhmProcess }
+        const cpu = process.cpuUsage(lastCpu); lastCpu = process.cpuUsage()
+        const marks = {}; for (const k of Object.keys(_perfMarks)) if (k !== 'start') marks[k] = _perfMarks[k]
+        fs.appendFileSync(path.join(app.getPath('userData'), 'perf.log'), JSON.stringify({ t: new Date().toISOString(), tray, spawns: _spawnLedger ? _spawnLedger.drain() : null, mainCpuMs: Math.round((cpu.user + cpu.system) / 1000), marks, procs: m }) + '\n')
+      } catch {}
+    }, 5000)
+  })
 }
 app.on('will-quit', (e) => {
   if (_installingUpdate) return          // second pass, triggered by quitAndInstall: let Electron quit normally
@@ -1415,7 +1489,7 @@ app.on('will-quit', (e) => {
     : Promise.resolve()
   const cleanup = Promise.all([(sessionEndPromise || Promise.resolve()).finally(() => presenceShutdown().catch(() => {})), resumeAllFrozen(), (_powerLimit ? _powerLimit.onQuit().catch(() => {}) : null), (competeActive() ? competeSvc().stop().catch(() => {}) : null),
     // a game in progress: the session ends the normal way (Game Shield programs restart, Windows Update is released, an automatic boost stops), then a boost the user started is put back
-    (_gameAuto ? _gameAuto.stopWatcher().catch(() => {}) : Promise.resolve()).then(() => (pulseActivePreset ? pulseRestoreAll(() => {}).catch(() => {}) : null)).then(() => (snapshots && snapshots.load('update-guard') ? ugSvc().release() : null)).catch(() => {})])
+    (_gameAuto ? _gameAuto.stopWatcher().catch(() => {}) : Promise.resolve()).then(() => (_pulseOwner ? _pulseOwner.idle() : null)).then(() => (pulseActivePreset ? pulseRestoreAll(() => {}).catch(() => {}) : null)).then(() => (snapshots && snapshots.load('update-guard') ? ugSvc().release() : null)).catch(() => {})])
   const timeout = new Promise(resolve => setTimeout(resolve, 6500))
   Promise.race([cleanup, timeout]).finally(() => {
     try { gameShieldShutdown() } catch {}   // if the restore above ran out of time, at least start the programs Game Shield stopped
@@ -1522,7 +1596,8 @@ async function setStartupTask(enabled) {
   if (enabled) {
     if (!app.isPackaged) return { ok: true, skipped: true }
     const exe = process.execPath.replace(/"/g, '\\"')
-    const cr = await runCmd(`schtasks /create /tn "${STARTUP_TASK_NAME}" /tr "\\"${exe}\\"" /sc ONLOGON /rl HIGHEST /f`)
+    const trayArg = loadSettings().startInTray === true ? ' --tray' : ''   // start hidden in the tray: no window, no boot scan until the tray icon is used
+    const cr = await runCmd(`schtasks /create /tn "${STARTUP_TASK_NAME}" /tr "\\"${exe}\\"${trayArg}" /sc ONLOGON /rl HIGHEST /f`)
     if (!cr.ok) { startupTrace(`setStartupTask(true) err: ${cr.err}`); return { ok: false, error: cr.err || 'schtasks failed' } }
     return { ok: true }
   } else {
@@ -2264,6 +2339,12 @@ ipcMain.handle('save-settings', (_, data) => {
   if (saved && typeof clean.language === 'string') presenceSet({ lang: clean.language === 'fi' ? 'fi' : 'en' })
   return saved
 
+})
+// Start hidden in the tray: saved by main, and the logon task is rewritten (with or without --tray) when Start with Windows is on.
+ipcMain.handle('set-start-in-tray', async (_, on) => {
+  if (!saveSettings({ ...loadSettings(), startInTray: !!on })) return { ok: false, error: 'settings_write_failed' }
+  if (loadSettings().startAtLogin === true) return setStartupTask(true)
+  return { ok: true }
 })
 ipcMain.handle('set-startup', (_, enabled) => {
   return setStartupTask(!!enabled)
@@ -10350,7 +10431,6 @@ const PULSE_PRESETS = {
 }
 
 let pulseActivePreset = null
-let autoPulseTriggeredPreset = null  // set when game watcher auto-activated pulse
 let lastUsedPulsePreset = null       // remembered for tray "Start Pulse" shortcut
 let pulseStartTimestamp = null       // set when Pulse activates, cleared on restore
 let pulseBatchId = null
@@ -10552,7 +10632,8 @@ async function pulseRecover() {
   } catch { /* retried next start */ }
 }
 
-async function activatePulse(presetId, killBg, send) {
+/** Applies one boost. `via` is 'auto' when Auto-Pulse (not a person) asked. Callers go through activatePulse() below: one queue, one owner (lib/pulse/owner.js). */
+async function activatePulseCore(presetId, killBg, send, via) {
   const preset = PULSE_PRESETS[presetId]
   if (!preset) return { ok: false, error: 'Unknown preset' }
   const svc = pulseSvc()
@@ -10564,7 +10645,7 @@ async function activatePulse(presetId, killBg, send) {
   lastUsedPulsePreset = presetId
   pulseStartTimestamp = Date.now()
   pulseBatchId = pulseNewId()
-  pulseVia = autoPulseTriggeredPreset ? 'game-watcher' : 'manual'
+  pulseVia = via === 'auto' ? 'game-watcher' : 'manual'
   snapshots.save('pulse-active', { batchId: pulseBatchId, presetId, since: pulseStartTimestamp })
 
   try {
@@ -10604,7 +10685,6 @@ async function activatePulse(presetId, killBg, send) {
   updateTrayMenu()
   svc.syncBoost(true, presetId, preset.name)
   puKeysSync()
-  try { gameAutoSvc().pulseChanged(presetId) } catch {}   // the game session tells the user who started this boost
   return { ok: true }
 }
 
@@ -10630,7 +10710,7 @@ async function pulseApplyDeferred() {
   await pulseApplyGamePriority({ pid: Number(m[1]), name: m[2], st: m[3] }, puLog)
 }
 
-async function deactivatePulse(send) {
+async function deactivatePulseCore(send) {
   pulseActivePreset = null
   presenceRefresh()
   const restored = await pulseRestoreAll(send)   // false when something could not be put back (it stays in the journal and is retried at the next start)
@@ -10638,9 +10718,24 @@ async function deactivatePulse(send) {
   updateTrayMenu()
   pulseSvc().syncBoost(false)
   puKeysSync()
-  try { gameAutoSvc().pulseChanged(null) } catch {}
   return { ok: restored !== false }
 }
+
+// Every surface (Pulse tab, tray, Cockpit, HUD, hotkeys, bundles, Auto-Pulse) starts and stops a boost through the owner: operations run one
+// after the other, "who started it" is one value, and the game session is told after each (lib/pulse/owner.js).
+const PulseOwner = require('./lib/pulse/owner')
+let _pulseOwner = null
+function pulseOwner() {
+  if (!_pulseOwner) _pulseOwner = PulseOwner.create({
+    activate: (id, o) => activatePulseCore(id, o.killBg, o.send || puLog, o.via),
+    deactivate: o => deactivatePulseCore((o && o.send) || puLog),
+    current: () => pulseActivePreset,
+    notify: c => { try { gameAutoSvc().pulseChanged(c.preset, c.by) } catch {} },
+  })
+  return _pulseOwner
+}
+const activatePulse = (presetId, killBg, send, opts = {}) => pulseOwner().start(presetId, { killBg, send, auto: !!opts.auto })
+const deactivatePulse = (send, opts = {}) => pulseOwner().stop({ send, auto: !!opts.auto })
 
 ipcMain.handle('pulse-start', async (_, { presetId, killBg } = {}) => {
   if (!requiresPremium('pulse-start')) return { ok: false, reason: 'premium_required' }
@@ -10651,7 +10746,6 @@ ipcMain.handle('pulse-start', async (_, { presetId, killBg } = {}) => {
 ipcMain.handle('pulse-stop', async () => {
   if (!requiresPremium('pulse-stop')) return { ok: false, reason: 'premium_required' }
   const send = (msg, level) => sendLog({ msg, level, ts: new Date().toLocaleTimeString() })
-  autoPulseTriggeredPreset = null  // clear auto-pulse state on manual stop too
   return deactivatePulse(send)
 })
 
@@ -10702,6 +10796,7 @@ ipcMain.handle('pulse-detect-game', async () => {
 
 async function pulseThermalAuditCore() {
   if (!requiresPremium('pulse-thermal-audit')) return { ok: false, reason: 'premium_required' }
+  await ensureLhm()
   const SAMPLES = 10, INTERVAL_MS = 500
   // Collect avg clock, max clock, temp, per-core clocks, and fan RPM each sample
   const psScript = `
@@ -11215,13 +11310,14 @@ let _compete = null
 const competeSend = (ch, payload) => { try { mainWindow?.webContents.send(ch, payload) } catch {} }
 const competeLog = (msg, level = 'info') => competeSend('log', { msg, level, ts: new Date().toLocaleTimeString() })
 const competeMeta = ctx => ({ via: 'manual', batchId: ctx.batchId })
-function competeActive() { return !!_compete && _compete.status().state !== 'idle' }
+let _competeStarting = false   // between the click and the session existing (the start looks the game up first): the Game Watcher must not open a session in that gap
+function competeActive() { return _competeStarting || (!!_compete && _compete.status().state !== 'idle') }
 
 /** Puts back what the journal recorded for Competitive Mode: priorities always (self-guarded), the power plan only if the user did not change it since. */
 async function competeRestoreJournal() {
   const svc = journalSvc()
   const entries = svc.journal.list({ limit: 2000 }).filter(e => e.control && e.control.startsWith('compete:') && e.action === 'apply' && !e.undoneBy)
-  for (const e of entries.reverse()) {
+  for (const e of entries) {   // journal.list() is newest first already: undo newest first, like Pulse (this used to reverse it, oldest first)
     const isPower = e.control === 'compete:power'
     let r
     try { r = await svc.undo({ entryId: e.id }, { force: !isPower }) } catch (err) { r = { ok: false } }
@@ -11331,10 +11427,20 @@ ipcMain.handle('compete-games', async (_, req) => {
   const g = await getGamesRegistry(!!(req && req.refresh))
   return { ok: true, games: g.games.map(x => ({ id: x.id, source: x.source, name: x.name })) }
 })
+/** Competitive Mode takes the game over: an open automatic session (Game Watcher) ends the normal way first, so two systems never hold the same
+ *  protections (Game Shield, Windows Update, a Pulse boost) and the session ledger closes cleanly. Only when the start can really go ahead. */
+async function competeStartOwned(req) {
+  const eligible = !!auth && auth.isPremium() && !!competeResolveGame(String((req && req.gameId) || ''))
+  if (eligible) _competeStarting = true
+  try {
+    if (eligible && _gameAuto) { try { await _gameAuto.handOver('competitive-mode') } catch {} }
+    return await competeSvc().start(req)
+  } finally { _competeStarting = false }
+}
 ipcMain.handle('compete-start', async (_, req) => {
   await getGamesRegistry(false)
   const id = String(req && req.gameId || '')
-  const r = await competeSvc().start({ gameId: id, opts: req && req.opts })
+  const r = await competeStartOwned({ gameId: id, opts: req && req.opts })
   if (r.ok) competeLog(`◆ Competitive Mode: starting ${id}`, 'head')
   return r
 })
@@ -11357,7 +11463,7 @@ async function competeFromArgv(argv) {
   if (!id || competeActive()) return
   await getGamesRegistry(false)
   const prefs = cuRead('jt_compete.json', {})
-  const r = await competeSvc().start({ gameId: id, opts: (prefs.opts || {})[id] })
+  const r = await competeStartOwned({ gameId: id, opts: (prefs.opts || {})[id] })
   if (r.ok) competeLog('◆ Competitive Mode: starting ' + id + ' from a shortcut', 'head')
 }
 ipcMain.handle('compete-browse', async () => {
@@ -11366,8 +11472,7 @@ ipcMain.handle('compete-browse', async () => {
   const p = r.filePaths[0]
   return CompeteLaunch.validExePath(p) ? { ok: true, id: 'custom:' + p, name: path.win32.basename(p).replace(/\.exe$/i, '') } : { ok: false, error: 'bad-exe' }
 })
-setTimeout(() => { try { competeSvc().recover().catch(() => {}) } catch {} }, 5000)
-setTimeout(() => { competeFromArgv(process.argv).catch(() => {}) }, 9000)   // started from a desktop shortcut; after recover() so a leftover session is undone first   // a session that was running when the app or PC went down is put back
+// (Competitive Mode recover() and the --compete shortcut run from the start-up recovery chain in app.whenReady.)
 
 // ─── Games (lib/games): library of every installed game, per-game changes (priority, power throttling, windowed-game optimisations) read back and undoable ───
 // docs/GAMES_EVIDENCE.md. State lives in jt_games.json; registry changes go through journalSvc().runRecorded ('games:<id>:<row>'); priority is owned by the CPU & Memory service.
@@ -11487,66 +11592,29 @@ function gamesLearnRunning() {
 // The session lifecycle lives in lib/gameauto (watching, one queue, ledger, restore, recovery). This block hands it the effects that
 // stay here: Apps game time, MMCSS, per-game profile, frame capture, presence. docs/GAMEAUTO_EVIDENCE.md.
 const GameAuto = require('./lib/gameauto')
+const GameAutoProfile = require('./lib/gameauto/profile')
+const GameAutoApps = require('./lib/gameauto/appsevents')
+let _appsGameP = null, _appsLowered = 0   // Apps Game time of the session that is running: its start (a promise) and how many processes stepped back
 let activeGameProfile = null            // id of the game being played (the Pulse preset id when it has one)
-let activeGameProfileTweaksApplied = false  // true when a per-game tweak profile was applied by the session
 let activeGameName = null, activeGameExe = null
 let _gameAuto = null
 const gwLog = (msg, level) => sendLog({ msg, level, ts: new Date().toLocaleTimeString() })
-const MMCSS_BASE = 'HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Multimedia\\SystemProfile'
 
 /** Per-game effects at the start of a session. Returns ledger events; Update Guard, Game Shield and Auto-Pulse are handled by the service. */
 async function gameSessionStart(game) {
   const ev = []
   activeGameProfile = game.id; activeGameName = game.name; activeGameExe = game.exe
+  liveGameReason('session', true, game.exe)
   _bgWakeUntil = Date.now() + 20000; bgNeedsUpdate()   // sensors warm up while PresentMon and the session start
   gamesLearnRunning()
-  appsSvc().gameStart(appsGameOf(game.id)).catch(() => {})   // Game time: programs step back while the game runs
+  _appsGameP = appsSvc().gameStart(appsGameOf(game.id)).catch(e => ({ ok: false, error: String((e && e.message) || e) }))   // Game time: programs step back while the game runs (result awaited below)
   presenceRefresh()   // Discord shows the game
   gwLog(`🎮 Game detected: ${game.name} — applying optimizations…`, 'head')
 
-  // FiveM: silently ensure fullscreen compat flag is set on every session start
-  if (game.pulse === 'fivem') {
-    const compatPath = 'HKCU:\\Software\\Microsoft\\Windows NT\\CurrentVersion\\AppCompatFlags\\Layers'
-    await runPS(`New-Item -Path "${compatPath}" -Force -EA SilentlyContinue | Out-Null`)
-    for (const exe of ['FiveM.exe', 'GTA5.exe', 'FiveM_b3095_GTAProcess.exe']) {
-      const cur = await runPS(`(Get-ItemProperty -Path "${compatPath}" -Name "${exe}" -EA SilentlyContinue)."${exe}"`)
-      if (!(cur.out || '').includes('DISABLEDXMAXIMIZEDWINDOWEDMODE')) {
-        const base = (cur.out || '').trim()
-        const newVal = base ? `${base} DISABLEDXMAXIMIZEDWINDOWEDMODE` : '~ DISABLEDXMAXIMIZEDWINDOWEDMODE'
-        await runPS(`Set-ItemProperty -Path "${compatPath}" -Name "${exe}" -Value ${V.psQuote(newVal)} -Force`)
-      }
-    }
-  }
-
-  // MMCSS: remember the user's own value so the end of the session puts back exactly that, and read the change back
-  if (!snapshots.load('watcher-mmcss')) {
-    const cur = await runPS(`(Get-ItemProperty -Path "${MMCSS_BASE}" -Name SystemResponsiveness -EA SilentlyContinue).SystemResponsiveness`)
-    const seen = /^\d+$/.test(cur.out.trim()) ? Number(cur.out.trim()) : 20
-    snapshots.save('watcher-mmcss', { value: [10, 14, 18].includes(seen) ? 20 : seen })   // 10/14/18 are what older Pulse versions wrote and never put back; Windows' own default is 20
-  }
-  await runPS(`Set-ItemProperty -Path "${MMCSS_BASE}" -Name SystemResponsiveness -Value 10 -Force`)
-  await runPS(`Set-ItemProperty -Path "${MMCSS_BASE}\\Tasks\\Games" -Name "GPU Priority" -Value 8 -Force`)
-  const now = await runPS(`(Get-ItemProperty -Path "${MMCSS_BASE}" -Name SystemResponsiveness -EA SilentlyContinue).SystemResponsiveness`)
-  if (now.out.trim() === '10') { ev.push({ feature: 'mmcss', kind: 'applied', key: 'mmcss', detail: 'verified' }); gwLog(`✓ Auto-profile applied for ${game.name}`, 'ok') }
-  else ev.push({ feature: 'mmcss', kind: 'failed', detail: 'not-set' })
-
-  // Per-game tweak profile: apply if one is assigned to this game
-  const assignedProfile = gameProfileFor(loadSettings(), game.id)
-  const profile = assignedProfile ? loadProfiles()[assignedProfile] : null
-  if (profile) {
-    gwLog(`  Applying tweak profile: ${assignedProfile}`, 'info')
-    const fails = []   // (the old loop used a variable that did not exist here, so a profile never got past its first tweak)
-    for (const [k, v] of Object.entries(profile.tweaks || {})) {
-      if (v !== 'applied') continue
-      const tweakId = k.replace(/^tweak_/, '')
-      if (hasTweak(tweakId) && !isPlanExcluded(tweakId)) await bundleApply(tweakId, fails)
-    }
-    activeGameProfileTweaksApplied = true
-    // These tweaks are not undone when the game ends (they are kept until undone in History); the ledger says so instead of implying a restore.
-    ev.push(fails.length ? { feature: 'profile', kind: 'failed', detail: fails.map(f => f.id).join(', '), vars: { name: assignedProfile } } : { feature: 'profile', kind: 'applied', detail: 'kept', vars: { name: assignedProfile } })
-    gwLog(fails.length ? `  ⚠ Tweak profile "${assignedProfile}": ${fails.length} tweak(s) did not apply` : `  ✓ Tweak profile "${assignedProfile}" applied`, fails.length ? 'warn' : 'ok')
-    mainWindow?.webContents.send('game-watcher-event', { event: 'profile-applied', gameId: game.id, profileName: assignedProfile })
-  }
+  // Not here any more: a per-session FiveM compatibility-flag write and a per-session MMCSS (SystemResponsiveness / GPU Priority) write.
+  // The flag belongs to the Games tab row and the FiveM catalog (journaled, undoable: a session re-adding it silently defeated an undo), and
+  // the MMCSS write reset the user's own mmcss / priority-sep tweak to 20 after every game; Microsoft documents "GPU Priority" as not yet used.
+  // docs/GAMEAUTO_EVIDENCE.md.
 
   // ARIA: reset session accumulators for fresh session
   _ariaSessionAnomalies = []
@@ -11584,16 +11652,37 @@ async function gameSessionStart(game) {
 
   // A boost started before the game: its priority is applied now, and proven
   if (pulseActivePreset && pulseDeferredGame) pulseApplyDeferred().catch(() => {})
+  const ap = GameAutoApps.startEvents(await _appsGameP)
+  _appsLowered = ap.lowered
+  ev.push(...ap.events)
   return ev
+}
+
+/** The saved tweak profile for this game, applied AFTER Auto-Pulse (see lib/gameauto/profile.js for the rules). Returns ledger events. */
+async function gameSessionProfile(game) {
+  const settings = loadSettings()
+  const name = gameProfileFor(settings, game.id)
+  const profile = name ? loadProfiles()[name] : null
+  if (!profile) return []
+  const plan = GameAutoProfile.plan(profile, { settings, hasTweak: id => hasTweak(id), isPlanExcluded, tierOf: id => (TWEAKS[id] && TWEAKS[id].safetyTier) ?? 3 })
+  const fails = []
+  if (plan.apply.length) gwLog(`  Applying tweak profile: ${name} (${plan.apply.length} to apply, ${plan.already.length} already on)`, 'info')
+  for (const id of plan.apply) await bundleApply(id, fails)
+  const failedIds = new Set(fails.map(f => f.id))
+  const patch = {}
+  for (const id of plan.apply) if (!failedIds.has(id)) patch['tweak_' + id] = 'applied'   // the UI and the next session see the same truth
+  if (Object.keys(patch).length) { try { saveSettings({ ...loadSettings(), ...patch }) } catch {} }
+  gwLog(fails.length ? `  ⚠ Tweak profile "${name}": ${fails.length} tweak(s) did not apply` : `  ✓ Tweak profile "${name}" ready`, fails.length ? 'warn' : 'ok')
+  if (plan.apply.length) mainWindow?.webContents.send('game-watcher-event', { event: 'profile-applied', gameId: game.id, profileName: name })
+  return GameAutoProfile.events(name, plan, fails)
 }
 
 /** Per-game effects at the end of a session (game closed, another game started, or the watcher was stopped). Returns ledger events. */
 async function gameSessionEnd(game, reason) {
   const ev = []
   const prev = game.id
-  const hadProfileTweaks = activeGameProfileTweaksApplied
-  activeGameProfile = null; activeGameProfileTweaksApplied = false; activeGameName = null; activeGameExe = null
-  appsSvc().gameEnd().catch(() => {})
+  activeGameProfile = null; activeGameName = null; activeGameExe = null
+  liveGameReason('session', false)
   gwLog(`Game closed: ${game.name} — restoring defaults…`, 'info')
 
   // Stop rolling FPS counter and hide display before PresentMon shuts down
@@ -11631,19 +11720,13 @@ async function gameSessionEnd(game, reason) {
 
   presenceRefresh()   // game closed (activeGameProfile is already null)
 
-  if (hadProfileTweaks && !pulseActivePreset) {
-    // A per-game tweak profile was applied without Pulse: put back whatever Pulse's journal still holds
-    await pulseRestoreAll(gwLog)
-  }
-  // MMCSS goes back to the user's own value, read back; a failed restore keeps the snapshot so the next start retries it (pulseRecover)
-  const snap = snapshots.load('watcher-mmcss')
-  if (snap && Number.isInteger(snap.value)) {
-    await runPS(`Set-ItemProperty -Path "${MMCSS_BASE}" -Name SystemResponsiveness -Value ${snap.value} -Force`)
-    const back = await runPS(`(Get-ItemProperty -Path "${MMCSS_BASE}" -Name SystemResponsiveness -EA SilentlyContinue).SystemResponsiveness`)
-    const ok = back.out.trim() === String(snap.value)
-    if (ok) snapshots.remove('watcher-mmcss')
-    ev.push({ feature: 'mmcss', kind: 'restored', key: 'mmcss', ok, detail: ok ? 'ok' : 'not-restored' })
-  } else snapshots.remove('watcher-mmcss')
+  // Apps Game time goes back inside the session (after its own start has finished: a quick game switch can no longer overlap the two)
+  try { await _appsGameP } catch {}
+  const ar = await appsSvc().gameEnd().catch(e => ({ ok: false, error: String((e && e.message) || e) }))
+  ev.push(...GameAutoApps.endEvents(ar, _appsLowered))
+  _appsGameP = null; _appsLowered = 0
+  // The per-game tweak profile is not undone here by design (kept until undone in History, said in the ledger). MMCSS is no longer written by
+  // sessions; a leftover from an older version is put back once at the next start (pulseRecover).
   gwLog('✓ Defaults restored.', 'ok')
   return ev
 }
@@ -11667,14 +11750,14 @@ function gameAutoSvc() {
     pulse: {
       active: () => pulseActivePreset,
       start: async id => {
-        autoPulseTriggeredPreset = id   // activatePulse records "started by the game watcher" from this
-        const r = await activatePulse(id, false, gwLog)
-        if (!r || !r.ok) { autoPulseTriggeredPreset = null; try { pulseSvc().syncBoost(false) } catch {} }
+        const r = await activatePulse(id, false, gwLog, { auto: true })   // journaled "via game-watcher"; the owner records that Auto-Pulse started it
+        if (!r || !r.ok) { try { pulseSvc().syncBoost(false) } catch {} }
         return r
       },
-      stop: async () => { autoPulseTriggeredPreset = null; return deactivatePulse(gwLog) },
+      stop: () => deactivatePulse(gwLog, { auto: true }),
     },
     effects: { start: g => gameSessionStart(g), end: (g, reason) => gameSessionEnd(g, reason) },
+    profile: { apply: g => gameSessionProfile(g) },
     emit: p => { try { mainWindow?.webContents.send('gameauto-event', p) } catch {} },
     legacyEvent: p => { try { mainWindow?.webContents.send('game-watcher-event', p) } catch {} },
     log: gwLog,
@@ -12837,7 +12920,7 @@ pu2Handle('pulse2-status', (a, s) => s.status())
 pu2Handle('pulse2-subscribe', (a, s, e) => { puBgEnsure(); return s.subscribe(e.sender.id) })
 pu2Handle('pulse2-unsubscribe', (a, s, e) => s.unsubscribe(e.sender.id))
 pu2Handle('pulse2-boost', async (a, s) => { const r = await s.startBoost({ presetId: typeof a.presetId === 'string' ? a.presetId.slice(0, 40) : '', name: typeof a.name === 'string' ? a.name.slice(0, 60) : '', killBg: !!a.killBg }); puKeysSync(); return r })
-pu2Handle('pulse2-unboost', async (a, s) => { autoPulseTriggeredPreset = null; const r = await s.stopBoost(); puKeysSync(); return r })
+pu2Handle('pulse2-unboost', async (a, s) => { const r = await s.stopBoost(); puKeysSync(); return r })
 pu2Handle('pulse2-preflight', (a, s) => s.preflight())
 pu2Handle('pulse2-sessions', (a, s) => s.sessions())
 pu2Handle('pulse2-session', (a, s) => s.session(typeof a.id === 'string' ? a.id : ''))
@@ -13407,6 +13490,7 @@ ipcMain.handle('bios-ram-stress', (_, ...a) => ramStressCore(...a))
 
 ipcMain.handle('bios-lhm-sensors', async () => {
   if (!requiresPremium('bios-lhm-sensors')) return { ok: false, fans: [], powers: [], volts: [] }
+  await ensureLhm()
   const r = await runPS(`
 try {
   $ns  = 'root\\LibreHardwareMonitor'
@@ -13464,6 +13548,7 @@ Write-Output "SCORE=$count"
 })
 
 ipcMain.handle('get-temps', async () => {
+  await ensureLhm()
   const r = await runPS(`
 $ns = 'root\\LibreHardwareMonitor'
 $sensors = try { Get-WmiObject -Namespace $ns -Class Sensor -EA Stop } catch { $null }
@@ -13496,7 +13581,13 @@ let _thermalTimer = null
 const _frozenPids = new Set()  // tracks PIDs suspended by freeze-process
 ipcMain.handle('thermal-start', () => {
   if (_thermalTimer) return {}
+  let _thermalBusy = false
   _thermalTimer = setInterval(async () => {
+    // Nobody to show it to (window hidden or gone, no Pulse Cockpit): skip the tick. It used to run a PowerShell WMI query every 2 s into the void
+    // for the minute before the page unloads, and again after every page rebuild. An overlapping tick is skipped too (4 s timeout vs 2 s period).
+    if (_thermalBusy || (!uiWanted() && !(pulseWindow && !pulseWindow.isDestroyed()))) return
+    _thermalBusy = true
+    try { await ensureLhm() } catch {}
     const r = await runPS(`
 $ns = 'root\\LibreHardwareMonitor'
 $s = try { Get-WmiObject -Namespace $ns -Class Sensor -EA Stop } catch { $null }
@@ -13509,7 +13600,7 @@ Write-Output "CPU_TEMP=$cpuTemp"
 Write-Output "CPU_LOAD=$cpuLoad"
 Write-Output "CLK_NOW=$clkNow"
 Write-Output "CLK_MAX=$clkMax"
-    `, 4000)
+    `, 4000).finally(() => { _thermalBusy = false })
     if (r.out.includes('LHM_UNAVAILABLE')) return
     const get = k => parseFloat(r.out.match(new RegExp(k + '=([\\d.]+)'))?.[1] || '0')
     const cpuTemp = get('CPU_TEMP'), cpuLoad = get('CPU_LOAD')
@@ -14208,9 +14299,14 @@ async function gameShieldMidTick() {
   try {
     const cfg = gsSettings()
     if (!cfg.enabled && !s.forced) return
-    const names = GameShield.midSessionKillList({ ramPct: gsRamPct(), tier3Threshold: cfg.tier3, midThreshold: cfg.mid, exclusions: [...cfg.exclusions, ...s.protect], alreadyStopped: [...s.stopped.keys()] })
+    // A program that was looked for and was not running is not looked for again for 2 minutes (while RAM stayed high this ran a PowerShell every 20 s
+    // for the same missing browsers and launchers); a program opened later is still caught on the next round after that.
+    const tNow = Date.now(); s.notRunning = s.notRunning || new Map()
+    const skip = [...s.notRunning].filter(([, t]) => tNow - t < 120000).map(([n]) => n)
+    const names = GameShield.midSessionKillList({ ramPct: gsRamPct(), tier3Threshold: cfg.tier3, midThreshold: cfg.mid, exclusions: [...cfg.exclusions, ...s.protect], alreadyStopped: [...s.stopped.keys(), ...skip] })
     if (!names.length) return
     const killed = await gsStopNames(s, names, 'mid')
+    for (const n of names) { if (!killed.includes(n)) s.notRunning.set(n, tNow); else s.notRunning.delete(n) }
     if (_gsSession === s && killed.length) {
       gsLog('Game Shield: RAM high — stopped ' + killed.join(', '), 'warn')
       gsSend({ action: 'mid-session-kill', killed: killed.map(n => n + '.exe') })

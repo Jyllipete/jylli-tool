@@ -91,7 +91,7 @@ LANG.fi.games2 = {
   histEmptyT: 'Mitään ei ole vielä muutettu', histEmptyS: 'Jokainen peliin tekemäsi muutos näkyy täällä Kumoa-painikkeen kanssa.', runTitle: '{n} muutosta', runOk: '{n} tehty', runBad: '{n} epäonnistui',
   did_apply: 'otettu käyttöön', did_restore: 'poistettu käytöstä', unverified: 'ei voitu lukea takaisin', openJournal: 'Avaa koko muutoshistoria',
 
-  autoWatchT: 'Automaattiprofiilit', autoWatchOn: 'Tarkkailussa: viritys otetaan käyttöön, kun peli käynnistyy, ja palautetaan sen sulkeutuessa.', autoWatchOff: 'Pois. Ota käyttöön, jos haluat ottaa tallennetun profiilin käyttöön pelin käynnistyessä.',
+  autoWatchT: 'Automaattiprofiilit', autoWatchOn: 'Tarkkailussa. Istunnon suojaukset (Windows Updaten pito, Game Shield, Auto-Pulse, Game time) palautetaan pelin sulkeutuessa. Tallennettu viritysprofiili pysyy käytössä, kunnes perut sen Historiassa.', autoWatchOff: 'Pois. Ota käyttöön, jos haluat ottaa tallennetun profiilin käyttöön pelin käynnistyessä.',
   autoWatchS: 'Tarkistaa 5 sekunnin välein, onko käynnissä peli, jonka se tuntee nimeltä. Se tallentaa istuntosi pelihistoriaan ja voi käynnistää Pulsen.',
   autoPulseT: 'Käynnistä Pulse automaattisesti', autoPulseS: 'Tehostaa peliä sen ollessa käynnissä ja palauttaa sitten kaiken.',
   profT: 'Viritysprofiili pelille', profS: 'Otetaan käyttöön pelin käynnistyessä. Toimii peleille, jotka Jylli tuntee nimeltä.', assignFor: 'Profiili pelille {name}', noProfile: 'Ei mitään',

@@ -1070,6 +1070,8 @@ LANG.fi = {
       analyticsConsentAllow:'Jaa tilastot',
       settingsStartup:'Käynnistä Windowsin käynnistyksessä',
       settingsStartupDesc:'Käynnistä Jylli Tool automaattisesti Windowsin käynnistyessä',
+      settingsStartInTray:'Käynnistä piilotettuna ilmaisinalueelle',
+      settingsStartInTrayDesc:'Kun Windows käynnistyy, Jylli Tool avautuu vain ilmaisinalueelle: ikkunaa ei näy ennen kuin klikkaat kuvaketta. Game Watcher ja Auto-Pulse toimivat silti. Vaatii asetuksen Käynnistä Windowsin käynnistyksessä.',
       settingsHideOnGame:'Piilota ilmaisinalueelle, kun peli käynnistyy',
       settingsHideOnGameDesc:'Kun peli tunnistetaan, Jylli Tool piiloutuu ilmaisinalueelle. Se jatkaa toimintaansa; avaa se uudelleen ilmaisinalueen kuvakkeesta.',
       startupTaskFailed:'Käynnistystehtävän päivitys epäonnistui',

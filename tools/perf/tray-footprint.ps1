@@ -12,6 +12,10 @@ function Get-Tree($id, $all) {
 }
 $end = (Get-Date).AddSeconds($Seconds)
 $prev = @{}
+# WMI work the app causes is billed to WmiPrvSE.exe, which is not a child of ours: report its CPU-seconds over the run (the whole PC's, so compare with a run
+# of the same length without the app), and how many distinct child processes were seen (short-lived PowerShell helpers only show up if a sample catches them).
+function Wmi-Cpu { (Get-Process -Name WmiPrvSE -EA SilentlyContinue | Measure-Object CPU -Sum).Sum }
+$wmi0 = Wmi-Cpu; $seenPids = @{}
 while ((Get-Date) -lt $end) {
   $all = Get-CimInstance Win32_Process
   $ids = @(Get-Tree $root.ProcessId $all)
@@ -23,7 +27,8 @@ while ((Get-Date) -lt $end) {
     $prev[$id] = $p.CPU
     [pscustomobject]@{ Pid = $id; Name = $p.ProcessName; Type = $type; PrivMB = [math]::Round($p.PrivateMemorySize64 / 1MB); WsMB = [math]::Round($p.WorkingSet64 / 1MB); CpuPct = $cpu }
   }
-  '--- ' + (Get-Date -Format 'HH:mm:ss') + '  total private ' + ($rows | Measure-Object PrivMB -Sum).Sum + ' MB, ws ' + ($rows | Measure-Object WsMB -Sum).Sum + ' MB, cpu ' + [math]::Round(($rows | Measure-Object CpuPct -Sum).Sum, 2) + ' %'
+  foreach ($id in $ids) { $seenPids[$id] = $true }
+  '--- ' + (Get-Date -Format 'HH:mm:ss') + '  distinct pids seen ' + $seenPids.Count + ', WmiPrvSE cpu-s since start ' + [math]::Round((Wmi-Cpu) - $wmi0, 2) + '  total private ' + ($rows | Measure-Object PrivMB -Sum).Sum + ' MB, ws ' + ($rows | Measure-Object WsMB -Sum).Sum + ' MB, cpu ' + [math]::Round(($rows | Measure-Object CpuPct -Sum).Sum, 2) + ' %'
   $rows | Sort-Object PrivMB -Descending | Format-Table -AutoSize | Out-String -Width 200
   Start-Sleep -Seconds $Every
 }

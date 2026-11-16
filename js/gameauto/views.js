@@ -160,7 +160,7 @@
     const { T } = x
     const base = 'ev_' + e.feature + '_' + e.kind + (e.kind === 'restored' && e.ok === false ? '_fail' : '')
     const key = [base + '_' + e.detail, base].find(k => x.has(k)) || 'ev_generic'
-    return T(key, { key: e.key || '', detail: e.detail || '', name: (e.vars && e.vars.name) || '', verdict: e.kind === 'restored' && e.detail && x.has('v_' + e.detail) ? T('v_' + e.detail) : (e.detail || ''), feature: e.feature, kind: e.kind })
+    return T(key, { ...(e.vars || {}), key: e.key || '', detail: e.detail || '', name: (e.vars && e.vars.name) || '', verdict: e.kind === 'restored' && e.detail && x.has('v_' + e.detail) ? T('v_' + e.detail) : (e.detail || ''), feature: e.feature, kind: e.kind })
   }
   const evTone = e => (e.ok === false || e.kind === 'failed' ? 'bad' : e.kind === 'restored' ? 'ok' : e.kind === 'applied' ? 'info' : 'idle')
 

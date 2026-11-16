@@ -66,7 +66,7 @@ LANG.fi.gameauto = {
 
   ledgerT: 'Istuntoloki', ledgerS: 'Mitä automaatio muutti pelin aikana ja palautettiinko se.', ledgerEmpty: 'Ei vielä pelinistuntoja. Käynnistä peli, niin loki ilmestyy tähän.', ledgerNoEvents: 'Tämän istunnon aikana ei muutettu mitään.',
   ledgerNow: 'Tämä istunto: {game}', ledgerLast: 'Viime istunto: {game}', ledgerSince: 'Alkoi {since} sitten', ledgerEnded: 'Päättyi: {why} · pelattu {dur}',
-  end_exit: 'peli sulkeutui', end_switch: 'toinen peli käynnistyi', 'end_watcher-stopped': 'Game Watcher kytkettiin pois', end_crash: 'Jylli Tool sulkeutui pelin aikana',
+  end_exit: 'peli sulkeutui', end_switch: 'toinen peli käynnistyi', 'end_watcher-stopped': 'Game Watcher kytkettiin pois', end_crash: 'Jylli Tool sulkeutui pelin aikana', 'end_competitive-mode': 'Competitive Mode otti pelin haltuunsa',
   allRestored: 'Kaikki palautettu', needsAttention: '{n} vaatii huomiota', histT: 'Aiemmat istunnot',
   ev_generic: '{feature}: {kind}',
   ev_updateGuard_applied: 'Windows Update pysäytetty', ev_updateGuard_restored: 'Windows Update palautettu ennalleen', 'ev_updateGuard_restored_windows-reenabled': 'Windows Update palautettu (Windows oli jo kytkenyt sen päälle pelin aikana)',
@@ -79,6 +79,10 @@ LANG.fi.gameauto = {
   ev_autoPulse_failed: 'Pulse ei käynnistynyt: {detail}', 'ev_autoPulse_skipped_no-preset': 'Pelillä ei ole Pulse-esiasetusta', 'ev_autoPulse_skipped_off-for-game': 'Auto-Pulse on pois päältä tälle pelille',
   'ev_autoPulse_info_manual-boost-left-alone': 'Oma Pulse-tehostuksesi jätettiin rauhaan', 'ev_autoPulse_info_stopped-by-user': 'Pysäytit Pulsen; Auto-Pulse pysyy pois päältä tälle pelille',
   ev_mmcss_applied: 'Pelien ajoituksen prioriteetti nostettu (tarkistettu)', ev_mmcss_restored: 'Ajoituksen prioriteetti palautettu arvoosi', ev_mmcss_restored_fail: 'Ajoituksen prioriteettia ei saatu palautettua. Yritetään uudelleen seuraavalla käynnistyksellä.', ev_mmcss_failed: 'Pelien ajoituksen prioriteettia ei saatu asetettua',
+  'ev_profile_applied_kept-counts': 'Viritysprofiili ”{name}”: {n} otettu käyttöön, {already} oli jo päällä. Ne pysyvät, kunnes perut ne Historiassa.', 'ev_profile_failed_tweak-failed': 'Viritysprofiili ”{name}”: {id} ei tullut käyttöön ({error})',
+  'ev_profile_skipped_refused-tier': 'Viritysprofiili ”{name}”: {id} jätettiin ottamatta käyttöön (liian riskialtis automaattiseen ajoon)', 'ev_profile_skipped_refused-excluded': 'Viritysprofiili ”{name}”: {id} jätettiin ottamatta käyttöön (olet jättänyt sen pois automaattisista ajoista)', 'ev_profile_skipped_unknown-tweak': 'Viritysprofiili ”{name}”: {id} ei ole enää olemassa ja se ohitettiin',
+  ev_apps_applied: '{n} taustaprosessia väistyi tämän pelin tieltä', ev_apps_restored: 'Taustaohjelmat palautettu', ev_apps_restored_fail: 'Joitakin taustaohjelmia ei saatu palautettua', 'ev_apps_restored_fail_left': '{left} taustaprosessia ei saatu palautettua', ev_apps_failed: 'Pelin ajoa (Game time) ei saatu käynnistettyä', 'ev_apps_info_nothing-to-lower': 'Game time ei löytänyt mitään väistettävää', 'ev_apps_info_still-ending': 'Edellisen pelin Game time oli vielä päättymässä, joten se ei käynnistynyt tälle pelille',
+  'ev_autoPulse_info_taken-over-by-user': 'Käynnistit oman Pulse-tehostuksen. Se päättyy pelin mukana.',
   ev_profile_applied: 'Viritysprofiili ”{name}” otettu käyttöön. Se pysyy, kunnes perut sen Historiassa.', ev_profile_failed: 'Viritysprofiili ”{name}”: osaa viritysasetuksista ei saatu käyttöön ({detail})',
   'ev_watcher_info_app-closed-during-session': 'Jylli Tool sulkeutui tämän pelin aikana. Jäljelle jäänyt palautettiin, kun se käynnistyi uudelleen.',
 

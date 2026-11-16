@@ -173,6 +173,7 @@ contextBridge.exposeInMainWorld('api', {
   openPath:           (p)          => ipcRenderer.invoke('open-path', p),
   setDiscordRpc:          (enabled)      => ipcRenderer.invoke('set-discord-rpc', enabled),
   setStartup:             (enabled)      => ipcRenderer.invoke('set-startup', enabled),
+  setStartInTray:         (on)           => ipcRenderer.invoke('set-start-in-tray', !!on),
   discordSetPage:         (page, tab)    => ipcRenderer.invoke('discord-set-page', page, tab),
   discordSetAppliedCount: (count)        => ipcRenderer.invoke('discord-set-applied-count', count),
   discordSetSilent:       (on)           => ipcRenderer.invoke('discord-set-silent', on),

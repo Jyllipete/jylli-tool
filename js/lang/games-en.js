@@ -101,7 +101,7 @@ LANG.en.games2 = {
   did_apply: 'turned on', did_restore: 'turned off', unverified: 'could not be read back', openJournal: 'Open the full change history',
 
   // automation
-  autoWatchT: 'Auto-profiles', autoWatchOn: 'Watching: tuning applies when a game starts and is put back when it closes.', autoWatchOff: 'Off. Turn on to apply a saved profile when a game starts.',
+  autoWatchT: 'Auto-profiles', autoWatchOn: 'Watching. Session protections (Windows Update hold, Game Shield, Auto-Pulse, Game time) are put back when the game closes. A saved tweak profile stays applied until you undo it in History.', autoWatchOff: 'Off. Turn on to apply a saved profile when a game starts.',
   autoWatchS: 'Checks every 5 seconds for a game it knows by name. It records your sessions for the play history and can start Pulse.',
   autoPulseT: 'Start Pulse automatically', autoPulseS: 'Boosts the game while it runs, then restores everything.',
   profT: 'Tweak profile per game', profS: 'Applied when the game starts. Works for games Jylli knows by name.', assignFor: 'Profile for {name}', noProfile: 'None',

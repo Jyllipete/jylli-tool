@@ -91,10 +91,36 @@ program makes a particular game faster. It is not shown as a performance gain.
 | Crash / power loss | At the next start (8 s): Windows Update released, Game Shield programs recorded on disk restarted, MMCSS restored (existing `pulseRecover`), the saved session is closed as "Jylli Tool closed during the game" with what was recovered. |
 | Settings | Switches and thresholds are main-owned (`MAIN_OWNED_SETTINGS`), so a stale renderer copy cannot overwrite them. Every change returns `{ ok }`; a failed write changes nothing and says so. |
 
+## Ownership and precedence (audit 2026-11)
+
+Rule: **one owner per resource, restore in the exact reverse of apply, one queue.** Found by reading the code paths, fixed in the same round.
+
+| Resource | Owner | Order / rule |
+|---|---|---|
+| Session start | `lib/gameauto` queue | effects (Apps Game time, frame capture) → Game Shield → Update Guard → Auto-Pulse → saved tweak profile |
+| Session end | same queue | **exact reverse**: Auto-Pulse → Update Guard → Game Shield → effects. The power plan and Windows Update come back before the slower Game Shield restart check, which matters when the app quits against its 6.5 s timeout. |
+| Pulse boost | `lib/pulse/owner.js` | Every surface (tab, tray, Cockpit, HUD, hotkeys, bundles, Auto-Pulse) goes through one queue. A Stop pressed while a Start is applying runs after it. "Who started it" is one value (`auto` / `manual`), cleared by every stop. |
+| Auto-Pulse switch off mid-game | session service | ends only a boost Auto-Pulse started; your own boost stays (and still ends with its game) |
+| Your boost started over an automatic one | owner → `pulseChanged(preset, 'manual')` | becomes yours ("taken over by you") |
+| Competitive Mode | `competeStartOwned` | an open automatic session ends the normal way first (`handOver`), and the watcher is held off while the start looks the game up. Undo is newest first. |
+| Apps Game time | session effects | its start and end are awaited inside the session (a quick game switch can no longer overlap them) and recorded in the ledger |
+| CPU & Memory / GPU / Power live views | `liveGameReason` | two reasons (`context` detector, `session`); the views pause on the first and resume when the last ends, so a library or custom game pauses them too |
+| Start-up recovery | one chain, ~4 s after launch | Pulse → Apps → Competitive Mode → session service, then the watcher, then a `--compete` shortcut |
+
+### Removed from sessions, and why
+
+- **MMCSS write** (`SystemResponsiveness` = 10 and the Games task's `GPU Priority` = 8 at every session). Microsoft documents `SystemResponsiveness` as the share of CPU kept for low-priority tasks and `GPU Priority` as "not yet used" (Multimedia Class Scheduler Service, Microsoft Learn); 8 is already the default. The effect on a game is not measured here and only reaches threads that register with MMCSS. The restore also reset the user's own `mmcss` / `priority-sep` tweak (10) to 20 after every game. The persistent `mmcss` tweak stays; `pulseRecover` still puts back a leftover snapshot from an older version once.
+- **FiveM compatibility flag** write on every session: not journaled, and it silently re-added the flag after the user undid the Games-tab row. The row and the FiveM catalog own that key.
+
+### Saved tweak profile (`lib/gameauto/profile.js`)
+
+Runs last. A tweak already applied (`tweak_<id>` = applied) is not applied again; tier 3 and tweaks you excluded from automatic runs are refused (the same rule as the journal's automatic pipeline, which the old loop skipped); an unknown id is reported. What it applies is written to the settings so the UI agrees. The profile stays applied after the game (undo in History); the ledger says how many were applied, which were already on, and which were refused or failed.
+
 ## Not verified
 
 - No run in the built Electron app and no real game session: lifecycle tested with fakes (`test/gameauto-*.test.js`, `test/updateguard.test.js`) and the
   panel in the browser preview (`/app?gx=idle|playing|ended|failed|degraded|off|paused|fail`).
 - `sc.exe config wuauserv start= delayed-auto` and the registry read of `DelayedAutostart` are documented Windows behaviour but were not exercised
   against a real service here.
+- The 2026-11 ownership changes are covered by unit tests with fakes (`test/gameauto-service.test.js`, `test/pulse-owner.test.js`, `test/gameauto-profile.test.js`) and source-level guards (`test/perf-audit-wiring.test.js`). No real game session, no real MMCSS / Windows Update / compatibility-flag write was run.
 - Which programs Windows Update Medic or Group Policy may turn back on is outside this tool.

@@ -39,6 +39,7 @@ function world(over = {}) {
       stop: async () => { w.calls.push('pulse.stop'); w.pulseActive = null; return { ok: true } },
     },
     effects: { start: async g => { w.calls.push('fx.start'); return [{ feature: 'apps', kind: 'applied', key: 'gametime' }] }, end: async () => { w.calls.push('fx.end'); return [{ feature: 'apps', kind: 'restored', key: 'gametime' }] } },
+    profile: { apply: async g => { w.calls.push('profile.apply'); return w.profileEvents || [] } },
     emit: p => w.events.push(p),
     legacyEvent: p => w.legacy.push(p.event),
     log: () => {},
@@ -54,7 +55,7 @@ test('a game that is already running starts its session when the watcher starts,
   await w.svc.startWatcher()
   const s = w.svc.snapshot()
   assert.equal(s.session.game.id, 'csgo')
-  assert.deepEqual(w.calls, ['fx.start', 'shield.activate', 'ug.hold', 'pulse.start:csgo'])
+  assert.deepEqual(w.calls, ['fx.start', 'shield.activate', 'ug.hold', 'pulse.start:csgo', 'profile.apply'])   // the saved tweak profile comes last
   assert.equal(s.features.updateGuard.status, 'holding')
   assert.equal(s.features.updateGuard.pending.count, 2)
   assert.equal(s.features.autoPulse.status, 'active')
@@ -141,7 +142,7 @@ test('Update Guard that skipped (service already disabled) is shown as skipped, 
 
 test('free accounts: the watcher works, the premium features do nothing and cannot be switched on', async () => {
   const w = world(); w.premium = false; w.names = new Set(['cs2']); await w.svc.startWatcher()
-  assert.deepEqual(w.calls, ['fx.start'])
+  assert.deepEqual(w.calls, ['fx.start', 'profile.apply'])
   assert.deepEqual(await w.svc.set({ shield: true }), { ok: false, reason: 'premium_required' })
 })
 
@@ -240,4 +241,54 @@ test('a legacy preset override count is surfaced once and can be dismissed', asy
   assert.equal(w.svc.snapshot().legacyOverrides, 0)
   w.svc.migrateLegacy(3)
   assert.equal(w.svc.snapshot().legacyOverrides, 0)
+})
+
+test('the end of a session is the exact reverse of its start', async () => {
+  const w = world(); w.names = new Set(['cs2']); await w.svc.startWatcher()
+  w.calls.length = 0
+  await w.run(); await w.run()   // 2 misses end the session
+  assert.deepEqual(w.calls, ['pulse.stop', 'ug.release', 'shield.deactivate', 'fx.end'])
+})
+
+test('turning Auto-Pulse off mid-game ends a boost it started, not one the user started', async () => {
+  const a = world(); a.names = new Set(['cs2']); await a.svc.startWatcher()
+  assert.equal(a.pulseActive, 'csgo')
+  await a.svc.set({ autoPulse: false })
+  assert.equal(a.pulseActive, null)
+  const b = world({ autoPulseEnabled: false }); b.pulseActive = 'csgo'; b.names = new Set(['cs2']); await b.svc.startWatcher()
+  await b.svc.set({ autoPulse: true }); await b.svc.set({ autoPulse: false })
+  assert.equal(b.pulseActive, 'csgo')   // a manual boost for the same game survives the switch, and still ends with the game
+  await b.run(); await b.run()
+  assert.equal(b.pulseActive, null)
+})
+
+test('a boost the user starts over the automatic one becomes theirs', async () => {
+  const w = world(); w.names = new Set(['cs2']); await w.svc.startWatcher()
+  w.svc.pulseChanged('csgo', 'manual')
+  assert.equal(w.svc.snapshot().features.autoPulse.status, 'manual')
+  await w.svc.set({ autoPulse: false })
+  assert.equal(w.pulseActive, 'csgo')
+  w.svc.pulseChanged(null, 'auto')   // our own stop is never mistaken for the user's
+  assert.equal(w.svc.snapshot().features.autoPulse.status, 'manual')
+})
+
+test('Competitive Mode hand-over ends the open session first, restores everything and closes the ledger once', async () => {
+  const w = world(); w.names = new Set(['cs2']); await w.svc.startWatcher()
+  const r = await w.svc.handOver('competitive-mode')
+  assert.deepEqual(r, { ok: true, ended: true })
+  assert.equal(w.svc.snapshot().session, null)
+  assert.equal(w.pulseActive, null); assert.equal(w.ug.held, false)
+  assert.equal(last(w).endReason, 'competitive-mode')
+  assert.equal(last(w).summary.clean, true)
+  assert.deepEqual(await w.svc.handOver('competitive-mode'), { ok: true, ended: false })   // nothing open: nothing to do
+  assert.equal(w.calls.filter(c => c === 'shield.deactivate').length, 1)
+})
+
+test('profile events from the effects land in the ledger and never count as waiting to be put back', async () => {
+  const w = world(); w.profileEvents = [{ feature: 'profile', kind: 'applied', detail: 'kept', vars: { name: 'Ranked', n: 2, already: 0 } }]
+  w.names = new Set(['cs2']); await w.svc.startWatcher()
+  await w.run(); await w.run()
+  const l = last(w)
+  assert.ok(l.events.some(e => e.feature === 'profile' && e.detail === 'kept'))
+  assert.equal(l.summary.clean, true)
 })
