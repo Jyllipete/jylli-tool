@@ -9113,7 +9113,9 @@ function startTierRefresh() {
 
 ipcMain.handle('auth-start', async () => {
   try {
-    const r = await auth.start()
+    let lang = 'en'
+    try { lang = loadSettings().language === 'fi' ? 'fi' : 'en' } catch {}   // the result page in the browser follows the app's language
+    const r = await auth.start({ lang })
     if (!r) return { ok: false }
     let browserFailed = false
     try {
