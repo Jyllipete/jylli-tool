@@ -1,0 +1,108 @@
+/* ═══ Discord gate "Keyring" (prefix gt-): the screen Jylli Tool shows until a Discord session is verified. js/gate/view.js builds it.
+   House style: quiet and exact. Hairlines, Geist, tokens only; no glow on text, cards or badges (the one accent shadow is on the primary action).
+   Only transform and opacity animate, except the one-off aperture at the end. Every duration scales with --motion-scale. ═══ */
+
+@property --gt-r { syntax: '<length>'; inherits: true; initial-value: 0px; }
+
+#lock-screen.gt {
+  position: fixed; inset: 0; z-index: 99999; display: flex !important; flex-direction: column;
+  background: var(--c-bg-base); color: var(--c-text-primary); font-family: var(--font); overflow: hidden;
+  opacity: 0; transition: opacity calc(240ms * var(--motion-scale)) var(--ease-out);
+}
+#lock-screen.gt.gt-in { opacity: 1; }
+.gt [hidden] { display: none !important; }
+
+/* top strip: drag area, language, window buttons */
+.gt-bar { flex: none; height: 40px; display: flex; align-items: center; gap: 12px; padding: 0 0 0 16px; -webkit-app-region: drag; user-select: none; }
+.gt-bar button { -webkit-app-region: no-drag; }
+.gt-bar-brand { display: flex; align-items: center; gap: 8px; font: 600 var(--fs-2)/1 var(--font); color: var(--c-text-secondary); }
+.gt-mark-sm { width: 18px; height: 18px; fill: none; stroke: var(--c-text-secondary); stroke-width: 3.2; stroke-linecap: round; }
+.gt-bar-sp { flex: 1; }
+.gt-lang { display: flex; padding: 2px; gap: 2px; border: 1px solid var(--hairline-strong); border-radius: 8px; -webkit-app-region: no-drag; }
+.gt-lang-btn { height: 22px; min-width: 32px; padding: 0 8px; border: 0; border-radius: 6px; background: none; color: var(--c-text-secondary); font: 500 var(--fs-1)/1 var(--font-mono); cursor: pointer; transition: background var(--dur-fast), color var(--dur-fast); }
+.gt-lang-btn:hover { background: var(--c-bg-hover); color: var(--c-text-primary); }
+.gt-lang-btn.is-on { background: var(--c-bg-raised); color: var(--c-text-primary); }
+.gt-win { height: 40px; margin-left: 4px; -webkit-app-region: no-drag; }
+
+/* two columns: the promise, then the dial */
+.gt-stage { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: center; gap: clamp(24px, 5vw, 80px); padding: 0 clamp(24px, 6vw, 96px) 28px; }
+.gt-copy { max-width: 440px; justify-self: end; display: flex; flex-direction: column; gap: 14px; animation: gt-rise calc(520ms * var(--motion-scale)) var(--ease-out) calc(80ms * var(--motion-scale)) both; }
+.gt-title { margin: 0; font: 600 clamp(28px, 3.4vw, 40px)/1.08 var(--font); letter-spacing: -.025em; color: var(--c-text-primary); }
+.gt-sub { margin: 0; max-width: 400px; font-size: var(--fs-3); line-height: 1.55; color: var(--c-text-secondary); }
+.gt-values, .gt-trust { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 9px; }
+.gt-values { margin-top: 6px; }
+.gt-values li { display: flex; align-items: center; gap: 12px; font-size: var(--fs-3); color: var(--c-text-primary); }
+.gt-values i { width: 18px; text-align: center; color: var(--c-accent-text, var(--c-accent)); }
+.gt-trust { margin-top: 10px; padding-top: 16px; border-top: 1px solid var(--hairline); }
+.gt-trust li { display: flex; align-items: center; gap: 12px; font-size: var(--fs-2); line-height: 1.45; color: var(--c-text-tertiary); }
+.gt-trust i { width: 18px; text-align: center; }
+
+.gt-core { justify-self: start; width: min(480px, 100%); display: flex; flex-direction: column; align-items: center; text-align: center; animation: gt-rise calc(520ms * var(--motion-scale)) var(--ease-out) calc(200ms * var(--motion-scale)) both; }
+@keyframes gt-rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+/* the dial */
+.gt-dial { position: relative; width: min(320px, 46vh); aspect-ratio: 1; flex: none; }
+.gt-dial svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.gt-halo { fill: none; stroke: var(--hairline); stroke-width: 1; opacity: .7; }
+.gt-tick { stroke: var(--c-text-secondary); stroke-width: 1.2; stroke-linecap: round; opacity: .75; transition: opacity calc(200ms * var(--motion-scale)) var(--ease-out); }
+.gt-tick-major { stroke-width: 1.8; opacity: 1; }
+.gt-tick.is-off { opacity: .16; }
+.gt-arc { fill: none; stroke: var(--hairline-strong); stroke-width: 3; stroke-linecap: round; transition: stroke calc(300ms * var(--motion-scale)) var(--ease-out); }
+.gt-arc.is-on { stroke: var(--c-accent); }
+.gt-arc.is-live { animation: gt-breathe 2.4s ease-in-out infinite; }
+#gt-arcs .gt-arc:nth-child(2) { transition-delay: calc(90ms * var(--motion-scale)); }
+#gt-arcs .gt-arc:nth-child(3) { transition-delay: calc(180ms * var(--motion-scale)); }
+#gt-arcs .gt-arc:nth-child(4) { transition-delay: calc(270ms * var(--motion-scale)); }
+@keyframes gt-breathe { 0%, 100% { opacity: 1; } 50% { opacity: .35; } }
+.gt-core-ring { fill: none; stroke: var(--hairline-strong); stroke-width: 1; }
+.gt-mark { fill: none; stroke: var(--c-text-primary); stroke-width: 2.4; stroke-linecap: round; transition: opacity calc(240ms * var(--motion-scale)) var(--ease-out); }
+.gt-mark circle { stroke: var(--c-text-secondary); }
+.gt-sweep { transform-origin: 160px 160px; animation: gt-sweep 14s linear infinite; opacity: 0; transition: opacity calc(400ms * var(--motion-scale)) var(--ease-out); }
+.gt-sweep-arc { fill: none; stroke: var(--c-accent); stroke-width: 2.4; stroke-linecap: round; }
+.gt[data-state="idle"] .gt-sweep, .gt[data-state="expired"] .gt-sweep, .gt[data-state="noSession"] .gt-sweep { opacity: .9; }
+@keyframes gt-sweep { to { transform: rotate(360deg); } }
+
+.gt-count { position: absolute; left: 0; right: 0; bottom: 21%; font: 500 var(--fs-2)/1 var(--font-mono); font-variant-numeric: tabular-nums; color: var(--c-text-tertiary); }
+.gt-avatar { position: absolute; left: 50%; top: 50%; width: 31%; aspect-ratio: 1; margin: -15.5% 0 0 -15.5%; border-radius: 50%; border: 2px solid var(--c-accent); opacity: 0; transform: scale(.7); transition: opacity calc(320ms * var(--motion-scale)) var(--ease-out), transform calc(420ms * var(--motion-scale)) var(--ease-out); }
+.gt-granted .gt-avatar { opacity: 1; transform: none; }
+.gt-granted .gt-mark { opacity: 0; }
+
+/* the four real stages under the dial */
+.gt-stages { list-style: none; margin: 18px 0 0; padding: 0; display: flex; gap: 6px 14px; justify-content: center; flex-wrap: wrap; white-space: nowrap; }
+.gt-stages li { display: flex; align-items: center; gap: 6px; font-size: var(--fs-1); color: var(--c-text-tertiary); transition: color calc(200ms * var(--motion-scale)); }
+.gt-stages i { width: 6px; height: 6px; border-radius: 50%; background: var(--hairline-strong); transition: background calc(200ms * var(--motion-scale)); }
+.gt-stages li.is-on { color: var(--c-text-secondary); }
+.gt-stages li.is-on i { background: var(--c-accent); }
+.gt-stages li.is-live { color: var(--c-text-primary); }
+
+.gt-status { margin-top: 14px; min-height: 22px; max-width: 360px; font: 500 var(--fs-3)/1.4 var(--font); color: var(--c-text-primary); }
+.gt-status.is-bad { color: var(--c-danger); }
+.gt-substatus { min-height: 18px; margin-top: 2px; max-width: 340px; font-size: var(--fs-2); line-height: 1.45; color: var(--c-text-secondary); }
+.gt-actions { margin-top: 14px; min-height: 84px; width: 100%; display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.gt-actions .j-btn { min-height: 34px; justify-content: center; min-width: 200px; }
+.gt-cta { min-height: 40px !important; box-shadow: 0 8px 24px -10px rgba(var(--c-accent-rgb), .6); }
+.gt-saved { margin-top: 4px; font-size: var(--fs-1); color: var(--c-text-tertiary); }
+.gt-ver { position: absolute; right: 16px; bottom: 10px; font: 400 var(--fs-1)/1 var(--font-mono); color: var(--c-text-tertiary); }
+
+/* success: the gate opens like an aperture from the dial centre onto the boot scan */
+#lock-screen.gt.gt-open {
+  -webkit-mask-image: radial-gradient(circle at var(--gt-cx) var(--gt-cy), transparent var(--gt-r), #000 calc(var(--gt-r) + 2px));
+          mask-image: radial-gradient(circle at var(--gt-cx) var(--gt-cy), transparent var(--gt-r), #000 calc(var(--gt-r) + 2px));
+  animation: gt-aperture calc(680ms * var(--motion-scale)) cubic-bezier(.55, .05, .2, 1) forwards;
+}
+@keyframes gt-aperture { from { --gt-r: 0px; } to { --gt-r: 150vmax; } }
+
+/* narrow window: stack */
+@media (max-width: 900px) {
+  .gt-stage { grid-template-columns: 1fr; align-content: center; justify-items: center; overflow-y: auto; }
+  .gt-copy { display: none; }
+  .gt-core { justify-self: center; }
+}
+@media (max-height: 640px) { .gt-dial { width: min(260px, 42vh); } .gt-stages { margin-top: 12px; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .gt-sweep, .gt-arc.is-live { animation: none; }
+  #lock-screen.gt.gt-open { -webkit-mask-image: none; mask-image: none; animation: gt-fade 150ms linear forwards; }
+  @keyframes gt-fade { to { opacity: 0; } }
+}
+.gt.is-hidden .gt-sweep, .gt.is-hidden .gt-arc.is-live { animation-play-state: paused; }

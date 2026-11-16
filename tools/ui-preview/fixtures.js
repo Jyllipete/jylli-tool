@@ -41,8 +41,28 @@ const restorePoints = [
 ]
 
 /** @returns the fixture for an API call, or undefined for "unknown" */
+// Discord gate scenes (?lock=idle|waiting|browserfail|denied|notmember|offline|timeout|granted|granted-free|expired): authVerify says no, authStart/authPoll are scripted.
+let _lockPolls = 0
+function lockScene(name, args, ctx, premium) {
+  const s = ctx.lock
+  switch (name) {
+    case 'authVerify': return s === 'saved' ? { ok: true, reason: 'ok', isPremium: premium } : { ok: false, reason: 'no_token' }
+    case 'authStart': _lockPolls = 0; return s === 'offline' ? { ok: false } : { ok: true, state: 'a'.repeat(48), url: 'https://discord.com/oauth2/authorize?preview=1', browserFailed: s === 'browserfail' }
+    case 'authPoll': {
+      _lockPolls++
+      if (s === 'denied' && _lockPolls >= 3) return { status: 'denied', reason: 'bad_entitlement' }
+      if (s === 'notmember' && _lockPolls >= 3) return { status: 'denied', reason: 'not_in_guild' }
+      if ((s === 'cancelled' || s === 'banned' || s === 'error') && _lockPolls >= 3) return { status: 'denied', reason: s }
+      if ((s === 'granted' || s === 'granted-free') && _lockPolls >= 3) return { status: 'ok', isPremium: s === 'granted', discordUserId: '80351110224678912', profile: ctx.avatar === 'none' ? null : { name: 'Pete J', avatar: '8342729096ea3675442027381ff50dfe' } }
+      return { status: 'pending' }
+    }
+    case 'openExternal': return null
+  }
+  return undefined
+}
 function respond(name, args, ctx) {
   const lang = ctx.lang, premium = ctx.premium
+  if (ctx.lock) { const v = lockScene(name, args, ctx, premium); if (v !== undefined) return v }
   if (/^diag2/.test(name)) return require('./diag-fixture').respond(name, args, ctx)
   if (/^compete[A-Z]/.test(name)) return require('./compete-fixture').respond(name, args, ctx)
   if (/^games2|^getGameCover$/.test(name)) return require('./games-fixture').respond(name, args, ctx)

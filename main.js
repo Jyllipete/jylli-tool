@@ -9143,7 +9143,7 @@ ipcMain.handle('auth-verify', async () => {
     const r = await refreshAuth()
     startupTrace(`auth-verify: ok=${r?.ok} reason=${r?.reason}`)
     if (r.ok) startTierRefresh()
-    return r
+    return r.ok ? { ...r, profile: auth.profile?.() || null, discordUserId: auth.userId?.() || null } : r
   } catch (e) {
     startupTrace(`auth-verify: error ${e?.message}`)
     return { ok: false, reason: 'error' }
