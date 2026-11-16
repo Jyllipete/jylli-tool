@@ -26,6 +26,11 @@ const ANSWERS = {
   'Repair-WindowsImage -Online -CheckHealth': out({ dism: 'healthy', sfc: 'clean' }),
 }
 
+// every harness() made a temp folder that was never removed (1,700+ empty jt-diag-* folders piled up in %TEMP%); remove them when the file is done
+const _benchDirs = []
+const tmpBench = () => { const d = fs.mkdtempSync(path.join(os.tmpdir(), 'jt-diag-')); _benchDirs.push(d); return d }
+test.after(() => { for (const d of _benchDirs) { try { fs.rmSync(d, { recursive: true, force: true }) } catch { /* temp folder, best effort */ } } })
+
 function harness(o = {}) {
   const log = [], files = { state: null }
   const deps = {
@@ -49,7 +54,7 @@ function harness(o = {}) {
     ramStress: async () => { log.push('ram'); return { passed: true, errors: 0, passes: 3 } },
     runtimes: async () => ({ missing: [] }),
     installRuntimes: async () => ({ ok: true }),
-    benchDir: fs.mkdtempSync(path.join(os.tmpdir(), 'jt-diag-')),
+    benchDir: tmpBench(),
   }
   return { svc: Diag.create(deps), deps, log, files }
 }

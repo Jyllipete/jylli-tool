@@ -82,3 +82,11 @@ test('the system poller reads RAM and uptime from the kernel and keeps the old W
   assert.match(ps, /GlobalMemoryStatusEx/); assert.match(ps, /GetTickCount64/)
   assert.match(ps, /else \{\s+\$os = Get-CimInstance Win32_OperatingSystem/)
 })
+
+test('the admin check is asked once per run and only a real answer is remembered; check-is-admin shares it', () => {
+  const m = main.match(/async function checkAdmin\(\) \{[\s\S]*?\n\}\n/)
+  assert.ok(m, 'checkAdmin not found')
+  assert.match(m[0], /if \(_adminCached !== null\) return _adminCached/)
+  assert.match(m[0], /out === 'True' \|\| out === 'False'\) _adminCached = isAdmin/)
+  assert.match(main, /ipcMain\.handle\('check-is-admin', async \(\) => \(\{ isAdmin: await checkAdmin\(\) \}\)\)/)
+})

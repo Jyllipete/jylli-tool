@@ -1627,8 +1627,13 @@ function assertPositiveInt(val, name) {
 // ─── Admin detection ─────────────────────────────────────────────────────────
 let _adminDebugRaw = '(not yet run)'
 
+// Whether this process is elevated cannot change while it runs, so the answer is asked once. Before this every call started a new PowerShell:
+// the Home page alone caused about 10 of them a minute (measured 2026-11-16 with the spawn ledger).
+let _adminCached = null
+
 async function checkAdmin() {
   if (!IS_WIN) return process.getuid?.() === 0
+  if (_adminCached !== null) return _adminCached
   // Bypass the runPS semaphore — admin check is a one-liner (~50ms) and must never queue behind
   // slow metrics scripts. If it queued, the 5s timeout would expire while waiting, returning false.
   try {
@@ -1640,6 +1645,7 @@ async function checkAdmin() {
     debugLog(`[checkAdmin] raw PS output: "${out}"`)
     _adminDebugRaw = out
     const isAdmin = out === 'True'
+    if (out === 'True' || out === 'False') _adminCached = isAdmin   // only a real answer is remembered, never an empty or failed one
     if (!isAdmin) startupTrace(`checkAdmin: NOT admin — raw="${out}" ok=${r.ok}`)
     startupTrace(`checkAdmin: PowerShell principal check → ${isAdmin}`)
     return isAdmin
@@ -2888,10 +2894,7 @@ ipcMain.handle('restore-to-point', async (_, seq) => {
 })
 
 // ─── Restore Points: extended ─────────────────────────────────────────────────
-ipcMain.handle('check-is-admin', async () => {
-  const r = await runPS('([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)')
-  return { isAdmin: r.ok && r.out.trim().toLowerCase() === 'true' }
-})
+ipcMain.handle('check-is-admin', async () => ({ isAdmin: await checkAdmin() }))   // same cached answer as is-admin: one PowerShell per run, not one per call
 
 ipcMain.handle('delete-restore-point', async (_, seq) => {
   const send = (msg, level) => sendLog({ msg, level, ts: new Date().toLocaleTimeString() })
