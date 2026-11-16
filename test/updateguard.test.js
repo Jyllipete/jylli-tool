@@ -44,6 +44,14 @@ test('a stopped manual service is not started on restore', async () => {
   assert.deepEqual([svc.start, svc.running], [3, false])
 })
 
+test('a service that our own pending search started is not started again on restore', async () => {
+  const { svc, g } = fake(3, '', false)
+  const pre = await g.probe()                  // before the search: stopped
+  svc.running = true                           // the search starts wuauserv
+  await g.hold({ wasRunning: pre.running }); await g.release()
+  assert.deepEqual([svc.start, svc.running], [3, false])
+})
+
 test('already disabled: nothing is changed and nothing is claimed', async () => {
   const { svc, store, g } = fake(4, '', false)
   const r = await g.hold()

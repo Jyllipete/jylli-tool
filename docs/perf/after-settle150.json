@@ -1,0 +1,78 @@
+﻿{
+    "date":  "2026-11-16T10:21:04",
+    "cores":  16,
+    "scenarios":  {
+                      "normalStart":  {
+                                          "startupMarksMs":  {
+                                                                 "ready":  134,
+                                                                 "shown":  1362
+                                                             },
+                                          "visible":  {
+                                                          "seconds":  10,
+                                                          "samples":  2,
+                                                          "spawnsPerMin":  6,
+                                                          "spawnsByExePerMin":  {
+                                                                                    "tasklist":  6
+                                                                                },
+                                                          "appCpuPct":  0.18,
+                                                          "mainCpuMsPerSec":  7.9,
+                                                          "workingSetMB":  390,
+                                                          "lastTray":  {
+                                                                           "hidden":  false,
+                                                                           "unloaded":  false,
+                                                                           "telemetry":  false,
+                                                                           "sensor":  true,
+                                                                           "lhm":  false
+                                                                       },
+                                                          "wmiPrvSeCpuSec":  0
+                                                      },
+                                          "hidden":  {
+                                                         "seconds":  90,
+                                                         "samples":  18,
+                                                         "spawnsPerMin":  6,
+                                                         "spawnsByExePerMin":  {
+                                                                                   "tasklist":  6
+                                                                               },
+                                                         "appCpuPct":  0.03,
+                                                         "mainCpuMsPerSec":  4.9,
+                                                         "workingSetMB":  27,
+                                                         "lastTray":  {
+                                                                          "hidden":  true,
+                                                                          "unloaded":  true,
+                                                                          "telemetry":  false,
+                                                                          "sensor":  false,
+                                                                          "lhm":  false
+                                                                      },
+                                                         "wmiPrvSeCpuSec":  0
+                                                     }
+                                      },
+                      "trayStart":  {
+                                        "startupMarksMs":  {
+                                                               "ready":  131
+                                                           },
+                                        "hidden":  {
+                                                       "seconds":  90,
+                                                       "samples":  18,
+                                                       "spawnsPerMin":  6,
+                                                       "spawnsByExePerMin":  {
+                                                                                 "tasklist":  6
+                                                                             },
+                                                       "appCpuPct":  0.03,
+                                                       "mainCpuMsPerSec":  4.7,
+                                                       "workingSetMB":  220,
+                                                       "lastTray":  {
+                                                                        "hidden":  true,
+                                                                        "unloaded":  true,
+                                                                        "telemetry":  false,
+                                                                        "sensor":  false,
+                                                                        "lhm":  false
+                                                                    },
+                                                       "wmiPrvSeCpuSec":  0
+                                                   }
+                                    }
+                  },
+    "control":  {
+                    "seconds":  5,
+                    "wmiPrvSeCpuSec":  0
+                }
+}
