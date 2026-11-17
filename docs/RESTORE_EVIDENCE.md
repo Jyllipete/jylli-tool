@@ -26,7 +26,7 @@ A point captures the state at its own time. Rolling back to it undoes everything
 | Origin of a point | description prefix `JylliTool_*` (`model.originOf`, the only decoder), else Windows' own description and type | |
 
 ## Estimates (and only these)
-- "Room for about N more" = free cap ÷ average point size. Point sizes differ a lot; the tab labels it an estimate and shows nothing when there is nothing to base it on (`roomEstimate`).
+- "Room for about N more" = free cap ÷ average point size. Point sizes differ a lot; the tab labels it an estimate and shows nothing when there is nothing to base it on (`roomEstimate`): fewer than 3 points, because on the real PC one point sat in 9.4 GB of shadow storage and the average said "room for 0 more".
 
 ## Writes, and how each is proven
 | Action | How | Proof |

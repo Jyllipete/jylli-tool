@@ -97,6 +97,7 @@ test('afterPoint: programs installed on a LATER day are listed apart from the sa
 })
 test('roomEstimate: a bounded cap uses the free cap, nothing to base it on is null', () => {
   assert.equal(model.roomEstimate({ has: true, used: 4 * GB, max: 10 * GB }, null, 4), 6)
+  assert.equal(model.roomEstimate({ has: true, used: 9.4 * GB, max: 19 * GB }, null, 1), null)   // one point: the average is meaningless
   assert.equal(model.roomEstimate({ has: true, used: 0, max: 10 * GB }, null, 0), null)
   assert.equal(model.roomEstimate({ has: true, used: 10 * GB, max: 10 * GB }, null, 5), 0)
   assert.equal(model.roomEstimate(null, null, 3), null)
