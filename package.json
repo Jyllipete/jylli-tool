@@ -15,7 +15,8 @@
     "dist": "npm run build:uninstaller && npm run build && npm run build:installer",
     "promo:analyze": "node tools/promo/analyze.js",
     "promo:shoot": "node tools/promo/shoot.js",
-    "promo:render": "electron tools/promo/render.js"
+    "promo:render": "electron tools/promo/render.js",
+    "banner": "electron tools/release-banner/render.js"
   },
   "build": {
     "appId": "com.jylli.tool",

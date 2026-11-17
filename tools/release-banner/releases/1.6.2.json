@@ -1,0 +1,6 @@
+{
+  "version": "1.6.2",
+  "shots": [{ "page": "restore-points" }, { "page": "startup-manager" }, { "page": "app-optimizer" }, { "page": "devices" }],
+  "en": { "headline": "Four new tabs, lighter in the background", "chips": ["Restore points", "Startup", "Apps", "Devices"] },
+  "fi": { "headline": "Neljä uutta välilehteä, kevyempi taustalla", "chips": ["Palautuspisteet", "Käynnistys", "Sovellukset", "Laitteet"] }
+}

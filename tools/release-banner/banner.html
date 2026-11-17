@@ -1,0 +1,55 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Jylli Tool release banner</title>
+<link rel="stylesheet" href="/css/fonts.css">
+<style>
+  :root { --bg: #09090B; --card: #141419; --text: #EDEDF0; --accent: #8B7CF6; --dim: #9A9AA8; }
+  * { box-sizing: border-box; margin: 0 }
+  html, body { width: 100%; height: 100%; overflow: hidden; background: var(--bg); font-family: 'Geist', 'Segoe UI Variable', 'Segoe UI', sans-serif; color: var(--text) }
+  .stage { position: relative; transform-origin: 0 0; width: 1920px; height: 960px; overflow: hidden;
+    background: radial-gradient(900px 700px at 78% 40%, rgba(139,124,246,.28), transparent 70%), radial-gradient(600px 500px at 5% 100%, rgba(139,124,246,.14), transparent 70%), var(--bg) }
+  .left { position: absolute; left: 90px; top: 0; bottom: 0; width: 640px; display: flex; flex-direction: column; justify-content: center; gap: 28px }
+  .brand { display: flex; align-items: center; gap: 22px }
+  .brand img { width: 84px; height: 84px; border-radius: 20px }
+  .brand b { font-size: 46px; font-weight: 700; letter-spacing: -.02em }
+  .ver { display: inline-block; align-self: flex-start; padding: 8px 22px; border-radius: 999px; background: var(--accent); color: #fff; font-size: 30px; font-weight: 700 }
+  h1 { font-size: 66px; line-height: 1.08; font-weight: 700; letter-spacing: -.025em }
+  .chips { display: flex; flex-wrap: wrap; gap: 12px }
+  .chip { padding: 9px 20px; border-radius: 999px; border: 1.5px solid rgba(139,124,246,.55); background: rgba(139,124,246,.12); font-size: 25px; font-weight: 500 }
+  .grid { position: absolute; left: 790px; right: 50px; top: 0; bottom: 0; display: flex; flex-wrap: wrap; align-content: center; justify-content: center; gap: 34px 34px }
+  .win { width: 520px; border-radius: 16px; overflow: hidden; background: var(--card); border: 1.5px solid rgba(255,255,255,.12); box-shadow: 0 30px 70px rgba(0,0,0,.6), 0 0 0 1px rgba(139,124,246,.18), 0 0 90px rgba(139,124,246,.18) }
+  .win:nth-child(even) { transform: translateY(40px) rotate(1deg) }
+  .win:nth-child(odd) { transform: translateY(-10px) rotate(-1deg) }
+  .win { min-width: 0; flex: none }
+  .crop { width: 100%; overflow: hidden; aspect-ratio: 1600 / 1025 }
+  .crop img { display: block; width: 118%; max-width: none; transform-origin: 0 0; transform: translate(-12.7%, -6.8%) }   /* drop sidebar + title bar, zoom into the tab */
+  .win .cap { padding: 12px 20px; font-size: 24px; font-weight: 600; background: #101015; border-top: 1px solid rgba(255,255,255,.08) }
+  .grid.n1 .win { width: 960px } .grid.n2 .win, .grid.n3 .win { width: 560px }
+</style>
+<div class="stage">
+  <div class="left">
+    <div class="brand"><img src="/assets/icon.png" alt=""><b>Jylli Tool</b></div>
+    <div class="ver" id="ver"></div>
+    <h1 id="h"></h1>
+    <div class="chips" id="chips"></div>
+  </div>
+  <div class="grid" id="grid"></div>
+</div>
+<script>
+  // the offscreen window can report a smaller viewport than 1920 (display scaling): fit the fixed 1920x960 stage to it
+  document.querySelector('.stage').style.transform = `scale(${innerWidth / 1920})`
+  const q = JSON.parse(new URLSearchParams(location.search).get('d'))
+  document.getElementById('ver').textContent = 'v' + q.version
+  document.getElementById('h').textContent = q.headline
+  document.getElementById('chips').innerHTML = q.chips.map(c => `<span class="chip"></span>`).join('')
+  document.querySelectorAll('.chip').forEach((el, i) => el.textContent = q.chips[i])
+  const g = document.getElementById('grid'); g.className = 'grid n' + q.shots.length
+  const imgs = q.shots.map((s, i) => {
+    const w = document.createElement('div'); w.className = 'win'
+    const crop = document.createElement('div'); crop.className = 'crop'
+    const im = new Image(); im.src = s; crop.appendChild(im); w.appendChild(crop)
+    const c = document.createElement('div'); c.className = 'cap'; c.textContent = q.chips[i] || ''; w.appendChild(c)
+    g.appendChild(w); return im
+  })
+  Promise.all([document.fonts.ready, ...imgs.map(i => i.decode().catch(() => {}))]).then(() => { window.__ready = true })
+</script>
