@@ -20,3 +20,8 @@ preview-out/
 tools/promo/media/
 tools/promo/shots/
 tools/promo/out/
+
+# local IDE settings and secrets (never commit)
+.idea/
+.env
+.env.*
