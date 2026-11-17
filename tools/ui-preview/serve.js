@@ -17,6 +17,8 @@ const SHIM = keys => `(() => {
   }
   window.api = api
   window.__pushEvent = (name, data) => { for (const cb of subs.get(name) || []) { try { cb(data) } catch {} } }
+  // Fixtures that emit live events (restore progress) queue them on the server; a preview page with ?rs= polls them so the page sees them as it would in the app.
+  if (/[?&]rs=/.test(location.search)) setInterval(() => fetch('/__events').then(r => r.json()).then(list => { for (const e of list) window.__pushEvent(e.name, e.data) }).catch(() => {}), 250)
 })()`
 
 http.createServer((req, res) => {
@@ -25,6 +27,7 @@ http.createServer((req, res) => {
     const h = fs.readFileSync(path.join(root, 'index.html'), 'utf8').replace('<head>', '<head><script src="/__shim.js"></script>')
     res.writeHead(200, { 'Content-Type': types['.html'], 'Cache-Control': 'no-store' }).end(h); return
   }
+  if (url.pathname === '/__events') { const q = globalThis.__previewEvents || (globalThis.__previewEvents = []); res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' }).end(JSON.stringify(q.splice(0))); return }
   if (url.pathname === '/__shim.js') { res.writeHead(200, { 'Content-Type': types['.js'], 'Cache-Control': 'no-store' }).end(SHIM(apiKeys())); return }
   if (url.pathname.startsWith('/__api/') && req.method === 'POST') {
     let body = ''

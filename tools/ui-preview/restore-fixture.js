@@ -85,7 +85,7 @@ function rig(state) {
   const svc = Restore.create({
     runPS,
     createPoint: async (desc) => {
-      await new Promise(r => setTimeout(r, 900))
+      await new Promise(r => setTimeout(r, 1600))
       if (!pc.admin) return { ok: false, code: 'not_admin', reason: 'Administrator rights are required', guidance: 'Restart Jylli Tool as administrator, then try again.' }
       const seq = Math.max(0, ...pc.points.map(p => p.seq)) + 1
       pc.points.push({ seq, desc, at: Date.now(), type: 12 }); pc.storage.used += 0.4 * GB
@@ -97,7 +97,8 @@ function rig(state) {
     flagPatch: p => send.push(p),
     isGameRunning: () => false, openRstrui: async () => true,
     state: { read: () => store, write: v => { store = v } },
-    emit: () => {},
+    // live events reach the page through serve.js's /__events queue (names are the preload `on...` methods)
+    emit: (ch, p) => { const name = { 'restore2-phase': 'onRestore2Phase', 'restore2-changed': 'onRestore2Changed' }[ch]; if (name) (globalThis.__previewEvents || (globalThis.__previewEvents = [])).push({ name, data: p }) },
   })
   const R = { svc, pc, settings, ready: null }
   cache.set(state, R)
