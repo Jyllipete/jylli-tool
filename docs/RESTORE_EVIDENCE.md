@@ -51,6 +51,10 @@ After the restart `reconcile()` runs on every scan (and 20 s after launch when a
 
 Only a **succeeded** restore changes anything: journal entries recorded between the point and the request get `undoneBy: system-restore:<seq>`, and `tweak_<id>` flags follow (the oldest entry per tweak decides: an apply means "not applied at the point"). Failed / interrupted / cancelled / unknown mark nothing. The old behaviour cleared every `tweak_*` flag *before* the reboot, even when the restore later failed.
 
+**Checked so far (2026-11-17, one Windows 11 PC, non-elevated shell):** the probe runs and parses; without admin Windows lists no points and no shadow storage (`pointsRead:false`, shown as "could not read"); `RPSessionInterval` read 1. Run `node tools/restore-probe.js` from an **elevated** terminal to see the raw `-LastStatus` text, the point types and whether `RPSessionInterval` agrees with the shadow storage, and add the result here.
+
+**The nav dot and tab dot** follow `restore2-changed` (any feature that makes, deletes or restores a point): verified in the preview that a stale status shows both dots and a fresh status clears them.
+
 **Not verified on a real PC:** the type-6 point and the `-LastStatus` wording have not been observed on a real restore (the fixture and tests drive the logic with synthetic probes). A real `Restore-Computer` reboot is the one thing this work could not exercise.
 
 ## Schedule
