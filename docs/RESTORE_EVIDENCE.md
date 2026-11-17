@@ -59,7 +59,9 @@ Only a **succeeded** restore changes anything: journal entries recorded between 
 
 **The nav dot and tab dot** follow `restore2-changed` (any feature that makes, deletes or restores a point): verified in the preview that a stale status shows both dots and a fresh status clears them.
 
-**Not verified on a real PC:** a *completed* restore: the success wording of `-LastStatus` and whether the type-6 point is listed by `Get-ComputerRestorePoint` (the event log shows Windows creates it) are still unobserved. The interrupted case above is the only real restore seen so far.
+**Confirmed after the interrupted restore (elevated probe, same PC):** `-LastStatus` read "The last attempt to restore the computer was interrupted." (parsed `interrupted`); `Get-ComputerRestorePoint` lists the Windows undo point as `#13`, type 6, description "Restore Operation", created within a second of the request (origin `restoreOp`); the user's own points (#12, #11) were intact. With this data `outcome()` returns `interrupted` and marks nothing.
+
+**Not verified on a real PC:** a *completed* restore: the success wording of `-LastStatus` is still unobserved (the failed and interrupted wordings are confirmed).
 
 ## Schedule
 A check one minute after start and then hourly (`restore.tick`). It does nothing when the schedule is off or not due, never runs while a game is running (`liveGameReason`) or on battery, and after a failure waits 6 hours. A launch-only timer (the old behaviour) missed PCs that stay on for days.
