@@ -53,6 +53,8 @@ Only a **succeeded** restore changes anything: journal entries recorded between 
 
 **Checked so far (2026-11-17, one Windows 11 PC, non-elevated shell):** the probe runs and parses; without admin Windows lists no points and no shadow storage (`pointsRead:false`, shown as "could not read"); `RPSessionInterval` read 1. Run `node tools/restore-probe.js` from an **elevated** terminal to see the raw `-LastStatus` text, the point types and whether `RPSessionInterval` agrees with the shadow storage, and add the result here.
 
+**Checked elevated (2026-11-17, same PC):** `Get-ComputerRestorePoint` listed 1 point (type 12, `JylliTool_v1_FirstRun`, parsed as origin `firstRun`); `-LastStatus` returned the English text "The last attempt to restore the computer failed." (parsed `failed` by keyword; this PC has an older failed attempt on record, so the *success* and *interrupted* wordings are still unobserved); `RPSessionInterval` was 1 and shadow storage was present, so the two protection sources agree here. Because that old status never goes away, `outcome()` only trusts `-LastStatus` when the PC rebooted after the request.
+
 **The nav dot and tab dot** follow `restore2-changed` (any feature that makes, deletes or restores a point): verified in the preview that a stale status shows both dots and a fresh status clears them.
 
 **Not verified on a real PC:** the type-6 point and the `-LastStatus` wording have not been observed on a real restore (the fixture and tests drive the logic with synthetic probes). A real `Restore-Computer` reboot is the one thing this work could not exercise.
