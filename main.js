@@ -1380,27 +1380,11 @@ app.whenReady().then(async () => {
   puBgFlag(false)   // a flag left by a crash would keep the poller sampling
   startContextDetector()
   setInterval(bgNeedsUpdate, 5000).unref()   // sensors follow what needs them (window shown, a recording session, HUDs, GPU limit guard, ARIA)
-  // Auto-snapshot on launch if overdue
-  setTimeout(async () => {
-    if (!mainWindow || mainWindow.isDestroyed()) return
-    try {
-      const s = loadSettings()
-      const days = parseInt(s.autoSnapshotDays) || 0
-      if (!days) return
-      const last = s.lastAutoSnapshot ? new Date(s.lastAutoSnapshot) : null
-      const now = new Date()
-      const msPerDay = 86400000
-      if (last && (now - last) < days * msPerDay) return
-      const send = (msg, level) => sendLog({ msg, level, ts: new Date().toLocaleTimeString() })
-      send(`Auto-snapshot (every ${days}d): creating restore point…`, 'head')
-      const result = await createRestorePointInternal(send)
-      if (result.ok !== false) {
-        const updated = { ...loadSettings(), lastAutoSnapshot: now.toISOString() }
-        saveSettings(updated)
-        mainWindow?.webContents.send('auto-snapshot-done', { ts: now.toISOString() })
-      }
-    } catch {}
-  }, 5000)
+  // Restore points (lib/restore): a restore we asked for before a reboot is reconciled 20 s after start; the schedule is checked a minute after start and hourly
+  // (so a PC left running still gets its point), never while a game runs or on battery. Both are free when there is nothing to do.
+  setTimeout(() => { try { if (restoreSvc().hasPending()) restoreSvc().scan().catch(() => {}) } catch {} }, 20000)
+  setTimeout(() => { try { restoreSvc().tick().catch(() => {}) } catch {} }, 60000)
+  setInterval(() => { try { restoreSvc().tick().catch(() => {}) } catch {} }, 3600000).unref()
 })
 app.on('window-all-closed', () => { /* stay alive in tray */ })
 
@@ -2323,7 +2307,7 @@ ipcMain.handle('get-tweak-states', async () => {
 // read tokens nor write a premium flag.
 const PROTECTED_SETTINGS = ['authToken', 'hmacSecret', 'discordUserId', 'authExpiry', 'isPremium', 'settingsHmac']
 // Written by the main process itself; a stale copy held by the renderer must never overwrite them.
-const MAIN_OWNED_SETTINGS = ['discordPresence', 'declaredRig', 'lastRestorePointAt', 'lastAutoSnapshot', 'thermalLastAudit', 'aria_insights', 'gameShieldEnabled', 'gameShieldExclusions', 'updateGuardEnabled', 'gameWatcherEnabled', 'autoPulseEnabled', 'gameShieldTier3Threshold', 'gameShieldMidSessionThreshold']
+const MAIN_OWNED_SETTINGS = ['discordPresence', 'declaredRig', 'lastRestorePointAt', 'lastAutoSnapshot', 'autoSnapshotDays', 'thermalLastAudit', 'aria_insights', 'gameShieldEnabled', 'gameShieldExclusions', 'updateGuardEnabled', 'gameWatcherEnabled', 'autoPulseEnabled', 'gameShieldTier3Threshold', 'gameShieldMidSessionThreshold']
 ipcMain.handle('load-settings', () => {
   startupTrace('IPC load-settings handler called')
   const s = { ...loadSettings() }
@@ -2833,7 +2817,7 @@ const _restorePointSvc = createRestorePointService({ runPS })
 let _rpStatusCache = null // { newestAt } for the session; reset after a point is created
 async function createRestorePointInternal(send, desc = 'JylliTool_AutoOpti') {
   const r = await _restorePointSvc.create(desc, send)
-  if (r.ok) { const s = loadSettings(); s.lastRestorePointAt = Date.now(); saveSettings(s); _rpStatusCache = null }
+  if (r.ok) { const s = loadSettings(); s.lastRestorePointAt = Date.now(); saveSettings(s); _rpStatusCache = null; try { if (_restoreSvc) _restoreSvc.invalidate() } catch {} }   // the Restore tab (and the nav dot) reload when ANY feature makes a point
   return r.ok ? r : { ...r, error: r.reason }
 }
 
@@ -2884,75 +2868,8 @@ async function restoreStatusCore() {
   return { newestAt: _rpStatusCache.newestAt, lastCreatedAt }
 }
 
-ipcMain.handle('restore-to-point', async (_, seq) => {
-  const n = assertPositiveInt(seq, 'seq')
-  const r = await runPS(`Restore-Computer -RestorePoint ${n} -Confirm:$false -ErrorAction Stop`)
-  if (r.ok) return { ok: true }
-  const openErr = await shell.openPath('rstrui.exe').catch(() => 'open failed')
-  const opened = !openErr
-  return { ok: false, fallback: opened, error: r.err }
-})
-
 // ─── Restore Points: extended ─────────────────────────────────────────────────
 ipcMain.handle('check-is-admin', async () => ({ isAdmin: await checkAdmin() }))   // same cached answer as is-admin: one PowerShell per run, not one per call
-
-ipcMain.handle('delete-restore-point', async (_, seq) => {
-  const send = (msg, level) => sendLog({ msg, level, ts: new Date().toLocaleTimeString() })
-  const n = assertPositiveInt(seq, 'seq')
-  send(`Deleting restore point #${n}…`, 'head')
-
-  // Match the restore point to its Win32_ShadowCopy instance by creation time (within 60s),
-  // then call .Delete() on the shadow copy — the only reliable way to remove a restore point.
-  const ps = `
-$ErrorActionPreference = 'Stop'
-$rp = Get-ComputerRestorePoint | Where-Object { $_.SequenceNumber -eq ${n} }
-if (-not $rp) { throw "Restore point ${n} not found" }
-$rpTime = $rp.ConvertToDateTime($rp.CreationTime)
-$cands = @(Get-WmiObject -Class Win32_ShadowCopy | Where-Object {
-    $scTime = [Management.ManagementDateTimeConverter]::ToDateTime($_.InstallDate)
-    [Math]::Abs(($scTime - $rpTime).TotalSeconds) -lt 10
-})
-if ($cands.Count -eq 0) { throw "No shadow copy found matching restore point ${n}" }
-# Never guess: if two snapshots were taken within seconds of each other, deleting the wrong one cannot be undone.
-if ($cands.Count -gt 1) { throw "More than one shadow copy matches restore point ${n} - refusing to delete" }
-$sc = $cands[0]
-$id = $sc.ID
-$sc.Delete()
-Write-Output "deleted:$id"
-`
-  const r = await runPS(ps)
-  if (r.ok && r.out && r.out.includes('deleted:')) {
-    send(`✓ Restore point #${n} deleted.`, 'ok')
-    return { ok: true }
-  }
-  // vssadmin fallback: extract shadow ID from output if WMI .Delete() threw but printed the ID
-  const idMatch = (r.out || '').match(/\{[0-9a-fA-F-]{36}\}/)
-  if (idMatch) {
-    const r2 = await runFile('vssadmin.exe', ['delete', 'shadows', `/Shadow=${idMatch[0]}`, '/Quiet'])
-    if (r2.ok) { send(`✓ Restore point #${n} deleted (vssadmin).`, 'ok'); return { ok: true } }
-  }
-  send(`Failed to delete restore point #${n}: ${r.err}`, 'err')
-  return { ok: false, error: r.err || 'Shadow copy not found or access denied. Run as admin.' }
-})
-
-ipcMain.handle('get-sr-disk-usage', async () => {
-  const ps = `
-try {
-  Get-CimInstance -ClassName Win32_ShadowStorage | Select-Object AllocatedSpace,MaxSpace,UsedSpace | ConvertTo-Json
-} catch {
-  Get-WmiObject Win32_ShadowStorage | Select-Object AllocatedSpace,MaxSpace,UsedSpace | ConvertTo-Json
-}
-`
-  const r = await runPS(ps)
-  if (!r.ok || !r.out) return { available: false }
-  try {
-    const raw = JSON.parse(r.out)
-    const arr = Array.isArray(raw) ? raw : [raw]
-    let used = 0, max = 0, alloc = 0
-    arr.forEach(s => { used += Number(s.UsedSpace) || 0; max += Number(s.MaxSpace) || 0; alloc += Number(s.AllocatedSpace) || 0 })
-    return { available: true, usedBytes: used, maxBytes: max, allocBytes: alloc }
-  } catch { return { available: false } }
-})
 
 ipcMain.handle('save-text-file', async (_, { filename, content } = {}) => {
   const { dialog } = require('electron')
@@ -2960,6 +2877,57 @@ ipcMain.handle('save-text-file', async (_, { filename, content } = {}) => {
   if (canceled || !filePath) return { ok: false }
   fs.writeFileSync(filePath, content, 'utf8')
   return { ok: true }
+})
+
+// ─── Restore (Lifeline): lib/restore. Points, protection, storage cap, schedule, a restore that is reconciled after the reboot ───
+const Restore = require('./lib/restore')
+let _restoreSvc = null
+const _jnames = new Map()
+function restoreSvc() {
+  if (_restoreSvc) return _restoreSvc
+  _restoreSvc = Restore.create({
+    runPS: (s, ms) => runPS(s, ms),
+    createPoint: (desc, send) => createRestorePointInternal((msg, level) => { try { send(msg, level) } catch {} sendLog({ msg, level, ts: new Date().toLocaleTimeString() }) }, desc),
+    journal: { list: o => journalSvc().list(o), markUndone: (id, by) => journalSvc().journal.markUndone(id, by) },
+    // A readable name for a journal entry: the tweak's own name, else its control (e.g. debloat:<id>).
+    nameOf: e => {
+      if (e.tweakId) {
+        if (!_jnames.has(e.tweakId)) { let n = null; try { const m = journalSvc().tweakMeta([e.tweakId])[0]; n = m && m.name } catch {} _jnames.set(e.tweakId, n || e.tweakId) }
+        return _jnames.get(e.tweakId)
+      }
+      return e.control ? String(e.control) : null
+    },
+    settings: {
+      get: () => loadSettings(),
+      patch: p => { saveSettings({ ...loadSettings(), ...p }); for (const [k, v] of Object.entries(p)) _settingsWriteLog.note(k, v) },
+    },
+    // After a successful restore the rolled-back tweaks' flags follow (the renderer is told through the same event the journal uses).
+    flagPatch: p => { saveSettings({ ...loadSettings(), ...p }); for (const [k, v] of Object.entries(p)) _settingsWriteLog.note(k, v); cuSend('settings-patch', p) },
+    isGameRunning: () => _liveGameReasons.size > 0,
+    openRstrui: async () => !(await shell.openPath('rstrui.exe').catch(() => 'open failed')),
+    state: { read: () => cuRead('jt_restore.json', null), write: v => cuWrite('jt_restore.json', v) },
+    emit: (ch, p) => { if (ch === 'restore2-changed') _rpStatusCache = null; cuSend(ch, p) },
+  })
+  return _restoreSvc
+}
+ipcMain.handle('restore2-scan', async () => { try { return await restoreSvc().scan() } catch (e) { return gmFail(e) } })
+ipcMain.handle('restore2-cached', () => { try { return restoreSvc().cached() } catch { return null } })
+ipcMain.handle('restore2-create', async (_, req) => { try { return await restoreSvc().createNow({ label: gmStr(req && req.label, 80) }) } catch (e) { return gmFail(e) } })
+ipcMain.handle('restore2-preview', async (_, req) => { try { return await restoreSvc().preview({ seq: Number(req && req.seq) }) } catch (e) { return gmFail(e) } })
+ipcMain.handle('restore2-restore', async (_, req) => { try { return await restoreSvc().restore({ seq: Number(req && req.seq) }) } catch (e) { return gmFail(e) } })
+ipcMain.handle('restore2-delete', async (_, req) => { try { return await restoreSvc().remove({ seq: Number(req && req.seq) }) } catch (e) { return gmFail(e) } })
+ipcMain.handle('restore2-protect', async (_, req) => { try { return await restoreSvc().protect({ on: !!(req && req.on) }) } catch (e) { return gmFail(e) } })
+ipcMain.handle('restore2-storage', async (_, req) => { try { return await restoreSvc().storage({ pct: Number(req && req.pct) }) } catch (e) { return gmFail(e) } })
+ipcMain.handle('restore2-schedule', (_, req) => { try { return restoreSvc().schedule({ days: Number(req && req.days) }) } catch (e) { return gmFail(e) } })
+ipcMain.handle('restore2-ack', () => { try { return restoreSvc().ack() } catch (e) { return gmFail(e) } })
+ipcMain.handle('restore2-export', () => { try { return { ok: true, ...restoreSvc().exportText() } } catch (e) { return gmFail(e) } })
+// Only two fixed Windows tools can be opened from the page, never a path it sends.
+ipcMain.handle('restore2-open', async (_, req) => {
+  const which = req && req.which
+  const exe = which === 'rstrui' ? 'rstrui.exe' : which === 'protection' ? 'SystemPropertiesProtection.exe' : null
+  if (!exe) return { ok: false, error: 'invalid' }
+  const err = await shell.openPath(exe).catch(() => 'open failed')
+  return err ? { ok: false, error: String(err).slice(0, 200) } : { ok: true }
 })
 
 // ─── Debloat: scan installed apps ─────────────────────────────────────────────

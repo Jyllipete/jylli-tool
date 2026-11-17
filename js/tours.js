@@ -100,9 +100,9 @@
       T('scheduler-create', ['Schedule a task', 'Pick what to run and when, such as a cleanup every Sunday.'], ['Ajasta tehtävä', 'Valitse mitä ajetaan ja milloin, esimerkiksi siivous joka sunnuntai.']),
       T('scheduler-tasks', ['Your tasks', 'Scheduled tasks are listed here and can be removed at any time.'], ['Tehtäväsi', 'Ajastetut tehtävät näkyvät tässä, ja ne voi poistaa milloin tahansa.']),
     ] },
-    restore: { v: 1, tag: { 'restore-create': '#rp-desc', 'restore-list': '#rp-table-wrap' }, stops: [
-      T('restore-create', ['Create a restore point', 'A snapshot of Windows you can return to. Windows allows one per day.'], ['Luo palautuspiste', 'Tilannevedos Windowsista, johon voit palata. Windows sallii yhden päivässä.']),
-      T('restore-list', ['Roll back', 'Choose a point and restore it if something goes wrong. Your files stay as they are.'], ['Palaa takaisin', 'Valitse piste ja palauta se, jos jokin menee pieleen. Tiedostosi pysyvät ennallaan.']),
+    restore: { v: 1, tag: { 'restore-create': '#rs-stage', 'restore-list': '#rs-list' }, stops: [
+      T('restore-create', ['Create a restore point', 'A snapshot of Windows you can return to. Jylli Tool checks in Windows that it really exists.'], ['Luo palautuspiste', 'Tilannevedos Windowsista, johon voit palata. Jylli Tool varmistaa Windowsista, että se todella on olemassa.']),
+      T('restore-list', ['Roll back', 'Open a point to see what it would undo, then restore it if something goes wrong. Your files stay as they are.'], ['Palaa takaisin', 'Avaa piste nähdäksesi, mitä se kumoaisi, ja palauta se, jos jokin menee pieleen. Tiedostosi pysyvät ennallaan.']),
     ] },
     history: { v: 2, tag: { 'history-journal': '#journal-box', 'history-list': '#changelog-list' }, stops: [
       T('history-journal', ['Everything we changed', 'A journal of every change, with the option to undo it.'], ['Kaikki muuttamamme', 'Loki jokaisesta muutoksesta, ja mahdollisuus perua se.']),

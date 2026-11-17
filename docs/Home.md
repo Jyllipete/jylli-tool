@@ -13,6 +13,7 @@ Obsidian vault = this `docs/` folder. Rule across all evidence docs: **unverifie
 - [[NETWORK_EVIDENCE]]: Network tab "Signal" (Path stage, checkup thresholds, live switch state)
 - [[DIAGNOSTICS_EVIDENCE]]: Diagnostics "Vitals"
 - [[FIVEM_EVIDENCE]]: FiveM "Uplink"
+- [[RESTORE_EVIDENCE]]: Restore points "Lifeline" (what a point covers, reboot reconcile, estimates)
 - [[PULSE_EVIDENCE]]: Pulse "Flow"
 - [[GAMEAUTO_EVIDENCE]]: Game automation (Game Watcher, Update Guard, Game Shield, Auto-Pulse: sessions, ledger, restore, recovery)
 - [[HOME_EVIDENCE]]: Home "Helm" (Jylli Index, Next Best Move, Proof Ledger)

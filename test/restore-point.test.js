@@ -37,3 +37,8 @@ test('service never throws and reports the guidance', async () => {
   const ok = await createRestorePointService({ runPS: async () => ({ ok: true, out: 'RP_OK:7' }) }).create('x')
   assert.deepStrictEqual(ok, { ok: true, seq: 7 })
 })
+
+test('Finnish letters in a description become their Latin twins instead of vanishing', () => {
+  assert.strictEqual(cleanDesc('Pelien jälkeen ÄÖå'), 'Pelien jalkeen AOa')
+  assert.strictEqual(cleanDesc("a';b"), 'ab')
+})

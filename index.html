@@ -26,6 +26,7 @@
 <link rel="stylesheet" href="css/gameauto.css">
 <link rel="stylesheet" href="css/apps.css">
 <link rel="stylesheet" href="css/startup.css">
+<link rel="stylesheet" href="css/restore.css">
 <link rel="stylesheet" href="css/devices.css">
 <link rel="stylesheet" href="css/cleanup.css">
 <link rel="stylesheet" href="css/diagnostics.css">
@@ -532,6 +533,8 @@
 <script src="js/lang/apps-fi.js"></script>
 <script src="js/lang/startup-en.js"></script>
 <script src="js/lang/startup-fi.js"></script>
+<script src="js/lang/restore-en.js"></script>
+<script src="js/lang/restore-fi.js"></script>
 <script src="js/lang/devices-en.js"></script>
 <script src="js/lang/devices-fi.js"></script>
 <script src="js/lang/gate-en.js"></script>
@@ -599,7 +602,6 @@
 <script src="js/pages/optimize-fixes.js"></script>
 <script src="js/pages/gaming-latency.js"></script>
 <script src="js/pages/system-diagnostics.js"></script>
-<script src="js/pages/system-restore.js"></script>
 <script src="js/pages/gaming-pulse.js"></script>
 <script src="js/ui-helpers.js"></script>
 <script src="js/tours.js"></script>
@@ -675,6 +677,9 @@
 <script src="js/startup/pure.js"></script>
 <script src="js/startup/views.js"></script>
 <script src="js/startup/page.js"></script>
+<script src="js/restore/pure.js"></script>
+<script src="js/restore/views.js"></script>
+<script src="js/restore/page.js"></script>
 <script src="js/devices/pure.js"></script>
 <script src="js/devices/views.js"></script>
 <script src="js/devices/page.js"></script>
@@ -5011,8 +5016,8 @@ async function refreshSpecs() {
 
 async function quickCreateRP() {
   appendLog(tUI('rpCreating'), 'head')
-  const r = await api.createRestorePoint('JylliTool_v1_Quick')
-  appendLog(r.ok ? tUI('rpCreated') : `${tUI('rpFailed')} ${r.error}`, r.ok ? 'ok' : 'err')
+  const r = await api.restore2Create({ label: 'Quick' })
+  appendLog(r.ok ? tUI('rpCreated') : `${tUI('rpFailed')} ${r.reason || r.error || ''}`, r.ok ? 'ok' : 'err')
   window.JylliRestoreUI?.refresh()
   return r
 }
@@ -5899,87 +5904,14 @@ function buildCleanup(c) { JylliCleanupPage.mount(c) }
 function buildDebloater(c) { JylliDebloatPage.mount(c) }
 
 // ─── Page: Restore Points ─────────────────────────────────────────────────────
-// Tracks which restore point sequence number is currently selected in the table
-let _rpSelectedSeq = null
-let _rpSelectedData = null
-let _rpAutoSnapshotListenerRegistered = false
-let _rpLastPoints = []
-
-async function doCreateRP() {
-  const desc = document.getElementById('rp-desc')?.value.trim() || `JylliTool_Manual_${new Date().toISOString().slice(0,10).replace(/-/g,'')}`
-  const status = document.getElementById('rp-status')
-  const inputWrap = document.querySelector('.rp-v2-create-input-wrap')
-  const createBtn = document.getElementById('rp-create-btn')
-
-  // Animated progress overlay
-  let progressEl = null
-  const progressLabels = [tUI('rpProgressInit'), tUI('rpProgressSnapshot'), tUI('rpProgressVerify')]
-  if (inputWrap) {
-    progressEl = document.createElement('div')
-    progressEl.className = 'rp-v2-create-progress'
-    progressEl.innerHTML = progressLabels.map((label, i) => `
-      <div class="rp-v2-progress-step${i === 0 ? ' active' : ''}" id="rp-prog-${i}">
-        <div class="rp-v2-progress-step__dot"></div><span>${label}</span>
-      </div>${i < progressLabels.length - 1 ? '<span class="rp-v2-progress-sep">→</span>' : ''}
-    `).join('')
-    inputWrap.appendChild(progressEl)
-  }
-  if (createBtn) createBtn.disabled = true
-  if (status) { status.innerHTML = `<i class="fa fa-spinner fa-spin"></i> ${tUI('rpCreating')}`; status.style.color = 'var(--c-warning)' }
-
-  const stepTimer = setTimeout(() => {
-    document.getElementById('rp-prog-0')?.classList.replace('active', 'done')
-    document.getElementById('rp-prog-1')?.classList.add('active')
-  }, 600)
-
-  const r = await api.createRestorePoint(desc)
-
-  clearTimeout(stepTimer)
-  progressLabels.forEach((_, i) => {
-    const el = document.getElementById(`rp-prog-${i}`)
-    if (el) { el.classList.remove('active'); el.classList.add('done') }
-  })
-  setTimeout(() => progressEl?.remove(), 400)
-  if (createBtn) createBtn.disabled = false
-
-  if (status) {
-    status.textContent = r.ok ? tUI('rpCreated') : `${tUI('rpFailed')} ${r.error}`
-    status.style.color = r.ok ? 'var(--c-success)' : 'var(--c-danger)'
-  }
-  if (r.ok) {
-    try {
-      const appliedIds = Object.keys(settings).filter(k => k.startsWith('tweak_') && settings[k] === 'applied').map(k => k.slice(6))
-      const snapshot = JSON.parse(localStorage.getItem('rp_tweak_snapshots') || '{}')
-      snapshot[`ts_${Date.now()}`] = { ts: Date.now(), appliedIds }
-      const keys = Object.keys(snapshot).sort()
-      if (keys.length > 20) keys.slice(0, keys.length - 20).forEach(k => delete snapshot[k])
-      localStorage.setItem('rp_tweak_snapshots', JSON.stringify(snapshot))
-    } catch {}
-    loadRPList().catch(() => {}); loadRPDiskUsage().catch(() => {}); window.JylliRestoreUI?.refresh()
-  }
+// Restore points "Lifeline": js/restore/{pure,views,page}.js on the engine in lib/restore (main.js `// ─── Restore (Lifeline)`).
+function buildRestorePoints(c) {
+  const host = document.createElement('div'); host.id = 'rs-host'; c.appendChild(host)
+  const page = JylliRestorePage.mount(host)
+  registerPageCleanup('restore-points', () => { try { page.destroy() } catch {} })
 }
 
-async function rpEnableSR() {
-  const status = document.getElementById('rp-status')
-  if (status) { status.innerHTML = `<i class="fa fa-spinner fa-spin"></i> ${tUI('rpEnablingSR')}`; status.style.color = 'var(--warning)' }
-  const r = await api.createRestorePoint('JylliTool_EnableSR_Check')
-  if (status) {
-    status.textContent = r.ok ? tUI('rpSrEnabled') : `${tUI('rpFailed')} ${r.error || ''}`
-    status.style.color = r.ok ? 'var(--success)' : 'var(--danger)'
-  }
-  loadRPList().catch(() => {})
-}
-
-function _rpParseDate(wmiFmt) {
-  if (!wmiFmt) return null
-  // WMI format: 20250523143000.000000+000  (offset is UTC minutes, e.g. +120 = UTC+2)
-  const m = String(wmiFmt).match(/^(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})\.?\d*([+-]\d+)?$/)
-  if (!m) return null
-  const offsetMin = m[7] ? parseInt(m[7], 10) : 0
-  const utcMs = Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +m[6]) - offsetMin * 60000
-  return new Date(utcMs)
-}
-
+// "3 days ago" for the History tab and the restore nudge (the page itself uses js/restore/pure.js).
 function _rpRelAge(ms) {
   const m = Math.floor(ms / 60000), h = Math.floor(m / 60), d = Math.floor(h / 24)
   if (d > 0) return tG('rpx', 'daysAgo', { n: d })
@@ -5988,256 +5920,6 @@ function _rpRelAge(ms) {
   return tG('rpx', 'justNow')
 }
 
-function _rpTypeClass(desc) {
-  const d = (desc || '').toLowerCase()
-  if (d.includes('install')) return 'install'
-  if (d.includes('driver')) return 'driver'
-  if (d.includes('modify') || d.includes('settings') || d.includes('jyllit') || d.includes('manual')) return 'modify'
-  return 'other'
-}
-function _rpTypeLabel(typeClass) {
-  const map = { modify: tUI('rpTypeModify'), install: tUI('rpTypeInstall'), driver: tUI('rpTypeDriver'), other: tUI('rpTypeOther') }
-  return map[typeClass] || typeClass
-}
-
-function _rpAgeBadgeClass(ageMs, isNewest) {
-  if (isNewest || ageMs < 86400000)    return 'fresh'
-  if (ageMs < 7 * 86400000)            return 'recent'
-  if (ageMs < 30 * 86400000)           return 'old'
-  return 'ancient'
-}
-
-function rpSelectRow(seq) {
-  _rpSelectedSeq = seq
-  const p = _rpLastPoints.find(x => x.SequenceNumber === seq)
-  const desc = p ? (p.Description || '') : ''
-  const dateObj = p ? _rpParseDate(p.CreationTime) : null
-  const dateStr = dateObj ? dateObj.toLocaleString() : ''
-  _rpSelectedData = { seq, desc, dateStr }
-  document.querySelectorAll('#rp-tbody tr').forEach(r => r.classList.toggle('rp-selected', r.dataset.seq == seq))
-  const preview = document.getElementById('rp-selected-preview')
-  const noSel = document.getElementById('rp-no-sel')
-  const restoreBtn = document.getElementById('rp-restore-btn')
-  const spType = document.getElementById('rp-sp-type')
-  if (preview) {
-    preview.style.display = 'flex'
-    document.getElementById('rp-sp-seq').textContent = `#${seq}`
-    document.getElementById('rp-sp-desc').textContent = desc
-    document.getElementById('rp-sp-date').textContent = dateStr
-    if (spType) {
-      const typeClass = _rpTypeClass(desc)
-      const typeIcons = { modify: 'fa-sliders', install: 'fa-box-open', driver: 'fa-microchip', other: 'fa-circle-dot' }
-      spType.innerHTML = `<span class="rp-v2-type rp-v2-type--${typeClass}"><i class="fa ${typeIcons[typeClass] || 'fa-circle-dot'}"></i> ${_rpTypeLabel(typeClass)}</span>`
-    }
-  }
-  if (noSel) noSel.style.display = 'none'
-  if (restoreBtn) restoreBtn.style.display = ''
-}
-
-async function loadRPList() {
-  const tbody = document.getElementById('rp-tbody')
-  const emptyEl = document.getElementById('rp-empty')
-  const tableWrap = document.getElementById('rp-table-wrap')
-  if (!tbody) return
-  const isEmpty = !tbody.querySelector('tr[data-seq]')
-  if (isEmpty) {
-    tbody.innerHTML = `<tr><td colspan="4" class="rp-v2-loading-cell"><span class="rp-v2-skeleton"></span></td></tr>`
-  }
-  const refreshBtn = document.getElementById('rp-refresh-btn')
-  refreshBtn?.classList.add('rp-v2-refreshing')
-  const raw = await api.listRestorePoints()
-  refreshBtn?.classList.remove('rp-v2-refreshing')
-
-  if (!Array.isArray(raw)) {
-    tbody.innerHTML = ''
-    if (emptyEl) { emptyEl.querySelector('.rp-v2-empty__title').textContent = tUI('rpNotFound'); emptyEl.style.display = 'flex' }
-    return
-  }
-  const points = raw
-  _rpLastPoints = points
-
-  const staleBanner = document.getElementById('rp-stale-banner')
-  if (staleBanner) {
-    // Same rule as Home and the nav dot (js/restore-nudge.js): newest of Windows' list and the one Jylli made.
-    const newest = points.reduce((m, p) => { const d = _rpParseDate(p.CreationTime); return d ? Math.max(m, d.getTime()) : m }, 0)
-    const lvl = JylliRestoreNudge.restoreStatus({ newestAt: newest, lastCreatedAt: settings.lastRestorePointAt })
-    staleBanner.style.display = lvl.level === 'fresh' ? 'none' : 'flex'
-    const bt = document.getElementById('rp-stale-text')
-    if (bt) bt.textContent = lvl.level === 'never' ? tG('rpNudge', 'bannerNever') : tG('rpNudge', 'bannerStale', { when: _rpRelAge(lvl.ageMs) })
-  }
-
-  if (!points.length) {
-    tbody.innerHTML = ''
-    if (emptyEl) emptyEl.style.display = 'flex'
-    return
-  }
-  if (emptyEl) emptyEl.style.display = 'none'
-
-  const now = Date.now()
-  const newestSeq = points[0]?.SequenceNumber
-  const typeIcons = { modify: 'fa-sliders', install: 'fa-box-open', driver: 'fa-microchip', other: 'fa-circle-dot' }
-  tbody.innerHTML = points.map(p => {
-    const seq = p.SequenceNumber
-    const desc = p.Description || ''
-    const dateObj = _rpParseDate(p.CreationTime)
-    const dateStr = dateObj ? dateObj.toLocaleString() : (p.CreationTime || '')
-    const ageMs = dateObj ? (now - dateObj.getTime()) : 0
-    const isNewest = seq === newestSeq
-    const ageCls = _rpAgeBadgeClass(ageMs, isNewest)
-    const ageLabelMap = { fresh: tUI('rpBadgeLatest'), recent: tUI('rpBadgeRecent'), old: tUI('rpBadgeOld'), ancient: tUI('rpBadgeAncient') }
-    const ageBadge = `<span class="rp-v2-age rp-v2-age--${ageCls}">${ageLabelMap[ageCls] || ageCls}</span>`
-    const typeClass = _rpTypeClass(desc)
-    const typePill = `<span class="rp-v2-type rp-v2-type--${typeClass}"><i class="fa ${typeIcons[typeClass] || 'fa-circle-dot'}"></i> ${_rpTypeLabel(typeClass)}</span>`
-    return `<tr data-seq="${seq}" data-rp-seq="${seq}" data-rp-ts="${dateObj ? dateObj.getTime() : 0}" onclick="rpSelectRow(${seq})">
-      <td>${seq}</td>
-      <td>${escHtml(desc)}${ageBadge}${typePill}</td>
-      <td>${dateStr}${ageMs > 0 ? `<span class="rp-v2-age-hint">${_rpRelAge(ageMs)}</span>` : ''}</td>
-      <td><button class="rp-v2-del-btn" title="${tUI('rpDeleteTitle')}" onclick="event.stopPropagation();doDeleteRP(${seq})"><i class="fa fa-trash"></i></button></td>
-    </tr>`
-  }).join('')
-
-  // Cursor-tracking radial glow via delegated mousemove
-  tbody.onmousemove = function(e) {
-    const tr = e.target.closest('tr[data-seq]')
-    if (!tr) return
-    const rect = tr.getBoundingClientRect()
-    tr.style.setProperty('--mx', `${((e.clientX - rect.left) / rect.width * 100).toFixed(1)}%`)
-    tr.style.setProperty('--my', `${((e.clientY - rect.top) / rect.height * 100).toFixed(1)}%`)
-  }
-
-  if (_rpSelectedSeq != null) {
-    document.querySelectorAll('#rp-tbody tr').forEach(r => r.classList.toggle('rp-selected', r.dataset.seq == _rpSelectedSeq))
-  }
-
-  // Update hero stat pills
-  const statCount = document.getElementById('rp-stat-count')
-  if (statCount) statCount.querySelector('.rp-v2-stat-pill__value').textContent = points.length
-  const newestPt = points[0]
-  const statAge = document.getElementById('rp-stat-age')
-  if (statAge && newestPt) {
-    const d = _rpParseDate(newestPt.CreationTime)
-    statAge.querySelector('.rp-v2-stat-pill__value').textContent = d ? _rpRelAge(Date.now() - d.getTime()) : '—'
-  }
-}
-
-async function loadRPDiskUsage() {
-  const fill = document.getElementById('rp-disk-fill')
-  const info = document.getElementById('rp-disk-info')
-  const pctEl = document.getElementById('rp-disk-pct')
-  if (!fill || !info) return
-  const d = (await api.getSrDiskUsage().catch(() => null)) || { available: false }
-  if (!d.available) { info.textContent = tUI('rpDiskUnavailable'); return }
-  const usedGB  = (d.usedBytes  / 1073741824).toFixed(2)
-  const allocGB = (d.allocBytes / 1073741824).toFixed(2)
-  const maxGB   = (d.maxBytes   / 1073741824).toFixed(2)
-  const pct = d.maxBytes > 0 ? Math.min(100, Math.round(d.usedBytes / d.maxBytes * 100)) : 0
-  fill.style.width = pct + '%'
-  fill.className = `rp-v2-disk-bar-fill ${pct < 60 ? 'low' : pct < 85 ? 'mid' : 'high'}`
-  if (pctEl) pctEl.textContent = pct + '%'
-  info.textContent = `${tUI('rpDiskUsed')}: ${usedGB} GB  /  ${tUI('rpDiskAlloc')}: ${allocGB} GB  /  ${tUI('rpDiskMax')}: ${maxGB} GB`
-  const statDisk = document.getElementById('rp-stat-disk')
-  if (statDisk) statDisk.querySelector('.rp-v2-stat-pill__value').textContent = `${usedGB} GB`
-}
-
-async function doRestoreToPoint() {
-  const seq = _rpSelectedSeq
-  if (!seq) { toast(tUI('rpInvalidSeqTitle'), tUI('rpInvalidSeq'), 'warn'); return }
-
-  // Build tweak diff
-  let diffHtml = ''
-  try {
-    const nowApplied = new Set(Object.keys(settings).filter(k => k.startsWith('tweak_') && settings[k] === 'applied').map(k => k.slice(6)))
-    const snapshots = JSON.parse(localStorage.getItem('rp_tweak_snapshots') || '{}')
-    // Find the snapshot closest to the selected RP's date
-    const rpRow = document.querySelector(`[data-rp-seq="${seq}"]`)
-    const rpTs = rpRow ? parseInt(rpRow.dataset.rpTs || '0', 10) : 0
-    const entries = Object.values(snapshots)
-    const closest = rpTs > 0
-      ? [...entries].sort((a, b) => Math.abs(a.ts - rpTs) - Math.abs(b.ts - rpTs))[0]
-      : entries.at(-1)
-    if (closest?.appliedIds) {
-      const snapshotSet = new Set(closest.appliedIds)
-      const wouldRevert = [...nowApplied].filter(id => !snapshotSet.has(id))
-      const wouldGain   = [...snapshotSet].filter(id => !nowApplied.has(id))
-      const parts = []
-      if (wouldRevert.length) parts.push(`<div class="rp-v2-diff-group rp-v2-diff-group--revert"><span class="rp-v2-diff-group__label"><i class="fa fa-arrow-rotate-left"></i> ${tUI('rpDiffWillRevert').replace('{{n}}', wouldRevert.length)}</span><div class="rp-v2-diff-group__items">${wouldRevert.slice(0,8).join(', ')}${wouldRevert.length>8?` +${wouldRevert.length-8} more`:''}</div></div>`)
-      if (wouldGain.length)   parts.push(`<div class="rp-v2-diff-group rp-v2-diff-group--restore"><span class="rp-v2-diff-group__label"><i class="fa fa-arrow-up"></i> ${tUI('rpDiffWillRestore').replace('{{n}}', wouldGain.length)}</span><div class="rp-v2-diff-group__items">${wouldGain.slice(0,8).join(', ')}${wouldGain.length>8?` +${wouldGain.length-8} more`:''}</div></div>`)
-      if (!parts.length) parts.push(`<div class="rp-v2-diff-group rp-v2-diff-group--none"><span class="rp-v2-diff-group__label"><i class="fa fa-check"></i> ${tUI('rpDiffNoChanges')}</span></div>`)
-      diffHtml = `<div class="rp-v2-diff">${parts.join('')}</div>`
-    }
-  } catch {}
-
-  try { await showConfirm({ title: `${tUI('restoreConfirmTitle')} #${seq}`, body: `<strong class="jx-11">${tUI('restoreConfirmBody')}</strong><br><br>${tG('rpx', 'confirmWindows')}${diffHtml}<br><br><span class="jx-150">${tG('rpx', 'confirmTweaks')}</span>`, okText: tUI('restoreConfirmOk'), okStyle: 'danger', icon: 'fa-triangle-exclamation' }) } catch { return }
-  const r = await api.restoreToPoint(seq)
-  if (!r.ok) {
-    if (r.fallback) {
-      toast(tUI('rpSectionTitle'), tUI('rpRestoreFallback'), 'warn')
-    } else {
-      toast(tUI('rpSectionTitle'), `${tUI('rpFailed')} ${r.error || ''}`, 'err')
-    }
-    return
-  }
-  const cleared = { ...settings }
-  for (const key of Object.keys(cleared)) {
-    if (key.startsWith('tweak_')) cleared[key] = 'not-applied'
-  }
-  await api.saveSettings(cleared)
-  localStorage.setItem('jt_settings', JSON.stringify(cleared))
-  Object.assign(settings, cleared)
-}
-
-async function doDeleteRP(seq) {
-  try { await showConfirm({ title: tUI('rpDeleteConfirmTitle'), body: tUI('rpDeleteConfirmBody').replace('{{seq}}', seq), okText: tUI('rpDeleteOk'), okStyle: 'danger', icon: 'fa-trash' }) } catch { return }
-  const r = await api.deleteRestorePoint(seq)
-  if (r.ok) {
-    toast(tUI('rpDeleteTitle'), tUI('rpDeleted'), 'ok')
-    if (_rpSelectedSeq === seq) {
-      _rpSelectedSeq = null
-      const preview = document.getElementById('rp-selected-preview')
-      const noSel = document.getElementById('rp-no-sel')
-      const restoreBtn = document.getElementById('rp-restore-btn')
-      if (preview) preview.style.display = 'none'
-      if (noSel) noSel.style.display = ''
-      if (restoreBtn) restoreBtn.style.display = 'none'
-    }
-    loadRPList().catch(() => {})
-    loadRPDiskUsage().catch(() => {})
-  } else {
-    toast(tUI('rpSectionTitle'), `${tUI('rpDeleteFailed')} ${r.error || ''}`, 'err')
-  }
-}
-
-async function rpSetSchedule(days) {
-  settings.autoSnapshotDays = days
-  document.querySelectorAll('.rp-v2-chip').forEach(btn => {
-    btn.classList.toggle('active', btn.dataset.days === days)
-  })
-  try {
-    await api.saveSettings({ ...settings, autoSnapshotDays: days })
-    const tip = document.getElementById('rp-schedule-saved')
-    if (tip) {
-      tip.textContent = `✓ ${tUI('rpScheduleSaved')}`
-      tip.style.opacity = '1'
-      clearTimeout(tip._fadeTimer)
-      tip._fadeTimer = setTimeout(() => { tip.style.opacity = '0' }, 1600)
-    }
-  } catch {
-    toast(tUI('rpSectionTitle'), tUI('rpFailed'), 'err')
-  }
-}
-
-async function rpExportList() {
-  const points = _rpLastPoints.length ? _rpLastPoints : await api.listRestorePoints()
-  if (!Array.isArray(points) || !points.length) { toast(tUI('rpSectionTitle'), tUI('rpNotFound'), 'warn'); return }
-  const lines = points.map(p => {
-    const d = _rpParseDate(p.CreationTime)
-    return `#${p.SequenceNumber}  |  ${p.Description}  |  ${d ? d.toLocaleString() : p.CreationTime || ''}`
-  })
-  const content = `System Restore Points — ${new Date().toLocaleString()}\n${'─'.repeat(60)}\n${lines.join('\n')}\n`
-  await api.saveTextFile({ filename: 'restore-points.txt', content })
-}
-
-function openRstrui() { api.openExternal('rstrui.exe') }
 
 // ─── Auth/Boot — see js/boot-logic.js ──────────────────────────────────────────
 
