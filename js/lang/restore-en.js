@@ -53,18 +53,18 @@ LANG.en.restore2 = {
   schLast: 'Last automatic: {when}', schNever: 'No automatic point yet', schNext: 'next {when}', schDue: 'due now', schRules: 'Skipped while a game runs or when on battery.',
   knowT: 'Good to know', know1T: 'What is protected', know1B: 'System files, the registry, drivers and installed programs. Your documents, photos and games are not touched.',
   know2T: 'Disk space', know2B: 'Restore points use the storage limit above. Windows removes the oldest ones when it is full.',
-  know3T: 'Restoring', know3B: 'A restore restarts the PC and can take several minutes. Save your work first; open a point to see what it would undo.',
+  know3T: 'Restoring', know3B: 'A restore restarts the PC and can take 30 minutes or more. Never turn off or restart the PC while it runs. Save your work first; open a point to see what it would undo.',
   // banner
   bnPendingT: 'Waiting for the restart into point #{seq}', bnPendingS: 'Requested {when}. The result appears here after Windows restarts.',
   rc_succeededT: 'Restore to point #{seq} finished', rc_succeededS: '{n} recorded Jylli changes were rolled back and marked as undone.', rc_succeededS_1: '1 recorded Jylli change was rolled back and marked as undone.',
   rc_failedT: 'Restore to point #{seq} failed', rc_failedS: 'Windows reports that the restore failed. Nothing was marked as undone.',
-  rc_interruptedT: 'Restore to point #{seq} was interrupted', rc_interruptedS: 'Windows reports that it was interrupted. Nothing was marked as undone.',
+  rc_interruptedT: 'Restore to point #{seq} was interrupted', rc_interruptedS: 'Windows reports that it was interrupted (for example by a restart while it ran). Nothing was marked as undone. Windows normally puts the PC back as it was; check that your PC works as before.',
   rc_cancelledT: 'The restore to point #{seq} never started', rc_cancelledS: 'The PC did not restart after the request. Nothing was changed.',
   rc_unknownT: 'Could not confirm the restore to point #{seq}', rc_unknownS: 'Windows did not say how it went. Nothing was marked as undone; check the list of points.',
   // sheet
   shWhat: 'What rolling back would do', shChanges: 'Jylli changes made after it ({n})', shChanges_1: 'Jylli changes made after it (1)', shNoChanges: 'None recorded.', shMore: '+{n} more',
   shPrograms: 'Programs installed after it (by install date)', shNoPrograms: 'No later installs found.', shSame: '{n} installed the same day (cannot tell which came first)', shSame_1: '1 installed the same day (cannot tell which came first)',
-  shFacts: 'Always true for a restore', shF1: 'Your documents, photos and games are not touched.', shF2: 'Registry, drivers, system files and programs return to how they were at that point.', shF3: 'The PC restarts, and it can take several minutes.',
+  shFacts: 'Always true for a restore', shF1: 'Your documents, photos and games are not touched.', shF2: 'Registry, drivers, system files and programs return to how they were at that point.', shF3: 'The PC restarts and the restore runs before Windows starts. It can take 30 minutes or more: do not turn off or restart the PC while it runs.',
   shReady: 'Before you restore', chkAdmin: 'Running as administrator', chkAdminBad: 'Not running as administrator', chkPower: 'Power is not a problem', chkPowerBad: 'Running on battery. Plug in before you restore.', chkDisk: 'Enough free disk space', chkDiskBad: 'Low free disk space. A restore may fail.',
   shAck: 'I have saved my work and understand the PC will restart.', shDelete: 'Delete point', shRestore: 'Restart and restore',
   // confirms + toasts

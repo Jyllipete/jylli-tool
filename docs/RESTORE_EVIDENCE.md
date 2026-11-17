@@ -43,11 +43,13 @@ The protection toggle and storage cap are not journaled: each has its own invers
 ## Restore and the reboot
 `Restore-Computer` reboots the PC, which may kill this process before it can write anything. So `pending { seq, pointAt, at }` is written first; it is cleared if Windows refuses (and `rstrui.exe` is opened as before).
 
-After the restart `reconcile()` runs on every scan (and 20 s after launch when a request is pending). `model.outcome` judges it from evidence, strongest first:
-1. a Windows "Restore Operation" point (type 6) newer than the request: **succeeded**;
-2. the PC rebooted after the request and `Get-ComputerRestorePoint -LastStatus` says failed / interrupted / succeeded (matched by keyword, because Windows words it per language): that status;
-3. rebooted but no usable status: **unknown** (kept for 3 days, then reported as unknown);
+After the restart `reconcile()` runs on every scan (and 20 s after launch when a request is pending). `model.outcome` judges it from evidence:
+1. PC rebooted since the request and `Get-ComputerRestorePoint -LastStatus` says **failed** or **interrupted**: that status;
+2. rebooted, status **succeeded** *and* a Windows "Restore Operation" point (type 6) newer than the request exists: **succeeded**. An old success on record proves nothing about this restore, so the point must be there;
+3. rebooted, anything else: **unknown** (kept for 3 days, then reported as unknown);
 4. no reboot since the request: **waiting** for 15 minutes, then **cancelled** (nothing happened).
+
+**Observed on a real restore (2026-11-17, event log):** Windows creates the "Restore Operation" undo point when the restore *starts* (09:23:50, event 8215) and the machine restarts into the restore. The restore ran ~10 minutes, was cut off by a forced restart (event 41, then 8204 "System restore ended unexpectedly because of power loss or a program error"), so it never finished. The first version of `outcome` took the type-6 point as proof of success and would have reported this interrupted restore as finished and marked the user's changes undone. It now proves only that the restore *started*.
 
 Only a **succeeded** restore changes anything: journal entries recorded between the point and the request get `undoneBy: system-restore:<seq>`, and `tweak_<id>` flags follow (the oldest entry per tweak decides: an apply means "not applied at the point"). Failed / interrupted / cancelled / unknown mark nothing. The old behaviour cleared every `tweak_*` flag *before* the reboot, even when the restore later failed.
 
@@ -57,7 +59,7 @@ Only a **succeeded** restore changes anything: journal entries recorded between 
 
 **The nav dot and tab dot** follow `restore2-changed` (any feature that makes, deletes or restores a point): verified in the preview that a stale status shows both dots and a fresh status clears them.
 
-**Not verified on a real PC:** the type-6 point and the `-LastStatus` wording have not been observed on a real restore (the fixture and tests drive the logic with synthetic probes). A real `Restore-Computer` reboot is the one thing this work could not exercise.
+**Not verified on a real PC:** a *completed* restore: the success wording of `-LastStatus` and whether the type-6 point is listed by `Get-ComputerRestorePoint` (the event log shows Windows creates it) are still unobserved. The interrupted case above is the only real restore seen so far.
 
 ## Schedule
 A check one minute after start and then hourly (`restore.tick`). It does nothing when the schedule is off or not due, never runs while a game is running (`liveGameReason`) or on battery, and after a failure waits 6 hours. A launch-only timer (the old behaviour) missed PCs that stay on for days.

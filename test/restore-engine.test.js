@@ -136,10 +136,14 @@ test('findings: named thresholds, and the headline is never repeated', () => {
 test('outcome: the restore we asked for is judged from evidence, never assumed', () => {
   const pending = { seq: 5, at: NOW - 2 * 3600000, pointAt: NOW - 3 * DAY }
   const pr = o => ({ ok: true, points: [], lastStatus: 'unknown', bootAt: pending.at + 60000, ...o })
-  assert.equal(model.outcome(pending, pr({ points: [{ type: 6, at: pending.at + 90000 }] }), NOW).status, 'succeeded')
+  const op = [{ type: 6, at: pending.at + 12000 }]
+  // seen on a real PC: Windows made the "Restore Operation" point at the START, then the restore was cut off by a forced restart. The point alone is NOT success.
+  assert.equal(model.outcome(pending, pr({ points: op, lastStatus: 'interrupted' }), NOW).status, 'interrupted')
+  assert.equal(model.outcome(pending, pr({ points: op, lastStatus: 'unknown' }), NOW).status, 'unknown')
+  assert.equal(model.outcome(pending, pr({ points: op, lastStatus: 'succeeded' }), NOW).status, 'succeeded')
   assert.equal(model.outcome(pending, pr({ lastStatus: 'failed' }), NOW).status, 'failed')
   assert.equal(model.outcome(pending, pr({ lastStatus: 'interrupted' }), NOW).status, 'interrupted')
-  assert.equal(model.outcome(pending, pr({ lastStatus: 'succeeded' }), NOW).status, 'succeeded')
+  assert.equal(model.outcome(pending, pr({ lastStatus: 'succeeded' }), NOW).status, 'unknown')   // an old success on record, this restore never started: proves nothing
   assert.equal(model.outcome(pending, pr({ lastStatus: 'unknown' }), NOW).status, 'unknown')
   assert.equal(model.outcome(pending, pr({ bootAt: pending.at - 3600000 }), NOW).status, 'cancelled')       // no reboot since the request, long ago
   assert.equal(model.outcome({ ...pending, at: NOW - 60000 }, pr({ bootAt: NOW - 3 * 3600000 }), NOW).status, 'waiting')
