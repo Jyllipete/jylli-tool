@@ -1,14 +1,16 @@
 # Changelog
 
-## Seuraava (ei vielä julkaistu)
+## v1.6.2 (nykyinen)
 
+- Uusi — Palautuspisteet "Lifeline", Käynnistys "Ignition", Sovellukset "Backstage", Järjestelmä > Laitteet ja uusittu Discord-kirjautumisnäyttö "Keyring"
+- Uusi — Peliautomaatio yhtenä istuntojärjestelmänä; Parannus — paljon vähemmän taustatyötä; Korjaus — Pelit-kortit, MMCSS, Update Guard
 - Uusi — "Käynnistä piilotettuna ilmaisinalueelle": Windowsin käynnistyessä ei avata ikkunaa; Game Watcher ja Auto-Pulse toimivat silti (uusille käyttöönotoille päällä, olemassa olevat käyttäjät säilyttävät ikkunan)
 - Korjaus — Pelin istunto ei enää kirjoita MMCSS-arvoja eikä FiveM-yhteensopivuuslippua: aiemmin istunto nollasi omat mmcss-säätösi 20:een jokaisen pelin jälkeen
 - Korjaus — Istunnon palautus tehdään täsmälleen käänteisessä järjestyksessä (Pulse ja Windows Update ensin); Kilpailutila ottaa auki olevan istunnon haltuunsa siististi; Pulse-käynnistykset kulkevat yhden jonon kautta
 - Korjaus — Tallennettu pelikohtainen säätöprofiili ei aja jo päällä olevia säätöjä uudelleen eikä ohita automaattiajon turvasääntöjä (taso 3, pois suljetut)
 - Parannus — Vähemmän taustatyötä: LibreHardwareMonitor käynnistyy vasta tarvittaessa, lämpövahti ei kysele piilossa, näkyvä tunnistin ei käynnistä kolmea PowerShelliä 10 sekunnin välein, järjestelmäpollaus ei kysy WMI:tä sekunnin välein
 
-## v1.6.1 (nykyinen)
+## v1.6.1
 
 - Uusi — Pelit-välilehti "Kirjasto": oikea Steam-, Epic- ja Xbox-kirjasto, Pelaa-painike, peleittäiset säädöt ja pelihistoria
 - Uusi — Kilpailutila: yhden pelin tehostin (Premium: ytimet, Game Shield, Windows-haun tauotus, pikakuvake)

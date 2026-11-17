@@ -9154,6 +9154,33 @@ ipcMain.handle('install-update', () => {
 
 // What's New content
 const WHATS_NEW = [
+  { version: '1.6.2', date: 'Nov 2026', items: [
+    'New — Restore points tab "Lifeline": every restore point with its origin, protection and coverage checks, create-now with live steps, preview and restore, storage cap and schedule. A "Restore Operation" point proves a restore started, not that it finished',
+    'New — Startup tab "Ignition": startup items sorted into worth keeping, your call, delayed and off, with boot-time impact and before/after compare',
+    'New — Apps tab "Backstage": what each program costs you, undoable persistent changes and Game time rules that quiet launchers while you play',
+    'New — System > Devices: peripherals detected with source and confidence, mouse polling-rate test and keyboard repeat settings',
+    'New — Discord sign-in screen "Keyring": rebuilt, clearer steps and error reasons',
+    'New — Game automation: Game Watcher, Update Guard, Game Shield and Auto-Pulse now run as one game session system with exact, reverse-order restore',
+    'New — Optional "Start hidden in the tray": no window at Windows start, Game Watcher and Auto-Pulse keep working',
+    'Improved — Much less background work: the hidden page is unloaded in the tray, sensors start on demand, fewer PowerShell and WMI calls while idle',
+    'Improved — Home first-impression fixes; the bot is told the app language at sign-in',
+    'Fix — Games tab cards ignoring clicks',
+    'Fix — A game session no longer overwrites your own MMCSS tweaks, and Update Guard restores Windows Update to its real previous state',
+    'Fix — A saved per-game profile no longer re-runs tweaks that are already on or skips the automatic-run safety rules',
+  ], items_fi: [
+    'Uusi — Palautuspisteet-välilehti "Lifeline": kaikki palautuspisteet alkuperineen, suojaus- ja kattavuustarkistukset, luo nyt -toiminto reaaliaikaisin vaihein, esikatselu ja palautus, tallennustilan raja ja aikataulu. "Restore Operation" -piste todistaa palautuksen alkaneen, ei sen valmistuneen',
+    'Uusi — Käynnistys-välilehti "Ignition": käynnistyskohteet lajiteltuna säilytettäviin, harkittaviin, viivästettyihin ja pois päältä oleviin, käynnistysajan vaikutus ja ennen/jälkeen-vertailu',
+    'Uusi — Sovellukset-välilehti "Backstage": mitä kukin ohjelma maksaa, peruttavat pysyvät muutokset ja Peliaika-säännöt jotka hiljentävät launcherit pelatessa',
+    'Uusi — Järjestelmä > Laitteet: oheislaitteet tunnistettuna lähteineen ja varmuuksineen, hiiren päivitystaajuuden testi ja näppäimistön toistoasetukset',
+    'Uusi — Discord-kirjautumisnäyttö "Keyring": uusittu, selkeämmät vaiheet ja virheiden syyt',
+    'Uusi — Peliautomaatio: Game Watcher, Update Guard, Game Shield ja Auto-Pulse toimivat nyt yhtenä peli-istuntojärjestelmänä ja palautus tehdään täsmälleen käänteisessä järjestyksessä',
+    'Uusi — Valinnainen "Käynnistä piilotettuna ilmaisinalueelle": Windowsin käynnistyessä ei avata ikkunaa, Game Watcher ja Auto-Pulse toimivat silti',
+    'Parannus — Paljon vähemmän taustatyötä: piilotettu sivu puretaan ilmaisinalueella, tunnistimet käynnistyvät vasta tarvittaessa ja PowerShell- ja WMI-kutsuja on vähemmän tyhjäkäynnillä',
+    'Parannus — Home-sivun ensivaikutelman korjaukset; botille kerrotaan sovelluksen kieli kirjautumisen alussa',
+    'Korjaus — Pelit-välilehden kortit eivät reagoineet klikkauksiin',
+    'Korjaus — Pelin istunto ei enää ylikirjoita omia MMCSS-säätöjäsi ja Update Guard palauttaa Windows Updaten todelliseen aiempaan tilaansa',
+    'Korjaus — Tallennettu pelikohtainen profiili ei aja jo päällä olevia säätöjä uudelleen eikä ohita automaattiajon turvasääntöjä',
+  ]},
   { version: '1.6.1', date: 'Nov 2026', items: [
     'New — Games tab "Library": your real Steam, Epic and Xbox library, a Play button, honest per-game tuning that you can undo, and play history',
     'New — Competitive Mode: one-game booster at the top of Games (priority, power plan, memory cleanup, tray). Premium adds core selection, Game Shield, Windows Search pause and a desktop shortcut',
